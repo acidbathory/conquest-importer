@@ -18,7 +18,8 @@
 | T2 | Injection via monitor text into HCL (`"`, `${...}`, `%{...}`, heredoc terminators, newlines) | Central escape functions in the Terraform emitter; no string concatenation of untrusted text | Hostile-input golden tests (week 7) |
 | T3 | Injection into NRQL (quote breaking, extra clauses) | Structured query building from the IR; escape string literals; reject unexpected tokens | Hostile-input tests (week 7) |
 | T4 | Injection via GraphQL variables | Use GraphQL variables, never string-format untrusted values into the query document | Code review + tests (week 5) |
-| T5 | Unintended writes to a real New Relic account | Dry-run by default; `--apply` required; account ID must match an allow-listed test account; diff shown first | Tests (week 5) |
+| T5 | Unintended writes to a real New Relic account | Dry-run by default (offline); writing needs `--apply`, `--confirm-account`, and the account in `NEW_RELIC_ALLOWED_ACCOUNT_IDS`; plan printed first; conditions created disabled; creates never retried; re-runs skip existing | `tests/test_apply.py` |
+| T11 | Terminal escape sequences in monitor names printed by the CLI | `printable()` strips control characters before printing | `tests/test_apply.py` |
 | T6 | Over-privileged keys | Read-only Datadog key; NR key scoped to alert write in a test account; documented in `.env.example` | Manual checklist |
 | T7 | Silently wrong conversion | Confidence label + reason on every monitor; `unmapped` fields preserved; gap report | Golden tests; report review |
 | T8 | Supply-chain compromise | Pinned lockfile (`uv.lock`); `pip-audit` in CI; few dependencies | CI |

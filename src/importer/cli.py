@@ -2,11 +2,22 @@
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from importer.apply import (
+    GuardError,
+    NewRelicAPIError,
+    NewRelicClient,
+    apply_plan,
+    check_guards,
+    get_account_name,
+    load_plan,
+    printable,
+)
 from importer.emit.common import CannotEmit
 from importer.emit.nerdgraph import nerdgraph_payload
 from importer.emit.terraform import terraform_file
@@ -14,7 +25,12 @@ from importer.extract.datadog import DatadogAPIError, DatadogClient, InvalidSite
 from importer.models.ir import Confidence, IRMonitor
 from importer.models.source import DatadogMonitor
 from importer.report import build_report
-from importer.secrets import DatadogCredentials, MissingSecretError, RedactingFilter
+from importer.secrets import (
+    DatadogCredentials,
+    MissingSecretError,
+    RedactingFilter,
+    require_env,
+)
 from importer.translate.monitors import load_metric_map, translate_monitor
 
 app = typer.Typer(
@@ -77,6 +93,66 @@ def convert(
     report = build_report(final, {m.source_id for m in emitted})
     (out / "report.md").write_text(report)
     typer.echo(f"Read {len(monitors)} monitors, emitted {len(emitted)}. See {out / 'report.md'}")
+
+
+@app.command()
+def apply(
+    source: Annotated[
+        Path, typer.Option("--in", help="Converted output directory (contains ir/)")
+    ] = Path("out/converted"),
+    account_id: Annotated[int, typer.Option(help="New Relic TEST account id")] = 0,
+    region: Annotated[str, typer.Option(help="us or eu")] = "us",
+    policy_name: Annotated[str, typer.Option(help="Alert policy to create or reuse")] = (
+        "Imported from Datadog"
+    ),
+    do_apply: Annotated[
+        bool, typer.Option("--apply", help="Actually create conditions (default: dry run)")
+    ] = False,
+    confirm_account: Annotated[
+        int | None, typer.Option(help="Repeat the account id to confirm --apply")
+    ] = None,
+) -> None:
+    """Create the converted conditions in a New Relic account.
+
+    Dry run by default: prints the plan and sends nothing. To write, you need --apply,
+    --confirm-account, and the account listed in NEW_RELIC_ALLOWED_ACCOUNT_IDS.
+    Conditions are created disabled.
+    """
+    if account_id <= 0:
+        typer.echo("Error: --account-id is required", err=True)
+        raise typer.Exit(code=1)
+    try:
+        plan = load_plan(source / "ir")
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error reading {source / 'ir'}: {printable(str(exc), 200)}", err=True)
+        raise typer.Exit(code=1) from None
+
+    typer.echo(f"Account {account_id} ({region}), policy {printable(policy_name)!r}")
+    typer.echo(f"{len(plan.items)} conditions to create, {plan.skipped} monitors not emittable")
+    for item in plan.items:
+        typer.echo(f"  {item.source_id}  {printable(item.name, 50):50}  {printable(item.nrql, 90)}")
+    if not do_apply:
+        typer.echo("\nDRY RUN: nothing was sent. Add --apply --confirm-account to create them.")
+        return
+
+    try:
+        check_guards(account_id, confirm_account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS"))
+        key = require_env("NEW_RELIC_API_KEY")
+        with NewRelicClient(key, region) as client:
+            typer.echo(f"Account name: {printable(get_account_name(client, account_id))}")
+            result = apply_plan(client, account_id, policy_name, plan)
+    except (GuardError, MissingSecretError, NewRelicAPIError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+
+    typer.echo(
+        f"\nCreated {len(result.created)}, already existed {len(result.skipped_existing)}, "
+        f"failed {len(result.failed)}. Conditions are DISABLED: review, then enable."
+    )
+    for name, reason in result.failed:
+        typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
+    if result.failed:
+        raise typer.Exit(code=1)
 
 
 @app.command()
