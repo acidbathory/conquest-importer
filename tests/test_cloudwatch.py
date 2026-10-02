@@ -154,9 +154,9 @@ def test_unsupported_forms_are_manual_not_errors(fields: dict[str, Any]) -> None
     assert ir.reasons
 
 
-def test_every_converted_alarm_is_approximate_until_mappings_are_verified() -> None:
+def test_every_converted_alarm_stays_approximate_until_all_services_are_verified() -> None:
     assert alarm().confidence == Confidence.APPROXIMATE
-    assert any("unverified" in r for r in alarm().reasons)
+    assert any("assumed for other services" in r for r in alarm().reasons)
 
 
 def test_actions_are_listed_not_migrated() -> None:

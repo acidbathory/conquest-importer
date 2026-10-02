@@ -11,6 +11,9 @@ A tool that reads a customer's Datadog monitors and produces the equivalent New 
 ## Update: CloudWatch is now supported too (no network block)
 `importer convert --source cloudwatch --in describe-alarms.json` converts CloudWatch alarms. On 23 synthetic alarms, 15 convert (65%); the rest are labelled with reasons. Proven in the New Relic sandbox through both the API and Terraform routes (created, read back, no drift, cleaned up). CloudWatch is the better customer story: many customers use it, and periods/evaluation periods map almost directly. Also tested on a genuine `aws cloudwatch describe-alarms` export (9 test alarms created in a real AWS account, converted, then deleted): it parsed without changes. AWS metric names are still unverified (the sandbox has no AWS data).
 
+## Update: ingestion setup built and verified with real AWS data
+`importer ingest-setup` generates Terraform that streams CloudWatch metrics into New Relic (Metric Streams) and links the AWS account. Deployed for real in the test AWS account and sandbox (12 resources), real metrics arrived in ~3 minutes, a converter-generated alarm query returned the correct value (12 for 12 test writes), then everything was destroyed and existing resources were confirmed unchanged. Confirms the metric-name convention for DynamoDB; other services still assumed. See `docs/verification-log.md`.
+
 ## The blocker (Datadog only)
 `api.datadoghq.com` is blocked on our network (Cloudflare Gateway shows "This website is blocked"). I can't create a Datadog trial's monitors or read them back until it is allowed.
 

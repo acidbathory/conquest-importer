@@ -377,7 +377,7 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
 
     reasons.append(
         "AWS metric and dimension names follow the New Relic Metric Streams convention "
-        "(aws.<service>.<Metric>) and are unverified"
+        "(aws.<service>.<Metric>): confirmed against real DynamoDB data, assumed for other services"
     )
     missing = alarm.TreatMissingData or "missing"
     no_data = NoData()

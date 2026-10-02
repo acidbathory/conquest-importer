@@ -1,5 +1,5 @@
 {
-  "_comment": "CloudWatch namespace -> New Relic AWS Metric Streams metric prefix. Metrics are named <prefix>.<MetricName> and dimensions <prefix>.<DimensionName>. UNVERIFIED: the sandbox account held no AWS data to check against. Confirm in a real account with: SELECT uniques(metricName) FROM Metric WHERE metricName LIKE 'aws.%'",
+  "_comment": "CloudWatch namespace -> New Relic AWS Metric Streams metric prefix. Metrics are named <prefix>.<MetricName> and dimensions <prefix>.<DimensionName>. CONFIRMED on 2026-10-02 for AWS/DynamoDB (metric name, dimension attribute, value attribute); ASSUMED for the other services. Check more with: SELECT uniques(metricName) FROM Metric WHERE metricName LIKE 'aws.%'",
   "AWS/EC2": "aws.ec2",
   "AWS/EBS": "aws.ebs",
   "AWS/RDS": "aws.rds",
