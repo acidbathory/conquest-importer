@@ -20,6 +20,7 @@ from importer.apply import (
     printable,
 )
 from importer.emit.common import CannotEmit
+from importer.emit.ingest import IngestConfig, ingest_files
 from importer.emit.nerdgraph import nerdgraph_payload
 from importer.emit.terraform import terraform_file
 from importer.extract.datadog import DatadogAPIError, DatadogClient, InvalidSiteError
@@ -33,7 +34,12 @@ from importer.secrets import (
     RedactingFilter,
     require_env,
 )
-from importer.translate.cloudwatch import load_namespace_map, translate_alarm, translate_composite
+from importer.translate.cloudwatch import (
+    alarm_namespaces,
+    load_namespace_map,
+    translate_alarm,
+    translate_composite,
+)
 from importer.translate.monitors import load_metric_map, translate_monitor
 
 
@@ -184,6 +190,60 @@ def apply(
         typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
     if result.failed:
         raise typer.Exit(code=1)
+
+
+@app.command("ingest-setup")
+def ingest_setup(
+    out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/ingest"),
+    aws_region: Annotated[str, typer.Option(help="AWS region to stream from")] = "us-east-1",
+    nr_region: Annotated[str, typer.Option(help="New Relic region: us or eu")] = "us",
+    name_prefix: Annotated[str, typer.Option(help="Prefix for created resources")] = (
+        "newrelic-metrics"
+    ),
+    namespaces: Annotated[
+        str | None, typer.Option(help="Comma-separated CloudWatch namespaces to stream")
+    ] = None,
+    alarms: Annotated[
+        Path | None, typer.Option(help="describe-alarms JSON: stream only the namespaces it uses")
+    ] = None,
+) -> None:
+    """Generate Terraform that streams CloudWatch metrics into New Relic (Metric Streams).
+
+    Writes files only; nothing is deployed. The New Relic license key is never written to a
+    file: pass it when applying with TF_VAR_newrelic_license_key.
+    """
+    try:
+        chosen: list[str] = []
+        if namespaces:
+            chosen += [n.strip() for n in namespaces.split(",") if n.strip()]
+        if alarms:
+            metric, _ = load_alarms(alarms)
+            chosen += sorted(alarm_namespaces(metric))
+        if not chosen:
+            chosen = sorted(load_namespace_map())
+        config = IngestConfig.model_validate(
+            {
+                "name_prefix": name_prefix,
+                "aws_region": aws_region,
+                "nr_region": nr_region,
+                "namespaces": chosen,
+            }
+        )
+        files = ingest_files(config)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
+        raise typer.Exit(code=1) from None
+    out.mkdir(parents=True, exist_ok=True)
+    for name, text in files.items():
+        (out / name).write_text(text)
+    typer.echo(f"Wrote {', '.join(files)} to {out}; streaming {len(config.namespaces)} namespaces")
+    typer.echo("To deploy (review the plan first):")
+    typer.echo("  export TF_VAR_newrelic_license_key=...   # never commit this")
+    typer.echo(
+        "  export TF_VAR_newrelic_account_id=...    # and NEW_RELIC_API_KEY for the provider"
+    )
+    typer.echo("  terraform init && terraform plan")
+    typer.echo("Note: Terraform state will contain the license key. Protect it.")
 
 
 @app.command()

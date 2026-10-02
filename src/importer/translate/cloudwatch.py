@@ -100,6 +100,18 @@ def load_namespace_map(path: Path = NAMESPACE_MAP_PATH) -> dict[str, str]:
     return {k: str(v) for k, v in raw.items() if not k.startswith("_")}
 
 
+def alarm_namespaces(alarms: list[CloudWatchAlarm]) -> set[str]:
+    """Every CloudWatch namespace the given alarms read from."""
+    found: set[str] = set()
+    for a in alarms:
+        if a.Namespace:
+            found.add(a.Namespace)
+        for q in a.Metrics or []:
+            if q.MetricStat:
+                found.add(q.MetricStat.Metric.Namespace)
+    return found
+
+
 def alarm_source_id(key: str) -> int:
     """A stable integer id derived from the alarm ARN or name (used for file names and labels)."""
     return int(hashlib.sha256(key.encode()).hexdigest()[:12], 16)
