@@ -1,5 +1,7 @@
 # Project rules for AI assistants
 
+**Start here:** read `HANDOFF.md` (current state, how to run, standing rules), then `ROADMAP.md`.
+
 ## Attribution (important)
 **Never add Claude (or any AI assistant) as a contributor, author or co-author.**
 - No `Co-Authored-By:` trailers on commits.
