@@ -64,7 +64,6 @@ def resource_block(monitor: IRMonitor) -> str:
         f"  aggregation_window = {AGGREGATION_WINDOW_SECONDS}",
         '  aggregation_method = "event_flow"',
         f"  aggregation_delay  = {AGGREGATION_DELAY_SECONDS}",
-        '  value_function     = "single_value"',
         "",
         "  nrql {",
         f"    query = {hcl_string(nrql_for(monitor))}",

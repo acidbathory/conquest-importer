@@ -28,8 +28,8 @@ A tool that reads a customer's Datadog monitors and produces the equivalent New 
 - [ ] Recreate the Datadog API and Application keys. The current ones were pasted into a chat, so delete them in Datadog and create new ones. Type them into `.env` directly, not into any chat
 - [ ] Create a read-only Application key (monitors_read) for extraction, and a temporary write key (monitors_write) for creating sample monitors. Delete the write key afterwards
 - [ ] Set `DD_SITE` in `.env` to match the Datadog address bar (for example `datadoghq.com`, `us5.datadoghq.com`)
-- [ ] Set up the New Relic test account and a limited user key (alert write only); put its account id in `NEW_RELIC_ALLOWED_ACCOUNT_IDS` in `.env`
-- [ ] Install Terraform (`brew install terraform`) so the generated files can be validated
+- [x] New Relic sandbox account set up and in `.env`. First real `importer apply` created 21 disabled conditions and was then cleaned up (2026-10-02). Still worth replacing the user key with one limited to alert management
+- [x] Install Terraform (`brew install hashicorp/tap/terraform`; the main Homebrew repo no longer has it). Generated Terraform now passes `terraform validate` (provider v3.100.1)
 - [ ] Run `uv run python scripts/create_sample_monitors.py` (dry run), then with `--apply`
 - [ ] Run `uv run importer extract`, then `uv run importer convert`, and review `out/converted/report.md`
 - [ ] Udemy Python course (ongoing)

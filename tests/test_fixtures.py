@@ -68,3 +68,30 @@ def test_full_pipeline_on_fixtures(tmp_path: Path) -> None:
     # one Terraform resource per emitted NerdGraph payload
     emitted = len(list((tmp_path / "nerdgraph").glob("*.json")))
     assert terraform.count('resource "newrelic_nrql_alert_condition"') == emitted
+
+
+def test_generated_terraform_validates_for_all_fixtures(tmp_path: Path) -> None:
+    import shutil
+    import subprocess
+
+    import pytest
+
+    terraform = shutil.which("terraform")
+    if terraform is None:
+        pytest.skip("terraform not installed")
+    out = tmp_path / "out"
+    result = CliRunner().invoke(app, ["convert", "--in", str(FIXTURES), "--out", str(out)])
+    assert result.exit_code == 0, result.output
+    init = subprocess.run(  # noqa: S603
+        [terraform, "init", "-backend=false", "-input=false", "-no-color"],
+        cwd=out,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if init.returncode != 0:
+        pytest.skip("cannot download the New Relic provider (offline or blocked)")
+    check = subprocess.run(  # noqa: S603
+        [terraform, "validate", "-no-color"], cwd=out, capture_output=True, text=True, check=False
+    )
+    assert check.returncode == 0, check.stdout + check.stderr
