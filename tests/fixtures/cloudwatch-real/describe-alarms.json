@@ -1,0 +1,265 @@
+{
+    "MetricAlarms": [
+        {
+            "AlarmName": "conquest-test-alb-latency-p99",
+            "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-alb-latency-p99",
+            "AlarmConfigurationUpdatedTimestamp": "2026-10-02T16:24:11.844000+05:30",
+            "ActionsEnabled": true,
+            "OKActions": [],
+            "AlarmActions": [],
+            "InsufficientDataActions": [],
+            "StateValue": "INSUFFICIENT_DATA",
+            "StateReason": "Unchecked: Initial alarm creation",
+            "StateUpdatedTimestamp": "2026-10-02T16:24:11.844000+05:30",
+            "MetricName": "TargetResponseTime",
+            "Namespace": "AWS/ApplicationELB",
+            "ExtendedStatistic": "p99",
+            "Dimensions": [
+                {
+                    "Name": "LoadBalancer",
+                    "Value": "app/test/0123456789abcdef"
+                }
+            ],
+            "Period": 60,
+            "EvaluationPeriods": 3,
+            "Threshold": 2.0,
+            "ComparisonOperator": "GreaterThanThreshold",
+            "StateTransitionedTimestamp": "2026-10-02T16:24:11.844000+05:30"
+        },
+        {
+            "AlarmName": "conquest-test-connections-3of5",
+            "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-connections-3of5",
+            "AlarmConfigurationUpdatedTimestamp": "2026-10-02T16:24:10.106000+05:30",
+            "ActionsEnabled": true,
+            "OKActions": [],
+            "AlarmActions": [],
+            "InsufficientDataActions": [],
+            "StateValue": "INSUFFICIENT_DATA",
+            "StateReason": "Unchecked: Initial alarm creation",
+            "StateUpdatedTimestamp": "2026-10-02T16:24:10.106000+05:30",
+            "MetricName": "DatabaseConnections",
+            "Namespace": "AWS/RDS",
+            "Statistic": "Average",
+            "Dimensions": [
+                {
+                    "Name": "DBInstanceIdentifier",
+                    "Value": "test-db"
+                }
+            ],
+            "Period": 60,
+            "EvaluationPeriods": 5,
+            "DatapointsToAlarm": 3,
+            "Threshold": 500.0,
+            "ComparisonOperator": "GreaterThanThreshold",
+            "TreatMissingData": "notBreaching",
+            "StateTransitionedTimestamp": "2026-10-02T16:24:10.106000+05:30"
+        },
+        {
+            "AlarmName": "conquest-test-custom-namespace",
+            "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-custom-namespace",
+            "AlarmConfigurationUpdatedTimestamp": "2026-10-02T16:24:15.037000+05:30",
+            "ActionsEnabled": true,
+            "OKActions": [],
+            "AlarmActions": [],
+            "InsufficientDataActions": [],
+            "StateValue": "INSUFFICIENT_DATA",
+            "StateReason": "Unchecked: Initial alarm creation",
+            "StateUpdatedTimestamp": "2026-10-02T16:24:15.037000+05:30",
+            "MetricName": "QueueDepth",
+            "Namespace": "Custom/MyApp",
+            "Statistic": "Average",
+            "Dimensions": [],
+            "Period": 60,
+            "EvaluationPeriods": 1,
+            "Threshold": 100.0,
+            "ComparisonOperator": "GreaterThanThreshold",
+            "StateTransitionedTimestamp": "2026-10-02T16:24:15.037000+05:30"
+        },
+        {
+            "AlarmName": "conquest-test-ec2-cpu-high",
+            "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-ec2-cpu-high",
+            "AlarmConfigurationUpdatedTimestamp": "2026-10-02T16:24:05.250000+05:30",
+            "ActionsEnabled": true,
+            "OKActions": [],
+            "AlarmActions": [],
+            "InsufficientDataActions": [],
+            "StateValue": "INSUFFICIENT_DATA",
+            "StateReason": "Unchecked: Initial alarm creation",
+            "StateUpdatedTimestamp": "2026-10-02T16:24:05.250000+05:30",
+            "MetricName": "CPUUtilization",
+            "Namespace": "AWS/EC2",
+            "Statistic": "Average",
+            "Dimensions": [
+                {
+                    "Name": "InstanceId",
+                    "Value": "i-0123456789abcdef0"
+                }
+            ],
+            "Period": 300,
+            "Unit": "Percent",
+            "EvaluationPeriods": 3,
+            "DatapointsToAlarm": 3,
+            "Threshold": 80.0,
+            "ComparisonOperator": "GreaterThanThreshold",
+            "StateTransitionedTimestamp": "2026-10-02T16:24:05.250000+05:30"
+        },
+        {
+            "AlarmName": "conquest-test-lambda-error-rate",
+            "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-lambda-error-rate",
+            "AlarmConfigurationUpdatedTimestamp": "2026-10-02T16:24:16.612000+05:30",
+            "ActionsEnabled": true,
+            "OKActions": [],
+            "AlarmActions": [],
+            "InsufficientDataActions": [],
+            "StateValue": "INSUFFICIENT_DATA",
+            "StateReason": "Unchecked: Initial alarm creation",
+            "StateUpdatedTimestamp": "2026-10-02T16:24:16.612000+05:30",
+            "Dimensions": [],
+            "EvaluationPeriods": 3,
+            "DatapointsToAlarm": 3,
+            "Threshold": 5.0,
+            "ComparisonOperator": "GreaterThanThreshold",
+            "Metrics": [
+                {
+                    "Id": "m1",
+                    "MetricStat": {
+                        "Metric": {
+                            "Namespace": "AWS/Lambda",
+                            "MetricName": "Errors",
+                            "Dimensions": [
+                                {
+                                    "Name": "FunctionName",
+                                    "Value": "test-fn"
+                                }
+                            ]
+                        },
+                        "Period": 60,
+                        "Stat": "Sum"
+                    },
+                    "ReturnData": false
+                },
+                {
+                    "Id": "m2",
+                    "MetricStat": {
+                        "Metric": {
+                            "Namespace": "AWS/Lambda",
+                            "MetricName": "Invocations",
+                            "Dimensions": [
+                                {
+                                    "Name": "FunctionName",
+                                    "Value": "test-fn"
+                                }
+                            ]
+                        },
+                        "Period": 60,
+                        "Stat": "Sum"
+                    },
+                    "ReturnData": false
+                },
+                {
+                    "Id": "e1",
+                    "Expression": "m1 / m2 * 100",
+                    "Label": "Error rate",
+                    "ReturnData": true
+                }
+            ],
+            "StateTransitionedTimestamp": "2026-10-02T16:24:16.612000+05:30"
+        },
+        {
+            "AlarmName": "conquest-test-lambda-errors",
+            "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-lambda-errors",
+            "AlarmConfigurationUpdatedTimestamp": "2026-10-02T16:24:08.491000+05:30",
+            "ActionsEnabled": true,
+            "OKActions": [],
+            "AlarmActions": [],
+            "InsufficientDataActions": [],
+            "StateValue": "INSUFFICIENT_DATA",
+            "StateReason": "Unchecked: Initial alarm creation",
+            "StateUpdatedTimestamp": "2026-10-02T16:24:08.491000+05:30",
+            "MetricName": "Errors",
+            "Namespace": "AWS/Lambda",
+            "Statistic": "Sum",
+            "Dimensions": [
+                {
+                    "Name": "FunctionName",
+                    "Value": "test-fn"
+                }
+            ],
+            "Period": 60,
+            "EvaluationPeriods": 1,
+            "Threshold": 0.0,
+            "ComparisonOperator": "GreaterThanThreshold",
+            "StateTransitionedTimestamp": "2026-10-02T16:24:08.491000+05:30"
+        },
+        {
+            "AlarmName": "conquest-test-rds-free-storage",
+            "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-rds-free-storage",
+            "AlarmConfigurationUpdatedTimestamp": "2026-10-02T16:24:06.877000+05:30",
+            "ActionsEnabled": true,
+            "OKActions": [],
+            "AlarmActions": [],
+            "InsufficientDataActions": [],
+            "StateValue": "INSUFFICIENT_DATA",
+            "StateReason": "Unchecked: Initial alarm creation",
+            "StateUpdatedTimestamp": "2026-10-02T16:24:06.877000+05:30",
+            "MetricName": "FreeStorageSpace",
+            "Namespace": "AWS/RDS",
+            "Statistic": "Minimum",
+            "Dimensions": [
+                {
+                    "Name": "DBInstanceIdentifier",
+                    "Value": "test-db"
+                }
+            ],
+            "Period": 300,
+            "EvaluationPeriods": 1,
+            "Threshold": 5000000000.0,
+            "ComparisonOperator": "LessThanThreshold",
+            "TreatMissingData": "breaching",
+            "StateTransitionedTimestamp": "2026-10-02T16:24:06.877000+05:30"
+        },
+        {
+            "AlarmName": "conquest-test-sqs-age",
+            "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-sqs-age",
+            "AlarmConfigurationUpdatedTimestamp": "2026-10-02T16:24:13.466000+05:30",
+            "ActionsEnabled": true,
+            "OKActions": [],
+            "AlarmActions": [],
+            "InsufficientDataActions": [],
+            "StateValue": "INSUFFICIENT_DATA",
+            "StateReason": "Unchecked: Initial alarm creation",
+            "StateUpdatedTimestamp": "2026-10-02T16:24:13.466000+05:30",
+            "MetricName": "ApproximateAgeOfOldestMessage",
+            "Namespace": "AWS/SQS",
+            "Statistic": "Maximum",
+            "Dimensions": [
+                {
+                    "Name": "QueueName",
+                    "Value": "test-queue"
+                }
+            ],
+            "Period": 300,
+            "EvaluationPeriods": 1,
+            "Threshold": 600.0,
+            "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+            "StateTransitionedTimestamp": "2026-10-02T16:24:13.466000+05:30"
+        }
+    ],
+    "CompositeAlarms": [
+        {
+            "ActionsEnabled": true,
+            "AlarmActions": [],
+            "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-composite",
+            "AlarmConfigurationUpdatedTimestamp": "2026-10-02T16:24:18.250000+05:30",
+            "AlarmName": "conquest-test-composite",
+            "AlarmRule": "ALARM(\"conquest-test-ec2-cpu-high\") AND ALARM(\"conquest-test-lambda-errors\")",
+            "InsufficientDataActions": [],
+            "OKActions": [],
+            "StateReason": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-composite was created and its alarm rule evaluates to OK",
+            "StateReasonData": "{\"triggeringAlarms\":[{\"arn\":\"arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-lambda-errors\",\"state\":{\"value\":\"INSUFFICIENT_DATA\",\"timestamp\":\"2026-10-02T10:54:08.491+0000\"}},{\"arn\":\"arn:aws:cloudwatch:us-east-1:123456789012:alarm:conquest-test-ec2-cpu-high\",\"state\":{\"value\":\"INSUFFICIENT_DATA\",\"timestamp\":\"2026-10-02T10:54:05.250+0000\"}}]}",
+            "StateUpdatedTimestamp": "2026-10-02T16:24:18.250000+05:30",
+            "StateValue": "OK",
+            "StateTransitionedTimestamp": "2026-10-02T16:24:18.250000+05:30"
+        }
+    ]
+}

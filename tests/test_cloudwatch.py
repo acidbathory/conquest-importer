@@ -348,3 +348,33 @@ def test_generated_terraform_validates(tmp_path: Path) -> None:
         [terraform, "validate", "-no-color"], cwd=out, capture_output=True, text=True, check=False
     )
     assert check.returncode == 0, check.stdout + check.stderr
+
+
+# --- real AWS export ---------------------------------------------------------------------------
+
+REAL = ROOT / "fixtures" / "cloudwatch-real"
+
+
+def test_real_aws_export_converts_as_expected(tmp_path: Path) -> None:
+    result = CliRunner().invoke(
+        app, ["convert", "--source", "cloudwatch", "--in", str(REAL), "--out", str(tmp_path)]
+    )
+    assert result.exit_code == 0, result.output
+    irs = {
+        json.loads(p.read_text())["name"]: json.loads(p.read_text())
+        for p in (tmp_path / "ir").glob("*.json")
+    }
+    assert len(irs) == 9
+    assert {n: v["confidence"] for n, v in irs.items()} == {
+        "conquest-test-ec2-cpu-high": "approximate",
+        "conquest-test-rds-free-storage": "approximate",
+        "conquest-test-lambda-errors": "approximate",
+        "conquest-test-connections-3of5": "approximate",
+        "conquest-test-alb-latency-p99": "manual",
+        "conquest-test-sqs-age": "approximate",
+        "conquest-test-custom-namespace": "manual",
+        "conquest-test-lambda-error-rate": "approximate",
+        "conquest-test-composite": "unsupported",
+    }
+    assert len(list((tmp_path / "nerdgraph").glob("*.json"))) == 6
+    assert "926634327293" not in (REAL / "describe-alarms.json").read_text()

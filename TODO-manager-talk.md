@@ -9,7 +9,7 @@ A tool that reads a customer's Datadog monitors and produces the equivalent New 
 - It has **not** been run against a real Datadog account, because of the blocker below.
 
 ## Update: CloudWatch is now supported too (no network block)
-`importer convert --source cloudwatch --in describe-alarms.json` converts CloudWatch alarms. On 23 synthetic alarms, 15 convert (65%); the rest are labelled with reasons. Proven in the New Relic sandbox through both the API and Terraform routes (created, read back, no drift, cleaned up). CloudWatch is the better customer story: many customers use it, and periods/evaluation periods map almost directly. Still synthetic input and unverified AWS metric names (the sandbox has no AWS data).
+`importer convert --source cloudwatch --in describe-alarms.json` converts CloudWatch alarms. On 23 synthetic alarms, 15 convert (65%); the rest are labelled with reasons. Proven in the New Relic sandbox through both the API and Terraform routes (created, read back, no drift, cleaned up). CloudWatch is the better customer story: many customers use it, and periods/evaluation periods map almost directly. Also tested on a genuine `aws cloudwatch describe-alarms` export (9 test alarms created in a real AWS account, converted, then deleted): it parsed without changes. AWS metric names are still unverified (the sandbox has no AWS data).
 
 ## The blocker (Datadog only)
 `api.datadoghq.com` is blocked on our network (Cloudflare Gateway shows "This website is blocked"). I can't create a Datadog trial's monitors or read them back until it is allowed.
