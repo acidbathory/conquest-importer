@@ -1,0 +1,742 @@
+{
+  "MetricAlarms": [
+    {
+      "AlarmName": "ec2-cpu-high",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:ec2-cpu-high",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 3,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/EC2",
+      "MetricName": "CPUUtilization",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "InstanceId",
+          "Value": "i-0abc123def4567890"
+        }
+      ],
+      "Period": 300,
+      "DatapointsToAlarm": 3,
+      "Threshold": 80.0,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "Unit": "Percent"
+    },
+    {
+      "AlarmName": "ec2-status-check-failed",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:ec2-status-check-failed",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 2,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/EC2",
+      "MetricName": "StatusCheckFailed",
+      "Statistic": "Maximum",
+      "Dimensions": [
+        {
+          "Name": "InstanceId",
+          "Value": "i-0abc123def4567890"
+        }
+      ],
+      "Period": 60,
+      "Threshold": 1.0,
+      "ComparisonOperator": "GreaterThanOrEqualToThreshold"
+    },
+    {
+      "AlarmName": "rds-cpu-high",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:rds-cpu-high",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 2,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/RDS",
+      "MetricName": "CPUUtilization",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "DBInstanceIdentifier",
+          "Value": "prod-db-1"
+        }
+      ],
+      "Period": 300,
+      "Threshold": 90.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "rds-free-storage-low",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:rds-free-storage-low",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 1,
+      "TreatMissingData": "breaching",
+      "Namespace": "AWS/RDS",
+      "MetricName": "FreeStorageSpace",
+      "Statistic": "Minimum",
+      "Dimensions": [
+        {
+          "Name": "DBInstanceIdentifier",
+          "Value": "prod-db-1"
+        }
+      ],
+      "Period": 300,
+      "Threshold": 5000000000.0,
+      "ComparisonOperator": "LessThanThreshold"
+    },
+    {
+      "AlarmName": "rds-connections-3-of-5",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:rds-connections-3-of-5",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 5,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/RDS",
+      "MetricName": "DatabaseConnections",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "DBInstanceIdentifier",
+          "Value": "prod-db-1"
+        }
+      ],
+      "Period": 60,
+      "DatapointsToAlarm": 3,
+      "Threshold": 500.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "alb-5xx-any",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:alb-5xx-any",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 5,
+      "TreatMissingData": "notBreaching",
+      "Namespace": "AWS/ApplicationELB",
+      "MetricName": "HTTPCode_Target_5XX_Count",
+      "Statistic": "Sum",
+      "Dimensions": [
+        {
+          "Name": "LoadBalancer",
+          "Value": "app/my-alb/50dc6c495c0c9188"
+        }
+      ],
+      "Period": 60,
+      "DatapointsToAlarm": 1,
+      "Threshold": 10.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "alb-latency-p99",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:alb-latency-p99",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 3,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/ApplicationELB",
+      "MetricName": "TargetResponseTime",
+      "ExtendedStatistic": "p99",
+      "Dimensions": [
+        {
+          "Name": "LoadBalancer",
+          "Value": "app/my-alb/50dc6c495c0c9188"
+        }
+      ],
+      "Period": 60,
+      "Threshold": 2.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "lambda-errors",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:lambda-errors",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 1,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/Lambda",
+      "MetricName": "Errors",
+      "Statistic": "Sum",
+      "Dimensions": [
+        {
+          "Name": "FunctionName",
+          "Value": "checkout"
+        }
+      ],
+      "Period": 60,
+      "Threshold": 0.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "lambda-duration-high",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:lambda-duration-high",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 2,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/Lambda",
+      "MetricName": "Duration",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "FunctionName",
+          "Value": "checkout"
+        }
+      ],
+      "Period": 300,
+      "Threshold": 3000.0,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "Unit": "Milliseconds"
+    },
+    {
+      "AlarmName": "dynamodb-throttled",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:dynamodb-throttled",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 1,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/DynamoDB",
+      "MetricName": "ThrottledRequests",
+      "Statistic": "Sum",
+      "Dimensions": [
+        {
+          "Name": "TableName",
+          "Value": "orders"
+        },
+        {
+          "Name": "Operation",
+          "Value": "PutItem"
+        }
+      ],
+      "Period": 60,
+      "Threshold": 1.0,
+      "ComparisonOperator": "GreaterThanOrEqualToThreshold"
+    },
+    {
+      "AlarmName": "sqs-oldest-message",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:sqs-oldest-message",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 1,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/SQS",
+      "MetricName": "ApproximateAgeOfOldestMessage",
+      "Statistic": "Maximum",
+      "Dimensions": [
+        {
+          "Name": "QueueName",
+          "Value": "jobs"
+        }
+      ],
+      "Period": 300,
+      "Threshold": 600.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "ecs-service-cpu",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:ecs-service-cpu",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 5,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/ECS",
+      "MetricName": "CPUUtilization",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "ClusterName",
+          "Value": "prod"
+        },
+        {
+          "Name": "ServiceName",
+          "Value": "api"
+        }
+      ],
+      "Period": 60,
+      "Threshold": 85.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "lambda-error-rate",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:lambda-error-rate",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 3,
+      "TreatMissingData": "missing",
+      "Metrics": [
+        {
+          "Id": "m1",
+          "MetricStat": {
+            "Metric": {
+              "Namespace": "AWS/Lambda",
+              "MetricName": "Errors",
+              "Dimensions": [
+                {
+                  "Name": "FunctionName",
+                  "Value": "checkout"
+                }
+              ]
+            },
+            "Period": 60,
+            "Stat": "Sum"
+          },
+          "ReturnData": false
+        },
+        {
+          "Id": "m2",
+          "MetricStat": {
+            "Metric": {
+              "Namespace": "AWS/Lambda",
+              "MetricName": "Invocations",
+              "Dimensions": [
+                {
+                  "Name": "FunctionName",
+                  "Value": "checkout"
+                }
+              ]
+            },
+            "Period": 60,
+            "Stat": "Sum"
+          },
+          "ReturnData": false
+        },
+        {
+          "Id": "e1",
+          "Expression": "m1 / m2 * 100",
+          "Label": "Error rate",
+          "ReturnData": true
+        }
+      ],
+      "DatapointsToAlarm": 3,
+      "Threshold": 5.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "ec2-network-in",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:ec2-network-in",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 2,
+      "TreatMissingData": "missing",
+      "Metrics": [
+        {
+          "Id": "m1",
+          "MetricStat": {
+            "Metric": {
+              "Namespace": "AWS/EC2",
+              "MetricName": "NetworkIn",
+              "Dimensions": [
+                {
+                  "Name": "InstanceId",
+                  "Value": "i-0abc123def4567890"
+                }
+              ]
+            },
+            "Period": 300,
+            "Stat": "Average"
+          },
+          "ReturnData": true
+        }
+      ],
+      "Threshold": 100000000.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "lambda-fill-function",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:lambda-fill-function",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 1,
+      "TreatMissingData": "missing",
+      "Metrics": [
+        {
+          "Id": "m1",
+          "MetricStat": {
+            "Metric": {
+              "Namespace": "AWS/Lambda",
+              "MetricName": "Errors",
+              "Dimensions": [
+                {
+                  "Name": "FunctionName",
+                  "Value": "checkout"
+                }
+              ]
+            },
+            "Period": 60,
+            "Stat": "Sum"
+          },
+          "ReturnData": false
+        },
+        {
+          "Id": "e1",
+          "Expression": "FILL(m1, 0)",
+          "ReturnData": true
+        }
+      ],
+      "Threshold": 1.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "ec2-cpu-anomaly",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:ec2-cpu-anomaly",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 2,
+      "TreatMissingData": "missing",
+      "Metrics": [
+        {
+          "Id": "m1",
+          "ReturnData": true,
+          "MetricStat": {
+            "Metric": {
+              "Namespace": "AWS/EC2",
+              "MetricName": "CPUUtilization",
+              "Dimensions": [
+                {
+                  "Name": "InstanceId",
+                  "Value": "i-0abc"
+                }
+              ]
+            },
+            "Period": 300,
+            "Stat": "Average"
+          }
+        },
+        {
+          "Id": "ad1",
+          "Expression": "ANOMALY_DETECTION_BAND(m1, 2)",
+          "ReturnData": true
+        }
+      ],
+      "ThresholdMetricId": "ad1",
+      "ComparisonOperator": "LessThanLowerOrGreaterThanUpperThreshold"
+    },
+    {
+      "AlarmName": "ec2-high-resolution",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:ec2-high-resolution",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 3,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/EC2",
+      "MetricName": "CPUUtilization",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "InstanceId",
+          "Value": "i-0abc"
+        }
+      ],
+      "Period": 10,
+      "Threshold": 90.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "s3-daily-size",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:s3-daily-size",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 1,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/S3",
+      "MetricName": "BucketSizeBytes",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "BucketName",
+          "Value": "media"
+        },
+        {
+          "Name": "StorageType",
+          "Value": "StandardStorage"
+        }
+      ],
+      "Period": 86400,
+      "Threshold": 1000000000000.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "custom-app-queue-depth",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:custom-app-queue-depth",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 1,
+      "TreatMissingData": "missing",
+      "Namespace": "Custom/MyApp",
+      "MetricName": "QueueDepth",
+      "Statistic": "Average",
+      "Period": 60,
+      "Threshold": 100.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "actions-disabled-with-extras",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:actions-disabled-with-extras",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": false,
+      "OKActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "AlarmActions": [],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 1,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/SNS",
+      "MetricName": "NumberOfNotificationsFailed",
+      "Statistic": "Sum",
+      "Dimensions": [
+        {
+          "Name": "TopicName",
+          "Value": "orders"
+        }
+      ],
+      "Period": 300,
+      "Threshold": 0.0,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "EvaluateLowSampleCountPercentile": "ignore"
+    },
+    {
+      "AlarmName": "Hostile \"name\" ${evil} %{if true} with\nnewline",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:Hostile \"name\" ${evil} %{if true} with\nnewline",
+      "AlarmDescription": "Hostile text: ${evil} \"quotes\" `ticks` | pipes",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 1,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/EC2",
+      "MetricName": "CPUUtilization",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "InstanceId",
+          "Value": "i-x' OR 1=1 --"
+        }
+      ],
+      "Period": 60,
+      "Threshold": 50.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    },
+    {
+      "AlarmName": "dimension-with-slash-name",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:dimension-with-slash-name",
+      "AlarmDescription": "Synthetic sample alarm. Safe to ignore.",
+      "AlarmConfigurationUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "ActionsEnabled": true,
+      "OKActions": [],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "InsufficientDataActions": [],
+      "StateValue": "OK",
+      "StateReason": "Threshold Crossings: synthetic",
+      "StateUpdatedTimestamp": "2026-10-01T12:00:00.000000+00:00",
+      "EvaluationPeriods": 1,
+      "TreatMissingData": "missing",
+      "Namespace": "AWS/EC2",
+      "MetricName": "CPUUtilization",
+      "Statistic": "Average",
+      "Dimensions": [
+        {
+          "Name": "Bad/Dim",
+          "Value": "x"
+        }
+      ],
+      "Period": 60,
+      "Threshold": 50.0,
+      "ComparisonOperator": "GreaterThanThreshold"
+    }
+  ],
+  "CompositeAlarms": [
+    {
+      "AlarmName": "ec2-and-rds-both-bad",
+      "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:ec2-and-rds-both-bad",
+      "AlarmDescription": "Synthetic composite",
+      "ActionsEnabled": true,
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:123456789012:ops-alerts"
+      ],
+      "AlarmRule": "ALARM(\"ec2-cpu-high\") AND ALARM(\"rds-cpu-high\")",
+      "StateValue": "OK"
+    }
+  ]
+}

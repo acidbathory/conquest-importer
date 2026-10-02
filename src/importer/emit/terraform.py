@@ -6,11 +6,13 @@ from the environment.
 """
 
 from importer.emit.common import (
-    AGGREGATION_DELAY_SECONDS,
-    AGGREGATION_WINDOW_SECONDS,
+    RESOURCE_PREFIXES,
+    aggregation_delay,
+    aggregation_window,
     condition_name,
     emittable_window,
     nrql_for,
+    source_description,
 )
 from importer.models.ir import IRMonitor
 
@@ -54,16 +56,17 @@ def hcl_string(value: str) -> str:
 
 def resource_block(monitor: IRMonitor) -> str:
     window = emittable_window(monitor)
+    prefix = RESOURCE_PREFIXES.get(monitor.source_system, "src")
     lines = [
-        f'resource "newrelic_nrql_alert_condition" "dd_{monitor.source_id}" {{',
+        f'resource "newrelic_nrql_alert_condition" "{prefix}_{monitor.source_id}" {{',
         "  policy_id = newrelic_alert_policy.imported.id",
         f"  name      = {hcl_string(condition_name(monitor.name))}",
-        f"  description = {hcl_string(f'Imported from Datadog monitor {monitor.source_id}')}",
+        f"  description = {hcl_string(source_description(monitor))}",
         '  type      = "static"',
         "  enabled   = false",
-        f"  aggregation_window = {AGGREGATION_WINDOW_SECONDS}",
+        f"  aggregation_window = {aggregation_window(monitor)}",
         '  aggregation_method = "event_flow"',
-        f"  aggregation_delay  = {AGGREGATION_DELAY_SECONDS}",
+        f"  aggregation_delay  = {aggregation_delay(monitor)}",
         "",
         "  nrql {",
         f"    query = {hcl_string(nrql_for(monitor))}",
@@ -76,7 +79,7 @@ def resource_block(monitor: IRMonitor) -> str:
             f"    operator              = {hcl_string(t.operator.value)}",
             f"    threshold             = {t.value!r}",
             f"    threshold_duration    = {window}",
-            '    threshold_occurrences = "all"',
+            f'    threshold_occurrences = "{monitor.signal.occurrences.value}"',
             "  }",
         ]
     if monitor.no_data.notify and monitor.no_data.timeout_minutes:

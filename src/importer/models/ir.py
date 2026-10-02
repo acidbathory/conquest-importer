@@ -126,10 +126,18 @@ class HeartbeatSignal(BaseModel):
     nr_target: NrTarget
 
 
+class Occurrences(StrEnum):
+    ALL = "all"  # every evaluation window in the duration must breach
+    AT_LEAST_ONCE = "at_least_once"  # one breaching window in the duration is enough
+
+
 class Signal(BaseModel):
     kind: SignalKind
     raw_query: str
-    window_seconds: int | None = None
+    window_seconds: int | None = None  # how long a breach must last
+    aggregation_window_seconds: int | None = None  # size of each evaluated datapoint
+    aggregation_delay_seconds: int | None = None  # how long to wait for late data
+    occurrences: Occurrences = Occurrences.ALL
     metric: MetricSignal | None = None
     count: CountSignal | None = None
     heartbeat: HeartbeatSignal | None = None
@@ -154,6 +162,7 @@ class Notification(BaseModel):
 class IRMonitor(BaseModel):
     source_system: str = "datadog"
     source_id: int
+    source_key: str = ""  # original identifier when it is not an integer (for example an ARN)
     source_type: str
     name: str
     tags: list[str] = []

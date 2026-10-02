@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
 
@@ -22,6 +23,7 @@ from importer.emit.common import CannotEmit
 from importer.emit.nerdgraph import nerdgraph_payload
 from importer.emit.terraform import terraform_file
 from importer.extract.datadog import DatadogAPIError, DatadogClient, InvalidSiteError
+from importer.models.cloudwatch import load_alarms
 from importer.models.ir import Confidence, IRMonitor
 from importer.models.source import DatadogMonitor
 from importer.report import build_report
@@ -31,7 +33,30 @@ from importer.secrets import (
     RedactingFilter,
     require_env,
 )
+from importer.translate.cloudwatch import load_namespace_map, translate_alarm, translate_composite
 from importer.translate.monitors import load_metric_map, translate_monitor
+
+
+def _load_datadog(path: Path) -> list[IRMonitor]:
+    metric_map = load_metric_map()
+    return [
+        translate_monitor(DatadogMonitor.model_validate_json(p.read_text()), metric_map)
+        for p in sorted(path.glob("*.json"))
+    ]
+
+
+def _load_cloudwatch(path: Path) -> list[IRMonitor]:
+    prefixes = load_namespace_map()
+    metric, composite = load_alarms(path)
+    return [translate_alarm(a, prefixes) for a in metric] + [
+        translate_composite(c) for c in composite
+    ]
+
+
+LOADERS: dict[str, Callable[[Path], list[IRMonitor]]] = {
+    "datadog": _load_datadog,
+    "cloudwatch": _load_cloudwatch,
+}
 
 app = typer.Typer(
     help="Convert Datadog monitors to New Relic alert conditions.", no_args_is_help=True
@@ -50,19 +75,25 @@ def convert(
         Path, typer.Option("--in", help="Directory of extracted monitor JSON")
     ] = Path("out/datadog"),
     out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/converted"),
+    source_system: Annotated[
+        str, typer.Option("--source", help="datadog or cloudwatch")
+    ] = "datadog",
 ) -> None:
-    """Convert extracted monitors to IR, NerdGraph payloads, Terraform and a gap report.
+    """Convert extracted monitors or alarms to IR, NerdGraph payloads, Terraform and a report.
 
-    Offline and read-only: nothing is sent to New Relic.
+    For CloudWatch, --in is a file (or folder) holding the JSON from
+    `aws cloudwatch describe-alarms`. Offline and read-only: nothing is sent anywhere.
     """
-    metric_map = load_metric_map()
-    monitors = []
-    for path in sorted(source.glob("*.json")):
-        monitors.append(
-            translate_monitor(DatadogMonitor.model_validate_json(path.read_text()), metric_map)
-        )
+    if source_system not in LOADERS:
+        typer.echo(f"Error: --source must be one of {sorted(LOADERS)}", err=True)
+        raise typer.Exit(code=1)
+    try:
+        monitors = LOADERS[source_system](source)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error reading {source}: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
     if not monitors:
-        typer.echo(f"No monitor files found in {source}", err=True)
+        typer.echo(f"No monitors or alarms found in {source}", err=True)
         raise typer.Exit(code=1)
 
     (out / "ir").mkdir(parents=True, exist_ok=True)
@@ -90,7 +121,7 @@ def convert(
         (out / "ir" / f"{m.source_id}.json").write_text(m.model_dump_json(indent=2) + "\n")
         (out / "nerdgraph" / f"{m.source_id}.json").write_text(json.dumps(payload, indent=2) + "\n")
     (out / "main.tf").write_text(terraform_file(emitted))
-    report = build_report(final, {m.source_id for m in emitted})
+    report = build_report(final, {m.source_id for m in emitted}, source_system)
     (out / "report.md").write_text(report)
     typer.echo(f"Read {len(monitors)} monitors, emitted {len(emitted)}. See {out / 'report.md'}")
 

@@ -4,15 +4,26 @@ from collections import Counter
 
 from importer.models.ir import Confidence, IRMonitor
 
-GLOBAL_NOTES = [
-    "Datadog evaluates one value over the whole window (for example avg over 5 minutes). "
-    "The New Relic conditions evaluate 1-minute values and require a breach for the full "
-    "duration. The behaviour is close but not identical; review before enabling.",
+COMMON_NOTES = [
     "All conditions are created DISABLED. Enable them after review.",
     "Notification channels, handles and secrets are never migrated. Attach a workflow "
     "to the policy manually.",
     "Metric and tag mappings are unverified against a live New Relic account.",
 ]
+SOURCE_NOTES = {
+    "datadog": [
+        "Datadog evaluates one value over the whole window (for example avg over 5 minutes). "
+        "The New Relic conditions evaluate 1-minute values and require a breach for the full "
+        "duration. The behaviour is close but not identical; review before enabling.",
+    ],
+    "cloudwatch": [
+        "CloudWatch periods, evaluation periods and datapoints map directly to New Relic "
+        "aggregation windows and breach durations. 'M of N' alarms (0 < M < N) are approximated "
+        "as M consecutive breaches.",
+        "Metric names assume New Relic AWS Metric Streams (aws.<service>.<Metric>). Customers "
+        "using the older API-polling integration will have different names.",
+    ],
+}
 
 
 def md_cell(text: str, limit: int = 120) -> str:
@@ -23,7 +34,7 @@ def md_cell(text: str, limit: int = 120) -> str:
     return text
 
 
-def build_report(monitors: list[IRMonitor], emitted_ids: set[int]) -> str:
+def build_report(monitors: list[IRMonitor], emitted_ids: set[int], source: str = "datadog") -> str:
     counts = Counter(m.confidence for m in monitors)
     total = len(monitors)
     converted = len(emitted_ids)
@@ -37,7 +48,7 @@ def build_report(monitors: list[IRMonitor], emitted_ids: set[int]) -> str:
     ]
     lines += [f"| {c.value} | {counts[c]} |" for c in Confidence]
     lines += ["", "## Notes that apply to every converted monitor", ""]
-    lines += [f"- {n}" for n in GLOBAL_NOTES]
+    lines += [f"- {n}" for n in [*SOURCE_NOTES.get(source, []), *COMMON_NOTES]]
     lines += [
         "",
         "## Monitors",

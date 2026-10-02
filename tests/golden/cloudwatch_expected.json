@@ -1,0 +1,192 @@
+{
+  "ec2-cpu-high": {
+    "confidence": "approximate",
+    "nrql": "SELECT average(aws.ec2.CPUUtilization) FROM Metric WHERE aws.ec2.InstanceId = 'i-0abc123def4567890'",
+    "shape": {
+      "duration": 900,
+      "window": 300,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "ec2-status-check-failed": {
+    "confidence": "approximate",
+    "nrql": "SELECT max(aws.ec2.StatusCheckFailed) FROM Metric WHERE aws.ec2.InstanceId = 'i-0abc123def4567890'",
+    "shape": {
+      "duration": 120,
+      "window": 60,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "rds-cpu-high": {
+    "confidence": "approximate",
+    "nrql": "SELECT average(aws.rds.CPUUtilization) FROM Metric WHERE aws.rds.DBInstanceIdentifier = 'prod-db-1'",
+    "shape": {
+      "duration": 600,
+      "window": 300,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "rds-free-storage-low": {
+    "confidence": "approximate",
+    "nrql": "SELECT min(aws.rds.FreeStorageSpace) FROM Metric WHERE aws.rds.DBInstanceIdentifier = 'prod-db-1'",
+    "shape": {
+      "duration": 300,
+      "window": 300,
+      "occurrences": "ALL",
+      "expiration": true
+    }
+  },
+  "rds-connections-3-of-5": {
+    "confidence": "approximate",
+    "nrql": "SELECT average(aws.rds.DatabaseConnections) FROM Metric WHERE aws.rds.DBInstanceIdentifier = 'prod-db-1'",
+    "shape": {
+      "duration": 180,
+      "window": 60,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "alb-5xx-any": {
+    "confidence": "approximate",
+    "nrql": "SELECT sum(aws.applicationelb.HTTPCode_Target_5XX_Count) FROM Metric WHERE aws.applicationelb.LoadBalancer = 'app/my-alb/50dc6c495c0c9188'",
+    "shape": {
+      "duration": 300,
+      "window": 60,
+      "occurrences": "AT_LEAST_ONCE",
+      "expiration": false
+    }
+  },
+  "alb-latency-p99": {
+    "confidence": "manual",
+    "nrql": "not emitted: confidence is manual",
+    "shape": null
+  },
+  "lambda-errors": {
+    "confidence": "approximate",
+    "nrql": "SELECT sum(aws.lambda.Errors) FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
+    "shape": {
+      "duration": 60,
+      "window": 60,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "lambda-duration-high": {
+    "confidence": "approximate",
+    "nrql": "SELECT average(aws.lambda.Duration) FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
+    "shape": {
+      "duration": 600,
+      "window": 300,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "dynamodb-throttled": {
+    "confidence": "approximate",
+    "nrql": "SELECT sum(aws.dynamodb.ThrottledRequests) FROM Metric WHERE aws.dynamodb.TableName = 'orders' AND aws.dynamodb.Operation = 'PutItem'",
+    "shape": {
+      "duration": 60,
+      "window": 60,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "sqs-oldest-message": {
+    "confidence": "approximate",
+    "nrql": "SELECT max(aws.sqs.ApproximateAgeOfOldestMessage) FROM Metric WHERE aws.sqs.QueueName = 'jobs'",
+    "shape": {
+      "duration": 300,
+      "window": 300,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "ecs-service-cpu": {
+    "confidence": "approximate",
+    "nrql": "SELECT average(aws.ecs.CPUUtilization) FROM Metric WHERE aws.ecs.ClusterName = 'prod' AND aws.ecs.ServiceName = 'api'",
+    "shape": {
+      "duration": 300,
+      "window": 60,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "lambda-error-rate": {
+    "confidence": "approximate",
+    "nrql": "SELECT sum(aws.lambda.Errors) / sum(aws.lambda.Invocations) * 100 FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
+    "shape": {
+      "duration": 180,
+      "window": 60,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "ec2-network-in": {
+    "confidence": "approximate",
+    "nrql": "SELECT average(aws.ec2.NetworkIn) FROM Metric WHERE aws.ec2.InstanceId = 'i-0abc123def4567890'",
+    "shape": {
+      "duration": 600,
+      "window": 300,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "lambda-fill-function": {
+    "confidence": "manual",
+    "nrql": "not emitted: confidence is manual",
+    "shape": null
+  },
+  "ec2-cpu-anomaly": {
+    "confidence": "manual",
+    "nrql": "not emitted: confidence is manual",
+    "shape": null
+  },
+  "ec2-high-resolution": {
+    "confidence": "manual",
+    "nrql": "not emitted: confidence is manual",
+    "shape": null
+  },
+  "s3-daily-size": {
+    "confidence": "approximate",
+    "nrql": "not emitted: aggregation window 86400s is outside 30s-1h",
+    "shape": null
+  },
+  "custom-app-queue-depth": {
+    "confidence": "manual",
+    "nrql": "not emitted: confidence is manual",
+    "shape": null
+  },
+  "actions-disabled-with-extras": {
+    "confidence": "approximate",
+    "nrql": "SELECT sum(aws.sns.NumberOfNotificationsFailed) FROM Metric WHERE aws.sns.TopicName = 'orders'",
+    "shape": {
+      "duration": 300,
+      "window": 300,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "Hostile \"name\" ${evil} %{if true} with\nnewline": {
+    "confidence": "approximate",
+    "nrql": "SELECT average(aws.ec2.CPUUtilization) FROM Metric WHERE aws.ec2.InstanceId = 'i-x\\' OR 1=1 --'",
+    "shape": {
+      "duration": 60,
+      "window": 60,
+      "occurrences": "ALL",
+      "expiration": false
+    }
+  },
+  "dimension-with-slash-name": {
+    "confidence": "manual",
+    "nrql": "not emitted: confidence is manual",
+    "shape": null
+  },
+  "ec2-and-rds-both-bad": {
+    "confidence": "unsupported",
+    "nrql": "not emitted: confidence is unsupported",
+    "shape": null
+  }
+}

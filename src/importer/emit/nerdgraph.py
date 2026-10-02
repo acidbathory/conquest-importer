@@ -7,11 +7,12 @@ variables, never formatted into the query text.
 from typing import Any
 
 from importer.emit.common import (
-    AGGREGATION_DELAY_SECONDS,
-    AGGREGATION_WINDOW_SECONDS,
+    aggregation_delay,
+    aggregation_window,
     condition_name,
     emittable_window,
     nrql_for,
+    source_description,
 )
 from importer.models.ir import IRMonitor
 
@@ -31,13 +32,13 @@ def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
     window = emittable_window(monitor)
     condition: dict[str, Any] = {
         "name": condition_name(monitor.name),
-        "description": f"Imported from Datadog monitor {monitor.source_id}",
+        "description": source_description(monitor),
         "enabled": False,  # imported disabled; a human enables after review
         "nrql": {"query": nrql_for(monitor)},
         "signal": {
-            "aggregationWindow": AGGREGATION_WINDOW_SECONDS,
+            "aggregationWindow": aggregation_window(monitor),
             "aggregationMethod": "EVENT_FLOW",
-            "aggregationDelay": AGGREGATION_DELAY_SECONDS,
+            "aggregationDelay": aggregation_delay(monitor),
         },
         "valueFunction": "SINGLE_VALUE",
         "terms": [
@@ -46,7 +47,7 @@ def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
                 "operator": t.operator.value.upper(),
                 "threshold": t.value,
                 "thresholdDuration": window,
-                "thresholdOccurrences": "ALL",
+                "thresholdOccurrences": monitor.signal.occurrences.value.upper(),
             }
             for t in monitor.thresholds
         ],

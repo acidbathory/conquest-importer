@@ -42,6 +42,16 @@ Datadog JSON -> DatadogMonitor -> [translate] -> IRMonitor -> [emit] -> NerdGrap
 - **Log / APM count:** `logs("k:v -k:v k:v*")` and `trace-analytics(...)` with `rollup("count")`, optional `by(...)`.
 - **Service check:** `"datadog.agent.up".over("*")` becomes a heartbeat (count of agent samples plus signal-loss expiration).
 
+## CloudWatch (second source)
+Input is the JSON from `aws cloudwatch describe-alarms` (a file or folder); no AWS credentials are handled. Mapping:
+- **Period / EvaluationPeriods / DatapointsToAlarm** become the aggregation window, the breach duration and the occurrences setting. N of N is `all`, 1 of N is `at_least_once` (both exact); other M of N is approximated as M consecutive breaches and flagged.
+- **Statistic** Average/Sum/Minimum/Maximum are supported. Percentiles, SampleCount and anomaly detection are manual.
+- **Metric names** follow New Relic AWS Metric Streams (`aws.<service>.<Metric>`, dimensions `aws.<service>.<Dimension>`) via `cloudwatch_map.json`. Unverified: the sandbox held no AWS data.
+- **Metric math:** arithmetic over metrics with the same period, statistic and dimensions. Functions (FILL, RATE, ...) are manual.
+- **TreatMissingData=breaching** becomes expiration that opens a violation; other modes are flagged.
+- **Composite alarms** are unsupported; alarm actions (SNS) are listed, never migrated.
+- `source_id` is a stable integer derived from the alarm ARN; the original is kept in `source_key`.
+
 ## Known gaps (prototype)
 Anomaly/forecast/outlier, composite, SLO/process/other types, non-count log rollups, OR in search, recovery thresholds, negated metric scopes, unit conversion inside formulas, notification channels, dashboards.
 
