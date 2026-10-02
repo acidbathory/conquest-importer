@@ -8,6 +8,7 @@ from the environment.
 from importer.emit.common import (
     AGGREGATION_DELAY_SECONDS,
     AGGREGATION_WINDOW_SECONDS,
+    condition_name,
     emittable_window,
     nrql_for,
 )
@@ -56,7 +57,7 @@ def resource_block(monitor: IRMonitor) -> str:
     lines = [
         f'resource "newrelic_nrql_alert_condition" "dd_{monitor.source_id}" {{',
         "  policy_id = newrelic_alert_policy.imported.id",
-        f"  name      = {hcl_string(monitor.name)}",
+        f"  name      = {hcl_string(condition_name(monitor.name))}",
         f"  description = {hcl_string(f'Imported from Datadog monitor {monitor.source_id}')}",
         '  type      = "static"',
         "  enabled   = false",

@@ -161,3 +161,13 @@ def test_end_to_end_on_sample_definitions(tmp_path: Path) -> None:
     assert "Monitors read: **20**" in report
     for c in ("exact", "approximate", "manual", "unsupported"):
         assert f"| {c} |" in report
+
+
+def test_condition_name_removes_control_characters_and_is_bounded() -> None:
+    from importer.emit.common import MAX_NAME_LENGTH, condition_name
+
+    assert condition_name("a\nb\tc\x1b[31m d") == "abc[31m d"
+    assert len(condition_name("x" * 500)) == MAX_NAME_LENGTH
+    ir = convert(name="Line one\nline two")
+    assert nerdgraph_payload(ir)["variables"]["condition"]["name"] == "Line oneline two"
+    assert '"Line oneline two"' in resource_block(ir)

@@ -94,7 +94,7 @@ def load_plan(ir_dir: Path) -> Plan:
         items.append(
             PlanItem(
                 source_id=monitor.source_id,
-                name=monitor.name,
+                name=payload["variables"]["condition"]["name"],
                 nrql=payload["variables"]["condition"]["nrql"]["query"],
                 payload=payload,
             )

@@ -9,6 +9,7 @@ from typing import Any
 from importer.emit.common import (
     AGGREGATION_DELAY_SECONDS,
     AGGREGATION_WINDOW_SECONDS,
+    condition_name,
     emittable_window,
     nrql_for,
 )
@@ -29,7 +30,7 @@ MUTATION = (
 def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
     window = emittable_window(monitor)
     condition: dict[str, Any] = {
-        "name": monitor.name,
+        "name": condition_name(monitor.name),
         "description": f"Imported from Datadog monitor {monitor.source_id}",
         "enabled": False,  # imported disabled; a human enables after review
         "nrql": {"query": nrql_for(monitor)},

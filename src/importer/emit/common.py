@@ -12,6 +12,15 @@ MAX_DURATION_SECONDS = 86400
 EMITTABLE_KINDS = (SignalKind.METRIC, SignalKind.LOG, SignalKind.APM, SignalKind.HEARTBEAT)
 
 
+MAX_NAME_LENGTH = 128
+
+
+def condition_name(name: str) -> str:
+    """Name as it will be stored. New Relic drops control characters from names, so we remove
+    them ourselves: the name we send then equals the name stored, which keeps re-runs idempotent."""
+    return "".join(c for c in name if c.isprintable()).strip()[:MAX_NAME_LENGTH]
+
+
 class CannotEmit(ValueError):
     """The monitor cannot be emitted; the message is the reason."""
 
