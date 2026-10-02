@@ -1,0 +1,42 @@
+{
+  "id": 9000018,
+  "org_id": 1234567,
+  "name": "[sample] 18 Anomaly on CPU",
+  "type": "query alert",
+  "query": "avg(last_4h):anomalies(avg:system.cpu.user{*}, 'basic', 2, direction='both', alert_window='last_15m', interval=60, count_as_rate=false) >= 1",
+  "message": "Synthetic sample monitor. Safe to delete.",
+  "tags": [
+    "conquest-importer-sample"
+  ],
+  "options": {
+    "notify_audit": false,
+    "locked": false,
+    "timeout_h": 0,
+    "include_tags": true,
+    "require_full_window": true,
+    "new_host_delay": 300,
+    "notify_no_data": false,
+    "renotify_interval": 0,
+    "escalation_message": "",
+    "silenced": {},
+    "thresholds": {
+      "critical": 1,
+      "critical_recovery": 0
+    }
+  },
+  "multi": false,
+  "priority": null,
+  "created": "2026-10-01T12:00:00.000000+00:00",
+  "created_at": 1790856000000,
+  "modified": "2026-10-01T12:00:00.000000+00:00",
+  "deleted": null,
+  "creator": {
+    "name": "Sample User",
+    "handle": "sample@example.com",
+    "id": 1
+  },
+  "overall_state": "No Data",
+  "overall_state_modified": "2026-10-01T12:00:00.000000+00:00",
+  "matching_downtimes": [],
+  "restricted_roles": null
+}

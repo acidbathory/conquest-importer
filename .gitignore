@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+dist/
+*.egg-info/
+
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+*.tfvars
+*.tfstate*
+.terraform/
+
+# Generated output from real runs (fixtures are committed deliberately under tests/)
+out/
+
+# Local screenshots
+Screenshot*.png
