@@ -20,3 +20,7 @@ out/
 
 # Local screenshots
 Screenshot*.png
+
+# Terraform plan files and build artifacts from live tests
+tfplan
+*.zip

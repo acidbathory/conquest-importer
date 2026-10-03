@@ -50,6 +50,28 @@ Facts confirmed against real systems (not synthetic fixtures). Dates are 2026-10
 - NOT verified: a real run against an account (no AWS call was made by this feature yet), and that
   passing both alarm types returns both in one response.
 
+## Live end-to-end test, 2026-10-03 (AWS 926634327293 -> New Relic sandbox 8059020)
+Created in AWS by `scripts/live-test/aws` (Terraform, all `conquest-live-*`, tagged, state local):
+DynamoDB table, Lambda with X-Ray active tracing, IAM role, log group, 6 metric alarms, 1 composite
+alarm, 1 dashboard. Traffic: 8 ok invocations, 2 forced errors, 1 slow call, 3 custom data points.
+- `extract-cloudwatch` worked on its first real run (6 metric + 1 composite alarm, 1 dashboard).
+  The dashboard body as returned by AWS parsed correctly, including the `"."` shorthand.
+- Alerts: 7 alarms -> 4 converted (57%). Converted: DynamoDB writes, Lambda errors, Lambda
+  error-rate (metric math), Lambda duration 3-of-5. Not converted, as designed: p99 statistic,
+  custom namespace (no mapping), composite alarm.
+- Dashboard: 4 of 6 widgets converted; the custom-metric widget (no mapping) and the Logs Insights
+  widget became "Not migrated" placeholders.
+- `importer apply` created the 4 conditions (DISABLED) under the new policy "Conquest live test
+  (CloudWatch)"; read back from New Relic: all 4 present, all disabled.
+- The dashboard was created with `terraform apply` of the generated `dashboards.tf`; read back:
+  present and PRIVATE. (`importer` has no dashboard `apply` command yet.)
+- NOT YET: no metric data arrived in New Relic (0 points for the function and table) because the
+  Metric Streams pipeline (`ingest-setup`) was not deployed for this run. So the generated NRQL
+  and the Lambda metric naming are still unproven against data. Traces (X-Ray) have no converter.
+- Cleanup: AWS `terraform destroy` in `scripts/live-test/aws`; New Relic: delete the policy
+  "Conquest live test (CloudWatch)" (its conditions go with it) and the dashboard
+  `conquest-live-overview`. Only delete things named like that.
+
 ## Still unverified
 - Services other than DynamoDB (EC2, RDS, Lambda, ALB, SQS, ECS, ...): the EC2 instance was
   stopped and the Lambda functions idle, so they published no metrics during the test.
