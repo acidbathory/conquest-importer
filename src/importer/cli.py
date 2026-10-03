@@ -3,13 +3,12 @@
 import json
 import logging
 import os
-from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from importer.apply import (
+from importer.core.apply import (
     GuardError,
     NewRelicAPIError,
     NewRelicClient,
@@ -19,53 +18,26 @@ from importer.apply import (
     load_plan,
     printable,
 )
-from importer.emit.common import CannotEmit
-from importer.emit.ingest import IngestConfig, ingest_files
-from importer.emit.nerdgraph import nerdgraph_payload
-from importer.emit.terraform import terraform_file
-from importer.extract.datadog import DatadogAPIError, DatadogClient, InvalidSiteError
-from importer.models.cloudwatch import load_alarms
-from importer.models.ir import Confidence, IRMonitor
-from importer.models.source import DatadogMonitor
-from importer.report import build_report
-from importer.secrets import (
+from importer.core.emit.common import CannotEmit
+from importer.core.emit.nerdgraph import nerdgraph_payload
+from importer.core.emit.terraform import terraform_file
+from importer.core.ir import Confidence, IRMonitor
+from importer.core.report import build_report
+from importer.core.secrets import (
     DatadogCredentials,
     MissingSecretError,
     RedactingFilter,
     require_env,
 )
-from importer.translate.cloudwatch import (
-    alarm_namespaces,
-    load_namespace_map,
-    translate_alarm,
-    translate_composite,
-)
-from importer.translate.monitors import load_metric_map, translate_monitor
-
-
-def _load_datadog(path: Path) -> list[IRMonitor]:
-    metric_map = load_metric_map()
-    return [
-        translate_monitor(DatadogMonitor.model_validate_json(p.read_text()), metric_map)
-        for p in sorted(path.glob("*.json"))
-    ]
-
-
-def _load_cloudwatch(path: Path) -> list[IRMonitor]:
-    prefixes = load_namespace_map()
-    metric, composite = load_alarms(path)
-    return [translate_alarm(a, prefixes) for a in metric] + [
-        translate_composite(c) for c in composite
-    ]
-
-
-LOADERS: dict[str, Callable[[Path], list[IRMonitor]]] = {
-    "datadog": _load_datadog,
-    "cloudwatch": _load_cloudwatch,
-}
+from importer.sources import REGISTRY
+from importer.sources.cloudwatch.ingest import IngestConfig, ingest_files
+from importer.sources.cloudwatch.models import load_alarms
+from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
+from importer.sources.datadog.client import DatadogAPIError, DatadogClient, InvalidSiteError
 
 app = typer.Typer(
-    help="Convert Datadog monitors to New Relic alert conditions.", no_args_is_help=True
+    help="Convert observability alerts from other platforms to New Relic alert conditions.",
+    no_args_is_help=True,
 )
 
 
@@ -82,7 +54,7 @@ def convert(
     ] = Path("out/datadog"),
     out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/converted"),
     source_system: Annotated[
-        str, typer.Option("--source", help="datadog or cloudwatch")
+        str, typer.Option("--source", help="Source platform: " + ", ".join(sorted(REGISTRY)))
     ] = "datadog",
 ) -> None:
     """Convert extracted monitors or alarms to IR, NerdGraph payloads, Terraform and a report.
@@ -90,11 +62,11 @@ def convert(
     For CloudWatch, --in is a file (or folder) holding the JSON from
     `aws cloudwatch describe-alarms`. Offline and read-only: nothing is sent anywhere.
     """
-    if source_system not in LOADERS:
-        typer.echo(f"Error: --source must be one of {sorted(LOADERS)}", err=True)
+    if source_system not in REGISTRY:
+        typer.echo(f"Error: --source must be one of {sorted(REGISTRY)}", err=True)
         raise typer.Exit(code=1)
     try:
-        monitors = LOADERS[source_system](source)
+        monitors = REGISTRY[source_system].convert(source)
     except (OSError, ValueError) as exc:
         typer.echo(f"Error reading {source}: {printable(str(exc), 300)}", err=True)
         raise typer.Exit(code=1) from None

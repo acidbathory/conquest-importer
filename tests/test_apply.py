@@ -7,7 +7,8 @@ import pytest
 from pydantic import SecretStr
 from typer.testing import CliRunner
 
-from importer.apply import (
+from importer.cli import app
+from importer.core.apply import (
     GuardError,
     NewRelicAPIError,
     NewRelicClient,
@@ -16,7 +17,6 @@ from importer.apply import (
     load_plan,
     printable,
 )
-from importer.cli import app
 
 KEY = "NRAK-SECRET-KEY-123"
 FIXTURES = Path(__file__).parent / "fixtures" / "datadog"
@@ -228,7 +228,7 @@ def test_reads_are_retried() -> None:
     client = NewRelicClient(
         SecretStr(KEY), transport=httpx.MockTransport(handler), sleep=sleeps.append
     )
-    from importer.apply import get_account_name
+    from importer.core.apply import get_account_name
 
     assert get_account_name(client, 1) == "T"
     assert sleeps == [1.0, 2.0]
@@ -237,7 +237,7 @@ def test_reads_are_retried() -> None:
 def test_graphql_errors_are_raised_and_redacted() -> None:
     fake = FakeNewRelic()
     fake.graphql_error = f"bad credentials {KEY}"
-    from importer.apply import get_account_name
+    from importer.core.apply import get_account_name
 
     with pytest.raises(NewRelicAPIError) as info, client_for(fake) as client:
         get_account_name(client, 1)
@@ -249,7 +249,7 @@ def test_http_error_body_is_redacted() -> None:
         return httpx.Response(403, text=f"forbidden {KEY}")
 
     client = NewRelicClient(SecretStr(KEY), transport=httpx.MockTransport(handler))
-    from importer.apply import get_account_name
+    from importer.core.apply import get_account_name
 
     with pytest.raises(NewRelicAPIError) as info:
         get_account_name(client, 1)

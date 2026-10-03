@@ -19,11 +19,11 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, SecretStr
 
-from importer.emit.common import CannotEmit
-from importer.emit.nerdgraph import ACCOUNT_PLACEHOLDER, POLICY_PLACEHOLDER, nerdgraph_payload
-from importer.models.ir import IRMonitor
-from importer.secrets import redact
-from importer.tls import system_tls_context
+from importer.core.emit.common import CannotEmit
+from importer.core.emit.nerdgraph import ACCOUNT_PLACEHOLDER, POLICY_PLACEHOLDER, nerdgraph_payload
+from importer.core.ir import IRMonitor
+from importer.core.secrets import redact
+from importer.core.tls import system_tls_context
 
 log = logging.getLogger(__name__)
 

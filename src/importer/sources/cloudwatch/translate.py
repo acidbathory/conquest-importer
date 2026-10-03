@@ -10,14 +10,8 @@ import math
 import re
 from pathlib import Path
 
-from importer.emit.nrql import identifier
-from importer.models.cloudwatch import (
-    CloudWatchAlarm,
-    CompositeAlarm,
-    Dimension,
-    MetricDataQuery,
-)
-from importer.models.ir import (
+from importer.core.emit.nrql import identifier
+from importer.core.ir import (
     Aggregation,
     BinOp,
     Confidence,
@@ -37,6 +31,12 @@ from importer.models.ir import (
     SignalKind,
     TagFilter,
     Threshold,
+)
+from importer.sources.cloudwatch.models import (
+    CloudWatchAlarm,
+    CompositeAlarm,
+    Dimension,
+    MetricDataQuery,
 )
 
 NAMESPACE_MAP_PATH = Path(__file__).parent / "cloudwatch_map.json"

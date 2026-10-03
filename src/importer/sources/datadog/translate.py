@@ -10,8 +10,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, model_validator
 
-from importer.emit.nrql import TAG_ATTRIBUTES
-from importer.models.ir import (
+from importer.core.emit.nrql import TAG_ATTRIBUTES
+from importer.core.ir import (
     Confidence,
     CountSignal,
     HeartbeatSignal,
@@ -27,8 +27,8 @@ from importer.models.ir import (
     SignalKind,
     Threshold,
 )
-from importer.models.source import DatadogMonitor
-from importer.translate.queries import (
+from importer.sources.datadog.models import DatadogMonitor
+from importer.sources.datadog.queries import (
     UnsupportedQuery,
     parse_count_query,
     parse_metric_query,

@@ -6,7 +6,7 @@ variables, never formatted into the query text.
 
 from typing import Any
 
-from importer.emit.common import (
+from importer.core.emit.common import (
     aggregation_delay,
     aggregation_window,
     condition_name,
@@ -14,7 +14,7 @@ from importer.emit.common import (
     nrql_for,
     source_description,
 )
-from importer.models.ir import IRMonitor
+from importer.core.ir import IRMonitor
 
 POLICY_PLACEHOLDER = "POLICY_ID_PLACEHOLDER"
 ACCOUNT_PLACEHOLDER = "ACCOUNT_ID_PLACEHOLDER"

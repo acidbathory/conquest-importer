@@ -4,8 +4,8 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
-from importer.extract.datadog import DatadogAPIError, DatadogClient, InvalidSiteError
-from importer.secrets import DatadogCredentials
+from importer.core.secrets import DatadogCredentials
+from importer.sources.datadog.client import DatadogAPIError, DatadogClient, InvalidSiteError
 
 API_KEY = "api-key-SECRET-111"
 APP_KEY = "app-key-SECRET-222"

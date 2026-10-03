@@ -17,7 +17,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from importer.models.ir import (
+from importer.core.ir import (
     Aggregation,
     BinOp,
     CountFilter,

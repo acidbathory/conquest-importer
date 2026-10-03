@@ -16,9 +16,9 @@ from typing import Any
 
 import httpx
 
-from importer.models.source import DatadogMonitor
-from importer.secrets import DatadogCredentials, redact
-from importer.tls import system_tls_context
+from importer.core.secrets import DatadogCredentials, redact
+from importer.core.tls import system_tls_context
+from importer.sources.datadog.models import DatadogMonitor
 
 log = logging.getLogger(__name__)
 

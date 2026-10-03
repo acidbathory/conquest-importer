@@ -5,7 +5,7 @@ keys are written: the provider reads NEW_RELIC_API_KEY and NEW_RELIC_ACCOUNT_ID
 from the environment.
 """
 
-from importer.emit.common import (
+from importer.core.emit.common import (
     RESOURCE_PREFIXES,
     aggregation_delay,
     aggregation_window,
@@ -14,7 +14,7 @@ from importer.emit.common import (
     nrql_for,
     source_description,
 )
-from importer.models.ir import IRMonitor
+from importer.core.ir import IRMonitor
 
 HEADER = """terraform {
   required_providers {

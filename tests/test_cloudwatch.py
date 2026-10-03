@@ -9,12 +9,12 @@ import pytest
 from typer.testing import CliRunner
 
 from importer.cli import app
-from importer.emit.common import CannotEmit, nrql_for
-from importer.emit.nerdgraph import nerdgraph_payload
-from importer.emit.terraform import resource_block
-from importer.models.cloudwatch import CloudWatchAlarm, load_alarms
-from importer.models.ir import Confidence, IRMonitor, Occurrences
-from importer.translate.cloudwatch import (
+from importer.core.emit.common import CannotEmit, nrql_for
+from importer.core.emit.nerdgraph import nerdgraph_payload
+from importer.core.emit.terraform import resource_block
+from importer.core.ir import Confidence, IRMonitor, Occurrences
+from importer.sources.cloudwatch.models import CloudWatchAlarm, load_alarms
+from importer.sources.cloudwatch.translate import (
     alarm_source_id,
     load_namespace_map,
     translate_alarm,
@@ -240,7 +240,7 @@ def test_never_raises_on_hostile_input() -> None:
 
 
 def test_composite_is_unsupported_and_lists_alarm_names() -> None:
-    from importer.models.cloudwatch import CompositeAlarm
+    from importer.sources.cloudwatch.models import CompositeAlarm
 
     comp = CompositeAlarm(AlarmName="c", AlarmRule='ALARM("one") OR (ALARM("two") AND OK("three"))')
     ir = translate_composite(comp)

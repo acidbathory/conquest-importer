@@ -3,7 +3,7 @@ import logging
 import pytest
 from pydantic import SecretStr
 
-from importer.secrets import (
+from importer.core.secrets import (
     REDACTED,
     DatadogCredentials,
     MissingSecretError,

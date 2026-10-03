@@ -13,10 +13,10 @@ from typing import Any
 from typer.testing import CliRunner
 
 from importer.cli import app
-from importer.emit.common import CannotEmit, nrql_for
-from importer.models.ir import Confidence
-from importer.models.source import DatadogMonitor
-from importer.translate.monitors import load_metric_map, translate_monitor
+from importer.core.emit.common import CannotEmit, nrql_for
+from importer.core.ir import Confidence
+from importer.sources.datadog.models import DatadogMonitor
+from importer.sources.datadog.translate import load_metric_map, translate_monitor
 
 ROOT = Path(__file__).parent
 FIXTURES = ROOT / "fixtures" / "datadog"

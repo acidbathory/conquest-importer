@@ -22,9 +22,9 @@ from typing import Any
 
 import httpx
 
-from importer.extract.datadog import ALLOWED_SITES, DatadogClient, InvalidSiteError
-from importer.secrets import DatadogCredentials, MissingSecretError, redact
-from importer.tls import system_tls_context
+from importer.core.secrets import DatadogCredentials, MissingSecretError, redact
+from importer.core.tls import system_tls_context
+from importer.sources.datadog.client import ALLOWED_SITES, DatadogClient, InvalidSiteError
 
 SAMPLE_TAG = "conquest-importer-sample"
 DEFINITIONS = Path(__file__).parent / "sample_monitors.json"

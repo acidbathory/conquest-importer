@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from typer.testing import CliRunner
 
 from importer.cli import app
-from importer.emit.ingest import ENDPOINTS, IngestConfig, ingest_files
+from importer.sources.cloudwatch.ingest import ENDPOINTS, IngestConfig, ingest_files
 
 REAL = Path(__file__).parent / "fixtures" / "cloudwatch-real"
 

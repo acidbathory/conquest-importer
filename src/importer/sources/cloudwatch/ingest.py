@@ -16,7 +16,7 @@ from typing import Literal
 
 from pydantic import BaseModel, field_validator
 
-from importer.emit.terraform import hcl_string
+from importer.core.emit.terraform import hcl_string
 
 ENDPOINTS = {
     "us": "https://aws-api.newrelic.com/cloudwatch-metrics/v1",

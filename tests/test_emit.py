@@ -8,13 +8,13 @@ import pytest
 from typer.testing import CliRunner
 
 from importer.cli import app
-from importer.emit.common import CannotEmit
-from importer.emit.nerdgraph import MUTATION, nerdgraph_payload
-from importer.emit.terraform import hcl_string, resource_block, terraform_file
-from importer.models.ir import Confidence, IRMonitor
-from importer.models.source import DatadogMonitor
-from importer.report import build_report, md_cell
-from importer.translate.monitors import load_metric_map, translate_monitor
+from importer.core.emit.common import CannotEmit
+from importer.core.emit.nerdgraph import MUTATION, nerdgraph_payload
+from importer.core.emit.terraform import hcl_string, resource_block, terraform_file
+from importer.core.ir import Confidence, IRMonitor
+from importer.core.report import build_report, md_cell
+from importer.sources.datadog.models import DatadogMonitor
+from importer.sources.datadog.translate import load_metric_map, translate_monitor
 
 METRIC_MAP = load_metric_map()
 SCRIPTS = Path(__file__).parent.parent / "scripts"
@@ -164,7 +164,7 @@ def test_end_to_end_on_sample_definitions(tmp_path: Path) -> None:
 
 
 def test_condition_name_removes_control_characters_and_is_bounded() -> None:
-    from importer.emit.common import MAX_NAME_LENGTH, condition_name
+    from importer.core.emit.common import MAX_NAME_LENGTH, condition_name
 
     assert condition_name("a\nb\tc\x1b[31m d") == "abc[31m d"
     assert len(condition_name("x" * 500)) == MAX_NAME_LENGTH

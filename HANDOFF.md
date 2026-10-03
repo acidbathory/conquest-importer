@@ -21,7 +21,7 @@ Pipeline: source export -> typed source models -> **IR** (vendor-neutral) -> emi
 | Guarded `apply` to New Relic | Built; verified in the sandbox |
 | Dashboards (any source) | **Not started** |
 | Grafana, Dynatrace, GCP, Azure | **Not started** |
-| Tests | 186 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
+| Tests | 192 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
 
 Conversion rates so far (synthetic data, so optimistic): Datadog 16/20 on the original sample set;
 CloudWatch 15/23 synthetic, 6/9 real-export. Do not present these as customer results.
@@ -48,12 +48,15 @@ Golden files: `UPDATE_GOLDEN=1 uv run pytest tests/test_fixtures.py tests/test_c
 then **review the diff by hand** before committing.
 
 ## Repo map
-- `src/importer/models/` source models (`source.py` Datadog, `cloudwatch.py`) and `ir.py` (the IR)
-- `src/importer/translate/` queries + translators + mapping files (`metric_map.json`,
-  `cloudwatch_map.json`); the translators never raise, they label `manual`/`unsupported`
-- `src/importer/emit/` `nrql.py` (only place NRQL is built), `nerdgraph.py`, `terraform.py`,
-  `ingest.py`, `common.py`
-- `src/importer/apply.py` the only code that writes to New Relic; `secrets.py`, `tls.py`
+- `src/importer/core/` shared by every source: `ir.py` (the IR), `report.py`, `apply.py` (the only
+  code that writes to New Relic), `secrets.py`, `tls.py`, and `emit/` (`nrql.py` is the only place
+  NRQL is built; also `nerdgraph.py`, `terraform.py`, `common.py`)
+- `src/importer/sources/<name>/` one folder per source platform (`datadog/`, `cloudwatch/`): models,
+  translator (never raises, labels `manual`/`unsupported`), mapping JSON (`metric_map.json`,
+  `cloudwatch_map.json`). `sources/base.py` defines the interface: `load(path)` then
+  `translate(raw)`; each source registers itself in `REGISTRY`, and the CLI looks sources up there.
+  CloudWatch's `ingest.py` (Metric Streams Terraform) lives in its folder; Datadog's API `client.py`
+  in its.
 - `scripts/` fixture generators and the Datadog sample-monitor creator (writes to Datadog)
 - `tests/fixtures/` synthetic and real-sanitized inputs; `tests/golden/` expected results
 - `docs/` IR spec, threat model, verification log, decisions
@@ -91,7 +94,7 @@ then **review the diff by hand** before committing.
   idempotent), AWS `describe-alarms` parsing, Metric Streams ingestion end to end, metric naming
   `aws.<service>.<Metric>` + dimension attribute `aws.<service>.<Dimension>` for **DynamoDB**.
 - Assumed: naming for every other AWS service; all Datadog metric mappings
-  (`translate/metric_map.json`); Datadog API behavior (never seen live).
+  (`sources/datadog/metric_map.json`); Datadog API behavior (never seen live).
 
 ## Open to-dos
 Security / hygiene (owner):
@@ -101,7 +104,8 @@ Security / hygiene (owner):
 - [ ] Get Datadog API access allow-listed (or an approved non-corporate environment)
 
 Engineering (see `ROADMAP.md` for the plan and order):
-- [ ] Refactor into `core/` + `sources/<name>/` with a common source interface
+- [x] Refactor into `core/` + `sources/<name>/` with a common source interface (done 2026-10-03;
+      output verified byte-identical to before on all fixtures)
 - [ ] `importer stats`: aggregate conversion rates and failure reasons across runs
 - [ ] Side-by-side validation (run original and converted queries, compare)
 - [ ] Usage triage (skip unused dashboards/alerts)

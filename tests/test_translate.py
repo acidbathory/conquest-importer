@@ -2,16 +2,16 @@ from typing import Any
 
 import pytest
 
-from importer.emit.nrql import build_nrql, identifier, quote_string
-from importer.models.ir import BinOp, Confidence, IRMonitor, Operator, Severity
-from importer.models.source import DatadogMonitor
-from importer.translate.monitors import load_metric_map, translate_monitor
-from importer.translate.queries import (
+from importer.core.emit.nrql import build_nrql, identifier, quote_string
+from importer.core.ir import BinOp, Confidence, IRMonitor, Operator, Severity
+from importer.sources.datadog.models import DatadogMonitor
+from importer.sources.datadog.queries import (
     UnsupportedQuery,
     parse_count_query,
     parse_metric_query,
     parse_service_check,
 )
+from importer.sources.datadog.translate import load_metric_map, translate_monitor
 
 METRIC_MAP = load_metric_map()
 

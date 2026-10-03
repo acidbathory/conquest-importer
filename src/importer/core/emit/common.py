@@ -1,7 +1,7 @@
 """Shared emitter rules: which IR monitors can be emitted, and how windows map to New Relic."""
 
-from importer.emit.nrql import build_nrql
-from importer.models.ir import Confidence, IRMonitor, SignalKind
+from importer.core.emit.nrql import build_nrql
+from importer.core.ir import Confidence, IRMonitor, SignalKind
 
 # A Datadog "avg over last 5m" becomes: evaluate 1-minute windows, breach for 5 minutes.
 # This is a close but not identical semantic; the report states it once for all monitors.

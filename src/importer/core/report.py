@@ -2,7 +2,7 @@
 
 from collections import Counter
 
-from importer.models.ir import Confidence, IRMonitor
+from importer.core.ir import Confidence, IRMonitor
 
 COMMON_NOTES = [
     "All conditions are created DISABLED. Enable them after review.",

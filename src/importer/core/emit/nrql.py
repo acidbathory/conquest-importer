@@ -7,7 +7,7 @@ into a query any other way.
 
 import re
 
-from importer.models.ir import (
+from importer.core.ir import (
     Aggregation,
     CountFilter,
     CountSignal,
