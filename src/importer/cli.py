@@ -16,7 +16,6 @@ from importer.core.apply import (
     check_guards,
     get_account_name,
     load_plan,
-    printable,
 )
 from importer.core.emit.common import CannotEmit
 from importer.core.emit.nerdgraph import nerdgraph_payload
@@ -29,6 +28,8 @@ from importer.core.secrets import (
     RedactingFilter,
     require_env,
 )
+from importer.core.stats import build_stats, load_run, render_markdown
+from importer.core.text import printable
 from importer.sources import REGISTRY
 from importer.sources.cloudwatch.ingest import IngestConfig, ingest_files
 from importer.sources.cloudwatch.models import load_alarms
@@ -102,6 +103,30 @@ def convert(
     report = build_report(final, {m.source_id for m in emitted}, source_system)
     (out / "report.md").write_text(report)
     typer.echo(f"Read {len(monitors)} monitors, emitted {len(emitted)}. See {out / 'report.md'}")
+
+
+@app.command()
+def stats(
+    runs: Annotated[
+        list[Path], typer.Argument(help="One or more `convert` output folders (each has ir/)")
+    ],
+    top: Annotated[int, typer.Option(help="How many reasons to list per table")] = 10,
+    out: Annotated[Path | None, typer.Option(help="Also write the markdown here")] = None,
+) -> None:
+    """Summarise conversion rates and the most common reasons across one or more runs.
+
+    Read-only and offline. Pass every export once: the same export given twice is counted twice.
+    """
+    try:
+        loaded = [load_run(folder) for folder in runs]
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    text = render_markdown(loaded, build_stats(loaded), top)
+    typer.echo(text, nl=False)
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(text)
 
 
 @app.command()

@@ -15,8 +15,8 @@ from importer.core.apply import (
     apply_plan,
     check_guards,
     load_plan,
-    printable,
 )
+from importer.core.text import printable
 
 KEY = "NRAK-SECRET-KEY-123"
 FIXTURES = Path(__file__).parent / "fixtures" / "datadog"

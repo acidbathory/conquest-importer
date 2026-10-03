@@ -21,7 +21,7 @@ Pipeline: source export -> typed source models -> **IR** (vendor-neutral) -> emi
 | Guarded `apply` to New Relic | Built; verified in the sandbox |
 | Dashboards (any source) | **Not started** |
 | Grafana, Dynatrace, GCP, Azure | **Not started** |
-| Tests | 192 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
+| Tests | 210 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
 
 Conversion rates so far (synthetic data, so optimistic): Datadog 16/20 on the original sample set;
 CloudWatch 15/23 synthetic, 6/9 real-export. Do not present these as customer results.
@@ -39,6 +39,9 @@ uv run importer convert --in tests/fixtures/datadog --out out/converted
 uv run importer convert --source cloudwatch --in tests/fixtures/cloudwatch-real --out out/cw
 # Review out/<dir>/report.md, out/<dir>/main.tf, out/<dir>/nerdgraph/*.json
 
+# Conversion rates and most common failure reasons across one or more convert outputs
+uv run importer stats out/cw out/converted            # add --out out/stats.md to save it
+
 # Create in New Relic (dry run by default; writing needs all three guards)
 uv run importer apply --in out/cw --account-id <id>
 # Ingestion setup (writes Terraform only; nothing deployed)
@@ -48,7 +51,7 @@ Golden files: `UPDATE_GOLDEN=1 uv run pytest tests/test_fixtures.py tests/test_c
 then **review the diff by hand** before committing.
 
 ## Repo map
-- `src/importer/core/` shared by every source: `ir.py` (the IR), `report.py`, `apply.py` (the only
+- `src/importer/core/` shared by every source: `ir.py` (the IR), `report.py`, `stats.py`, `text.py`, `apply.py` (the only
   code that writes to New Relic), `secrets.py`, `tls.py`, and `emit/` (`nrql.py` is the only place
   NRQL is built; also `nerdgraph.py`, `terraform.py`, `common.py`)
 - `src/importer/sources/<name>/` one folder per source platform (`datadog/`, `cloudwatch/`): models,
@@ -106,7 +109,8 @@ Security / hygiene (owner):
 Engineering (see `ROADMAP.md` for the plan and order):
 - [x] Refactor into `core/` + `sources/<name>/` with a common source interface (done 2026-10-03;
       output verified byte-identical to before on all fixtures)
-- [ ] `importer stats`: aggregate conversion rates and failure reasons across runs
+- [x] `importer stats`: aggregate conversion rates and failure reasons across runs (`core/stats.py`;
+      reasons are grouped by mechanical pattern, not yet by the hand-written failure taxonomy)
 - [ ] Side-by-side validation (run original and converted queries, compare)
 - [ ] Usage triage (skip unused dashboards/alerts)
 - [ ] CloudWatch: percentiles, verify EC2/RDS/Lambda/ALB naming when resources are active

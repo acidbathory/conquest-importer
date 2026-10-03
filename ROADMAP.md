@@ -64,7 +64,7 @@ verification log entry, and a conversion-rate figure.
 ## To-dos
 ### Foundation (before adding sources)
 - [x] Refactor into `core/` and `sources/<name>/` with a common source interface (2026-10-03)
-- [ ] Build a `stats` command that aggregates conversion results and failure reasons across runs
+- [x] Build a `stats` command that aggregates conversion results and failure reasons across runs
       (this is how we "see where we are failing")
 - [ ] Define a failure taxonomy: unsupported query function, missing metric mapping, unsupported
       visualization, unsupported plugin, data not ingested, naming mismatch
