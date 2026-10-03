@@ -17,7 +17,10 @@ from importer.core.apply import (
     get_account_name,
     load_plan,
 )
+from importer.core.dashboard_ir import IRDashboard
+from importer.core.dashboard_report import build_dashboard_report
 from importer.core.emit.common import CannotEmit
+from importer.core.emit.dashboard import dashboard_id, dashboards_terraform, nerdgraph_dashboard
 from importer.core.emit.nerdgraph import nerdgraph_payload
 from importer.core.emit.terraform import terraform_file
 from importer.core.ir import Confidence, IRMonitor
@@ -30,7 +33,7 @@ from importer.core.secrets import (
 )
 from importer.core.stats import build_stats, load_run, render_markdown
 from importer.core.text import printable
-from importer.sources import REGISTRY
+from importer.sources import DASHBOARD_REGISTRY, REGISTRY
 from importer.sources.cloudwatch.ingest import IngestConfig, ingest_files
 from importer.sources.cloudwatch.models import load_alarms
 from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
@@ -127,6 +130,54 @@ def stats(
     if out:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text)
+
+
+@app.command("convert-dashboards")
+def convert_dashboards(
+    source: Annotated[
+        Path, typer.Option("--in", help="File or folder of exported dashboard JSON")
+    ] = Path("out/cloudwatch-dashboards"),
+    out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/dashboards"),
+    source_system: Annotated[
+        str,
+        typer.Option("--source", help="Source platform: " + ", ".join(sorted(DASHBOARD_REGISTRY))),
+    ] = "cloudwatch",
+) -> None:
+    """Convert exported dashboards to IR, NerdGraph payloads, Terraform and a report.
+
+    Offline and read-only: nothing is sent anywhere. Use a different --out than `convert`:
+    both write a Terraform provider block, which must not share a folder.
+    """
+    if source_system not in DASHBOARD_REGISTRY:
+        typer.echo(f"Error: --source must be one of {sorted(DASHBOARD_REGISTRY)}", err=True)
+        raise typer.Exit(code=1)
+    try:
+        dashboards = DASHBOARD_REGISTRY[source_system].convert(source)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error reading {source}: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    if not dashboards:
+        typer.echo(f"No dashboards found in {source}", err=True)
+        raise typer.Exit(code=1)
+
+    (out / "dashboard-ir").mkdir(parents=True, exist_ok=True)
+    (out / "nerdgraph").mkdir(parents=True, exist_ok=True)
+    emitted: list[tuple[int, IRDashboard]] = []
+    for d in dashboards:
+        ident = dashboard_id(d)
+        (out / "dashboard-ir" / f"{ident}.json").write_text(d.model_dump_json(indent=2) + "\n")
+        try:
+            payload = nerdgraph_dashboard(d)
+        except CannotEmit:
+            continue
+        emitted.append((ident, d))
+        (out / "nerdgraph" / f"{ident}.json").write_text(json.dumps(payload, indent=2) + "\n")
+    (out / "dashboards.tf").write_text(dashboards_terraform(emitted))
+    keys = {d.source_key for _, d in emitted}
+    (out / "report.md").write_text(build_dashboard_report(dashboards, keys))
+    typer.echo(
+        f"Read {len(dashboards)} dashboards, emitted {len(emitted)}. See {out / 'report.md'}"
+    )
 
 
 @app.command()

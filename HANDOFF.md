@@ -19,9 +19,9 @@ Pipeline: source export -> typed source models -> **IR** (vendor-neutral) -> emi
 | Datadog monitors -> conditions | Built on **synthetic** input only (API blocked by corporate Cloudflare Gateway) |
 | Ingestion setup (AWS Metric Streams Terraform) | Built; deployed and verified with real data on 2026-10-02, then destroyed |
 | Guarded `apply` to New Relic | Built; verified in the sandbox |
-| Dashboards (any source) | **Not started** |
+| Dashboards: CloudWatch | Built offline on **synthetic** input (`convert-dashboards`); Terraform validates; not created in New Relic. Other sources not started |
 | Grafana, Dynatrace, GCP, Azure | **Not started** |
-| Tests | 242 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
+| Tests | 270 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
 
 Conversion rates so far (synthetic data, so optimistic): Datadog 16/20 on the original sample set;
 CloudWatch 15/23 synthetic, 6/9 real-export. Do not present these as customer results.
@@ -42,6 +42,9 @@ uv run importer convert --source cloudwatch --in tests/fixtures/cloudwatch-real 
 # Conversion rates and most common failure reasons across one or more convert outputs
 uv run importer stats out/cw out/converted            # add --out out/stats.md to save it
 
+# Dashboards (CloudWatch): input is `aws cloudwatch get-dashboard` output; use a separate --out
+uv run importer convert-dashboards --in tests/fixtures/cloudwatch-dashboards --out out/dash
+
 # Create in New Relic (dry run by default; writing needs all three guards)
 uv run importer apply --in out/cw --account-id <id>
 # Ingestion setup (writes Terraform only; nothing deployed)
@@ -51,7 +54,7 @@ Golden files: `UPDATE_GOLDEN=1 uv run pytest tests/test_fixtures.py tests/test_c
 then **review the diff by hand** before committing.
 
 ## Repo map
-- `src/importer/core/` shared by every source: `ir.py` (the IR), `report.py`, `stats.py`, `text.py`, `apply.py` (the only
+- `src/importer/core/` shared by every source: `ir.py` (the IR), `report.py`, `dashboard_ir.py`, `dashboard_report.py`, `stats.py`, `text.py`, `apply.py` (the only
   code that writes to New Relic), `secrets.py`, `tls.py`, and `emit/` (`nrql.py` is the only place
   NRQL is built; also `nerdgraph.py`, `terraform.py`, `common.py`)
 - `src/importer/sources/<name>/` one folder per source platform (`datadog/`, `cloudwatch/`): models,
@@ -114,15 +117,20 @@ Engineering (see `ROADMAP.md` for the plan and order):
 - [x] Failure taxonomy for alerts (`core/taxonomy.py`: ordered keyword rules; a test fails if a
       fixture reason is uncategorised). Dashboard-specific categories (visualization, plugin) come
       with dashboards
-- [ ] Side-by-side validation (run original and converted queries, compare)
-- [ ] Usage triage (skip unused dashboards/alerts)
+- [ ] Side-by-side validation (run original and converted queries, compare): BLOCKED, needs live
+      access to the source (AWS/Datadog) and New Relic; ask the owner first
+- [ ] Usage triage (skip unused dashboards/alerts): BLOCKED, needs usage data (dashboard views,
+      alarm history) that the exports do not contain
 - [ ] CloudWatch percentiles: BLOCKED on live verification. Metric Streams send count/sum/min/max
       unless "additional statistics" are configured, and how New Relic stores them is unverified.
       Needs a stream with a percentile configured plus a query of the real data (asks for
       approval: deploys to AWS). Do not guess a mapping; changing the reason text also needs a
       human-reviewed golden regeneration
 - [ ] CloudWatch: verify EC2/RDS/Lambda/ALB naming when resources are active (needs AWS)
-- [ ] Dashboards (CloudWatch first, then Grafana), then GCP/Azure alerts, then Datadog on real data
+- [x] CloudWatch dashboards, offline (synthetic fixtures). TODO: `apply` for dashboards (writes to
+      New Relic; needs owner approval), real exports, `stats` support for dashboard runs,
+      dashboard-specific taxonomy categories (visualization, plugin)
+- [ ] Grafana dashboards, then GCP/Azure alerts, then Datadog on real data
 - [ ] Security hardening ideas: narrower IAM policy than `ReadOnlyAccess` for the link role;
       remote encrypted Terraform state guidance for real customers (state holds the ingest key)
 

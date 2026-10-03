@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from importer.core.dashboard_ir import IRDashboard
 from importer.core.ir import IRMonitor
 
 
@@ -30,3 +31,23 @@ REGISTRY: dict[str, Source[Any]] = {}
 
 def register(source: Source[Any]) -> None:
     REGISTRY[source.name] = source
+
+
+@dataclass(frozen=True)
+class DashboardSource[T]:
+    """Same two-step shape as Source, for dashboards."""
+
+    name: str
+    input_help: str
+    load: Callable[[Path], list[T]]
+    translate: Callable[[list[T]], list[IRDashboard]]
+
+    def convert(self, path: Path) -> list[IRDashboard]:
+        return self.translate(self.load(path))
+
+
+DASHBOARD_REGISTRY: dict[str, DashboardSource[Any]] = {}
+
+
+def register_dashboards(source: DashboardSource[Any]) -> None:
+    DASHBOARD_REGISTRY[source.name] = source

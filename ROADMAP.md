@@ -19,7 +19,7 @@ fails**, source by source, on real data.
 |---|---|---|
 | Alerts to New Relic conditions (API + Terraform) | Built, sandbox-verified | Built, sandbox-verified; input is synthetic (network blocked) |
 | Ingestion setup (Terraform) | Built, verified with real data (DynamoDB confirmed) | Not started |
-| Dashboards | Not started | Not started |
+| Dashboards | Built offline on synthetic input (Terraform validates; not created in New Relic) | Not started |
 | SLOs, synthetics, logs | Not started | Not started |
 
 Shared pieces: intermediate format, NRQL/HCL/GraphQL emitters, gap report, guarded `apply`,
@@ -34,7 +34,7 @@ data-model mapping), which a partnership does not remove.
 
 | Source | Alerts | Dashboards | Ingestion | Notes |
 |---|---|---|---|---|
-| AWS CloudWatch | Done (partial) | Next | Done for Metric Streams | Add percentiles, more services verified |
+| AWS CloudWatch | Done (partial) | Built offline, synthetic input | Done for Metric Streams | Add percentiles, more services verified |
 | GCP Cloud Monitoring | Alert policies with MQL/PromQL conditions | Dashboard JSON | New Relic GCP integration | Research needed: New Relic's current GCP ingestion options |
 | Azure Monitor | Metric and log alert rules | Portal dashboards / Workbooks | New Relic Azure integration | Research needed: streaming vs polling |
 

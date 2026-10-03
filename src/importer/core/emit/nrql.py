@@ -7,6 +7,7 @@ into a query any other way.
 
 import re
 
+from importer.core.dashboard_ir import Series
 from importer.core.ir import (
     Aggregation,
     CountFilter,
@@ -21,6 +22,7 @@ from importer.core.ir import (
     SignalKind,
     TagFilter,
 )
+from importer.core.text import printable
 
 NRQL_FUNCTIONS = {
     Aggregation.AVG: "average",
@@ -42,6 +44,7 @@ SPECIAL_PREDICATES = {
 }
 COUNT_EVENTS = {SignalKind.LOG: "Log", SignalKind.APM: "Transaction"}
 PRECEDENCE = {"+": 1, "-": 1, "*": 2, "/": 2}
+MAX_ALIAS = 100
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]*$")
 
 
@@ -97,7 +100,7 @@ def _tag_clause(f: TagFilter) -> str:
     return f"{attr} = {quote_string(f.value)}"
 
 
-def _metric_nrql(signal: MetricSignal) -> str:
+def _metric_nrql(signal: MetricSignal, alias: str | None = None) -> str:
     func = NRQL_FUNCTIONS[signal.aggregation]
     targets = [t.nr_target for t in signal.terms.values()]
     if any(t is None for t in targets):
@@ -110,10 +113,20 @@ def _metric_nrql(signal: MetricSignal) -> str:
         select = _target_sql(target, func)
     else:
         select = _expr_sql(signal.expression, signal, func)
+    if alias:
+        select += f" AS {quote_string(printable(alias, MAX_ALIAS))}"
     query = f"SELECT {select} FROM {identifier(events.pop())}"  # noqa: S608 - validated
     if signal.scope:
         query += " WHERE " + " AND ".join(_tag_clause(f) for f in signal.scope)
     return query + _facet(SignalKind.METRIC, signal.group_by)
+
+
+def widget_nrql(series: Series, timeseries: bool) -> str:
+    """NRQL for one dashboard series; `timeseries` adds the bucket size for charts over time."""
+    query = _metric_nrql(series.signal, series.label)
+    if timeseries:
+        query += f" TIMESERIES {int(series.period_seconds)} SECONDS"
+    return query
 
 
 def _filter_clause(kind: SignalKind, f: CountFilter) -> str:

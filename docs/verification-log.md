@@ -32,8 +32,19 @@ Facts confirmed against real systems (not synthetic fixtures). Dates are 2026-10
 - New Relic's AWS account id used in the trust policy (754728514883) and the external-id scheme
   were accepted by New Relic.
 
+## CloudWatch dashboards (2026-10-03, offline only)
+- Input is SYNTHETIC (written from the documented widget format; no real export yet).
+- `terraform validate` accepts the generated `newrelic_one_dashboard` resources against the real
+  provider schema. This checks structure only: nothing was created in New Relic.
+- NOT verified: the NerdGraph `dashboardCreate` payload against the live API; that the generated
+  NRQL returns data in a real account (only DynamoDB naming is confirmed); the meaning of the
+  `"..."` metric-row shorthand (implemented from memory of the documented format: same
+  namespace, metric and dimension names, new dimension values) -- check against a real export.
+- Percentiles: BLOCKED on live verification of how Metric Streams percentile data lands in New
+  Relic (count/sum/min/max only unless additional statistics are configured).
+
 ## Still unverified
 - Services other than DynamoDB (EC2, RDS, Lambda, ALB, SQS, ECS, ...): the EC2 instance was
   stopped and the Lambda functions idle, so they published no metrics during the test.
 - Datadog: no live access (blocked on the corporate network).
-- Percentile statistics, anomaly alarms and dashboards are not converted.
+- Percentile statistics and anomaly alarms are not converted. Dashboards: see above.
