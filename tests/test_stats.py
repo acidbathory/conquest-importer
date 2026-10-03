@@ -6,6 +6,7 @@ from typer.testing import CliRunner
 from importer.cli import app
 from importer.core.ir import Confidence, IRMonitor
 from importer.core.stats import Run, build_stats, load_run, reason_pattern, render_markdown
+from importer.core.taxonomy import Category
 from importer.sources import REGISTRY
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -147,3 +148,22 @@ def test_cli_reports_a_bad_folder(tmp_path: Path) -> None:
     res = CliRunner().invoke(app, ["stats", str(tmp_path)])
     assert res.exit_code == 1
     assert "no ir/" in res.output
+
+
+def test_category_table_counts_each_monitor_once() -> None:
+    run = Run(
+        Path("r"),
+        [
+            _monitor(
+                Confidence.MANUAL,
+                ["no New Relic mapping for metric 'a'", "no New Relic mapping for metric 'b'"],
+            ),
+            _monitor(Confidence.APPROXIMATE, ["alarm actions must be configured manually"]),
+        ],
+    )
+    s = build_stats([run])["cloudwatch"]
+    assert s.categories_not_converted[Category.MISSING_MAPPING] == 1
+    assert s.categories_converted[Category.MANUAL_FOLLOWUP] == 1
+    text = render_markdown([run], {"cloudwatch": s})
+    assert "| missing mapping | 1 | 0 |" in text
+    assert "uncategorised" not in text

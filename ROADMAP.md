@@ -66,7 +66,7 @@ verification log entry, and a conversion-rate figure.
 - [x] Refactor into `core/` and `sources/<name>/` with a common source interface (2026-10-03)
 - [x] Build a `stats` command that aggregates conversion results and failure reasons across runs
       (this is how we "see where we are failing")
-- [ ] Define a failure taxonomy: unsupported query function, missing metric mapping, unsupported
+- [x] (alerts done, dashboard categories pending) Define a failure taxonomy: unsupported query function, missing metric mapping, unsupported
       visualization, unsupported plugin, data not ingested, naming mismatch
 - [ ] Add side-by-side validation: run the source query and the converted query over the same
       period and compare results (the safety net that makes approximate conversions acceptable)

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from importer.core.ir import Confidence, IRMonitor
 from importer.core.report import md_cell
+from importer.core.taxonomy import Category, classify
 from importer.core.text import printable
 
 CONVERTED = (Confidence.EXACT, Confidence.APPROXIMATE)
@@ -52,6 +53,9 @@ class SourceStats:
     # Reason pattern -> number of monitors that carry it (a monitor counts once per pattern).
     reasons_not_converted: Counter[str] = field(default_factory=Counter)
     reasons_converted: Counter[str] = field(default_factory=Counter)
+    # Taxonomy category -> number of monitors with at least one reason in it.
+    categories_not_converted: Counter[Category] = field(default_factory=Counter)
+    categories_converted: Counter[Category] = field(default_factory=Counter)
 
     @property
     def by_confidence(self) -> Counter[Confidence]:
@@ -93,6 +97,12 @@ def build_stats(runs: list[Run]) -> dict[str, SourceStats]:
             s.by_type[m.source_type].by_confidence[m.confidence] += 1
             target = s.reasons_converted if m.confidence in CONVERTED else s.reasons_not_converted
             target.update({reason_pattern(r) for r in m.reasons})
+            categories = (
+                s.categories_converted
+                if m.confidence in CONVERTED
+                else (s.categories_not_converted)
+            )
+            categories.update({classify(r) for r in m.reasons})
     return dict(sorted(stats.items()))
 
 
@@ -138,6 +148,29 @@ def render_markdown(runs: list[Run], stats: dict[str, SourceStats], top: int = 1
                 f"| {_cell(name, 60)} | {t.total} | {t.converted} | "
                 f"{_percent(t.converted, t.total)} |"
             )
+        seen = set(s.categories_not_converted) | set(s.categories_converted)
+        if seen:
+            lines += [
+                "",
+                "### By category",
+                "",
+                "| Category | Monitors not converted | Monitors converted |",
+                "|---|---|---|",
+            ]
+            order = sorted(
+                seen,
+                key=lambda c: (-s.categories_not_converted[c], -s.categories_converted[c], c.value),
+            )
+            lines += [
+                f"| {_cell(c.value, 60)} | {s.categories_not_converted[c]} | "
+                f"{s.categories_converted[c]} |"
+                for c in order
+            ]
+            if Category.OTHER in seen:
+                lines += [
+                    "",
+                    "Some reasons are uncategorised: add a rule in core/taxonomy.py.",
+                ]
         if s.reasons_not_converted:
             lines += [
                 "",

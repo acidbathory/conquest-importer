@@ -21,7 +21,7 @@ Pipeline: source export -> typed source models -> **IR** (vendor-neutral) -> emi
 | Guarded `apply` to New Relic | Built; verified in the sandbox |
 | Dashboards (any source) | **Not started** |
 | Grafana, Dynatrace, GCP, Azure | **Not started** |
-| Tests | 210 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
+| Tests | 242 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
 
 Conversion rates so far (synthetic data, so optimistic): Datadog 16/20 on the original sample set;
 CloudWatch 15/23 synthetic, 6/9 real-export. Do not present these as customer results.
@@ -110,10 +110,18 @@ Engineering (see `ROADMAP.md` for the plan and order):
 - [x] Refactor into `core/` + `sources/<name>/` with a common source interface (done 2026-10-03;
       output verified byte-identical to before on all fixtures)
 - [x] `importer stats`: aggregate conversion rates and failure reasons across runs (`core/stats.py`;
-      reasons are grouped by mechanical pattern, not yet by the hand-written failure taxonomy)
+      reasons are grouped by mechanical pattern, and also by category)
+- [x] Failure taxonomy for alerts (`core/taxonomy.py`: ordered keyword rules; a test fails if a
+      fixture reason is uncategorised). Dashboard-specific categories (visualization, plugin) come
+      with dashboards
 - [ ] Side-by-side validation (run original and converted queries, compare)
 - [ ] Usage triage (skip unused dashboards/alerts)
-- [ ] CloudWatch: percentiles, verify EC2/RDS/Lambda/ALB naming when resources are active
+- [ ] CloudWatch percentiles: BLOCKED on live verification. Metric Streams send count/sum/min/max
+      unless "additional statistics" are configured, and how New Relic stores them is unverified.
+      Needs a stream with a percentile configured plus a query of the real data (asks for
+      approval: deploys to AWS). Do not guess a mapping; changing the reason text also needs a
+      human-reviewed golden regeneration
+- [ ] CloudWatch: verify EC2/RDS/Lambda/ALB naming when resources are active (needs AWS)
 - [ ] Dashboards (CloudWatch first, then Grafana), then GCP/Azure alerts, then Datadog on real data
 - [ ] Security hardening ideas: narrower IAM policy than `ReadOnlyAccess` for the link role;
       remote encrypted Terraform state guidance for real customers (state holds the ingest key)
