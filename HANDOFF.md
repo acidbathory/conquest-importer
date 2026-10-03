@@ -17,11 +17,12 @@ Pipeline: source export -> typed source models -> **IR** (vendor-neutral) -> emi
 |---|---|
 | CloudWatch alarms -> conditions | Built. 23 synthetic + 9 real-export alarms. Percentiles, anomaly, metric-math functions, composites not converted |
 | Datadog monitors -> conditions | Built on **synthetic** input only (API blocked by corporate Cloudflare Gateway) |
+| CloudWatch extract from an account | Built (`extract-cloudwatch`); tested with a faked AWS CLI only, **not yet run against a real account** |
 | Ingestion setup (AWS Metric Streams Terraform) | Built; deployed and verified with real data on 2026-10-02, then destroyed |
 | Guarded `apply` to New Relic | Built; verified in the sandbox |
 | Dashboards: CloudWatch | Built offline on **synthetic** input (`convert-dashboards`); Terraform validates; not created in New Relic. Other sources not started |
 | Grafana, Dynatrace, GCP, Azure | **Not started** |
-| Tests | 270 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
+| Tests | 295 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
 
 Conversion rates so far (synthetic data, so optimistic): Datadog 16/20 on the original sample set;
 CloudWatch 15/23 synthetic, 6/9 real-export. Do not present these as customer results.
@@ -35,6 +36,10 @@ uv run importer --help
 
 # Datadog (fixtures): convert monitors already saved as one JSON file each
 uv run importer convert --in tests/fixtures/datadog --out out/converted
+# CloudWatch, straight from an AWS account (READ-ONLY, via the AWS CLI and its configured profile).
+# Stops before reading if the signed-in account is not --account-id. Review the export before sharing.
+uv run importer extract-cloudwatch --account-id 123456789012 --region us-east-1 --out out/cloudwatch
+# ...then convert out/cloudwatch/alarms and out/cloudwatch/dashboards as below
 # CloudWatch: input is the output of `aws cloudwatch describe-alarms --output json`
 uv run importer convert --source cloudwatch --in tests/fixtures/cloudwatch-real --out out/cw
 # Review out/<dir>/report.md, out/<dir>/main.tf, out/<dir>/nerdgraph/*.json

@@ -43,6 +43,13 @@ Facts confirmed against real systems (not synthetic fixtures). Dates are 2026-10
 - Percentiles: BLOCKED on live verification of how Metric Streams percentile data lands in New
   Relic (count/sum/min/max only unless additional statistics are configured).
 
+## CloudWatch extract (2026-10-03)
+- Verified against the installed AWS CLI's local help (no account contacted): `--alarm-types` takes
+  space-separated `MetricAlarm` / `CompositeAlarm`, and omitting it returns metric alarms only;
+  `--dashboard-name` is a plain string option; `list-dashboards` is paginated by the CLI.
+- NOT verified: a real run against an account (no AWS call was made by this feature yet), and that
+  passing both alarm types returns both in one response.
+
 ## Still unverified
 - Services other than DynamoDB (EC2, RDS, Lambda, ALB, SQS, ECS, ...): the EC2 instance was
   stopped and the Lambda functions idle, so they published no metrics during the test.

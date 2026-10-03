@@ -34,6 +34,8 @@ from importer.core.secrets import (
 from importer.core.stats import build_stats, load_run, render_markdown
 from importer.core.text import printable
 from importer.sources import DASHBOARD_REGISTRY, REGISTRY
+from importer.sources.cloudwatch.extract import AwsError, Reader
+from importer.sources.cloudwatch.extract import extract as extract_cloudwatch
 from importer.sources.cloudwatch.ingest import IngestConfig, ingest_files
 from importer.sources.cloudwatch.models import load_alarms
 from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
@@ -237,6 +239,42 @@ def apply(
     for name, reason in result.failed:
         typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
     if result.failed:
+        raise typer.Exit(code=1)
+
+
+@app.command("extract-cloudwatch")
+def extract_cloudwatch_command(
+    account_id: Annotated[str, typer.Option(help="AWS account id you expect (12 digits)")],
+    region: Annotated[str, typer.Option(help="AWS region to read")] = "us-east-1",
+    profile: Annotated[
+        str | None, typer.Option(help="AWS CLI profile (default: CLI default)")
+    ] = None,
+    out: Annotated[Path, typer.Option(help="New folder for the export")] = Path("out/cloudwatch"),
+    dashboards: Annotated[bool, typer.Option(help="Also export dashboards")] = True,
+) -> None:
+    """Read CloudWatch alarms and dashboards from an AWS account (read-only) via the AWS CLI.
+
+    Runs only describe-alarms, list-dashboards, get-dashboard and sts get-caller-identity.
+    Stops before reading anything if the signed-in account is not --account-id. The export can
+    contain account ids, ARNs and resource names: review it before sharing.
+    """
+    try:
+        result = extract_cloudwatch(Reader(region, profile), account_id, out, dashboards)
+    except (AwsError, ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(
+        f"Read account {result.account} ({region}): {result.metric_alarms} metric alarms, "
+        f"{result.composite_alarms} composite alarms, {result.dashboards} dashboards."
+    )
+    typer.echo("Next:")
+    typer.echo(f"  importer convert --source cloudwatch --in {out / 'alarms'} --out out/cw")
+    if dashboards:
+        typer.echo(f"  importer convert-dashboards --in {out / 'dashboards'} --out out/cw-dash")
+    typer.echo("  importer stats out/cw")
+    for failure in result.failed_dashboards:
+        typer.echo(f"  FAILED dashboard {failure}", err=True)
+    if result.failed_dashboards:
         raise typer.Exit(code=1)
 
 
