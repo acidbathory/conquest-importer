@@ -61,6 +61,12 @@ src/importer/
 Each source gets: its own fixtures (synthetic and real-sanitized), golden tests, mapping files, a
 verification log entry, and a conversion-rate figure.
 
+## CloudWatch status (2026-10-05): what is done, what is left
+Done and verified live: extract, alerts (incl. percentiles, metric math), dashboards, notifications
+(email/https), one-command `migrate`, `validate` side-by-side, exact `rollback`. Left: RDS/S3/ECS/
+ElastiCache/EBS/NLB naming checks, logs and traces, anomaly and composite alarms, non-SNS alarm
+actions, multi-region/multi-account, updating (not just skipping) existing objects. See HANDOFF.md.
+
 ## To-dos
 ### Foundation (before adding sources)
 - [x] Refactor into `core/` and `sources/<name>/` with a common source interface (2026-10-03)
@@ -68,7 +74,7 @@ verification log entry, and a conversion-rate figure.
       (this is how we "see where we are failing")
 - [x] (alerts done, dashboard categories pending) Define a failure taxonomy: unsupported query function, missing metric mapping, unsupported
       visualization, unsupported plugin, data not ingested, naming mismatch
-- [ ] Add side-by-side validation: run the source query and the converted query over the same
+- [x] (CloudWatch done, others pending) Add side-by-side validation: run the source query and the converted query over the same
       period and compare results (the safety net that makes approximate conversions acceptable)
 - [ ] Add usage triage: skip dashboards nobody views and alerts that never fire
 

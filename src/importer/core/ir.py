@@ -49,7 +49,8 @@ class Aggregation(StrEnum):
 
 class TagFilter(BaseModel):
     key: str
-    value: str
+    value: str = ""
+    absent: bool = False  # match only rows where this attribute is not set
 
 
 class NrTarget(BaseModel):

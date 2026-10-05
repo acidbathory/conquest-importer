@@ -24,3 +24,5 @@ Screenshot*.png
 # Terraform plan files and build artifacts from live tests
 tfplan
 *.zip
+destroyplan
+tfplan*

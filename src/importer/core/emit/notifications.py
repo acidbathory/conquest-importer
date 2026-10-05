@@ -83,11 +83,7 @@ def workflow_input(plan: NotificationPlan, channel_ids: list[str]) -> dict[str, 
             ],
         },
         "destinationConfigurations": [
-            {
-                "channelId": channel_ids[i],
-                "type": NR_TYPE[plan.destinations[i].kind],
-            }
-            for i in wf.destination_indexes
+            {"channelId": channel_ids[i]} for i in wf.destination_indexes
         ],
     }
 

@@ -90,7 +90,11 @@ def test_classic_alarm_maps_period_and_evaluation_periods() -> None:
     assert ir.signal.aggregation_window_seconds == 300
     assert ir.signal.window_seconds == 900
     assert ir.signal.occurrences == Occurrences.ALL
-    assert nrql_for(ir) == "SELECT average(aws.ec2.CPUUtilization) FROM Metric"
+    assert nrql_for(ir) == (
+        "SELECT average(aws.ec2.CPUUtilization) FROM Metric WHERE aws.ec2.AutoScalingGroupName "
+        "IS NULL AND aws.ec2.ImageId IS NULL AND aws.ec2.InstanceId IS NULL "
+        "AND aws.ec2.InstanceType IS NULL"
+    )
 
 
 def test_one_of_n_is_at_least_once_exactly() -> None:
@@ -138,7 +142,7 @@ def test_comparison_operators(op: str, expected: str) -> None:
         {"ComparisonOperator": "LessThanLowerOrGreaterThanUpperThreshold"},
         {"ComparisonOperator": "SomethingNew"},
         {"Statistic": "SampleCount"},
-        {"Statistic": None, "ExtendedStatistic": "p99"},
+        {"Statistic": None, "ExtendedStatistic": "p99.9"},
         {"Namespace": "MyCompany/App"},
         {"Period": 10},
         {"Period": 90},
@@ -168,7 +172,7 @@ def test_actions_are_listed_not_migrated() -> None:
 
 def test_dimensions_become_where_clauses_with_escaping() -> None:
     ir = alarm(Dimensions=[{"Name": "InstanceId", "Value": "i-1' OR 'a'='a"}])
-    assert nrql_for(ir).endswith("WHERE aws.ec2.InstanceId = 'i-1\\' OR \\'a\\'=\\'a'")
+    assert "WHERE aws.ec2.InstanceId = 'i-1\\' OR \\'a\\'=\\'a' AND " in nrql_for(ir)
 
 
 def test_dimension_value_with_newline_is_manual() -> None:
@@ -210,7 +214,8 @@ def test_metric_math_ratio_and_precedence() -> None:
     assert nrql_for(ir) == (
         "SELECT (sum(aws.lambda.A.byFunction) + sum(aws.lambda.B.byFunction)) "
         "/ sum(aws.lambda.C.byFunction) * 100 "
-        "FROM Metric WHERE aws.lambda.FunctionName = 'f'"
+        "FROM Metric WHERE aws.lambda.FunctionName = 'f' AND aws.lambda.ExecutedVersion IS NULL "
+        "AND aws.lambda.Resource IS NULL"
     )
 
 
@@ -311,7 +316,7 @@ def test_cli_convert_cloudwatch_end_to_end(tmp_path: Path) -> None:
     terraform = (tmp_path / "main.tf").read_text()
     assert "$${evil}" in terraform
     emitted = len(list((tmp_path / "nerdgraph").glob("*.json")))
-    assert terraform.count('resource "newrelic_nrql_alert_condition"') == emitted == 16
+    assert terraform.count('resource "newrelic_nrql_alert_condition"') == emitted == 17
 
 
 def test_cli_rejects_unknown_source_and_missing_input(tmp_path: Path) -> None:
@@ -371,13 +376,13 @@ def test_real_aws_export_converts_as_expected(tmp_path: Path) -> None:
         "conquest-test-rds-free-storage": "approximate",
         "conquest-test-lambda-errors": "approximate",
         "conquest-test-connections-3of5": "approximate",
-        "conquest-test-alb-latency-p99": "manual",
+        "conquest-test-alb-latency-p99": "approximate",
         "conquest-test-sqs-age": "approximate",
         "conquest-test-custom-namespace": "approximate",
         "conquest-test-lambda-error-rate": "approximate",
         "conquest-test-composite": "unsupported",
     }
-    assert len(list((tmp_path / "nerdgraph").glob("*.json"))) == 7
+    assert len(list((tmp_path / "nerdgraph").glob("*.json"))) == 8
     assert "926634327293" not in (REAL / "describe-alarms.json").read_text()
 
 
@@ -392,14 +397,15 @@ def test_lambda_function_metrics_carry_the_by_function_suffix() -> None:
         Dimensions=[{"Name": "FunctionName", "Value": "f"}],
     )
     assert nrql_for(ir) == (
-        "SELECT sum(aws.lambda.Errors.byFunction) FROM Metric WHERE aws.lambda.FunctionName = 'f'"
+        "SELECT sum(aws.lambda.Errors.byFunction) FROM Metric WHERE aws.lambda.FunctionName = 'f' "
+        "AND aws.lambda.ExecutedVersion IS NULL AND aws.lambda.Resource IS NULL"
     )
 
 
 def test_suffix_depends_on_the_dimension_set_and_is_absent_when_unconfirmed() -> None:
     # No dimensions: the account-wide metric keeps the plain name.
     plain = alarm(Namespace="AWS/Lambda", MetricName="Errors", Statistic="Sum", Dimensions=[])
-    assert nrql_for(plain) == "SELECT sum(aws.lambda.Errors) FROM Metric"
+    assert nrql_for(plain).startswith("SELECT sum(aws.lambda.Errors) FROM Metric WHERE ")
     # A dimension set with no confirmed suffix is left as before (and labelled unverified).
     other = alarm(
         Namespace="AWS/Lambda",
@@ -436,3 +442,105 @@ def test_other_custom_namespace_shapes_are_not_guessed(namespace: str) -> None:
     ir = alarm(Namespace=namespace, MetricName="M", Statistic="Sum")
     assert ir.confidence == Confidence.MANUAL
     assert "no New Relic mapping" in ir.reasons[0]
+
+
+# --- dimension sets, percentiles, Kinesis (confirmed on real data, 2026-10-05) -------------
+
+
+def test_dimension_set_is_pinned_so_other_sets_are_not_added_in() -> None:
+    # Seen live: ApiName-only and ApiName+Stage rows share a metric name and doubled a count.
+    only_api = alarm(
+        Namespace="AWS/ApiGateway",
+        MetricName="Count",
+        Statistic="Sum",
+        Dimensions=[{"Name": "ApiName", "Value": "a"}],
+    )
+    assert nrql_for(only_api) == (
+        "SELECT sum(aws.apigateway.Count) FROM Metric WHERE aws.apigateway.ApiName = 'a' "
+        "AND aws.apigateway.ApiId IS NULL AND aws.apigateway.Method IS NULL "
+        "AND aws.apigateway.Resource IS NULL AND aws.apigateway.Stage IS NULL"
+    )
+    with_stage = alarm(
+        Namespace="AWS/ApiGateway",
+        MetricName="Count",
+        Statistic="Sum",
+        Dimensions=[{"Name": "ApiName", "Value": "a"}, {"Name": "Stage", "Value": "s"}],
+    )
+    text = nrql_for(with_stage)
+    assert "aws.apigateway.Stage = 's'" in text and "aws.apigateway.Stage IS NULL" not in text
+
+
+def test_namespaces_without_a_dimension_list_add_no_pins() -> None:
+    ir = alarm(
+        Namespace="Custom/App1",
+        MetricName="M",
+        Statistic="Sum",
+        Dimensions=[{"Name": "Service", "Value": "x"}],
+    )
+    assert "IS NULL" not in nrql_for(ir)
+
+
+def test_kinesis_stream_metrics_carry_the_by_stream_suffix() -> None:
+    ir = alarm(
+        Namespace="AWS/Kinesis",
+        MetricName="IncomingRecords",
+        Statistic="Sum",
+        Dimensions=[{"Name": "StreamName", "Value": "s"}],
+    )
+    assert nrql_for(ir).startswith("SELECT sum(aws.kinesis.IncomingRecords.byStream) FROM Metric")
+
+
+def percentile_alarm(**fields: Any) -> IRMonitor:
+    base: dict[str, Any] = {
+        "Namespace": "AWS/ApiGateway",
+        "MetricName": "Latency",
+        "Statistic": None,
+        "ExtendedStatistic": "p99",
+        "Dimensions": [{"Name": "ApiName", "Value": "a"}],
+        "Period": 60,
+    }
+    return alarm(**{**base, **fields})
+
+
+def test_percentile_uses_the_separate_percentile_metric_and_the_matching_extreme() -> None:
+    above = percentile_alarm()
+    assert above.confidence == Confidence.APPROXIMATE
+    assert nrql_for(above).startswith("SELECT max(aws.apigateway.Latency.p99) FROM Metric")
+    assert any("--percentile" in r for r in above.reasons)
+    below = percentile_alarm(ComparisonOperator="LessThanThreshold")
+    assert nrql_for(below).startswith("SELECT min(aws.apigateway.Latency.p99)")
+
+
+def test_percentile_over_a_longer_period_says_it_is_an_approximation() -> None:
+    long = percentile_alarm(Period=300)
+    assert any("highest per-minute p99" in r for r in long.reasons)
+    assert not any("per-minute" in r for r in percentile_alarm().reasons)
+
+
+def test_percentile_keeps_the_confirmed_suffix_in_front() -> None:
+    ir = percentile_alarm(
+        Namespace="AWS/Lambda",
+        MetricName="Duration",
+        Dimensions=[{"Name": "FunctionName", "Value": "f"}],
+    )
+    assert nrql_for(ir).startswith("SELECT max(aws.lambda.Duration.byFunction.p99) FROM Metric")
+
+
+@pytest.mark.parametrize("stat", ["p99.9", "p100", "tm99", "TS(1:2)", "p"])
+def test_other_percentile_forms_stay_manual(stat: str) -> None:
+    assert percentile_alarm(ExtendedStatistic=stat).confidence == Confidence.MANUAL
+
+
+def test_mapping_files_agree_with_each_other() -> None:
+    from importer.sources.cloudwatch.translate import (
+        KNOWN_DIMENSIONS,
+        SUFFIXES,
+        load_namespace_map,
+    )
+
+    namespaces = set(load_namespace_map())
+    assert set(KNOWN_DIMENSIONS) <= namespaces
+    for namespace, by_dims in SUFFIXES.items():
+        assert namespace in namespaces
+        for dim_set in by_dims:
+            assert set(dim_set.split(",")) <= set(KNOWN_DIMENSIONS[namespace])

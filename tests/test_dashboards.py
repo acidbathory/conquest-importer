@@ -47,7 +47,9 @@ def test_simple_metric_row_becomes_a_timeseries_query() -> None:
     assert w.kind == WidgetKind.CHART and w.visualization == Visualization.LINE
     assert queries(w) == [
         "SELECT average(aws.ec2.CPUUtilization) FROM Metric "
-        "WHERE aws.ec2.InstanceId = 'i-1' TIMESERIES 300 SECONDS"
+        "WHERE aws.ec2.InstanceId = 'i-1' AND aws.ec2.AutoScalingGroupName IS NULL "
+        "AND aws.ec2.ImageId IS NULL AND aws.ec2.InstanceType IS NULL "
+        "TIMESERIES 300 SECONDS"
     ]
     assert w.confidence == Confidence.APPROXIMATE
 
@@ -74,7 +76,7 @@ def test_partial_conversion_is_approximate_and_says_what_was_lost() -> None:
     w = widget(
         [
             ["AWS/EC2", "CPUUtilization", "InstanceId", "i-1"],
-            ["AWS/EC2", "CPUUtilization", "InstanceId", "i-1", {"stat": "p99"}],
+            ["AWS/EC2", "CPUUtilization", "InstanceId", "i-1", {"stat": "SampleCount"}],
         ]
     )
     assert len(w.series) == 1 and w.kind == WidgetKind.CHART

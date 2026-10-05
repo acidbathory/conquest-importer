@@ -103,6 +103,45 @@ minutes after deployment.
   conditions disabled. Note: the condition search by name (`queryLike`) missed the newest
   condition right after creation; verify by `policyId` instead.
 
+## 2026-10-05: metric naming per service, percentiles, write paths (AWS 926634327293 -> NR 8059020)
+A second live stack (`scripts/live-test/services`: EC2, SQS, SNS, Kinesis, API Gateway, ALB, 6 alarms)
+and a second ingestion stack (`ingest-setup` with `--percentile`) were created, measured and destroyed.
+Metrics compared against CloudWatch `get-metric-statistics` with the new `validate` command.
+- DIMENSION SETS (converter bug found and fixed): CloudWatch publishes one metric per dimension set and
+  New Relic stores every set under the same metric name, so a query filtering on some dimensions
+  added the sets together (API Gateway Count: 54 for `[ApiName]` rows + 54 for `[ApiName,Stage]` rows =
+  108 vs CloudWatch 72 for one set). The converter now pins the set with `<dim> IS NULL` for every
+  known dimension the alarm does not use (`cloudwatch_dimensions.json`; over-listing is harmless).
+- Suffix table additions: `AWS/Kinesis` `StreamName` -> `.byStream`. Confirmed to need NO suffix:
+  SQS (QueueName), SNS (TopicName), ApiGateway (ApiName), ApplicationELB (LoadBalancer), EC2
+  (InstanceId). ALB with a fixed-response listener emits `HTTP_Fixed_Response_Count`, not RequestCount.
+- Side by side, same window, after the fixes: API Gateway count 90=90, EC2 CPU 0.225788 (exact),
+  Kinesis incoming 15=15, SNS published 15=15, SQS depth 38=38. ALB: no data either side (my alarm).
+- PERCENTILES: with `statistics_configuration` on the stream, New Relic stores `<metric>.p99` as a
+  separate GAUGE metric (`aws.apigateway.Latency.p99`, one value per minute). The converter reads
+  `max(...)` for "above" alarms and `min(...)` for "below", and says so when the alarm period is > 60s
+  (a p99 over 5 minutes is not the max of five 1-minute p99s). Verified: CloudWatch p99 max 2.99699 =
+  New Relic max(p99) 2.99699. Confirmed on API Gateway only; `p99.9` and trimmed means stay manual.
+- WRITE PATHS verified live in the sandbox, each created, read back, and rolled back:
+  conditions + policy (NerdGraph), dashboard (`dashboardCreate`/`dashboardDelete`, PRIVATE),
+  notification destination + channel + workflow (workflow DISABLED, filter
+  `accumulations.conditionName EXACTLY_MATCHES [<condition names>]`), idempotent re-run ("already
+  existed"). Bugs found by the live run and fixed: the workflow input has no `type` field in
+  `destinationConfigurations`; notification id filters are typed `ID` not `String`; a delete that does
+  not raise can still leave the object, so rollback re-reads after deleting.
+- `extract-cloudwatch` now also reads SNS subscriptions (`sns list-subscriptions-by-topic`); live run
+  returned 1 topic whose only subscription is SQS, correctly reported as not migratable.
+- `migrate` ran plan-only and `--apply` against the real account: policy + 6 conditions created with a
+  manifest; `rollback` dry-run, then real, removed exactly those 7.
+- NOT verified: email/https destinations were created with example.com placeholders and a DISABLED
+  workflow, so actual notification delivery is untested; real SNS email/https subscriptions were not
+  used; Terraform for notifications validates but was not applied; RDS, S3, ECS, ElastiCache, EBS,
+  NLB/classic ELB naming; Lambda dimension sets other than FunctionName; percentiles outside API
+  Gateway; the duplicate-row effect (two identical rows per timestamp, seen on DynamoDB and API
+  Gateway) is not explained and makes `sum`/`count` queries double-count unless filtered.
+- Cleanup: both stacks destroyed and swept; the NR sandbox has no `conquest`/`Imported from
+  CloudWatch` objects left.
+
 ## Still unverified
 - Services other than DynamoDB and Lambda per-function (EC2, RDS, ALB, SQS, ECS, ...): the EC2 instance was
   stopped and the Lambda functions idle, so they published no metrics during the test.

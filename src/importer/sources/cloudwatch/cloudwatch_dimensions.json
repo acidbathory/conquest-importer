@@ -1,0 +1,81 @@
+{
+  "_comment": "Known CloudWatch dimension names per namespace. CloudWatch publishes a metric once per dimension set and New Relic stores every set under the same metric name, so a query that filters on only some dimensions would add the sets together (seen on API Gateway: ApiName-only + ApiName/Stage rows doubled a count). The converter therefore adds `<dimension> IS NULL` for every dimension listed here that the alarm does not use. Over-listing is harmless; a dimension missing from this list can still leak. Confirmed 2026-10-05 for AWS/ApiGateway (ApiName vs ApiName+Stage).",
+  "AWS/EC2": [
+    "InstanceId",
+    "AutoScalingGroupName",
+    "ImageId",
+    "InstanceType"
+  ],
+  "AWS/EBS": [
+    "VolumeId"
+  ],
+  "AWS/RDS": [
+    "DBInstanceIdentifier",
+    "DBClusterIdentifier",
+    "DatabaseClass",
+    "EngineName",
+    "Role",
+    "SourceRegion"
+  ],
+  "AWS/ApplicationELB": [
+    "LoadBalancer",
+    "AvailabilityZone",
+    "TargetGroup"
+  ],
+  "AWS/NetworkELB": [
+    "LoadBalancer",
+    "AvailabilityZone",
+    "TargetGroup"
+  ],
+  "AWS/ELB": [
+    "LoadBalancerName",
+    "AvailabilityZone"
+  ],
+  "AWS/Lambda": [
+    "FunctionName",
+    "Resource",
+    "ExecutedVersion"
+  ],
+  "AWS/DynamoDB": [
+    "TableName",
+    "GlobalSecondaryIndexName",
+    "Operation",
+    "StreamLabel",
+    "ReceivingRegion"
+  ],
+  "AWS/SQS": [
+    "QueueName"
+  ],
+  "AWS/SNS": [
+    "TopicName",
+    "Application",
+    "Platform",
+    "Country",
+    "SMSType"
+  ],
+  "AWS/S3": [
+    "BucketName",
+    "StorageType",
+    "FilterId"
+  ],
+  "AWS/ECS": [
+    "ClusterName",
+    "ServiceName"
+  ],
+  "AWS/ElastiCache": [
+    "CacheClusterId",
+    "CacheNodeId",
+    "ReplicationGroupId"
+  ],
+  "AWS/ApiGateway": [
+    "ApiName",
+    "Stage",
+    "Resource",
+    "Method",
+    "ApiId"
+  ],
+  "AWS/Kinesis": [
+    "StreamName",
+    "ShardId"
+  ]
+}

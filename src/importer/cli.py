@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
 
@@ -35,6 +36,7 @@ from importer.core.ir import Confidence, IRMonitor
 from importer.core.manifest import CreatedObject, Manifest, load_manifest, save_manifest
 from importer.core.notification_ir import NotificationPlan, build_plan
 from importer.core.report import build_report, md_cell
+from importer.core.rollback import rollback
 from importer.core.secrets import (
     DatadogCredentials,
     MissingSecretError,
@@ -44,11 +46,14 @@ from importer.core.secrets import (
 from importer.core.stats import build_stats, load_run, render_markdown
 from importer.core.text import printable
 from importer.sources import DASHBOARD_REGISTRY, REGISTRY
-from importer.sources.cloudwatch.extract import AwsError, Reader
+from importer.sources.cloudwatch import validate as cw_validate
+from importer.sources.cloudwatch.dashboard_models import load_dashboards
+from importer.sources.cloudwatch.extract import AwsError, Reader, caller_account
 from importer.sources.cloudwatch.extract import extract as extract_cloudwatch
 from importer.sources.cloudwatch.ingest import IngestConfig, ingest_files
 from importer.sources.cloudwatch.models import load_alarms
 from importer.sources.cloudwatch.notifications import load_topics, routing, translate_topic
+from importer.sources.cloudwatch.streaming import streaming_inputs
 from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
 from importer.sources.datadog.client import DatadogAPIError, DatadogClient, InvalidSiteError
 
@@ -496,6 +501,297 @@ def apply_notifications_command(
         typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
     if result.failed:
         raise typer.Exit(code=1)
+
+
+@app.command("validate")
+def validate_command(
+    alarms: Annotated[
+        Path, typer.Option(help="describe-alarms JSON (from extract-cloudwatch)")
+    ] = Path("out/cloudwatch/alarms"),
+    alerts: Annotated[Path, typer.Option(help="Output folder of `convert` (has ir/)")] = Path(
+        "out/cw"
+    ),
+    account_id: Annotated[str, typer.Option(help="AWS account id you expect (12 digits)")] = "",
+    region: Annotated[str, typer.Option(help="AWS region to read")] = "us-east-1",
+    profile: Annotated[str | None, typer.Option(help="AWS CLI profile (default: CLI's)")] = None,
+    nr_account_id: Annotated[int, typer.Option(help="New Relic account id to query")] = 0,
+    nr_region: Annotated[str, typer.Option(help="us or eu")] = "us",
+    since: Annotated[
+        str | None, typer.Option(help="Window start, UTC (default: 30 minutes ago)")
+    ] = None,
+    until: Annotated[str | None, typer.Option(help="Window end, UTC (default: now)")] = None,
+    out: Annotated[Path | None, typer.Option(help="Also write the markdown report here")] = None,
+) -> None:
+    """Compare each converted query in New Relic with CloudWatch's own numbers (read-only).
+
+    Runs the converted NRQL over the window and reads the same window from CloudWatch. Use a
+    window that starts after ingestion started; New Relic has no earlier data.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    if not nr_account_id:
+        typer.echo("Error: --nr-account-id is required", err=True)
+        raise typer.Exit(code=1)
+    try:
+        end = (
+            cw_validate.utc(until) if until else datetime.now(UTC).replace(second=0, microsecond=0)
+        )
+        start = cw_validate.utc(since) if since else end - timedelta(minutes=30)
+        if start >= end:
+            raise ValueError("--since must be earlier than --until")
+        reader = Reader(region, profile)
+        if caller_account(reader) != account_id:
+            raise AwsError("the AWS CLI is signed in to a different account than --account-id")
+        with NewRelicClient(require_env("NEW_RELIC_API_KEY"), nr_region) as client:
+            checks = cw_validate.validate(
+                reader, client, nr_account_id, alarms, alerts / "ir", start, end
+            )
+    except (AwsError, MissingSecretError, NewRelicAPIError, ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    text = cw_validate.render(checks, start, end)
+    typer.echo(text, nl=False)
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(text)
+    if cw_validate.has_problems(checks):
+        raise typer.Exit(code=1)
+
+
+@app.command("rollback")
+def rollback_command(
+    manifest: Annotated[Path, typer.Option(help="manifest.json written by apply commands")],
+    account_id: Annotated[int, typer.Option(help="New Relic TEST account id")] = 0,
+    do_apply: Annotated[
+        bool, typer.Option("--apply", help="Actually delete (default: dry run)")
+    ] = False,
+    confirm_account: Annotated[
+        int | None, typer.Option(help="Repeat the account id to confirm --apply")
+    ] = None,
+) -> None:
+    """Delete exactly what a migration created, as recorded in its manifest.
+
+    Each object is re-read and deleted only if its id still has its recorded name. A policy is
+    kept if it still holds conditions that are not ours. Dry run by default.
+    """
+    if account_id <= 0:
+        typer.echo("Error: --account-id is required", err=True)
+        raise typer.Exit(code=1)
+    try:
+        record = load_manifest(manifest)
+        if record.account_id != account_id:
+            raise ValueError(f"manifest belongs to account {record.account_id}, not {account_id}")
+        if do_apply:
+            check_guards(
+                account_id, confirm_account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS")
+            )
+        with NewRelicClient(require_env("NEW_RELIC_API_KEY"), record.region) as client:
+            result = rollback(client, account_id, record, apply=do_apply)
+    except (GuardError, MissingSecretError, NewRelicAPIError, ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    verb = "Deleted" if do_apply else "Would delete"
+    for obj in result.deleted:
+        typer.echo(f"  {verb} {obj.kind:11} {obj.id}  {printable(obj.name, 60)}")
+    for obj, why in result.skipped:
+        typer.echo(f"  Left {obj.kind:11} {obj.id}  {printable(obj.name, 40)}: {why}")
+    for obj, why in result.failed:
+        typer.echo(f"  FAILED {obj.kind} {obj.id}: {printable(why, 150)}", err=True)
+    if not do_apply:
+        typer.echo("\nDRY RUN: nothing was deleted. Add --apply --confirm-account to delete.")
+    elif result.failed:
+        raise typer.Exit(code=1)
+
+
+def _step(title: str, run: Callable[[], None]) -> None:
+    """Run one stage of `migrate`; stop the whole run if the stage failed."""
+    typer.echo(f"\n== {title}")
+    try:
+        run()
+    except typer.Exit as exc:
+        if exc.exit_code:
+            typer.echo(f"\nStopped at: {title}. Nothing later was run.", err=True)
+            raise typer.Exit(code=1) from None
+
+
+def _plan_text(
+    aws_account: str,
+    nr_account: int,
+    region: str,
+    out: Path,
+    stats_md: str,
+    counts: dict[str, int],
+    stream: tuple[int, int],
+) -> str:
+    """The reviewable summary written by `migrate` (plain text, no untrusted names)."""
+    ingest = out / "ingest"
+    lines = [
+        "# Migration plan",
+        "",
+        f"AWS account {aws_account} ({region}) to New Relic account {nr_account}.",
+        "",
+        stats_md,
+        "## Dashboards",
+        "",
+        f"{counts['dashboards']} read; see {out / 'dashboards' / 'report.md'} for widget detail.",
+        "",
+        "## Notifications",
+        "",
+        f"{counts['topics']} SNS topics; see {out / 'notifications' / 'report.md'}.",
+        "",
+        "## Data ingestion (you deploy this: it needs the New Relic license key)",
+        "",
+        f"Streams {stream[0]} namespaces and {stream[1]} percentile setting(s).",
+        f"  cd {ingest} && terraform init && terraform plan   # apply after review",
+        "  needs TF_VAR_newrelic_license_key, TF_VAR_newrelic_account_id, TF_VAR_newrelic_api_key",
+        "",
+        "## Afterwards",
+        "",
+        f"  importer validate --alarms {out / 'export' / 'alarms'} --alerts {out / 'alerts'} "
+        f"--account-id {aws_account} --nr-account-id {nr_account} --since <ingestion start, UTC>",
+        f"  importer rollback --manifest {out / 'manifest.json'} --account-id {nr_account}",
+        "",
+        "Conditions and workflows are created DISABLED, dashboards PRIVATE: review, then enable.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+@app.command("migrate")
+def migrate_command(
+    aws_account_id: Annotated[str, typer.Option(help="AWS account id you expect (12 digits)")],
+    nr_account_id: Annotated[int, typer.Option(help="New Relic TEST account id to migrate into")],
+    region: Annotated[str, typer.Option(help="AWS region to read")] = "us-east-1",
+    profile: Annotated[str | None, typer.Option(help="AWS CLI profile (default: CLI's)")] = None,
+    nr_region: Annotated[str, typer.Option(help="New Relic region: us or eu")] = "us",
+    out: Annotated[Path, typer.Option(help="New folder for everything this run writes")] = Path(
+        "out/migration"
+    ),
+    do_apply: Annotated[
+        bool, typer.Option("--apply", help="Create everything in New Relic (default: plan only)")
+    ] = False,
+    confirm_account: Annotated[
+        int | None, typer.Option(help="Repeat the New Relic account id to confirm --apply")
+    ] = None,
+) -> None:
+    """Migrate CloudWatch into New Relic in one go: read, convert, plan, and (optionally) create.
+
+    Without --apply it only READS from AWS and writes local files (a plan you can review). With
+    --apply (plus --confirm-account and the allow-list) it creates alert conditions, dashboards and
+    notification workflows, all DISABLED or PRIVATE, and records a manifest so `rollback` can
+    undo exactly that. Metric data still needs the ingestion Terraform (it holds a secret key, so
+    it is generated for you to deploy, not run).
+    """
+    from importer.core.stats import build_stats, load_run, render_markdown
+
+    export, alerts, dash = out / "export", out / "alerts", out / "dashboards"
+    notes, manifest_path = out / "notifications", out / "manifest.json"
+
+    _step(
+        "1. Read the AWS account (read-only)",
+        lambda: extract_cloudwatch_command(
+            account_id=aws_account_id,
+            region=region,
+            profile=profile,
+            out=export,
+            dashboards=True,
+            notifications=True,
+        ),
+    )
+    _step(
+        "2. Convert alarms",
+        lambda: convert(source=export / "alarms", out=alerts, source_system="cloudwatch"),
+    )
+    has_dashboards = any((export / "dashboards").glob("*.json"))
+    if has_dashboards:
+        _step(
+            "3. Convert dashboards",
+            lambda: convert_dashboards(
+                source=export / "dashboards", out=dash, source_system="cloudwatch"
+            ),
+        )
+    has_topics = any((export / "notifications").glob("*.json"))
+    if has_topics:
+        _step(
+            "4. Plan notifications",
+            lambda: convert_notifications(
+                topics=export / "notifications", alerts=alerts, out=notes, prefix="Imported:"
+            ),
+        )
+
+    metric_alarms, _ = load_alarms(export / "alarms")
+    dashboards_in = load_dashboards(export / "dashboards") if has_dashboards else []
+    namespaces, specs = streaming_inputs(metric_alarms, dashboards_in)
+    percentile_args = [
+        f"{sp['namespace']}:{sp['metric_name']}:{','.join(map(str, sp['statistics']))}"  # type: ignore[call-overload]
+        for sp in specs
+    ]
+    _step(
+        "5. Generate the data-ingestion Terraform (not deployed)",
+        lambda: ingest_setup(
+            out=out / "ingest",
+            aws_region=region,
+            nr_region=nr_region,
+            name_prefix="cw-import",
+            namespaces=",".join(namespaces),
+            alarms=None,
+            percentile=percentile_args or None,
+        ),
+    )
+
+    run = load_run(alerts)
+    stats_md = render_markdown([run], build_stats([run]), top=15).split("\n", 2)[2]
+    counts = {
+        "dashboards": len(list((dash / "dashboard-ir").glob("*.json"))) if has_dashboards else 0,
+        "topics": len(list((export / "notifications").glob("*.json"))),
+    }
+    plan = _plan_text(
+        aws_account_id, nr_account_id, region, out, stats_md, counts, (len(namespaces), len(specs))
+    )
+    (out / "plan.md").write_text(plan)
+    typer.echo(f"\nPlan written to {out / 'plan.md'}")
+
+    if not do_apply:
+        typer.echo("PLAN ONLY: nothing was created in New Relic. Add --apply --confirm-account.")
+        return
+    policy = f"Imported from CloudWatch ({aws_account_id})"
+    _step(
+        "6. Create alert conditions",
+        lambda: apply(
+            source=alerts,
+            account_id=nr_account_id,
+            region=nr_region,
+            policy_name=policy,
+            do_apply=True,
+            confirm_account=confirm_account,
+            manifest=manifest_path,
+        ),
+    )
+    if has_topics:
+        _step(
+            "7. Create notification workflows (disabled)",
+            lambda: apply_notifications_command(
+                source=notes,
+                account_id=nr_account_id,
+                region=nr_region,
+                do_apply=True,
+                confirm_account=confirm_account,
+                manifest=manifest_path,
+            ),
+        )
+    if has_dashboards:
+        _step(
+            "8. Create dashboards (private)",
+            lambda: apply_dashboards_command(
+                source=dash,
+                account_id=nr_account_id,
+                region=nr_region,
+                do_apply=True,
+                confirm_account=confirm_account,
+                manifest=manifest_path,
+            ),
+        )
+    undo = f"importer rollback --manifest {manifest_path} --account-id {nr_account_id} --apply"
+    typer.echo(f"\nDone. To undo exactly this run: {undo} --confirm-account {nr_account_id}")
 
 
 @app.command("ingest-setup")

@@ -41,6 +41,15 @@ from importer.sources.cloudwatch.models import (
 
 NAMESPACE_MAP_PATH = Path(__file__).parent / "cloudwatch_map.json"
 SUFFIX_MAP_PATH = Path(__file__).parent / "cloudwatch_suffixes.json"
+DIMENSIONS_PATH = Path(__file__).parent / "cloudwatch_dimensions.json"
+# Percentiles arrive as a separate gauge metric named <metric>.pNN (confirmed on API Gateway
+# Latency.p99), and only when the metric stream is configured to send that percentile.
+_PERCENTILE = re.compile(r"^p(\d{1,2})$")
+PERCENTILE_NOTE = (
+    "percentile metrics (<metric>.pNN) are only sent when the metric stream is configured for "
+    "them: run ingest-setup with --percentile NAMESPACE:METRIC:pNN; the name was confirmed on "
+    "API Gateway only"
+)
 # Custom metrics stream as aws.custom.<name>.<Metric>, with <name> lower-cased (confirmed for one
 # single-word namespace; other shapes are left unmapped rather than guessed).
 _CUSTOM_NAMESPACE = re.compile(r"^Custom/([A-Za-z0-9]+)$")
@@ -116,6 +125,14 @@ def load_suffix_map(path: Path = SUFFIX_MAP_PATH) -> dict[str, dict[str, str]]:
 
 
 SUFFIXES = load_suffix_map()
+
+
+def load_dimension_registry(path: Path = DIMENSIONS_PATH) -> dict[str, list[str]]:
+    raw = json.loads(path.read_text())
+    return {k: list(v) for k, v in raw.items() if not k.startswith("_")}
+
+
+KNOWN_DIMENSIONS = load_dimension_registry()
 
 
 def metric_prefix(namespace: str, prefixes: dict[str, str]) -> str | None:
@@ -230,10 +247,16 @@ class _Resolved:
         self.aggregation = Aggregation.AVG
         self.scope: list[TagFilter] = []
         self.period = 0
+        self.notes: list[str] = []
 
 
 def _resolve_term(
-    namespace: str, metric_name: str, dims: list[Dimension], stat: str, prefixes: dict[str, str]
+    namespace: str,
+    metric_name: str,
+    dims: list[Dimension],
+    stat: str,
+    prefixes: dict[str, str],
+    percentile_aggregation: Aggregation = Aggregation.MAX,
 ) -> tuple[MetricTerm, list[TagFilter]]:
     prefix = metric_prefix(namespace, prefixes)
     if prefix is None:
@@ -241,16 +264,26 @@ def _resolve_term(
             Confidence.MANUAL,
             f"no New Relic mapping for namespace {namespace!r}; add it to cloudwatch_map.json",
         )
-    aggregation = STATISTICS.get(stat)
+    percentile = _PERCENTILE.match(stat)
+    # A percentile is one value per minute, so the time aggregation picks the extreme that
+    # matches the alarm direction (highest for "above", lowest for "below").
+    aggregation = percentile_aggregation if percentile else STATISTICS.get(stat)
     if aggregation is None:
         raise _Fail(Confidence.MANUAL, f"statistic {stat!r} is not supported yet")
     try:
-        attribute = identifier(f"{prefix}.{metric_name}{metric_suffix(namespace, dims)}")
+        name = f"{prefix}.{metric_name}{metric_suffix(namespace, dims)}"
+        if percentile:
+            name += f".{stat}"
+        attribute = identifier(name)
         scope = []
         for d in dims:
             if len(d.Value) > MAX_DIMENSION_VALUE or not d.Value.isprintable():
                 raise ValueError("dimension value is too long or has control characters")
             scope.append(TagFilter(key=identifier(f"{prefix}.{d.Name}"), value=d.Value))
+        # Pin the dimension set: rows of other sets share the metric name.
+        used = {d.Name for d in dims}
+        for other in sorted(set(KNOWN_DIMENSIONS.get(namespace, [])) - used):
+            scope.append(TagFilter(key=identifier(f"{prefix}.{other}"), absent=True))
     except ValueError:
         raise _Fail(
             Confidence.MANUAL, "metric or dimension name has characters that are not supported"
@@ -270,14 +303,20 @@ def _resolve(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> _Resolved:
     if alarm.Metrics is None:
         if not (alarm.Namespace and alarm.MetricName):
             raise _Fail(Confidence.MANUAL, "alarm has no metric")
-        if alarm.ExtendedStatistic:
-            raise _Fail(
-                Confidence.MANUAL,
-                f"percentile statistic {alarm.ExtendedStatistic!r} is not supported yet",
-            )
+        statistic = alarm.ExtendedStatistic or alarm.Statistic or ""
+        direction = OPERATORS.get(alarm.ComparisonOperator)
+        below = direction in (Operator.BELOW, Operator.BELOW_OR_EQUALS)
+        agg = Aggregation.MIN if below else Aggregation.MAX
         term, scope = _resolve_term(
-            alarm.Namespace, alarm.MetricName, alarm.Dimensions, alarm.Statistic or "", prefixes
+            alarm.Namespace, alarm.MetricName, alarm.Dimensions, statistic, prefixes, agg
         )
+        if _PERCENTILE.match(statistic):
+            out.notes.append(PERCENTILE_NOTE)
+            if (alarm.Period or 0) > 60:
+                out.notes.append(
+                    f"a {statistic} over {alarm.Period}s is approximated by the "
+                    f"{'lowest' if below else 'highest'} per-minute {statistic}"
+                )
         out.terms = {"m1": term}
         out.scope = scope
         out.aggregation = term.space_aggregation
@@ -313,7 +352,7 @@ def _resolve(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> _Resolved:
             prefixes,
         )
         out.terms[qid] = term
-        scopes.append(sorted(scope, key=lambda f: f.key))
+        scopes.append(sorted(scope, key=lambda f: (f.absent, f.key)))
         periods.add(stat.Period)
         stats.add(term.space_aggregation)
     if any(s != scopes[0] for s in scopes):
@@ -406,6 +445,7 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
         )
 
     reasons.append(NAMING_NOTE)
+    reasons.extend(n for n in resolved.notes if n not in reasons)
     missing = alarm.TreatMissingData or "missing"
     no_data = NoData()
     if missing == "breaching":

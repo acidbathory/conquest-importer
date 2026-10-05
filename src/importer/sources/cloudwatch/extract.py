@@ -28,6 +28,7 @@ ALLOWED_COMMANDS = {
     ("cloudwatch", "list-dashboards"),
     ("cloudwatch", "get-dashboard"),
     ("sns", "list-subscriptions-by-topic"),
+    ("cloudwatch", "get-metric-statistics"),
 }
 TIMEOUT_SECONDS = 120
 MAX_DASHBOARDS = 1000

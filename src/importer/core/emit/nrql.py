@@ -97,6 +97,8 @@ def _expr_sql(expr: Expr, signal: MetricSignal, func: str, parent_prec: int = 0)
 
 def _tag_clause(f: TagFilter) -> str:
     attr = identifier(attribute_for(SignalKind.METRIC, f.key))
+    if f.absent:
+        return f"{attr} IS NULL"
     return f"{attr} = {quote_string(f.value)}"
 
 

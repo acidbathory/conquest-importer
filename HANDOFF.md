@@ -3,6 +3,18 @@
 Written 2026-10-02 so any person or AI assistant can continue without the chat history.
 Read this, then `CLAUDE.md` (rules), `ROADMAP.md` (plan), `docs/verification-log.md` (what is proven).
 
+## WHERE WE STOPPED (2026-10-05) - read this first
+- All work is on branch `wip/cloudwatch-complete-2026-10-05` (not pushed). `main` is still green and
+  behind it. One golden test fails on the branch on purpose: see `docs/pending/README.md`. Approve
+  or reject that diff, then merge.
+- Nothing is running in AWS or New Relic (verified). `.env` holds the New Relic license key.
+- Open question for the owner, not for code: is the tool worth continuing without full coverage?
+  Agreed next step (slowly): measure a sanitized real-customer export with `importer migrate` in plan
+  mode (reads AWS, writes local files only) and ask the manager what failed before and what success
+  means. Pause new features until that number exists.
+- Gaps and their reasons (not built / needs verification / real mismatch / deliberate) are listed under
+  "Known CloudWatch gaps" below and in the 2026-10-05 verification-log section.
+
 ## What this project is
 "Conquest Importer": a prototype that migrates observability configuration from other platforms
 into New Relic. The owner is a non-coder architect at New Relic who wants to understand the
@@ -17,12 +29,16 @@ Pipeline: source export -> typed source models -> **IR** (vendor-neutral) -> emi
 |---|---|
 | CloudWatch alarms -> conditions | Built. 23 synthetic + 9 real-export alarms. Percentiles, anomaly, metric-math functions, composites not converted |
 | Datadog monitors -> conditions | Built on **synthetic** input only (API blocked by corporate Cloudflare Gateway) |
-| CloudWatch extract from an account | Built (`extract-cloudwatch`); tested with a faked AWS CLI only, **not yet run against a real account** |
+| CloudWatch extract from an account | Built and run against a real account (`extract-cloudwatch`, also reads SNS subscriptions) |
+| `migrate` (one go), `validate`, `rollback` | Built and run live in the sandbox. `migrate` does read, convert, plan, and guarded create; metric ingestion is generated as Terraform for a human to deploy (it holds a secret) |
+| Dashboards -> New Relic | `apply-dashboards` verified live (create, read back, rollback) |
+| Notifications (SNS -> workflows) | Email and https migrate to destinations/channels/DISABLED workflows (verified live with placeholder addresses); other protocols are reported |
+| Percentile alarms | Converted (max/min of the per-minute `<metric>.pNN` gauge); needs `ingest-setup --percentile`; confirmed on API Gateway only |
 | Ingestion setup (AWS Metric Streams Terraform) | Built; deployed and verified with real data on 2026-10-02, then destroyed |
 | Guarded `apply` to New Relic | Built; verified in the sandbox |
 | Dashboards: CloudWatch | Built offline on **synthetic** input (`convert-dashboards`); Terraform validates; not created in New Relic. Other sources not started |
 | Grafana, Dynatrace, GCP, Azure | **Not started** |
-| Tests | 302 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
+| Tests | 386 (385 pass; 1 golden test waits for the owner to review a diff, see below) (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
 
 Conversion rates so far (synthetic data, so optimistic): Datadog 16/20 on the original sample set;
 CloudWatch 15/23 synthetic, 6/9 real-export. Do not present these as customer results.
@@ -52,6 +68,16 @@ uv run importer convert-dashboards --in tests/fixtures/cloudwatch-dashboards --o
 
 # Create in New Relic (dry run by default; writing needs all three guards)
 uv run importer apply --in out/cw --account-id <id>
+# ONE GO (plan only by default; reads AWS, writes local files). With --apply it creates everything
+# in New Relic (disabled/private) and writes a manifest. See out/migration/plan.md afterwards.
+uv run importer migrate --aws-account-id 123456789012 --nr-account-id 1234567
+#   ... --apply --confirm-account 1234567        # creates; needs NEW_RELIC_ALLOWED_ACCOUNT_IDS
+uv run importer validate --alarms out/migration/export/alarms --alerts out/migration/alerts \
+    --account-id 123456789012 --nr-account-id 1234567 --since 2026-10-05T04:24:00Z   # side by side
+uv run importer rollback --manifest out/migration/manifest.json --account-id 1234567  # dry run; add --apply --confirm-account
+# Individual steps: extract-cloudwatch, convert, convert-dashboards, convert-notifications, apply,
+# apply-dashboards, apply-notifications, ingest-setup [--percentile NS:METRIC:p99], stats
+
 # Ingestion setup (writes Terraform only; nothing deployed)
 uv run importer ingest-setup --alarms tests/fixtures/cloudwatch-real --out out/ingest
 ```
@@ -122,16 +148,18 @@ Engineering (see `ROADMAP.md` for the plan and order):
 - [x] Failure taxonomy for alerts (`core/taxonomy.py`: ordered keyword rules; a test fails if a
       fixture reason is uncategorised). Dashboard-specific categories (visualization, plugin) come
       with dashboards
-- [ ] Side-by-side validation (run original and converted queries, compare): BLOCKED, needs live
-      access to the source (AWS/Datadog) and New Relic; ask the owner first
+- [x] Side-by-side validation for CloudWatch (`importer validate`, verified live). Datadog/others
+      still need live access to the source
 - [ ] Usage triage (skip unused dashboards/alerts): BLOCKED, needs usage data (dashboard views,
       alarm history) that the exports do not contain
-- [ ] CloudWatch percentiles: BLOCKED on live verification. Metric Streams send count/sum/min/max
+- [x] CloudWatch percentiles: verified on API Gateway 2026-10-05 (see the log). Earlier note: Metric Streams send count/sum/min/max
       unless "additional statistics" are configured, and how New Relic stores them is unverified.
       Needs a stream with a percentile configured plus a query of the real data (asks for
       approval: deploys to AWS). Do not guess a mapping; changing the reason text also needs a
       human-reviewed golden regeneration
-- [ ] CloudWatch: verify EC2/RDS/Lambda/ALB naming when resources are active (needs AWS)
+- [~] CloudWatch naming verified live: DynamoDB, Lambda (per function), Kinesis, SQS, SNS, API Gateway,
+      EC2 (CPU), ALB (fixed-response only). STILL TO VERIFY: RDS, S3, ECS, ElastiCache, EBS, NLB, classic ELB,
+      other Lambda dimension sets, and the dimension lists in `cloudwatch_dimensions.json`
 - [x] CloudWatch dashboards, offline (synthetic fixtures). TODO: `apply` for dashboards (writes to
       New Relic; needs owner approval), real exports, `stats` support for dashboard runs,
       dashboard-specific taxonomy categories (visualization, plugin)
@@ -139,15 +167,32 @@ Engineering (see `ROADMAP.md` for the plan and order):
 - [ ] Security hardening ideas: narrower IAM policy than `ReadOnlyAccess` for the link role;
       remote encrypted Terraform state guidance for real customers (state holds the ingest key)
 
-## Live test resources: ALL REMOVED (2026-10-05)
-The 2026-10-03 live test resources (AWS test stack, ingestion pipeline, New Relic policy, 5
-conditions, dashboard) were destroyed with `terraform destroy` / verified deletes and swept. The
-Terraform that created them is kept in `scripts/live-test/aws` and `importer ingest-setup`
-regenerates the ingestion stack. The pre-existing `conti-*` resources and `conti-nr-metricstream`
-were never touched. `NEW_RELIC_LICENSE_KEY` was copied into the git-ignored `.env` for the
-ingestion deploy; remove it when no longer needed.
+## Live test resources: ALL REMOVED (2026-10-05, again after the second round)
+Nothing created by this project is running. The Terraform for both AWS test stacks is kept
+(`scripts/live-test/aws`, `scripts/live-test/services`); `importer ingest-setup` regenerates the
+ingestion stack. The pre-existing `conti-*` resources and `conti-nr-metricstream` were never touched.
+`NEW_RELIC_LICENSE_KEY` is in the git-ignored `.env` (copied by the owner); remove it when done.
+
+## Known CloudWatch gaps (what "migrate everything in one go" still does NOT do)
+- Logs, X-Ray traces, SLOs, synthetics, EventBridge: not handled at all (metrics, alarms, dashboards only)
+- Not converted: anomaly-detection alarms, composite alarms, metric-math functions, statistics
+  other than Sum/Average/Min/Max/pNN, high-resolution (< 60s) periods, log/alarm/explorer widgets
+- Alarm actions other than SNS (EC2/ASG/SSM actions) are not migrated; SNS protocols other than
+  email and https are reported, not migrated
+- Metric names are only verified for the services listed above; everything else is assumed and can
+  return nothing silently: run `validate` after ingestion, always
+- One region and one account per run; the ingestion Terraform is deployed by a human
+- Duplicate data: if New Relic's polling AWS integration and Metric Streams both run, totals double;
+  `validate` detects it, nothing prevents it
+- Existing objects are skipped, never updated (re-running after a converter fix means rolling back
+  and re-applying)
 
 ## Lessons from building (so you do not repeat them)
+- CloudWatch publishes a metric once per dimension set and New Relic stores all sets under one
+  metric name: always pin the dimension set (`IS NULL` for the other known dimensions).
+- A delete call that does not raise may not have deleted: re-read. An id filter that is typed `ID`
+  rejects a `String` variable. Read the full GraphQL error (the client truncates at 300 characters;
+  use a probe call that fails validation before it can create anything).
 - The live test found what offline tests could not: metric names depend on the dimension set
   (Lambda `.byFunction`), and the converted query ran without error but returned 0. Always compare a
   converted query with the source platform's own numbers, side by side.
