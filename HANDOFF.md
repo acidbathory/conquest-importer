@@ -139,17 +139,13 @@ Engineering (see `ROADMAP.md` for the plan and order):
 - [ ] Security hardening ideas: narrower IAM policy than `ReadOnlyAccess` for the link role;
       remote encrypted Terraform state guidance for real customers (state holds the ingest key)
 
-## Live test resources currently RUNNING (cost money, remove when done)
-- AWS 926634327293 us-east-1: `scripts/live-test/aws` (table, traced Lambda, 7 alarms, dashboard) and
-  `out/live/ingest` (Firehose, metric stream, S3 bucket, roles, NR account link). Remove each with
-  `terraform destroy` in its folder (ingest needs the same TF_VAR_* env as apply). Both have local,
-  git-ignored state. `out/` is not in git: if the folder is lost, the state is lost.
-- New Relic sandbox 8059020: policy "Conquest live test (CloudWatch)" (id 8140341) with 5 DISABLED
-  conditions and the dashboard `conquest-live-overview` (Terraform state in `out/live/dash`). Both
-  were recreated/updated on 2026-10-05 from the fixed converter and verified by reading back and
-  running the stored queries. To remove: delete the 5 conditions and the policy (only objects named
-  `conquest-live-*`), and `terraform destroy` in `out/live/dash`.
-- Do not touch the pre-existing `conti-*` resources or the `conti-nr-metricstream` stream.
+## Live test resources: ALL REMOVED (2026-10-05)
+The 2026-10-03 live test resources (AWS test stack, ingestion pipeline, New Relic policy, 5
+conditions, dashboard) were destroyed with `terraform destroy` / verified deletes and swept. The
+Terraform that created them is kept in `scripts/live-test/aws` and `importer ingest-setup`
+regenerates the ingestion stack. The pre-existing `conti-*` resources and `conti-nr-metricstream`
+were never touched. `NEW_RELIC_LICENSE_KEY` was copied into the git-ignored `.env` for the
+ingestion deploy; remove it when no longer needed.
 
 ## Lessons from building (so you do not repeat them)
 - The live test found what offline tests could not: metric names depend on the dimension set
