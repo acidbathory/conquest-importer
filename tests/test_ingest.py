@@ -130,3 +130,47 @@ def test_generated_setup_validates(tmp_path: Path) -> None:
         check=False,
     )
     assert check.returncode == 0, check.stdout + check.stderr
+
+
+# --- percentiles ----------------------------------------------------------------------------
+
+
+def _cfg(**extra: object) -> IngestConfig:
+    base = {"namespaces": ["AWS/ApiGateway", "AWS/Lambda"]}
+    return IngestConfig.model_validate({**base, **extra})
+
+
+def test_percentiles_add_a_statistics_configuration_block() -> None:
+    cfg = _cfg(
+        percentiles=[
+            {
+                "namespace": "AWS/ApiGateway",
+                "metric_name": "Latency",
+                "statistics": ["p99", "p95", "p99"],
+            }
+        ]
+    )
+    main = ingest_files(cfg)["main.tf"]
+    assert main.count("statistics_configuration") == 1
+    assert 'additional_statistics = ["p95", "p99"]' in main
+    assert 'metric_name = "Latency"' in main
+
+
+def test_no_percentiles_means_no_block() -> None:
+    assert "statistics_configuration" not in ingest_files(_cfg())["main.tf"]
+
+
+@pytest.mark.parametrize("stat", ["99", "p", "p101", "p99.999", 'p9"9', "avg", ""])
+def test_bad_percentile_is_rejected(stat: str) -> None:
+    with pytest.raises(ValueError, match=r".+"):
+        _cfg(
+            percentiles=[
+                {"namespace": "AWS/Lambda", "metric_name": "Duration", "statistics": [stat]}
+            ]
+        )
+
+
+def test_percentile_for_a_namespace_that_is_not_streamed_is_rejected() -> None:
+    cfg = _cfg(percentiles=[{"namespace": "AWS/EC2", "metric_name": "X", "statistics": ["p99"]}])
+    with pytest.raises(ValueError, match="not being streamed"):
+        ingest_files(cfg)

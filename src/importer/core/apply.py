@@ -22,6 +22,7 @@ from pydantic import BaseModel, SecretStr
 from importer.core.emit.common import CannotEmit
 from importer.core.emit.nerdgraph import ACCOUNT_PLACEHOLDER, POLICY_PLACEHOLDER, nerdgraph_payload
 from importer.core.ir import IRMonitor
+from importer.core.manifest import CreatedObject
 from importer.core.secrets import redact
 from importer.core.tls import system_tls_context
 
@@ -74,6 +75,7 @@ class ApplyResult(BaseModel):
     created: list[str] = []
     skipped_existing: list[str] = []
     failed: list[tuple[str, str]] = []
+    objects: list[CreatedObject] = []  # ids of what was created, for the manifest
 
 
 def load_plan(ir_dir: Path) -> Plan:
@@ -189,7 +191,12 @@ def get_account_name(client: NewRelicClient, account_id: int) -> str:
     return str(account["name"])
 
 
-def ensure_policy(client: NewRelicClient, account_id: int, name: str) -> str:
+def ensure_policy(
+    client: NewRelicClient,
+    account_id: int,
+    name: str,
+    created: list[CreatedObject] | None = None,
+) -> str:
     cursor: str | None = None
     for _ in range(MAX_PAGES):
         data = client.run(
@@ -209,7 +216,10 @@ def ensure_policy(client: NewRelicClient, account_id: int, name: str) -> str:
         {"accountId": account_id, "policy": {"name": name, "incidentPreference": "PER_CONDITION"}},
         is_write=True,
     )
-    return str(data["alertsPolicyCreate"]["id"])
+    policy_id = str(data["alertsPolicyCreate"]["id"])
+    if created is not None:
+        created.append(CreatedObject(kind="policy", id=policy_id, name=name))
+    return policy_id
 
 
 def existing_condition_names(client: NewRelicClient, account_id: int, policy_id: str) -> set[str]:
@@ -233,7 +243,7 @@ def apply_plan(
     client: NewRelicClient, account_id: int, policy_name: str, plan: Plan
 ) -> ApplyResult:
     result = ApplyResult()
-    policy_id = ensure_policy(client, account_id, policy_name)
+    policy_id = ensure_policy(client, account_id, policy_name, result.objects)
     existing = existing_condition_names(client, account_id, policy_id)
     for item in plan.items:
         if item.name in existing:
@@ -249,9 +259,14 @@ def apply_plan(
         variables["accountId"] = account_id
         variables["policyId"] = policy_id
         try:
-            client.run(payload["query"], variables, is_write=True)
+            data = client.run(payload["query"], variables, is_write=True)
         except NewRelicAPIError as exc:
             result.failed.append((item.name, str(exc)))
             continue
         result.created.append(item.name)
+        made = data.get("alertsNrqlConditionStaticCreate") or {}
+        if made.get("id") is not None:
+            result.objects.append(
+                CreatedObject(kind="condition", id=str(made["id"]), name=item.name)
+            )
     return result

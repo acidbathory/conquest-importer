@@ -17,14 +17,24 @@ from importer.core.apply import (
     get_account_name,
     load_plan,
 )
+from importer.core.apply_dashboards import apply_dashboards, load_dashboard_plan
+from importer.core.apply_notifications import apply_notifications
 from importer.core.dashboard_ir import IRDashboard
 from importer.core.dashboard_report import build_dashboard_report
 from importer.core.emit.common import CannotEmit
-from importer.core.emit.dashboard import dashboard_id, dashboards_terraform, nerdgraph_dashboard
+from importer.core.emit.dashboard import (
+    TERRAFORM_HEADER,
+    dashboard_id,
+    dashboards_terraform,
+    nerdgraph_dashboard,
+)
 from importer.core.emit.nerdgraph import nerdgraph_payload
+from importer.core.emit.notifications import notifications_terraform
 from importer.core.emit.terraform import terraform_file
 from importer.core.ir import Confidence, IRMonitor
-from importer.core.report import build_report
+from importer.core.manifest import CreatedObject, Manifest, load_manifest, save_manifest
+from importer.core.notification_ir import NotificationPlan, build_plan
+from importer.core.report import build_report, md_cell
 from importer.core.secrets import (
     DatadogCredentials,
     MissingSecretError,
@@ -38,6 +48,7 @@ from importer.sources.cloudwatch.extract import AwsError, Reader
 from importer.sources.cloudwatch.extract import extract as extract_cloudwatch
 from importer.sources.cloudwatch.ingest import IngestConfig, ingest_files
 from importer.sources.cloudwatch.models import load_alarms
+from importer.sources.cloudwatch.notifications import load_topics, routing, translate_topic
 from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
 from importer.sources.datadog.client import DatadogAPIError, DatadogClient, InvalidSiteError
 
@@ -198,6 +209,9 @@ def apply(
     confirm_account: Annotated[
         int | None, typer.Option(help="Repeat the account id to confirm --apply")
     ] = None,
+    manifest: Annotated[
+        Path | None, typer.Option(help="Record of what was created (default: <in>/manifest.json)")
+    ] = None,
 ) -> None:
     """Create the converted conditions in a New Relic account.
 
@@ -228,7 +242,8 @@ def apply(
         with NewRelicClient(key, region) as client:
             typer.echo(f"Account name: {printable(get_account_name(client, account_id))}")
             result = apply_plan(client, account_id, policy_name, plan)
-    except (GuardError, MissingSecretError, NewRelicAPIError) as exc:
+        _record(manifest or source / "manifest.json", account_id, region, result.objects)
+    except (GuardError, MissingSecretError, NewRelicAPIError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
         raise typer.Exit(code=1) from None
 
@@ -251,6 +266,9 @@ def extract_cloudwatch_command(
     ] = None,
     out: Annotated[Path, typer.Option(help="New folder for the export")] = Path("out/cloudwatch"),
     dashboards: Annotated[bool, typer.Option(help="Also export dashboards")] = True,
+    notifications: Annotated[
+        bool, typer.Option(help="Also export the SNS subscriptions behind alarm actions")
+    ] = True,
 ) -> None:
     """Read CloudWatch alarms and dashboards from an AWS account (read-only) via the AWS CLI.
 
@@ -259,13 +277,16 @@ def extract_cloudwatch_command(
     contain account ids, ARNs and resource names: review it before sharing.
     """
     try:
-        result = extract_cloudwatch(Reader(region, profile), account_id, out, dashboards)
+        result = extract_cloudwatch(
+            Reader(region, profile), account_id, out, dashboards, notifications
+        )
     except (AwsError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
         raise typer.Exit(code=1) from None
     typer.echo(
         f"Read account {result.account} ({region}): {result.metric_alarms} metric alarms, "
-        f"{result.composite_alarms} composite alarms, {result.dashboards} dashboards."
+        f"{result.composite_alarms} composite alarms, {result.dashboards} dashboards, "
+        f"{result.topics} SNS topics."
     )
     typer.echo("Next:")
     typer.echo(f"  importer convert --source cloudwatch --in {out / 'alarms'} --out out/cw")
@@ -274,7 +295,206 @@ def extract_cloudwatch_command(
     typer.echo("  importer stats out/cw")
     for failure in result.failed_dashboards:
         typer.echo(f"  FAILED dashboard {failure}", err=True)
-    if result.failed_dashboards:
+    for failure in result.failed_topics:
+        typer.echo(f"  FAILED topic {failure}", err=True)
+    if result.failed_dashboards or result.failed_topics:
+        raise typer.Exit(code=1)
+
+
+def _record(path: Path, account_id: int, region: str, objects: list[CreatedObject]) -> None:
+    """Add what this run created to the manifest, creating it if needed."""
+    manifest = (
+        load_manifest(path) if path.exists() else Manifest(account_id=account_id, region=region)
+    )
+    if manifest.account_id != account_id:
+        raise ValueError(f"{path} belongs to account {manifest.account_id}, not {account_id}")
+    manifest.add(objects)
+    save_manifest(manifest, path)
+
+
+@app.command("apply-dashboards")
+def apply_dashboards_command(
+    source: Annotated[
+        Path, typer.Option("--in", help="Output folder of convert-dashboards (has dashboard-ir/)")
+    ] = Path("out/dashboards"),
+    account_id: Annotated[int, typer.Option(help="New Relic TEST account id")] = 0,
+    region: Annotated[str, typer.Option(help="us or eu")] = "us",
+    do_apply: Annotated[
+        bool, typer.Option("--apply", help="Actually create dashboards (default: dry run)")
+    ] = False,
+    confirm_account: Annotated[
+        int | None, typer.Option(help="Repeat the account id to confirm --apply")
+    ] = None,
+    manifest: Annotated[
+        Path | None,
+        typer.Option(help="Where to record what was created (default: <in>/manifest.json)"),
+    ] = None,
+) -> None:
+    """Create the converted dashboards in a New Relic account (private; existing names skipped).
+
+    Dry run by default. Writing needs --apply, --confirm-account and the account listed in
+    NEW_RELIC_ALLOWED_ACCOUNT_IDS, exactly like `apply`.
+    """
+    if account_id <= 0:
+        typer.echo("Error: --account-id is required", err=True)
+        raise typer.Exit(code=1)
+    try:
+        plan = load_dashboard_plan(source / "dashboard-ir")
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error reading {source / 'dashboard-ir'}: {printable(str(exc), 200)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"Account {account_id} ({region})")
+    typer.echo(f"{len(plan.items)} dashboards to create, {plan.skipped} not emittable")
+    for item in plan.items:
+        typer.echo(f"  {printable(item.name, 60):60} {item.widgets} widgets")
+    if not do_apply:
+        typer.echo("\nDRY RUN: nothing was sent. Add --apply --confirm-account to create them.")
+        return
+    try:
+        check_guards(account_id, confirm_account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS"))
+        key = require_env("NEW_RELIC_API_KEY")
+        with NewRelicClient(key, region) as client:
+            typer.echo(f"Account name: {printable(get_account_name(client, account_id))}")
+            result = apply_dashboards(client, account_id, plan)
+        _record(manifest or source / "manifest.json", account_id, region, result.objects)
+    except (GuardError, MissingSecretError, NewRelicAPIError, ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(
+        f"\nCreated {len(result.created)}, already existed {len(result.skipped_existing)}, "
+        f"failed {len(result.failed)}. Dashboards are PRIVATE."
+    )
+    for name, reason in result.failed:
+        typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
+    if result.failed:
+        raise typer.Exit(code=1)
+
+
+@app.command("convert-notifications")
+def convert_notifications(
+    topics: Annotated[
+        Path, typer.Option("--topics", help="Folder of exported SNS topics (extract-cloudwatch)")
+    ] = Path("out/cloudwatch/notifications"),
+    alerts: Annotated[
+        Path, typer.Option("--alerts", help="Output folder of `convert` (has ir/)")
+    ] = Path("out/cw"),
+    out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/notifications"),
+    prefix: Annotated[str, typer.Option(help="Prefix for created object names")] = "Imported:",
+) -> None:
+    """Plan New Relic destinations, channels and workflows from exported SNS topics.
+
+    One workflow per topic routes the converted conditions that used it. Offline and read-only.
+    Email and https subscriptions migrate; everything else is reported with a reason.
+    """
+    try:
+        raw_topics = load_topics(topics)
+        monitors = [
+            IRMonitor.model_validate_json(p.read_text())
+            for p in sorted((alerts / "ir").glob("*.json"))
+        ]
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    names: dict[int, str] = {}
+    for m in monitors:
+        try:
+            names[m.source_id] = nerdgraph_payload(m)["variables"]["condition"]["name"]
+        except (CannotEmit, ValueError):
+            continue
+    routes = routing(monitors, names)
+    (out / "notification-plans").mkdir(parents=True, exist_ok=True)
+    plans: list[NotificationPlan] = []
+    lines = ["# Notification conversion report", ""]
+    for n, raw in enumerate(raw_topics, start=1):
+        topic = translate_topic(raw)
+        plan = build_plan(topic, routes.get(topic.source_key, []), prefix)
+        plans.append(plan)
+        (out / "notification-plans" / f"topic-{n:04d}.json").write_text(
+            plan.model_dump_json(indent=2) + "\n"
+        )
+        status = "workflow planned" if plan.workflow else "no workflow"
+        lines += [
+            f"## {md_cell(printable(topic.name, 80))}",
+            "",
+            f"{status}: {len(topic.channels)} channels migrate, {len(topic.unsupported)} do not; "
+            f"{len(routes.get(topic.source_key, []))} converted conditions used this topic.",
+        ]
+        lines += [f"- not migrated: {md_cell(printable(r, 120))}" for r in topic.unsupported]
+        if not routes.get(topic.source_key):
+            lines.append("- no converted condition used this topic, so no workflow is created")
+        lines.append("")
+    unrouted = sorted(set(routes) - {t.get("TopicArn") for t in raw_topics})
+    for arn in unrouted:
+        lines.append(
+            f"- topic {md_cell(printable(arn, 100))} was not exported; its alarms get no workflow"
+        )
+    (out / "report.md").write_text("\n".join(lines) + "\n")
+    tf = TERRAFORM_HEADER + "\n" + notifications_terraform(plans)
+    (out / "notifications.tf").write_text(tf)
+    made = sum(p.workflow is not None for p in plans)
+    typer.echo(f"Read {len(plans)} topics, planned {made} workflows. See {out / 'report.md'}")
+
+
+@app.command("apply-notifications")
+def apply_notifications_command(
+    source: Annotated[
+        Path, typer.Option("--in", help="Output folder of convert-notifications")
+    ] = Path("out/notifications"),
+    account_id: Annotated[int, typer.Option(help="New Relic TEST account id")] = 0,
+    region: Annotated[str, typer.Option(help="us or eu")] = "us",
+    do_apply: Annotated[
+        bool, typer.Option("--apply", help="Actually create the objects (default: dry run)")
+    ] = False,
+    confirm_account: Annotated[
+        int | None, typer.Option(help="Repeat the account id to confirm --apply")
+    ] = None,
+    manifest: Annotated[
+        Path | None, typer.Option(help="Record of what was created (default: <in>/manifest.json)")
+    ] = None,
+) -> None:
+    """Create the planned destinations, channels and (disabled) workflows in New Relic.
+
+    Dry run by default; writing needs the same three guards as `apply`.
+    """
+    if account_id <= 0:
+        typer.echo("Error: --account-id is required", err=True)
+        raise typer.Exit(code=1)
+    try:
+        plans = [
+            NotificationPlan.model_validate_json(p.read_text())
+            for p in sorted((source / "notification-plans").glob("*.json"))
+        ]
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error reading {source}: {printable(str(exc), 200)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"Account {account_id} ({region})")
+    typer.echo(f"{sum(p.workflow is not None for p in plans)} workflows to create (disabled)")
+    for plan in plans:
+        if plan.workflow:
+            typer.echo(
+                f"  {printable(plan.workflow.name, 50):50} {len(plan.destinations)} channels, "
+                f"{len(plan.workflow.condition_names)} conditions"
+            )
+    if not do_apply:
+        typer.echo("\nDRY RUN: nothing was sent. Add --apply --confirm-account to create them.")
+        return
+    try:
+        check_guards(account_id, confirm_account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS"))
+        key = require_env("NEW_RELIC_API_KEY")
+        with NewRelicClient(key, region) as client:
+            typer.echo(f"Account name: {printable(get_account_name(client, account_id))}")
+            result = apply_notifications(client, account_id, plans)
+        _record(manifest or source / "manifest.json", account_id, region, result.objects)
+    except (GuardError, MissingSecretError, NewRelicAPIError, ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(
+        f"\nCreated {len(result.created)}, already existed {len(result.skipped_existing)}, "
+        f"failed {len(result.failed)}. Workflows are DISABLED."
+    )
+    for name, reason in result.failed:
+        typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
+    if result.failed:
         raise typer.Exit(code=1)
 
 
@@ -292,6 +512,10 @@ def ingest_setup(
     alarms: Annotated[
         Path | None, typer.Option(help="describe-alarms JSON: stream only the namespaces it uses")
     ] = None,
+    percentile: Annotated[
+        list[str] | None,
+        typer.Option(help="Also stream percentiles, as NAMESPACE:METRIC:p99[,p95] (repeatable)"),
+    ] = None,
 ) -> None:
     """Generate Terraform that streams CloudWatch metrics into New Relic (Metric Streams).
 
@@ -307,12 +531,22 @@ def ingest_setup(
             chosen += sorted(alarm_namespaces(metric))
         if not chosen:
             chosen = sorted(load_namespace_map())
+        specs = []
+        for item in percentile or []:
+            namespace, _, rest = item.rpartition(":")
+            namespace, _, metric_name = namespace.rpartition(":")
+            if not (namespace and metric_name and rest):
+                raise ValueError("--percentile must look like NAMESPACE:METRIC:p99[,p95]")
+            specs.append(
+                {"namespace": namespace, "metric_name": metric_name, "statistics": rest.split(",")}
+            )
         config = IngestConfig.model_validate(
             {
                 "name_prefix": name_prefix,
                 "aws_region": aws_region,
                 "nr_region": nr_region,
                 "namespaces": chosen,
+                "percentiles": specs,
             }
         )
         files = ingest_files(config)

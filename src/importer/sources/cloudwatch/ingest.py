@@ -28,6 +28,40 @@ NEW_RELIC_AWS_ACCOUNT = "754728514883"
 _PREFIX = re.compile(r"^[a-z][a-z0-9-]{0,23}$")
 _REGION = re.compile(r"^[a-z]{2}(-[a-z]+)+-[0-9]$")
 _NAMESPACE = re.compile(r"^[A-Za-z0-9_.\-/#:]{1,255}$")
+_METRIC = re.compile(r"^[A-Za-z0-9_.\-/#:]{1,255}$")
+_PERCENTILE = re.compile(r"^p(?:100|\d{1,2})(?:\.\d{1,2})?$")  # p50, p99, p99.9, p99.99
+
+
+class PercentileSpec(BaseModel):
+    """Ask the stream to also send these percentiles for one metric (off by default in AWS)."""
+
+    namespace: str
+    metric_name: str
+    statistics: list[str]
+
+    @field_validator("namespace")
+    @classmethod
+    def _check_ns(cls, v: str) -> str:
+        if not _NAMESPACE.match(v):
+            raise ValueError(f"invalid namespace {v[:40]!r}")
+        return v
+
+    @field_validator("metric_name")
+    @classmethod
+    def _check_metric(cls, v: str) -> str:
+        if not _METRIC.match(v):
+            raise ValueError(f"invalid metric name {v[:40]!r}")
+        return v
+
+    @field_validator("statistics")
+    @classmethod
+    def _check_stats(cls, v: list[str]) -> list[str]:
+        if not v or len(v) > 20:
+            raise ValueError("1 to 20 percentile statistics per metric")
+        for stat in v:
+            if not _PERCENTILE.match(stat):
+                raise ValueError(f"invalid percentile {stat[:12]!r}; use forms like p99 or p99.9")
+        return sorted(set(v))
 
 
 class IngestConfig(BaseModel):
@@ -35,6 +69,7 @@ class IngestConfig(BaseModel):
     aws_region: str = "us-east-1"
     nr_region: Literal["us", "eu"] = "us"
     namespaces: list[str]
+    percentiles: list[PercentileSpec] = []
 
     @field_validator("name_prefix")
     @classmethod
@@ -317,6 +352,18 @@ def ingest_files(config: IngestConfig) -> dict[str, str]:
         f"\n  include_filter {{\n    namespace = {hcl_string(ns)}\n  }}\n"
         for ns in config.namespaces
     )
+    for spec in config.percentiles:
+        if spec.namespace not in config.namespaces:
+            raise ValueError(f"percentile namespace {spec.namespace!r} is not being streamed")
+        stats = ", ".join(hcl_string(x) for x in spec.statistics)
+        filters += (
+            "\n  statistics_configuration {\n"
+            f"    additional_statistics = [{stats}]\n"
+            "    include_metric {\n"
+            f"      namespace   = {hcl_string(spec.namespace)}\n"
+            f"      metric_name = {hcl_string(spec.metric_name)}\n"
+            "    }\n  }\n"
+        )
     values = {
         "REGION": hcl_string(config.aws_region),
         "PREFIX": hcl_string(config.name_prefix),

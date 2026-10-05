@@ -27,12 +27,14 @@ ALLOWED_COMMANDS = {
     ("cloudwatch", "describe-alarms"),
     ("cloudwatch", "list-dashboards"),
     ("cloudwatch", "get-dashboard"),
+    ("sns", "list-subscriptions-by-topic"),
 }
 TIMEOUT_SECONDS = 120
 MAX_DASHBOARDS = 1000
 _REGION = re.compile(r"^[a-z]{2}(-[a-z]+)+-\d$")
 _PROFILE = re.compile(r"^[A-Za-z0-9_.@+=][A-Za-z0-9_.@+=-]{0,63}$")
 _ACCOUNT = re.compile(r"^\d{12}$")
+_SNS_TOPIC = re.compile(r"^arn:aws[a-z-]*:sns:[a-z0-9-]+:\d{12}:[A-Za-z0-9_-]{1,256}$")
 
 
 class AwsError(Exception):
@@ -126,6 +128,27 @@ def fetch_dashboard(reader: Reader, name: str) -> dict[str, Any]:
     return data
 
 
+def sns_topics(alarms: dict[str, Any]) -> list[str]:
+    """Every SNS topic ARN that any exported alarm notifies (other action kinds are ignored)."""
+    found: set[str] = set()
+    for key in ("MetricAlarms", "CompositeAlarms"):
+        for alarm in alarms.get(key, []):
+            for field_name in ("AlarmActions", "OKActions", "InsufficientDataActions"):
+                found.update(a for a in alarm.get(field_name, []) if _SNS_TOPIC.match(str(a)))
+    return sorted(found)
+
+
+def fetch_subscriptions(reader: Reader, topic_arn: str) -> dict[str, Any]:
+    if not _SNS_TOPIC.match(topic_arn):
+        raise AwsError("not an SNS topic ARN")
+    data = reader.call("sns", "list-subscriptions-by-topic", f"--topic-arn={topic_arn}")
+    if not isinstance(data, dict) or not isinstance(data.get("Subscriptions", []), list):
+        raise AwsError("unexpected list-subscriptions-by-topic output")
+    if data.get("NextToken"):
+        raise AwsError("list-subscriptions-by-topic output was truncated (NextToken present)")
+    return {"TopicArn": topic_arn, "Subscriptions": data.get("Subscriptions", [])}
+
+
 @dataclass
 class ExtractResult:
     account: str
@@ -133,6 +156,8 @@ class ExtractResult:
     composite_alarms: int = 0
     dashboards: int = 0
     failed_dashboards: list[str] = field(default_factory=list)
+    topics: int = 0
+    failed_topics: list[str] = field(default_factory=list)
 
 
 def _check_empty(folder: Path) -> None:
@@ -141,9 +166,13 @@ def _check_empty(folder: Path) -> None:
 
 
 def extract(
-    reader: Reader, expected_account: str, out: Path, include_dashboards: bool = True
+    reader: Reader,
+    expected_account: str,
+    out: Path,
+    include_dashboards: bool = True,
+    include_notifications: bool = True,
 ) -> ExtractResult:
-    """Export alarms (and dashboards) to `out/alarms` and `out/dashboards`."""
+    """Export alarms, dashboards and the SNS subscriptions behind alarm actions."""
     if not _ACCOUNT.match(expected_account):
         raise ValueError("--account-id must be a 12-digit AWS account id")
     account = caller_account(reader)
@@ -153,9 +182,12 @@ def extract(
             "nothing was read"
         )
     alarm_dir, dash_dir = out / "alarms", out / "dashboards"
+    note_dir = out / "notifications"
     _check_empty(alarm_dir)
     if include_dashboards:
         _check_empty(dash_dir)
+    if include_notifications:
+        _check_empty(note_dir)
 
     result = ExtractResult(account)
     alarms = fetch_alarms(reader)
@@ -163,6 +195,17 @@ def extract(
     result.composite_alarms = len(alarms.get("CompositeAlarms", []))
     alarm_dir.mkdir(parents=True, exist_ok=True)
     (alarm_dir / "describe-alarms.json").write_text(json.dumps(alarms, indent=2) + "\n")
+
+    if include_notifications:
+        note_dir.mkdir(parents=True, exist_ok=True)
+        for n, arn in enumerate(sns_topics(alarms), start=1):
+            try:
+                subs = fetch_subscriptions(reader, arn)
+            except AwsError as exc:
+                result.failed_topics.append(f"{printable(arn, 80)}: {exc}")
+                continue
+            (note_dir / f"topic-{n:04d}.json").write_text(json.dumps(subs, indent=2) + "\n")
+            result.topics += 1
 
     if include_dashboards:
         names = list_dashboard_names(reader)
