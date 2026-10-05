@@ -139,7 +139,7 @@ def test_comparison_operators(op: str, expected: str) -> None:
         {"ComparisonOperator": "SomethingNew"},
         {"Statistic": "SampleCount"},
         {"Statistic": None, "ExtendedStatistic": "p99"},
-        {"Namespace": "Custom/App"},
+        {"Namespace": "MyCompany/App"},
         {"Period": 10},
         {"Period": 90},
         {"MetricName": "Bad-Name"},
@@ -208,7 +208,8 @@ def math_alarm(expression: str, *queries: dict[str, Any]) -> IRMonitor:
 def test_metric_math_ratio_and_precedence() -> None:
     ir = math_alarm("(m1 + m2) / m3 * 100", q("m1", "A"), q("m2", "B"), q("m3", "C"))
     assert nrql_for(ir) == (
-        "SELECT (sum(aws.lambda.A) + sum(aws.lambda.B)) / sum(aws.lambda.C) * 100 "
+        "SELECT (sum(aws.lambda.A.byFunction) + sum(aws.lambda.B.byFunction)) "
+        "/ sum(aws.lambda.C.byFunction) * 100 "
         "FROM Metric WHERE aws.lambda.FunctionName = 'f'"
     )
 
@@ -310,7 +311,7 @@ def test_cli_convert_cloudwatch_end_to_end(tmp_path: Path) -> None:
     terraform = (tmp_path / "main.tf").read_text()
     assert "$${evil}" in terraform
     emitted = len(list((tmp_path / "nerdgraph").glob("*.json")))
-    assert terraform.count('resource "newrelic_nrql_alert_condition"') == emitted == 15
+    assert terraform.count('resource "newrelic_nrql_alert_condition"') == emitted == 16
 
 
 def test_cli_rejects_unknown_source_and_missing_input(tmp_path: Path) -> None:
@@ -372,9 +373,66 @@ def test_real_aws_export_converts_as_expected(tmp_path: Path) -> None:
         "conquest-test-connections-3of5": "approximate",
         "conquest-test-alb-latency-p99": "manual",
         "conquest-test-sqs-age": "approximate",
-        "conquest-test-custom-namespace": "manual",
+        "conquest-test-custom-namespace": "approximate",
         "conquest-test-lambda-error-rate": "approximate",
         "conquest-test-composite": "unsupported",
     }
-    assert len(list((tmp_path / "nerdgraph").glob("*.json"))) == 6
+    assert len(list((tmp_path / "nerdgraph").glob("*.json"))) == 7
     assert "926634327293" not in (REAL / "describe-alarms.json").read_text()
+
+
+# --- naming confirmed on real data (2026-10-03) -------------------------------------------
+
+
+def test_lambda_function_metrics_carry_the_by_function_suffix() -> None:
+    ir = alarm(
+        Namespace="AWS/Lambda",
+        MetricName="Errors",
+        Statistic="Sum",
+        Dimensions=[{"Name": "FunctionName", "Value": "f"}],
+    )
+    assert nrql_for(ir) == (
+        "SELECT sum(aws.lambda.Errors.byFunction) FROM Metric WHERE aws.lambda.FunctionName = 'f'"
+    )
+
+
+def test_suffix_depends_on_the_dimension_set_and_is_absent_when_unconfirmed() -> None:
+    # No dimensions: the account-wide metric keeps the plain name.
+    plain = alarm(Namespace="AWS/Lambda", MetricName="Errors", Statistic="Sum", Dimensions=[])
+    assert nrql_for(plain) == "SELECT sum(aws.lambda.Errors) FROM Metric"
+    # A dimension set with no confirmed suffix is left as before (and labelled unverified).
+    other = alarm(
+        Namespace="AWS/Lambda",
+        MetricName="Errors",
+        Statistic="Sum",
+        Dimensions=[{"Name": "FunctionName", "Value": "f"}, {"Name": "Resource", "Value": "f:1"}],
+    )
+    assert "aws.lambda.Errors)" in nrql_for(other)
+    # DynamoDB per-table metrics need no suffix (confirmed).
+    ddb = alarm(
+        Namespace="AWS/DynamoDB",
+        MetricName="ConsumedWriteCapacityUnits",
+        Statistic="Sum",
+        Dimensions=[{"Name": "TableName", "Value": "t"}],
+    )
+    assert "aws.dynamodb.ConsumedWriteCapacityUnits)" in nrql_for(ddb)
+
+
+def test_custom_namespace_maps_to_aws_custom_lowercased() -> None:
+    ir = alarm(
+        Namespace="Custom/ConquestLive",
+        MetricName="Orders",
+        Statistic="Sum",
+        Dimensions=[{"Name": "Service", "Value": "checkout"}],
+    )
+    assert nrql_for(ir) == (
+        "SELECT sum(aws.custom.conquestlive.Orders) FROM Metric "
+        "WHERE aws.custom.conquestlive.Service = 'checkout'"
+    )
+
+
+@pytest.mark.parametrize("namespace", ["Custom/My-App", "Custom/a/b", "Custom/", "MyCompany/App"])
+def test_other_custom_namespace_shapes_are_not_guessed(namespace: str) -> None:
+    ir = alarm(Namespace=namespace, MetricName="M", Statistic="Sum")
+    assert ir.confidence == Confidence.MANUAL
+    assert "no New Relic mapping" in ir.reasons[0]

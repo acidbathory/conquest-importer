@@ -84,7 +84,7 @@ def test_partial_conversion_is_approximate_and_says_what_was_lost() -> None:
 def test_nothing_convertible_is_manual_and_unsupported() -> None:
     w = widget([[{"expression": "m1*2", "id": "e1"}]])
     assert (w.kind, w.confidence) == (WidgetKind.UNSUPPORTED, Confidence.MANUAL)
-    w2 = widget([["Custom/X", "M", "D", "v"]])
+    w2 = widget([["MyCompany/X", "M", "D", "v"]])
     assert "no New Relic mapping" in w2.reasons[0]
 
 
@@ -161,7 +161,7 @@ def test_fixture_dashboards() -> None:
     ops, hard, empty = d["conquest-ops-overview"], d["conquest-hard-cases"], d["conquest-empty"]
     assert ops.confidence == Confidence.APPROXIMATE
     assert all(w.kind != WidgetKind.UNSUPPORTED for w in ops.widgets)
-    assert sum(w.kind == WidgetKind.UNSUPPORTED for w in hard.widgets) == 4
+    assert sum(w.kind == WidgetKind.UNSUPPORTED for w in hard.widgets) == 3
     assert empty.confidence == Confidence.UNSUPPORTED
     with pytest.raises(CannotEmit):
         nerdgraph_dashboard(empty)
@@ -187,7 +187,7 @@ def test_unconverted_widgets_become_visible_placeholders() -> None:
         for w in payload["variables"]["dashboard"]["pages"][0]["widgets"]
         if w["visualization"]["id"] == "viz.markdown"
     ]
-    assert len(texts) == 4 and all(t.startswith("**Not migrated:**") for t in texts)
+    assert len(texts) == 3 and all(t.startswith("**Not migrated:**") for t in texts)
 
 
 def test_hostile_text_is_escaped_in_every_output() -> None:

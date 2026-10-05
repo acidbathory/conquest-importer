@@ -22,7 +22,7 @@ Pipeline: source export -> typed source models -> **IR** (vendor-neutral) -> emi
 | Guarded `apply` to New Relic | Built; verified in the sandbox |
 | Dashboards: CloudWatch | Built offline on **synthetic** input (`convert-dashboards`); Terraform validates; not created in New Relic. Other sources not started |
 | Grafana, Dynatrace, GCP, Azure | **Not started** |
-| Tests | 295 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
+| Tests | 302 pass (ruff, mypy --strict, pytest, pip-audit, terraform validate) |
 
 Conversion rates so far (synthetic data, so optimistic): Datadog 16/20 on the original sample set;
 CloudWatch 15/23 synthetic, 6/9 real-export. Do not present these as customer results.
@@ -139,7 +139,19 @@ Engineering (see `ROADMAP.md` for the plan and order):
 - [ ] Security hardening ideas: narrower IAM policy than `ReadOnlyAccess` for the link role;
       remote encrypted Terraform state guidance for real customers (state holds the ingest key)
 
+## Live test resources currently RUNNING (cost money, remove when done)
+- AWS 926634327293 us-east-1: `scripts/live-test/aws` (table, traced Lambda, 7 alarms, dashboard) and
+  `out/live/ingest` (Firehose, metric stream, S3 bucket, roles, NR account link). Remove each with
+  `terraform destroy` in its folder (ingest needs the same TF_VAR_* env as apply). Both have local,
+  git-ignored state. `out/` is not in git: if the folder is lost, the state is lost.
+- New Relic sandbox 8059020: policy "Conquest live test (CloudWatch)" with 4 DISABLED conditions and
+  the dashboard `conquest-live-overview`, both built with the pre-fix names.
+- Do not touch the pre-existing `conti-*` resources or the `conti-nr-metricstream` stream.
+
 ## Lessons from building (so you do not repeat them)
+- The live test found what offline tests could not: metric names depend on the dimension set
+  (Lambda `.byFunction`), and the converted query ran without error but returned 0. Always compare a
+  converted query with the source platform's own numbers, side by side.
 - Tests on mocks hid real bugs: the live sandbox found that New Relic strips control characters
   from condition names (duplicate on re-run) and that the provider rejects `value_function`.
   Always verify against the real service and read results back.

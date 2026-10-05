@@ -66,7 +66,7 @@
   },
   "lambda-errors": {
     "confidence": "approximate",
-    "nrql": "SELECT sum(aws.lambda.Errors) FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
+    "nrql": "SELECT sum(aws.lambda.Errors.byFunction) FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
     "shape": {
       "duration": 60,
       "window": 60,
@@ -76,7 +76,7 @@
   },
   "lambda-duration-high": {
     "confidence": "approximate",
-    "nrql": "SELECT average(aws.lambda.Duration) FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
+    "nrql": "SELECT average(aws.lambda.Duration.byFunction) FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
     "shape": {
       "duration": 600,
       "window": 300,
@@ -116,7 +116,7 @@
   },
   "lambda-error-rate": {
     "confidence": "approximate",
-    "nrql": "SELECT sum(aws.lambda.Errors) / sum(aws.lambda.Invocations) * 100 FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
+    "nrql": "SELECT sum(aws.lambda.Errors.byFunction) / sum(aws.lambda.Invocations.byFunction) * 100 FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
     "shape": {
       "duration": 180,
       "window": 60,
@@ -155,9 +155,14 @@
     "shape": null
   },
   "custom-app-queue-depth": {
-    "confidence": "manual",
-    "nrql": "not emitted: confidence is manual",
-    "shape": null
+    "confidence": "approximate",
+    "nrql": "SELECT average(aws.custom.myapp.QueueDepth) FROM Metric",
+    "shape": {
+      "duration": 60,
+      "window": 60,
+      "occurrences": "ALL",
+      "expiration": false
+    }
   },
   "actions-disabled-with-extras": {
     "confidence": "approximate",

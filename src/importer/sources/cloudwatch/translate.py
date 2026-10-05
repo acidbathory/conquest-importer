@@ -40,6 +40,16 @@ from importer.sources.cloudwatch.models import (
 )
 
 NAMESPACE_MAP_PATH = Path(__file__).parent / "cloudwatch_map.json"
+SUFFIX_MAP_PATH = Path(__file__).parent / "cloudwatch_suffixes.json"
+# Custom metrics stream as aws.custom.<name>.<Metric>, with <name> lower-cased (confirmed for one
+# single-word namespace; other shapes are left unmapped rather than guessed).
+_CUSTOM_NAMESPACE = re.compile(r"^Custom/([A-Za-z0-9]+)$")
+NAMING_NOTE = (
+    "AWS metric and dimension names follow the New Relic Metric Streams convention "
+    "(aws.<service>.<Metric>): confirmed against real data for DynamoDB, Lambda per-function "
+    "metrics (suffix .byFunction) and Custom/<name> namespaces; assumed for other services, "
+    "where a dimension-dependent suffix may apply"
+)
 AGGREGATION_DELAY_SECONDS = 300  # AWS metrics arrive later than agent metrics
 OPERATORS = {
     "GreaterThanThreshold": Operator.ABOVE,
@@ -98,6 +108,26 @@ class _Fail(Exception):  # noqa: N818 - control flow, not an error type
 def load_namespace_map(path: Path = NAMESPACE_MAP_PATH) -> dict[str, str]:
     raw = json.loads(path.read_text())
     return {k: str(v) for k, v in raw.items() if not k.startswith("_")}
+
+
+def load_suffix_map(path: Path = SUFFIX_MAP_PATH) -> dict[str, dict[str, str]]:
+    raw = json.loads(path.read_text())
+    return {k: dict(v) for k, v in raw.items() if not k.startswith("_")}
+
+
+SUFFIXES = load_suffix_map()
+
+
+def metric_prefix(namespace: str, prefixes: dict[str, str]) -> str | None:
+    """The New Relic metric prefix for a CloudWatch namespace, or None if unknown."""
+    if namespace in prefixes:
+        return prefixes[namespace]
+    custom = _CUSTOM_NAMESPACE.match(namespace)
+    return f"aws.custom.{custom.group(1).lower()}" if custom else None
+
+
+def metric_suffix(namespace: str, dims: list[Dimension]) -> str:
+    return SUFFIXES.get(namespace, {}).get(",".join(sorted(d.Name for d in dims)), "")
 
 
 def alarm_namespaces(alarms: list[CloudWatchAlarm]) -> set[str]:
@@ -205,7 +235,7 @@ class _Resolved:
 def _resolve_term(
     namespace: str, metric_name: str, dims: list[Dimension], stat: str, prefixes: dict[str, str]
 ) -> tuple[MetricTerm, list[TagFilter]]:
-    prefix = prefixes.get(namespace)
+    prefix = metric_prefix(namespace, prefixes)
     if prefix is None:
         raise _Fail(
             Confidence.MANUAL,
@@ -215,7 +245,7 @@ def _resolve_term(
     if aggregation is None:
         raise _Fail(Confidence.MANUAL, f"statistic {stat!r} is not supported yet")
     try:
-        attribute = identifier(f"{prefix}.{metric_name}")
+        attribute = identifier(f"{prefix}.{metric_name}{metric_suffix(namespace, dims)}")
         scope = []
         for d in dims:
             if len(d.Value) > MAX_DIMENSION_VALUE or not d.Value.isprintable():
@@ -375,10 +405,7 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
             f"{datapoints} consecutive breaches"
         )
 
-    reasons.append(
-        "AWS metric and dimension names follow the New Relic Metric Streams convention "
-        "(aws.<service>.<Metric>): confirmed against real DynamoDB data, assumed for other services"
-    )
+    reasons.append(NAMING_NOTE)
     missing = alarm.TreatMissingData or "missing"
     no_data = NoData()
     if missing == "breaching":

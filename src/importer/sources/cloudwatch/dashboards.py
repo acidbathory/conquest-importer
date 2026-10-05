@@ -21,14 +21,10 @@ from importer.core.ir import Confidence, MetricSignal
 from importer.core.text import printable
 from importer.sources.cloudwatch.dashboard_models import CloudWatchDashboard
 from importer.sources.cloudwatch.models import Dimension
-from importer.sources.cloudwatch.translate import _Fail, _resolve_term
+from importer.sources.cloudwatch.translate import NAMING_NOTE, _Fail, _resolve_term
 
 DEFAULT_PERIOD = 300
 MAX_TITLE = 200
-NAMING_NOTE = (
-    "AWS metric and dimension names follow the New Relic Metric Streams convention "
-    "(aws.<service>.<Metric>): confirmed against real DynamoDB data, assumed for other services"
-)
 # CloudWatch chart settings that have no counterpart here yet; named in the report when present.
 UNMIGRATED_SETTINGS = ("annotations", "yAxis", "legend")
 UNSUPPORTED_TYPES = {

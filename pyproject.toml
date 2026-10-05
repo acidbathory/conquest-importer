@@ -44,6 +44,8 @@ select = ["E", "F", "I", "B", "S", "UP", "SIM"]
 
 [tool.mypy]
 strict = true
+# Runs inside AWS Lambda, where boto3 is provided; not part of the package.
+exclude = ["scripts/live-test/aws/handler.py"]
 python_version = "3.12"
 plugins = ["pydantic.mypy"]
 

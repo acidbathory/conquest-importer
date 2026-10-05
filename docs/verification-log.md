@@ -72,8 +72,34 @@ alarm, 1 dashboard. Traffic: 8 ok invocations, 2 forced errors, 1 slow call, 3 c
   "Conquest live test (CloudWatch)" (its conditions go with it) and the dashboard
   `conquest-live-overview`. Only delete things named like that.
 
+## Metric data arrived; naming corrected; side-by-side vs CloudWatch (2026-10-03)
+Ingestion (`ingest-setup`, prefix `conquest-live-ingest`, 12 resources) deployed; data appeared ~6
+minutes after deployment.
+- FOUND BY THE LIVE TEST: per-function Lambda metrics are named `aws.lambda.<Metric>.byFunction`
+  (dimension attribute `aws.lambda.FunctionName` unchanged). The plain `aws.lambda.<Metric>` is the
+  account-wide metric, so the first converted queries returned 0/None silently. Fixed via
+  `cloudwatch_suffixes.json` (only confirmed dimension sets). Other names exist (`.byFunctionAlias`,
+  `.byRegion`, DynamoDB `SuccessfulRequestLatency.put`); their dimension sets are NOT confirmed.
+- Custom metrics stream as `aws.custom.<namespace after "Custom/", lower-cased>.<Metric>` with
+  dimensions `aws.custom.<name>.<Dim>`. Confirmed for `Custom/ConquestLive` only; other shapes
+  (hyphens, several segments, namespaces not starting with `Custom/`) are left unmapped.
+- Each metric value is stored as a summary object (count, sum, min, max); `sum(metric)` sums `sum`.
+- Side by side, same window, metric-stream rows attached to an entity vs CloudWatch
+  `get-metric-statistics`: Lambda errors 1=1, invocations 6=6, DynamoDB writes 5=5, custom orders
+  15=15. The four converted condition queries all returned real values.
+- ENVIRONMENT EFFECTS that inflate raw totals (not converter bugs):
+  1. New Relic's older API-polling AWS integration (collector `cloud-integrations`) delivered the
+     same Lambda metrics a second time (6 extra). Filter with
+     `collector.name = 'cloudwatch-metric-streams'` or disable one integration.
+  2. DynamoDB had a second set of rows with no `entity.guid` (5 extra). Cause unknown; filtering to
+     rows with an entity matches CloudWatch.
+  Conditions and dashboards that use the plain generated queries would therefore over-count in an
+  account that has both integrations. Not yet handled by the converter.
+- Not yet done: the 4 conditions and the dashboard already in New Relic were created with the OLD
+  names and still need recreating from the fixed converter.
+
 ## Still unverified
-- Services other than DynamoDB (EC2, RDS, Lambda, ALB, SQS, ECS, ...): the EC2 instance was
+- Services other than DynamoDB and Lambda per-function (EC2, RDS, ALB, SQS, ECS, ...): the EC2 instance was
   stopped and the Lambda functions idle, so they published no metrics during the test.
 - Datadog: no live access (blocked on the corporate network).
 - Percentile statistics and anomaly alarms are not converted. Dashboards: see above.
