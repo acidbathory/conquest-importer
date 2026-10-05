@@ -95,8 +95,13 @@ minutes after deployment.
      rows with an entity matches CloudWatch.
   Conditions and dashboards that use the plain generated queries would therefore over-count in an
   account that has both integrations. Not yet handled by the converter.
-- Not yet done: the 4 conditions and the dashboard already in New Relic were created with the OLD
-  names and still need recreating from the fixed converter.
+- 2026-10-05: the 4 conditions created with the old names were deleted (each re-read and matched by
+  id, name and policy first) and 5 were recreated from the fixed converter (the custom-namespace
+  alarm now converts). The dashboard was updated in place with `terraform apply` (1 changed, 0
+  destroyed). Read back from New Relic and ran the stored queries over the 2026-10-03 data window:
+  12.0 writes, 2.0 errors, 14.29% error rate, 78.8 ms average duration, 17.0 custom orders; all
+  conditions disabled. Note: the condition search by name (`queryLike`) missed the newest
+  condition right after creation; verify by `policyId` instead.
 
 ## Still unverified
 - Services other than DynamoDB and Lambda per-function (EC2, RDS, ALB, SQS, ECS, ...): the EC2 instance was

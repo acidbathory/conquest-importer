@@ -144,8 +144,11 @@ Engineering (see `ROADMAP.md` for the plan and order):
   `out/live/ingest` (Firehose, metric stream, S3 bucket, roles, NR account link). Remove each with
   `terraform destroy` in its folder (ingest needs the same TF_VAR_* env as apply). Both have local,
   git-ignored state. `out/` is not in git: if the folder is lost, the state is lost.
-- New Relic sandbox 8059020: policy "Conquest live test (CloudWatch)" with 4 DISABLED conditions and
-  the dashboard `conquest-live-overview`, both built with the pre-fix names.
+- New Relic sandbox 8059020: policy "Conquest live test (CloudWatch)" (id 8140341) with 5 DISABLED
+  conditions and the dashboard `conquest-live-overview` (Terraform state in `out/live/dash`). Both
+  were recreated/updated on 2026-10-05 from the fixed converter and verified by reading back and
+  running the stored queries. To remove: delete the 5 conditions and the policy (only objects named
+  `conquest-live-*`), and `terraform destroy` in `out/live/dash`.
 - Do not touch the pre-existing `conti-*` resources or the `conti-nr-metricstream` stream.
 
 ## Lessons from building (so you do not repeat them)
