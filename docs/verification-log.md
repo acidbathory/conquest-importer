@@ -147,3 +147,16 @@ Metrics compared against CloudWatch `get-metric-statistics` with the new `valida
   stopped and the Lambda functions idle, so they published no metrics during the test.
 - Datadog: no live access (blocked on the corporate network).
 - Percentile statistics and anomaly alarms are not converted. Dashboards: see above.
+
+## 2026-11-04: real CloudWatch API round trip (alarms only)
+- Created 21 tagged alarms (`ckr-` prefix) in the test account from the synthetic fixture with
+  `scripts/live-test/measure_alarms.py` (cost: pennies; no SNS topics, no infrastructure). AWS itself
+  rejected 2 of the 23 fixture alarms (control characters in the name; a percentile-only option on a
+  Sum alarm), so those cases cannot occur in a real export.
+- `extract-cloudwatch` then `convert` on the real API output: 20 metric alarms + 1 composite, 15
+  converted (71%): metric alarms 15/20 (75%), composite 0/1. Same 15 as the synthetic run, so the
+  parser handles real API output identically. This is NOT a customer result: the alarms are our own
+  fixture, not a customer's.
+- Not converted and why: composite (1), anomaly detection (1), unsupported math syntax (1),
+  unsupported characters in a name (1), high-resolution period (1), window outside New Relic limits (1).
+- Cleanup: all 21 deleted (composite first; AWS refuses otherwise) and verified 0 alarms remain.
