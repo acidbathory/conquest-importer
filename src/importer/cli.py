@@ -22,6 +22,7 @@ from importer.core.apply_dashboards import apply_dashboards, load_dashboard_plan
 from importer.core.apply_notifications import apply_notifications
 from importer.core.dashboard_ir import IRDashboard
 from importer.core.dashboard_report import build_dashboard_report
+from importer.core.doctor import passed, render, run_checks
 from importer.core.emit.common import CannotEmit
 from importer.core.emit.dashboard import (
     TERRAFORM_HEADER,
@@ -124,6 +125,22 @@ def convert(
     report = build_report(final, {m.source_id for m in emitted}, source_system)
     (out / "report.md").write_text(report)
     typer.echo(f"Read {len(monitors)} monitors, emitted {len(emitted)}. See {out / 'report.md'}")
+
+
+@app.command()
+def doctor(
+    region: Annotated[str, typer.Option(help="AWS region to check")] = "us-east-1",
+    profile: Annotated[str | None, typer.Option(help="AWS CLI profile")] = None,
+) -> None:
+    """Check that the tools and AWS sign-in a run needs are in place. Read-only."""
+    try:
+        checks = run_checks(region, profile)
+    except ValueError as exc:
+        typer.echo(f"Error: {printable(str(exc), 200)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(render(checks), nl=False)
+    if not passed(checks):
+        raise typer.Exit(code=1)
 
 
 @app.command()

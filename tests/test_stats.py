@@ -167,3 +167,23 @@ def test_category_table_counts_each_monitor_once() -> None:
     text = render_markdown([run], {"cloudwatch": s})
     assert "| missing mapping | 1 | 0 |" in text
     assert "uncategorised" not in text
+
+
+def test_stats_output_is_safe_to_share(tmp_path: Path) -> None:
+    """`stats` is what testers send back: it must carry no names, ARNs or account ids."""
+    out = tmp_path / "cw"
+    src = Path("tests/fixtures/cloudwatch")
+    result = CliRunner().invoke(
+        app, ["convert", "--source", "cloudwatch", "--in", str(src), "--out", str(out)]
+    )
+    assert result.exit_code == 0, result.output
+    shared = CliRunner().invoke(app, ["stats", str(out)]).output
+    for leak in (
+        "i-0abc123def4567890",
+        "prod-db-1",
+        "my-alb",
+        "123456789012",
+        "arn:aws",
+        "checkout",
+    ):
+        assert leak not in shared

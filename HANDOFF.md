@@ -93,6 +93,7 @@ then **review the diff by hand** before committing.
   `translate(raw)`; each source registers itself in `REGISTRY`, and the CLI looks sources up there.
   CloudWatch's `ingest.py` (Metric Streams Terraform) lives in its folder; Datadog's API `client.py`
   in its.
+- `src/importer/core/doctor.py` preflight for `importer doctor`
 - `scripts/` fixture generators and the Datadog sample-monitor creator (writes to Datadog)
 - `tests/fixtures/` synthetic and real-sanitized inputs; `tests/golden/` expected results
 - `docs/` IR spec, threat model, verification log, decisions
