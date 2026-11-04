@@ -29,3 +29,8 @@ tfplan*
 
 # macOS
 .DS_Store
+
+# Terraform plans embed state (account ids, resource details)
+*.tfplan
+tfplan
+destroyplan
