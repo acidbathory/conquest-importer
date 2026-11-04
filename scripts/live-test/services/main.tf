@@ -3,12 +3,15 @@
 # Remove with:  terraform destroy      (state is local and git-ignored)
 
 terraform {
+  required_version = ">= 1.5"
+
   required_providers {
-    aws = { source = "hashicorp/aws" }
+    aws = { source = "hashicorp/aws", version = "~> 6.67" }
   }
 }
 
 variable "region" {
+  type    = string
   default = "us-east-1"
 }
 
