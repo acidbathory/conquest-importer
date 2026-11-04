@@ -40,6 +40,7 @@ from importer.core.migration_summary import load_summary
 from importer.core.remediation import steps_for
 from importer.core.rollback import current
 
+RUN = f"-{int(time.time()) % 100000}"  # keeps dashboard names unique: New Relic lists deleted ones for a while
 PREFIX = "ckt-"  # every AWS object this suite creates starts with this
 TAG = {"Key": "owner", "Value": "conquest-importer-suite"}
 NS = "Custom/ckt"
@@ -92,7 +93,7 @@ class Element:
 
     @property
     def name(self) -> str:
-        return PREFIX + self.key
+        return PREFIX + self.key + (RUN if self.group == "dashboard" else "")
 
 
 @dataclass
@@ -167,7 +168,7 @@ def dashboard(key: str, widgets: list[dict[str, Any]]) -> Callable[[Ctx], None]:
         for i, w in enumerate(widgets):
             w["x"], w["y"] = (i % 2) * 12, (i // 2) * 6
         body = json.dumps({"widgets": widgets}).replace("ACCOUNT", ctx.account)
-        ctx.cw.put_dashboard(DashboardName=PREFIX + key, DashboardBody=body)
+        ctx.cw.put_dashboard(DashboardName=PREFIX + key + RUN, DashboardBody=body)
 
     return make
 

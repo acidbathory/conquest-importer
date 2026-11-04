@@ -34,23 +34,25 @@ export AWS_SESSION_TOKEN=...        # only if your keys are temporary
 
 importer doctor                     # checks Python, AWS keys and (optionally) New Relic
 importer migrate --aws-account-id 123456789012 --nr-account-id 1234567
-open out/migration/report.html      # or double-click it
 ```
 
-That run reads your AWS account and writes files on your machine. It creates nothing in New
-Relic, so the report opens with a Preview banner and its numbers are a forecast. The last line it
-prints is the headline number:
+`migrate` reads your AWS account, writes a plan and a report on your machine, and then asks
+whether to create everything in New Relic. Answer `n` (or press Enter) and nothing is created, so
+the report opens with a Preview banner and its numbers are a forecast. Open it with
+`open out/migration/report.html`. The headline number it prints looks like this:
 
 ```
 Total completion (forecast): 70% (19 of 27 assets can be migrated, 8 need manual work; nothing has been created in New Relic yet)
 ```
 
-The report includes the command that creates everything. Once you run it, the report is rewritten
-as Applied: the numbers describe what was created, and anything New Relic refused counts as not
+Answer `y` and it creates the objects in New Relic straight away. Alerts and workflows are created
+disabled and dashboards private, and one command undoes it. The report is then rewritten as
+Applied: the numbers describe what was created, and anything New Relic refused counts as not
 migrated, with the reason.
 
-When the plan looks right, [create the objects in New Relic](docs/getting-started.md#step-5-create-it-in-new-relic).
-Alerts and workflows are created disabled and dashboards private, and one command undoes it.
+Creating needs a New Relic API key and your account on an allow-list, so a mistyped account id
+can't write to the wrong place. [Step 5 of the walkthrough](docs/getting-started.md#step-5-create-it-in-new-relic)
+shows the two settings. Add `--yes` to skip the question in a script.
 
 ## What can and cannot be migrated
 
@@ -73,8 +75,8 @@ customer results, and yours will differ.
 
 ## Safe by default
 
-- It only reads. The AWS permissions are read-only, and the code can call only a fixed list of read operations.
-- Creating anything needs `--apply`, the account id repeated, and the account on an allow-list.
+- It only reads AWS. The permissions are read-only, and the code can call only a fixed list of read operations.
+- It creates nothing in New Relic until you answer `y` (or pass `--yes`), and then only if the account is on an allow-list.
 - `importer rollback` removes what a run created and nothing else.
 - Keys are read from the environment and never written to files or logs.
 - The report contains your alarm names. `importer stats` prints a version with the names removed, which is safe to share.

@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, NoReturn
@@ -35,7 +36,8 @@ from importer.core.emit.notifications import notifications_terraform
 from importer.core.emit.terraform import terraform_file
 from importer.core.ir import Confidence, IRMonitor
 from importer.core.manifest import CreatedObject, Kind, Manifest, load_manifest, save_manifest
-from importer.core.migration_summary import load_summary
+from importer.core.migration_summary import Kind as AssetKind
+from importer.core.migration_summary import Summary, load_summary
 from importer.core.notification_ir import NotificationPlan, build_plan
 from importer.core.report import build_report, md_cell
 from importer.core.report_html import render_report
@@ -763,6 +765,39 @@ def report_command(
     typer.echo(f"Report written to {target}")
 
 
+def _interactive() -> bool:
+    """Whether a person can answer a question (a terminal, not a script or a pipe)."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _wants_to_create(summary: Summary, nr_account: int, yes: bool) -> bool:
+    """After the plan: check creating is possible, then ask (or accept --yes)."""
+    try:
+        check_guards(nr_account, nr_account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS"))
+        require_env("NEW_RELIC_API_KEY")
+    except (GuardError, MissingSecretError) as exc:
+        typer.echo(
+            f"\nTo create this in New Relic you need NEW_RELIC_API_KEY set and account "
+            f"{nr_account} listed in NEW_RELIC_ALLOWED_ACCOUNT_IDS ({printable(str(exc), 200)}).",
+            err=True,
+        )
+        return False
+    if yes:
+        return True
+    if not _interactive():
+        return False
+    shown: tuple[tuple[str, AssetKind], ...] = (("alarms", "alarm"), ("dashboards", "dashboard"))
+    parts = [
+        f"{n} {label}" for label, kind in shown if (n := sum(a.migrated for a in summary.of(kind)))
+    ]
+    what = " and ".join(parts) or "the converted objects"
+    return typer.confirm(
+        f"\nCreate {what} in New Relic account {nr_account} now? They are created disabled or "
+        "private, and one command undoes it",
+        default=False,
+    )
+
+
 @app.command("migrate")
 def migrate_command(
     aws_account_id: Annotated[str, typer.Option(help="AWS account id you expect (12 digits)")],
@@ -782,14 +817,18 @@ def migrate_command(
     confirm_account: Annotated[
         int | None, typer.Option(help="Repeat the New Relic account id to confirm --apply")
     ] = None,
+    yes: Annotated[
+        bool, typer.Option("--yes", help="Create without asking at the end of the plan")
+    ] = False,
 ) -> None:
-    """Migrate CloudWatch into New Relic in one go: read, convert, plan, and (optionally) create.
+    """Migrate CloudWatch into New Relic in one go: read, convert, plan, and create.
 
-    Without --apply it only READS from AWS and writes local files (a plan you can review). With
-    --apply (plus --confirm-account and the allow-list) it creates alert conditions, dashboards and
-    notification workflows, all DISABLED or PRIVATE, and records a manifest so `rollback` can
-    undo exactly that. Metric data still needs the ingestion Terraform (it holds a secret key, so
-    it is generated for you to deploy, not run).
+    It reads AWS (read-only), writes a plan and a report, then asks whether to create everything
+    in New Relic. Answer y to create alert conditions, dashboards and notification workflows, all
+    DISABLED or PRIVATE, with a manifest so `rollback` can undo exactly that. Use --yes to skip
+    the question, or --apply with --confirm-account for scripts. Creating needs
+    NEW_RELIC_API_KEY and the account in NEW_RELIC_ALLOWED_ACCOUNT_IDS. Metric data still needs the
+    ingestion Terraform (it holds a secret key, so it is generated for you to deploy, not run).
     """
     from importer.core.stats import build_stats, load_run, render_markdown
 
@@ -887,8 +926,13 @@ def migrate_command(
 
     if not do_apply:
         report()
-        typer.echo("PLAN ONLY: nothing was created in New Relic. Add --apply --confirm-account.")
-        return
+        if not _wants_to_create(load_summary(out), nr_account_id, yes):
+            typer.echo(
+                "\nNothing was created in New Relic. Run the command again with --yes to create "
+                "it, or answer y when asked."
+            )
+            return
+        do_apply, confirm_account = True, nr_account_id
     policy = f"Imported from CloudWatch ({aws_account_id})"
     clean = True
     if has_alarms:

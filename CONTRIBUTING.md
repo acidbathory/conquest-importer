@@ -37,6 +37,8 @@ uv run pip-audit
   `md_cell` (Markdown) and `e()` (HTML report). See [docs/dev/dry-guidelines.md](docs/dev/dry-guidelines.md).
 - A person reviews golden files (`tests/golden/`) before they are regenerated.
 - Never put secrets in the repo. Keys come from the environment.
+- Write docs and messages in plain language: say the point directly, skip decorative bold and
+  filler. The [humanizer patterns](https://github.com/blader/humanizer) list what to avoid.
 - Every item the converters cannot handle needs an honest reason and manual steps
   (`src/importer/core/remediation.py`); a test fails if one is missing.
 - Don't add AI tools as authors or co-authors on commits or pull requests.

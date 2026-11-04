@@ -134,7 +134,9 @@ ul.notes li{padding:12px 0;border-top:1px solid var(--rule)}
 footer{margin-top:80px;padding-top:16px;border-top:2px solid var(--ink);font-size:15px;
 color:var(--ink2);max-width:70ch}
 footer p{margin:0 0 8px}
-@media print{body{background:#fff;color:#000}details>*{display:block}.problem{break-inside:avoid}}
+@media print{body{background:#fff;color:#000}details>*{display:block}
+.ledger,.hero,.state,table,details,.stages li{break-inside:avoid}
+h2,.intro{break-after:avoid}}
 @media (prefers-reduced-motion:no-preference){.seg{transition:flex-grow .3s}}
 """.replace("GRAIN", GRAIN)
 
@@ -284,7 +286,7 @@ def _state(summary: Summary, aws_account: str, nr_account: int | None, region: s
     if summary.created is None:
         create = (
             f"importer migrate --aws-account-id {aws} --nr-account-id {nr} --region {area} "
-            f"--out out/migration-applied --apply --confirm-account {nr}"
+            f"--out out/migration-applied --yes"
         )
         stages = (
             _stage(

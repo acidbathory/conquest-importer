@@ -44,7 +44,7 @@ Use keys you can revoke afterwards. The tool never writes them to a file or log.
 
 ## New Relic: an API key, only to create things
 
-A plan-only run (the default) needs no New Relic key. To create alerts, dashboards and workflows:
+Making a plan needs no New Relic key. To create alerts, dashboards and workflows:
 
 1. In New Relic, open API keys and create a User key (it starts with `NRAK-`).
 2. The user behind it must be allowed to manage alerts, dashboards and notifications in the

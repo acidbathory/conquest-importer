@@ -99,7 +99,7 @@ def test_rich_escapes_before_adding_code_tags() -> None:
 def test_preview_and_applied_banners() -> None:
     preview = render_report(Summary([], None), aws_account="123456789012", nr_account=7)
     assert "Preview" in preview and "forecast" in preview
-    assert "--apply --confirm-account 7" in preview and "--aws-account-id 123456789012" in preview
+    assert "--yes" in preview and "--aws-account-id 123456789012" in preview
     applied = render_report(Summary([], {"condition": 3, "workflow": 1}, refused=2), nr_account=7)
     assert "3 conditions, 1 workflow" in applied and "refused <b>2</b>" in applied
     assert "importer rollback" in applied and "Preview" not in applied

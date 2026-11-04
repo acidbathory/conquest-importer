@@ -42,7 +42,11 @@ importer migrate --aws-account-id 123456789012 --nr-account-id 1234567
 - Add `--region eu-west-1` for another region, or `--profile name` to use a named AWS profile. A
   run covers one region.
 
-It prints the total completion and writes everything to `out/migration/`:
+It prints the total completion, writes everything to `out/migration/`, and finishes by asking
+whether to create it in New Relic. Answer `n` for now (or press Enter) so you can read the report
+first. Nothing is created in New Relic until you answer `y`, which is step 5.
+
+The files:
 
 | File | What it is |
 |---|---|
@@ -71,18 +75,22 @@ What each status means is in [what migrates](what-migrates.md).
 
 ## Step 5: Create it in New Relic
 
-Do this once the plan looks right, and use a test account first.
+Do this once the plan looks right, and use a test account first. Set the key and the allow-list,
+then run `migrate` again into a new folder and answer `y` at the end:
 
 ```sh
 export NEW_RELIC_API_KEY=NRAK-...
 export NEW_RELIC_ALLOWED_ACCOUNT_IDS=1234567
-importer migrate --aws-account-id 123456789012 --nr-account-id 1234567 \
-    --out out/migration-applied --apply --confirm-account 1234567
+importer migrate --aws-account-id 123456789012 --nr-account-id 1234567 --out out/migration-applied
 ```
 
-This creates alert conditions and notification workflows disabled and dashboards private, and
-records everything it made in `manifest.json`. Review them in New Relic, then enable them one at a
-time. Existing objects with the same name are skipped and never changed.
+In a script there is nobody to ask, so pass `--yes` to create without the question, or
+`--apply --confirm-account 1234567` to name the account explicitly. Without either, a script only
+makes the plan.
+
+Answering `y` creates alert conditions and notification workflows disabled and dashboards private,
+and records everything it made in `manifest.json`. Review them in New Relic, then enable them one
+at a time. Existing objects with the same name are skipped and never changed.
 
 If New Relic refuses an item, the run carries on with the rest, lists the failures at the end and
 exits with an error. Fix the cause and run the same command again. Only the failed items are retried.

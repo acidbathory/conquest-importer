@@ -216,3 +216,79 @@ def test_a_later_successful_create_clears_the_recorded_failure() -> None:
     manifest.add_failed("condition", [("a", "boom")])
     manifest.add([CreatedObject(kind="condition", id="1", name="a")])
     assert manifest.failed == []
+
+
+class Created:
+    """Stands in for the three create commands, recording how each was called."""
+
+    def __init__(self) -> None:
+        self.calls: list[dict[str, Any]] = []
+
+    def __call__(self, **kwargs: Any) -> None:
+        self.calls.append(kwargs)
+
+
+@pytest.fixture
+def prompt_world(monkeypatch: pytest.MonkeyPatch) -> Created:
+    from importer import cli
+
+    created = Created()
+    monkeypatch.setattr(ex, "run_boto3", DashboardsOnlyAws())
+    monkeypatch.setattr(cli, "apply_dashboards_command", created)
+    monkeypatch.setenv("NEW_RELIC_API_KEY", "k")
+    monkeypatch.setenv("NEW_RELIC_ALLOWED_ACCOUNT_IDS", "7")
+    return created
+
+
+def _migrate(tmp_path: Path, *extra: str, answer: str = "") -> Any:
+    args = ["migrate", "--aws-account-id", ACCOUNT, "--nr-account-id", "7", "--out", str(tmp_path)]
+    return CliRunner().invoke(app, [*args, *extra], input=answer)
+
+
+def test_the_plan_ends_by_asking_and_y_creates_everything(
+    prompt_world: Created, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from importer import cli
+
+    monkeypatch.setattr(cli, "_interactive", lambda: True)
+    res = _migrate(tmp_path, answer="y\n")
+    assert "Create" in res.output and "account 7 now?" in res.output
+    assert len(prompt_world.calls) == 1
+    assert (
+        prompt_world.calls[0]["do_apply"] is True and prompt_world.calls[0]["confirm_account"] == 7
+    )
+
+
+@pytest.mark.parametrize("answer", ["n\n", "\n"])
+def test_anything_but_y_creates_nothing(
+    prompt_world: Created, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, answer: str
+) -> None:
+    from importer import cli
+
+    monkeypatch.setattr(cli, "_interactive", lambda: True)
+    res = _migrate(tmp_path, answer=answer)
+    assert res.exit_code == 0 and not prompt_world.calls
+    assert "Nothing was created in New Relic" in res.output
+
+
+def test_a_script_without_yes_is_never_asked_and_creates_nothing(
+    prompt_world: Created, tmp_path: Path
+) -> None:
+    res = _migrate(tmp_path)
+    assert res.exit_code == 0 and not prompt_world.calls and "now?" not in res.output
+
+
+def test_yes_skips_the_question(prompt_world: Created, tmp_path: Path) -> None:
+    res = _migrate(tmp_path, "--yes")
+    assert "now?" not in res.output and len(prompt_world.calls) == 1
+
+
+def test_without_the_key_or_allow_list_it_explains_instead_of_asking(
+    prompt_world: Created, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from importer import cli
+
+    monkeypatch.setattr(cli, "_interactive", lambda: True)
+    monkeypatch.delenv("NEW_RELIC_ALLOWED_ACCOUNT_IDS")
+    res = _migrate(tmp_path, "--yes")
+    assert not prompt_world.calls and "NEW_RELIC_ALLOWED_ACCOUNT_IDS" in res.output
