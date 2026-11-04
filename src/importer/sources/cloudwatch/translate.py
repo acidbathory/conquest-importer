@@ -13,6 +13,7 @@ from pathlib import Path
 from importer.core.emit.nrql import identifier
 from importer.core.ir import (
     Aggregation,
+    BaselineSpec,
     BinOp,
     Confidence,
     CountFilter,
@@ -381,6 +382,58 @@ def _resolve(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> _Resolved:
     return out
 
 
+_BAND = re.compile(
+    r"^\s*ANOMALY_DETECTION_BAND\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:,\s*([0-9.]+)\s*)?\)\s*$"
+)
+ANOMALY_DIRECTIONS = {
+    "GreaterThanUpperThreshold": "upper_only",
+    "LessThanLowerThreshold": "lower_only",
+    "LessThanLowerOrGreaterThanUpperThreshold": "upper_and_lower",
+}
+DEFAULT_BAND_DEVIATIONS = 2.0
+
+
+def _anomaly(alarm: CloudWatchAlarm) -> tuple[CloudWatchAlarm, BaselineSpec]:
+    """Split an anomaly-detection alarm into its metric and the width of its band.
+
+    Returns a plain single-metric alarm (the metric the model watches) plus the baseline settings.
+    """
+    direction = ANOMALY_DIRECTIONS.get(alarm.ComparisonOperator)
+    if direction is None:
+        raise _Fail(Confidence.MANUAL, f"comparison {alarm.ComparisonOperator!r} is not supported")
+    queries = alarm.Metrics or []
+    band = next((q for q in queries if q.Id == alarm.ThresholdMetricId and q.Expression), None)
+    match = _BAND.match(band.Expression or "") if band else None
+    if match is None:
+        raise _Fail(
+            Confidence.MANUAL,
+            "anomaly detection alarm whose band is not a plain ANOMALY_DETECTION_BAND(metric, n)",
+        )
+    source = next((q for q in queries if q.Id == match.group(1) and q.MetricStat), None)
+    if source is None or source.MetricStat is None:
+        raise _Fail(
+            Confidence.MANUAL,
+            "anomaly detection alarm built on metric math, not on one metric",
+        )
+    spec = source.MetricStat
+    stat = spec.Stat
+    plain = CloudWatchAlarm(
+        AlarmName=alarm.AlarmName,
+        Namespace=spec.Metric.Namespace,
+        MetricName=spec.Metric.MetricName,
+        Dimensions=spec.Metric.Dimensions,
+        Statistic=None if _PERCENTILE.match(stat) else stat,
+        ExtendedStatistic=stat if _PERCENTILE.match(stat) else None,
+        Period=spec.Period,
+        EvaluationPeriods=alarm.EvaluationPeriods,
+        DatapointsToAlarm=alarm.DatapointsToAlarm,
+        ComparisonOperator="GreaterThanThreshold",
+        Threshold=0.0,
+    )
+    width = float(match.group(2)) if match.group(2) else DEFAULT_BAND_DEVIATIONS
+    return plain, BaselineSpec(direction=direction, deviations=width)
+
+
 def _log_signal(alarm: CloudWatchAlarm) -> tuple[CountSignal, list[str]]:
     """An alarm on a metric made by a log metric filter becomes a count of matching log events."""
     refs = alarm.log_metric_filters
@@ -472,7 +525,10 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
             unmapped=unmapped,
         )
 
+    baseline: BaselineSpec | None = None
+    measured = alarm  # the alarm whose metric is read (for an anomaly alarm, its source metric)
     operator = OPERATORS.get(alarm.ComparisonOperator)
+    threshold = alarm.Threshold
     if operator is None:
         if (
             "Anomaly" in alarm.ComparisonOperator
@@ -480,11 +536,22 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
             or "Lower" in alarm.ComparisonOperator
             or "Upper" in alarm.ComparisonOperator
         ):
-            return failed(Confidence.MANUAL, "anomaly detection alarms are not supported yet")
-        return failed(
-            Confidence.MANUAL, f"comparison {alarm.ComparisonOperator!r} is not supported"
-        )
-    if alarm.Threshold is None:
+            try:
+                measured, baseline = _anomaly(alarm)
+            except _Fail as fail:
+                return failed(fail.confidence, fail.reason)
+            operator, threshold = Operator.ABOVE, baseline.deviations
+            reasons.append(
+                "anomaly detection becomes a New Relic baseline condition: both learn the normal "
+                f"range and alert outside {baseline.deviations:g} standard deviations, but the "
+                "models differ and New Relic needs a few days of data to settle. Review the "
+                "alerts it raises before you enable it"
+            )
+        else:
+            return failed(
+                Confidence.MANUAL, f"comparison {alarm.ComparisonOperator!r} is not supported"
+            )
+    if threshold is None:
         return failed(Confidence.MANUAL, "alarm has no static threshold")
     log_count: CountSignal | None = None
     resolved: _Resolved | None = None
@@ -494,7 +561,7 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
             log_count, log_notes = _log_signal(alarm)
             period = alarm.Period or 0
         else:
-            resolved = _resolve(alarm, prefixes)
+            resolved = _resolve(measured, prefixes)
             period = resolved.period
     except _Fail as fail:
         return failed(fail.confidence, fail.reason)
@@ -546,13 +613,12 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
         if resolved is not None
         else None,
         count=log_count,
+        baseline=baseline,
     )
     return IRMonitor(
         **base,
         signal=signal,
-        thresholds=[
-            Threshold(severity=Severity.CRITICAL, operator=operator, value=alarm.Threshold)
-        ],
+        thresholds=[Threshold(severity=Severity.CRITICAL, operator=operator, value=threshold)],
         no_data=no_data,
         confidence=Confidence.APPROXIMATE,
         reasons=reasons,

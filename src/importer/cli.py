@@ -59,6 +59,11 @@ from importer.sources.cloudwatch.dashboard_models import load_dashboards
 from importer.sources.cloudwatch.extract import AwsError, Reader, caller_account
 from importer.sources.cloudwatch.extract import extract as extract_cloudwatch
 from importer.sources.cloudwatch.ingest import IngestConfig, ingest_files
+from importer.sources.cloudwatch.log_ingest import (
+    LogIngestConfig,
+    log_groups_from_ir,
+    log_ingest_files,
+)
 from importer.sources.cloudwatch.logfilter import attach_log_filters, load_metric_filters
 from importer.sources.cloudwatch.models import load_alarms
 from importer.sources.cloudwatch.notifications import load_topics, routing, translate_topic
@@ -1025,6 +1030,19 @@ def migrate_command(
             ),
         )
 
+    log_groups = log_groups_from_ir(alerts / "ir") if has_alarms else []
+    if log_groups:
+        _step(
+            "5b. Generate the log-forwarding Terraform (not deployed)",
+            lambda: ingest_logs_setup(
+                out=out / "logs-ingest",
+                aws_region=region,
+                nr_region=nr_region,
+                name_prefix="cw-import-logs",
+                log_group=log_groups,
+                alerts=None,
+            ),
+        )
     stats_md = ""
     if has_alarms:
         run = load_run(alerts)
@@ -1110,6 +1128,55 @@ def migrate_command(
     if not clean:
         typer.echo("Some items could not be created (see FAILED lines above).", err=True)
         raise typer.Exit(code=1)
+
+
+@app.command("ingest-logs-setup")
+def ingest_logs_setup(
+    out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/logs-ingest"),
+    aws_region: Annotated[str, typer.Option(help="AWS region of the log groups")] = "us-east-1",
+    nr_region: Annotated[str, typer.Option(help="New Relic region: us or eu")] = "us",
+    name_prefix: Annotated[str, typer.Option(help="Prefix for created resources")] = (
+        "newrelic-logs"
+    ),
+    log_group: Annotated[
+        list[str] | None, typer.Option(help="Log group to forward (repeatable)")
+    ] = None,
+    alerts: Annotated[
+        Path | None,
+        typer.Option(
+            help="Output folder of `convert`: forward the log groups its log conditions use"
+        ),
+    ] = None,
+) -> None:
+    """Generate Terraform that forwards CloudWatch log groups to New Relic (Firehose).
+
+    Converted log-metric alarms return data only after their log group reaches New Relic. Writes
+    files only; nothing is deployed. The license key is never written to a file: pass it when
+    applying with TF_VAR_newrelic_license_key.
+    """
+    try:
+        groups = list(log_group or [])
+        if alerts:
+            groups += log_groups_from_ir(alerts / "ir")
+        config = LogIngestConfig.model_validate(
+            {
+                "name_prefix": name_prefix,
+                "aws_region": aws_region,
+                "nr_region": nr_region,
+                "log_groups": groups,
+            }
+        )
+        files = log_ingest_files(config)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
+        raise typer.Exit(code=1) from None
+    out.mkdir(parents=True, exist_ok=True)
+    for name, text in files.items():
+        (out / name).write_text(text)
+    typer.echo(f"Wrote {', '.join(files)} to {out}; forwarding {len(config.log_groups)} log groups")
+    typer.echo("To deploy (review the plan first):")
+    typer.echo("  export TF_VAR_newrelic_license_key=...   # never commit this")
+    typer.echo(f"  cd {out} && terraform init && terraform plan")
 
 
 @app.command("ingest-setup")

@@ -131,6 +131,10 @@ export TF_VAR_newrelic_api_key=$NEW_RELIC_API_KEY
 terraform init && terraform plan            # read it, then: terraform apply
 ```
 
+If the run also wrote `logs-ingest/`, your plan has alarms that count log events. Deploy that
+folder the same way (`terraform init && terraform plan`, then apply) so the log groups reach New
+Relic. Those conditions return nothing until the logs arrive.
+
 Don't run New Relic's AWS polling integration and Metric Streams for the same metrics, or the
 totals double.
 

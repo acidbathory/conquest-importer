@@ -59,6 +59,7 @@ max-complexity = 15
 "scripts/live-test/aws/handler.py" = ["ARG001"]
 # Terraform template text contains long lines that cannot be wrapped.
 "src/importer/sources/cloudwatch/ingest.py" = ["E501"]
+"src/importer/sources/cloudwatch/log_ingest.py" = ["E501"]
 
 [tool.mypy]
 strict = true

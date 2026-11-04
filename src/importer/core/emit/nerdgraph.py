@@ -28,6 +28,15 @@ MUTATION = (
 )
 
 
+BASELINE_MUTATION = (
+    "mutation CreateBaselineCondition("
+    "$accountId: Int!, $policyId: ID!, $condition: AlertsNrqlConditionBaselineInput!) {\n"
+    "  alertsNrqlConditionBaselineCreate("
+    "accountId: $accountId, policyId: $policyId, condition: $condition) {\n"
+    "    id\n    name\n  }\n}"
+)
+
+
 def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
     window = emittable_window(monitor)
     condition: dict[str, Any] = {
@@ -52,6 +61,13 @@ def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
             for t in monitor.thresholds
         ],
     }
+    baseline = monitor.signal.baseline
+    if baseline is not None:
+        # A baseline condition has no value function; its terms are in standard deviations.
+        del condition["valueFunction"]
+        condition["baselineDirection"] = baseline.direction.upper()
+        for term in condition["terms"]:
+            term["operator"] = "ABOVE"
     if monitor.no_data.notify and monitor.no_data.timeout_minutes:
         condition["expiration"] = {
             "expirationDuration": monitor.no_data.timeout_minutes * 60,
@@ -59,7 +75,7 @@ def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
             "closeViolationsOnExpiration": False,
         }
     return {
-        "query": MUTATION,
+        "query": BASELINE_MUTATION if baseline is not None else MUTATION,
         "variables": {
             "accountId": ACCOUNT_PLACEHOLDER,
             "policyId": POLICY_PLACEHOLDER,

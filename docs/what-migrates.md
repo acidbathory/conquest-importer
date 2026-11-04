@@ -34,6 +34,12 @@ Metric math also migrates when it only adds, subtracts, multiplies or divides me
 an error rate. Dimensions become filters. Any dimension the alarm doesn't use is pinned to empty,
 so New Relic doesn't add several series together.
 
+Anomaly-detection alarms on one metric also migrate, as New Relic baseline conditions. The band
+width (the second argument of `ANOMALY_DETECTION_BAND`, 2 by default) becomes the number of
+standard deviations, and the direction (above, below or both) carries over. The two models learn
+differently and New Relic needs a few days of data to settle, so the report marks these as
+"Migrated, review".
+
 Some details are approximated, and the report says so:
 
 - "3 of 5" datapoints becomes "3 consecutive breaches".
@@ -63,7 +69,7 @@ differ from CloudWatch in case sensitivity, so compare counts before you enable 
 | Not migrated | Why | Fix |
 |---|---|---|
 | Composite alarms | New Relic has no composite condition | The report reads the rule and says how to rebuild it. An OR needs nothing, because separate conditions already do it. An AND becomes one NRQL condition or workflow filtering. It lists which child alarms did convert |
-| Anomaly-detection alarms | New Relic's baseline model is different | Recreate as a New Relic baseline condition once data is flowing |
+| Anomaly-detection alarms that are not a plain band on one metric (for example a band on metric math) | The baseline condition needs a single metric | Recreate as a New Relic baseline condition once data is flowing |
 | High-resolution alarms (under 60 s) | Metric Streams data is per minute | Use a 60 s window, or keep the alarm in CloudWatch |
 | Metric math with functions (`RATE`, `FILL` and so on) | Only arithmetic is converted | Write the NRQL by hand |
 | Other statistics (`SampleCount`, trimmed means and so on) | No mapping | Pick the closest supported statistic |
@@ -125,9 +131,19 @@ person, and the report gives the steps. None of them converts automatically.
 Scheduled and disabled EventBridge rules are not monitoring, so they aren't counted. The report
 mentions how many it left out.
 
+## Log forwarding
+
+Alarms converted from log metric filters count `Log` events, so they need those log groups in New
+Relic. When a run converts any, it writes `logs-ingest/`, Terraform that follows New Relic's
+documented setup: a Firehose delivery stream to the New Relic logs endpoint (GZIP, 1 MiB buffer),
+a role for CloudWatch Logs to write to it, and one subscription filter per log group. Like the
+metric stream, it is generated and never deployed, because it needs your license key. AWS allows
+two subscription filters per log group, so a group that already has two needs one removed first.
+`importer ingest-logs-setup --log-group /my/group` generates the same thing for groups you choose.
+
 ## Not handled at all
 
-Logs themselves, X-Ray traces and CloudTrail. It also handles one AWS region and one
+Forwarding logs in general (only the groups behind converted conditions get Terraform), X-Ray traces and CloudTrail. It also handles one AWS region and one
 account per run. Existing New Relic objects with the same name are skipped, never updated. To apply
 a fix, roll back and re-apply.
 

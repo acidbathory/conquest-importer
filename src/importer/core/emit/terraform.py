@@ -57,12 +57,13 @@ def hcl_string(value: str) -> str:
 def resource_block(monitor: IRMonitor) -> str:
     window = emittable_window(monitor)
     prefix = RESOURCE_PREFIXES.get(monitor.source_system, "src")
+    baseline = monitor.signal.baseline
     lines = [
         f'resource "newrelic_nrql_alert_condition" "{prefix}_{monitor.source_id}" {{',
         "  policy_id = newrelic_alert_policy.imported.id",
         f"  name      = {hcl_string(condition_name(monitor.name))}",
         f"  description = {hcl_string(source_description(monitor))}",
-        '  type      = "static"',
+        f'  type      = "{"baseline" if baseline else "static"}"',
         "  enabled   = false",
         f"  aggregation_window = {aggregation_window(monitor)}",
         '  aggregation_method = "event_flow"',
@@ -72,11 +73,13 @@ def resource_block(monitor: IRMonitor) -> str:
         f"    query = {hcl_string(nrql_for(monitor))}",
         "  }",
     ]
+    if baseline:
+        lines.insert(len(lines) - 4, f'  baseline_direction = "{baseline.direction}"')
     for t in monitor.thresholds:
         lines += [
             "",
             f"  {t.severity.value} {{",
-            f"    operator              = {hcl_string(t.operator.value)}",
+            f"    operator              = {hcl_string('above' if baseline else t.operator.value)}",
             f"    threshold             = {t.value!r}",
             f"    threshold_duration    = {window}",
             f'    threshold_occurrences = "{monitor.signal.occurrences.value}"',

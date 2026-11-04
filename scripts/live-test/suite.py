@@ -51,7 +51,7 @@ OUT = Path("out/suite")
 NRQL = "query($a: Int!, $n: Nrql!) { actor { account(id: $a) { nrql(query: $n) { results } } } }"
 CONDITION = (
     "query($a: Int!, $id: ID!) { actor { account(id: $a) { alerts { nrqlCondition(id: $id) "
-    "{ ... on AlertsNrqlBaselineCondition { id name enabled nrql { query } } "
+    "{ ... on AlertsNrqlBaselineCondition { id name enabled baselineDirection nrql { query } } "
     "... on AlertsNrqlStaticCondition { id name enabled nrql { query } } } } } } }"
 )
 DASH = (
@@ -638,8 +638,7 @@ CATALOG: list[Element] = [
     Element(
         "anomaly",
         "alarm",
-        "not_migrated",
-        ("anomaly",),
+        "migrated",
         create=anomaly,
         needs=("custom-data",),
         tags=("edge",),
@@ -1161,7 +1160,7 @@ def nr_get(client: NewRelicClient, nr: int, obj: CreatedObject) -> dict[str, Any
     return current(client, nr, obj)
 
 
-def level_e2e(
+def level_e2e(  # noqa: C901 - one sequential read-back loop
     client: NewRelicClient,
     nr: int,
     aws: str,
@@ -1238,6 +1237,12 @@ def level_e2e(
                 f"dashboard:{o.name}",
                 f"is not private (permissions={got.get('permissions')})",
             )
+        if (
+            o.kind == "condition"
+            and o.name == PREFIX + "anomaly"
+            and not got.get("baselineDirection")
+        ):
+            add("e2e", f"condition:{o.name}", "an anomaly alarm should become a baseline condition")
         if o.kind == "condition":
             query = (got.get("nrql") or {}).get("query", "")
             try:

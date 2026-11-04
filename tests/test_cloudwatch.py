@@ -316,7 +316,7 @@ def test_cli_convert_cloudwatch_end_to_end(tmp_path: Path) -> None:
     terraform = (tmp_path / "main.tf").read_text()
     assert "$${evil}" in terraform
     emitted = len(list((tmp_path / "nerdgraph").glob("*.json")))
-    assert terraform.count('resource "newrelic_nrql_alert_condition"') == emitted == 17
+    assert terraform.count('resource "newrelic_nrql_alert_condition"') == emitted == 18
 
 
 def test_cli_rejects_unknown_source_and_missing_input(tmp_path: Path) -> None:

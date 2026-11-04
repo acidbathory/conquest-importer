@@ -57,6 +57,7 @@ class Summary:
     refused: int = 0  # objects New Relic refused to create (they count as not migrated)
     ignored: list[str] = field(default_factory=list)  # found but left out on purpose
     existing: dict[str, int] = field(default_factory=dict)  # already there, left unchanged
+    log_groups: int = 0  # log groups behind converted log conditions (they need forwarding)
 
     def of(self, kind: Kind) -> list[Asset]:
         return [a for a in self.assets if a.kind == kind]
@@ -197,6 +198,13 @@ def _existing(run: Path) -> dict[str, int]:
     return {k: n for k, n in load_manifest(path).existing.items() if n} if path.is_file() else {}
 
 
+def _log_group_count(run: Path) -> int:
+    from importer.sources.cloudwatch.log_ingest import log_groups_from_ir
+
+    ir = run / "alerts" / "ir"
+    return len(log_groups_from_ir(ir)) if ir.is_dir() else 0
+
+
 def _refused(run: Path) -> int:
     path = run / "manifest.json"
     return len(load_manifest(path).failed) if path.is_file() else 0
@@ -241,6 +249,8 @@ def load_summary(run: Path) -> Summary:
         other, ignored = _other(run)
         assets = [*_alarms(run), *_dashboards(run), *_notifications(run), *other]
         _mark_refused(run, assets)
-        return Summary(assets, _created(run), _refused(run), ignored, _existing(run))
+        return Summary(
+            assets, _created(run), _refused(run), ignored, _existing(run), _log_group_count(run)
+        )
     except json.JSONDecodeError as exc:
         raise ValueError(f"unreadable JSON in {run}: {exc.msg}") from None

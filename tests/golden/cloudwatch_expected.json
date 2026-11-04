@@ -145,9 +145,14 @@
     "shape": null
   },
   "ec2-cpu-anomaly": {
-    "confidence": "manual",
-    "nrql": "not emitted: confidence is manual",
-    "shape": null
+    "confidence": "approximate",
+    "nrql": "SELECT average(aws.ec2.CPUUtilization) FROM Metric WHERE aws.ec2.InstanceId = 'i-0abc' AND aws.ec2.AutoScalingGroupName IS NULL AND aws.ec2.ImageId IS NULL AND aws.ec2.InstanceType IS NULL",
+    "shape": {
+      "duration": 600,
+      "window": 300,
+      "occurrences": "ALL",
+      "expiration": false
+    }
   },
   "ec2-high-resolution": {
     "confidence": "manual",

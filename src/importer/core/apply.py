@@ -264,7 +264,11 @@ def apply_plan(
             result.failed.append((item.name, str(exc)))
             continue
         result.created.append(item.name)
-        made = data.get("alertsNrqlConditionStaticCreate") or {}
+        made = (
+            data.get("alertsNrqlConditionStaticCreate")
+            or data.get("alertsNrqlConditionBaselineCreate")
+            or {}
+        )
         if made.get("id") is not None:
             result.objects.append(
                 CreatedObject(kind="condition", id=str(made["id"]), name=item.name)

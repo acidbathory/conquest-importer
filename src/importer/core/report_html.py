@@ -452,7 +452,15 @@ def render_report(
     if notes:
         sections.append(notes)
         n += 1
-    checklist = "".join(f"<li>{c}</li>" for c in CHECKLIST)
+    steps = list(CHECKLIST)
+    if summary.log_groups:
+        steps.insert(
+            1,
+            f"Forward the {summary.log_groups} log group(s) behind your log-based conditions: "
+            "deploy <code>logs-ingest/</code> the same way. Those conditions return nothing until "
+            "the logs arrive.",
+        )
+    checklist = "".join(f"<li>{c}</li>" for c in steps)
     sections.append(
         f'<h2><span class="no">{n:02d}</span>Before you enable anything</h2>'
         f'<ol class="steps">{checklist}</ol>'

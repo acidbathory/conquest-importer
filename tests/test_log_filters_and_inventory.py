@@ -337,3 +337,66 @@ def test_extract_writes_the_inventory_and_a_denied_read_only_warns(
 def test_every_new_read_is_on_the_allow_list_and_is_a_read() -> None:
     for service, op in ex.ALLOWED_OPERATIONS:
         assert op.startswith(("get_", "list_", "describe_")), (service, op)
+
+
+def test_migrate_converts_a_log_alarm_and_writes_the_log_forwarding_terraform(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    aws = Aws()
+    aws.answers["cloudwatch describe_alarms"] = {
+        "MetricAlarms": [
+            {
+                "AlarmName": "errors",
+                "Namespace": "Custom/app",
+                "MetricName": "ErrorCount",
+                "Statistic": "Sum",
+                "Period": 300,
+                "EvaluationPeriods": 1,
+                "Threshold": 5.0,
+                "ComparisonOperator": "GreaterThanThreshold",
+            }
+        ],
+        "CompositeAlarms": [],
+    }
+    aws.answers["logs describe_metric_filters"] = {
+        "metricFilters": [
+            {
+                "filterName": "f",
+                "logGroupName": "/app/web",
+                "filterPattern": "ERROR",
+                "metricTransformations": [
+                    {
+                        "metricName": "ErrorCount",
+                        "metricNamespace": "Custom/app",
+                        "metricValue": "1",
+                    }
+                ],
+            }
+        ]
+    }
+    # `Aws` returns its core answers first; make the alarm list win for this test.
+    original = aws.__call__
+
+    def call(
+        service: str, op: str, region: str, profile: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        if (service, op) == ("cloudwatch", "describe_alarms"):
+            return aws.answers["cloudwatch describe_alarms"]
+        return original(service, op, region, profile, params)
+
+    monkeypatch.setattr(ex, "run_boto3", call)
+    out = tmp_path / "run"
+    res = CliRunner().invoke(
+        app,
+        ["migrate", "--aws-account-id", "123456789012", "--nr-account-id", "7", "--out", str(out)],
+    )
+    assert res.exit_code == 0, res.output
+    assert "forwarding 1 log groups" in res.output
+    assert '"/app/web"' in (out / "logs-ingest" / "main.tf").read_text()
+    # the namespace is not streamed: the alarm reads logs, not a metric
+    assert (
+        not (out / "ingest").exists()
+        or "Custom/app" not in (out / "ingest" / "main.tf").read_text()
+    )
+    page = (out / "report.html").read_text()
+    assert "Forward the 1 log group(s)" in page and "Total completion" in page

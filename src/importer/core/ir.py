@@ -132,6 +132,17 @@ class Occurrences(StrEnum):
     AT_LEAST_ONCE = "at_least_once"  # one breaching window in the duration is enough
 
 
+class BaselineSpec(BaseModel):
+    """A baseline (learned-range) condition instead of a fixed threshold.
+
+    `deviations` is the width of the normal band in standard deviations; the condition opens a
+    violation when the signal leaves the band in `direction`.
+    """
+
+    direction: Literal["upper_only", "lower_only", "upper_and_lower"]
+    deviations: float
+
+
 class Signal(BaseModel):
     kind: SignalKind
     raw_query: str
@@ -142,6 +153,7 @@ class Signal(BaseModel):
     metric: MetricSignal | None = None
     count: CountSignal | None = None
     heartbeat: HeartbeatSignal | None = None
+    baseline: BaselineSpec | None = None
 
 
 class Threshold(BaseModel):
