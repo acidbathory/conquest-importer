@@ -1,25 +1,25 @@
 # Conquest Importer
 
+[![license](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![ci](https://github.com/acidbathory/conquest-importer/actions/workflows/ci.yml/badge.svg)](https://github.com/acidbathory/conquest-importer/actions/workflows/ci.yml)
 
-Move your **AWS CloudWatch** alarms, dashboards and notifications to **New Relic**, and get a report
-that tells you exactly what moved, what did not, why, and what to do about it.
+Moves your AWS CloudWatch alarms, dashboards and notifications to New Relic. When it finishes you
+get a report of what moved, what didn't, why, and what to do about it.
 
-![The migration report](docs/img/sample-report.png)
+![The migration report (preview: nothing created yet)](docs/img/sample-report.png)
 
-> **Status: prototype.** The CloudWatch path is built and tested against a real AWS account. Other
-> platforms are on the [roadmap](#roadmap). Treat every converted item as something to review, not to
-> trust blindly.
+> Status: prototype. The CloudWatch path has been tested against a real AWS account. Check every
+> converted item before you enable it. Other platforms are on the [roadmap](#roadmap).
 
 ## What you need
 
 | | |
 |---|---|
-| **Python 3.12 or newer** | `python3 --version` |
-| **AWS keys** that can read CloudWatch | [exact permissions](docs/permissions.md) (read-only) |
-| **A New Relic API key** | only to *create* things; a plan-only run does not need it |
+| Python 3.12 or newer | `python3 --version` |
+| AWS keys that can read CloudWatch | [exact permissions](docs/permissions.md) (read-only) |
+| A New Relic API key | only to create things; a plan-only run doesn't need it |
 
-Nothing else. No AWS CLI, no Terraform (Terraform is optional, for streaming metric data).
+You don't need the AWS CLI. Terraform is optional and only used to stream metric data.
 
 ## Try it in five minutes
 
@@ -37,54 +37,58 @@ importer migrate --aws-account-id 123456789012 --nr-account-id 1234567
 open out/migration/report.html      # or double-click it
 ```
 
-That run **reads** your AWS account and writes files on your machine. It creates nothing in New
-Relic. The last line it prints is your headline number:
+That run reads your AWS account and writes files on your machine. It creates nothing in New
+Relic, so the report opens with a Preview banner and its numbers are a forecast. The last line it
+prints is the headline number:
 
 ```
-Total completion: 70% (19 of 27 assets migrated, 8 need manual work)
+Total completion (forecast): 70% (19 of 27 assets can be migrated, 8 need manual work; nothing has been created in New Relic yet)
 ```
 
-When you are happy with the plan, [create the objects in New Relic](docs/getting-started.md#step-5-create-it-in-new-relic)
-(everything is created disabled or private, and one command undoes it).
+The report includes the command that creates everything. Once you run it, the report is rewritten
+as Applied: the numbers describe what was created, and anything New Relic refused counts as not
+migrated, with the reason.
+
+When the plan looks right, [create the objects in New Relic](docs/getting-started.md#step-5-create-it-in-new-relic).
+Alerts and workflows are created disabled and dashboards private, and one command undoes it.
 
 ## What can and cannot be migrated
 
 | Asset | Migrates | Does not migrate (and what to do) |
 |---|---|---|
-| **Alarms** | Single-metric alarms on 15 AWS services and `Custom/` metrics, including percentiles and simple metric math | Composite, anomaly-detection, high-resolution (< 60 s) and complex-math alarms: each gets written manual steps |
-| **Dashboards** | Metric charts and text widgets | Log, alarm-status and Metrics Explorer widgets, and math inside widgets |
-| **Notifications** | SNS email and https subscriptions become destinations and (disabled) workflows | SMS, Lambda, SQS, mobile push: reported with a replacement suggestion |
-| **Metric data** | Terraform for AWS Metric Streams is generated for you to deploy | Logs, traces, SLOs, synthetics, EventBridge: not handled |
+| Alarms | Single-metric alarms on 15 AWS services and `Custom/` metrics, including percentiles and simple metric math | Composite, anomaly-detection, high-resolution (under 60 s) and complex-math alarms. Each gets written manual steps |
+| Dashboards | Metric charts and text widgets | Log, alarm-status and Metrics Explorer widgets, and math inside widgets |
+| Notifications | SNS email and https subscriptions become destinations and (disabled) workflows | SMS, Lambda, SQS and mobile push. Each is reported with a replacement suggestion |
+| Metric data | Terraform for AWS Metric Streams is generated for you to deploy | Logs, traces, SLOs, synthetics and EventBridge are not handled |
 
-Every row, with the reason and the fix: **[docs/what-migrates.md](docs/what-migrates.md)**.
+Every row, with the reason and the fix, is in [docs/what-migrates.md](docs/what-migrates.md).
 
 ## How the report counts
 
-One alarm, one dashboard or one notification subscription is one *asset*. **Migrated** means it was
-converted (exactly, or approximately with notes to read first). **Not migrated** means a person must
-finish it. Total completion is migrated assets divided by all assets, shown with the per-type split
-and the reason behind every miss. Percentages measured on our own test data are not customer
-results; yours will differ.
+One alarm, one dashboard or one notification subscription is one asset. An asset counts as migrated
+when it was converted, either exactly or approximately with notes to read first. Anything else
+needs a person to finish it. Total completion is migrated assets divided by all assets, with the
+split per type and the reason behind every miss. Percentages measured on our own test data aren't
+customer results, and yours will differ.
 
 ## Safe by default
 
-- Reads only. The AWS permissions are read-only, and the code can only call a fixed list of read operations.
-- Creating anything needs `--apply`, the account id repeated, and the account on an allow-list. Alerts
-  and workflows are created **disabled**; dashboards **private**.
-- `importer rollback` removes exactly what a run created, nothing else.
-- Keys are read from the environment, never written to files or logs.
-- The report contains your alarm names. `importer stats` prints a version with names removed, safe to share.
+- It only reads. The AWS permissions are read-only, and the code can call only a fixed list of read operations.
+- Creating anything needs `--apply`, the account id repeated, and the account on an allow-list.
+- `importer rollback` removes what a run created and nothing else.
+- Keys are read from the environment and never written to files or logs.
+- The report contains your alarm names. `importer stats` prints a version with the names removed, which is safe to share.
 
 ## Documentation
 
 | | |
 |---|---|
 | [Getting started](docs/getting-started.md) | The full walkthrough, from install to rollback |
-| [What migrates](docs/what-migrates.md) | Everything that does and does not move, and why |
-| [Permissions](docs/permissions.md) | The AWS policy and New Relic key, copy and paste |
-| [Troubleshooting](docs/troubleshooting.md) | Error messages and what to do |
-| [Sharing results](docs/customer-export.md) | How to send us feedback without leaking names |
-| [Contributing](CONTRIBUTING.md) | Checks, conventions, how the code is laid out |
+| [What migrates](docs/what-migrates.md) | Everything that does and doesn't move, and why |
+| [Permissions](docs/permissions.md) | The AWS policy and New Relic key, ready to copy |
+| [Troubleshooting](docs/troubleshooting.md) | Error messages and what to do about them |
+| [Sharing results](docs/customer-export.md) | How to send feedback without leaking names |
+| [Contributing](CONTRIBUTING.md) | Checks, conventions and how the code is laid out |
 
 ## Roadmap
 
@@ -103,4 +107,9 @@ request. Contributions of any size are welcome, from a new platform to a fix to 
 ## Give feedback
 
 Tried it? [Open a feedback issue](../../issues/new/choose) and paste the output of `importer stats`.
-It contains no names. What failed, and what you expected to work, is the most useful thing we can get.
+It contains no names. The most useful thing you can tell us is what failed and what you expected
+to work.
+
+## License
+
+[Apache License 2.0](LICENSE).

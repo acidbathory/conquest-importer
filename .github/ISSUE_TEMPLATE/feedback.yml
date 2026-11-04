@@ -5,8 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you. **Do not paste** alarm names, account ids, ARNs, email addresses or keys.
-        The output of `importer stats` is safe: it contains no names.
+        Thanks for trying it. Don't paste alarm names, account ids, ARNs, email addresses or keys.
+        The output of `importer stats` is safe because it contains no names.
   - type: textarea
     id: stats
     attributes:

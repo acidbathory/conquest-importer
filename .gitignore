@@ -27,6 +27,17 @@ tfplan
 destroyplan
 tfplan*
 
+# Internal working notes and AI-assistant instructions: not needed to run or contribute.
+# They stay on disk, but are not published.
+AGENTS.md
+CLAUDE.md
+HANDOFF.md
+PLAN.md
+ROADMAP.md
+TODO-manager-talk.md
+docs/verification-log.md
+docs/testing-results/
+
 # macOS
 .DS_Store
 

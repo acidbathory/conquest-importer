@@ -9,4 +9,4 @@
 
 **Contributing and design**
 - [Linting and checks](dev/linting.md), [DRY guidelines](dev/dry-guidelines.md), [Testing](dev/testing.md)
-- [Intermediate format](ir-spec.md), [Threat model](threat-model.md), [Verification log](verification-log.md)
+- [Intermediate format](ir-spec.md), [Threat model](threat-model.md)

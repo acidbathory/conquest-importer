@@ -5,7 +5,7 @@ run the same commands; keep all three in step.
 
 ## Python: Ruff, always
 
-Ruff is the **only** Python linter and formatter. Do not add flake8, black, isort or pylint.
+Ruff is the only Python linter and formatter. Don't add flake8, black, isort or pylint.
 
 ```sh
 uv run ruff check .          # lint (add --fix for safe autofixes)
@@ -31,7 +31,7 @@ terraform fmt -check -recursive scripts
 tflint --chdir scripts/live-test/aws        # likewise .../services
 ```
 
-`out/` is generated and git-ignored; do not lint or commit it.
+`out/` is generated and git-ignored, so don't lint or commit it.
 
 ## YAML and GitHub workflows
 

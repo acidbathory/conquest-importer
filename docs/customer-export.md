@@ -1,18 +1,17 @@
 # Sharing results safely
 
-Two kinds of output, with very different privacy:
+The importer writes two kinds of output, and they differ a lot in what they reveal:
 
 | File | Contains | Share it? |
 |---|---|---|
-| `importer stats <folder>` output | Conversion rates and failure reasons, with names, ARNs and account ids stripped (a test enforces it) | **Yes.** Paste it in a [feedback issue](../../../issues/new/choose) |
-| `report.html`, `export/`, `report.md` | Real alarm names, resource names, ARNs, account ids and email addresses | **No**, not without reviewing and removing anything sensitive |
+| `importer stats <folder>` output | Conversion rates and failure reasons, with names, ARNs and account ids stripped (a test enforces it) | Yes. Paste it in a [feedback issue](../../../issues/new/choose) |
+| `report.html`, `export/`, `report.md` | Real alarm names, resource names, ARNs, account ids and email addresses | No, not until you have reviewed it and removed anything sensitive |
 
 Never share keys or an `.env` file.
 
 ## If someone else owns the AWS account
 
-They do not need to install anything but Python. Send them [permissions](permissions.md) and
-this:
+They only need Python. Send them [permissions](permissions.md) and this:
 
 ```sh
 pip install .

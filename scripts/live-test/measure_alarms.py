@@ -5,8 +5,8 @@ Alarms are built from the synthetic fixture, renamed with the `ckr-` prefix, wit
 and no SNS topics. `delete` removes only alarms whose names start with the prefix AND that this
 script created (checked via the tag `owner=conquest-importer-measure`).
 
-    uv run python scripts/live-test/measure_alarms.py create --account-id 926634327293
-    uv run python scripts/live-test/measure_alarms.py delete --account-id 926634327293
+    uv run python scripts/live-test/measure_alarms.py create --account-id <aws-account-id>
+    uv run python scripts/live-test/measure_alarms.py delete --account-id <aws-account-id>
 """
 
 import argparse

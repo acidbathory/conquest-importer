@@ -30,5 +30,5 @@
 Multi-user auth, hosted service deployment, migration of notification channel credentials (listed in the report as manual steps).
 
 ## Open questions
-- Does company policy require a security review before running against competitor APIs? (raise with manager)
+- Does company policy require a security review before running against competitor APIs?
 - Where will generated artifacts be stored, and who may read them?

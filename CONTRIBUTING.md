@@ -1,7 +1,7 @@
 # Contributing
 
-Thanks for helping. This is a prototype, so the most valuable contribution is a **real failure**:
-something that did not convert that you expected to, or a conversion that returned wrong numbers.
+This is a prototype, so the most useful contribution is a real failure: something that didn't
+convert when you expected it to, or a conversion that returned wrong numbers.
 Use the [feedback template](../../issues/new/choose).
 
 ## Fork and open a pull request
@@ -31,13 +31,13 @@ uv run pip-audit
 
 ## Rules that matter
 
-- **Ruff is the only Python linter and formatter.** `mypy --strict` stays green.
-- **Untrusted text** (alarm names, queries, messages) may reach output only through the escaping
+- Ruff is the only Python linter and formatter, and `mypy --strict` stays green.
+- Untrusted text (alarm names, queries, messages) may reach output only through the escaping
   helpers: `quote_string` / `identifier` (NRQL), `hcl_string` (Terraform), GraphQL variables,
   `md_cell` (Markdown) and `e()` (HTML report). See [docs/dev/dry-guidelines.md](docs/dev/dry-guidelines.md).
-- **Golden files** (`tests/golden/`) are reviewed by a person before they are regenerated.
-- **No secrets in the repo**, ever. Keys come from the environment.
-- Every item the converters cannot handle needs an honest reason *and* manual steps
+- A person reviews golden files (`tests/golden/`) before they are regenerated.
+- Never put secrets in the repo. Keys come from the environment.
+- Every item the converters cannot handle needs an honest reason and manual steps
   (`src/importer/core/remediation.py`); a test fails if one is missing.
 - Don't add AI tools as authors or co-authors on commits or pull requests.
 
@@ -52,5 +52,10 @@ tests/                       unit tests, fixtures, golden files
 docs/                        user docs; docs/dev has contributor docs
 ```
 
-Adding a new source platform: one folder under `sources/` with `load()` and `translate()`, the same
-as the existing two. See [ROADMAP.md](ROADMAP.md).
+To add a source platform, create one folder under `sources/` with `load()` and `translate()`, as
+`sources/cloudwatch` does. See the [roadmap](README.md#roadmap).
+
+## License
+
+By contributing you agree that your contribution is licensed under the
+[Apache License 2.0](LICENSE), the same as the project.

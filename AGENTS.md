@@ -8,6 +8,9 @@ Rules for AI assistants working in this repository. See also `CLAUDE.md` and `HA
   `.github/workflows/ci.yml`. Any JavaScript/TypeScript code is checked with ESLint.
   User-facing docs are in `README.md` and `docs/` (keep `docs/what-migrates.md` true when converters change).
   Details: `docs/dev/linting.md`, `docs/dev/dry-guidelines.md`, `docs/dev/testing.md`.
+- Migration testing on real AWS and New Relic accounts (sanity, integration, end to end and
+  regression, 10+ iterations): follow `docs/testing-migration.md` and run
+  `scripts/live-test/suite.py`. Test accounts only; report cost; never print keys.
 - Any infrastructure that carries cost must be clearly highlighted. Costs must be reported daily,
   with a dedicated budget alarm that does not exceed $10.
 - Folder layout: the parent folder is `Documents/*`.
