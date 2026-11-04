@@ -1,7 +1,7 @@
 [project]
 name = "conquest-importer"
 version = "0.1.0"
-description = "Prototype: convert Datadog monitors to New Relic alert conditions"
+description = "Prototype: migrate AWS CloudWatch alarms and dashboards to New Relic"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.7,<3",

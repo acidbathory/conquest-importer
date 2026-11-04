@@ -4,6 +4,12 @@ Thanks for helping. This is a prototype, so the most valuable contribution is a 
 something that did not convert that you expected to, or a conversion that returned wrong numbers.
 Use the [feedback template](../../issues/new/choose).
 
+## Fork and open a pull request
+
+1. Fork the repository on GitHub and clone your fork.
+2. Create a branch, make your change and run the checks below.
+3. Push the branch to your fork and open a pull request against `main`.
+
 ## Set up
 
 ```sh
@@ -42,7 +48,6 @@ src/importer/
   cli.py                     commands
   core/                      shared: the IR, emitters, apply, rollback, report
   sources/cloudwatch/        CloudWatch reader, converters, ingest Terraform
-  sources/datadog/           Datadog converters
 tests/                       unit tests, fixtures, golden files
 docs/                        user docs; docs/dev has contributor docs
 ```

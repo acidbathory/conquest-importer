@@ -82,7 +82,7 @@ def convert(
         str, typer.Option("--source", help="Source platform: " + ", ".join(sorted(REGISTRY)))
     ] = "datadog",
 ) -> None:
-    """Convert extracted monitors or alarms to IR, NerdGraph payloads, Terraform and a report.
+    """Convert extracted alarms to IR, NerdGraph payloads, Terraform and a report.
 
     For CloudWatch, --in is a file (or folder) holding the JSON from
     `aws cloudwatch describe-alarms`. Offline and read-only: nothing is sent anywhere.
@@ -939,7 +939,7 @@ def ingest_setup(
     typer.echo("Note: Terraform state will contain the license key. Protect it.")
 
 
-@app.command()
+@app.command(hidden=True)
 def extract(
     out: Annotated[Path, typer.Option(help="Directory for monitor JSON files")] = Path(
         "out/datadog"

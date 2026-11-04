@@ -4,7 +4,7 @@
    third use, not the second. Run `uv run vulture src` to remove dead code that looks like
    duplication.
 2. **Shared helpers live in `src/importer/core/`.** Source-specific code
-   (`sources/cloudwatch`, `sources/datadog`) imports from core, never from each other.
+   (one package per platform under `sources/`) imports from core, never from each other.
 3. **Escaping has exactly one home.** Untrusted text reaches output only through `quote_string` /
    `identifier` (NRQL), `hcl_string` (Terraform), GraphQL variables and `md_cell` (Markdown).
    Never re-implement or inline these.

@@ -85,7 +85,5 @@ roll back and re-apply).
 
 ## Other platforms
 
-| Platform | Status |
-|---|---|
-| Datadog monitors | Converted; tested on synthetic input only (the API was blocked) |
-| Grafana, Dynatrace, GCP, Azure | Not started. Grafana is the hardest: it is a layer over other data sources |
+Only AWS CloudWatch is supported today. Other platforms are planned; see the
+[roadmap](../README.md#roadmap).

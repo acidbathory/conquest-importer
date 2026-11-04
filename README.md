@@ -7,9 +7,9 @@ that tells you exactly what moved, what did not, why, and what to do about it.
 
 ![The migration report](docs/img/sample-report.png)
 
-> **Status: prototype.** The CloudWatch path is built and tested against a real AWS account. Datadog
-> alerts are converted but only tested on synthetic data. Grafana, Dynatrace, GCP and Azure are not
-> started. Treat every converted item as something to review, not to trust blindly.
+> **Status: prototype.** The CloudWatch path is built and tested against a real AWS account. Other
+> platforms are on the [roadmap](#roadmap). Treat every converted item as something to review, not to
+> trust blindly.
 
 ## What you need
 
@@ -85,6 +85,20 @@ results; yours will differ.
 | [Troubleshooting](docs/troubleshooting.md) | Error messages and what to do |
 | [Sharing results](docs/customer-export.md) | How to send us feedback without leaking names |
 | [Contributing](CONTRIBUTING.md) | Checks, conventions, how the code is laid out |
+
+## Roadmap
+
+AWS CloudWatch is supported today. These platforms are planned, in this order:
+
+1. Google Cloud (GCP)
+2. Microsoft Azure
+3. Datadog
+4. Grafana
+5. Dynatrace
+
+Want to help finish the project? Fork the repository, make your change on a branch and open a pull
+request. Contributions of any size are welcome, from a new platform to a fix to the docs; start with
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Give feedback
 
