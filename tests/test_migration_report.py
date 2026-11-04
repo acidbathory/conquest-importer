@@ -96,11 +96,20 @@ def test_rich_escapes_before_adding_code_tags() -> None:
     assert e("<b>") == "&lt;b&gt;"
 
 
-def test_plan_only_and_created_banners() -> None:
-    assert "Plan only" in render_report(Summary([], None))
-    created = render_report(Summary([], {"condition": 3, "workflow": 1}))
-    assert "3 condition" in created
-    assert "Plan only" not in created
+def test_preview_and_applied_banners() -> None:
+    preview = render_report(Summary([], None), aws_account="123456789012", nr_account=7)
+    assert "Preview" in preview and "forecast" in preview
+    assert "--apply --confirm-account 7" in preview and "--aws-account-id 123456789012" in preview
+    applied = render_report(Summary([], {"condition": 3, "workflow": 1}, refused=2), nr_account=7)
+    assert "3 conditions, 1 workflow" in applied and "refused <b>2</b>" in applied
+    assert "importer rollback" in applied and "Preview" not in applied
+
+
+def test_the_hero_says_forecast_until_something_is_created() -> None:
+    assets = [Asset("alarm", "a", "metric alarm", Confidence.APPROXIMATE)]
+    assert "can be migrated" in render_report(Summary(assets, None))
+    applied = render_report(Summary(assets, {"condition": 1}))
+    assert "can be migrated" not in applied and "assets migrated" in applied
 
 
 def test_empty_run_does_not_divide_by_zero() -> None:
@@ -130,12 +139,16 @@ def test_headline_states_total_completion() -> None:
         Asset("alarm", "c", "metric alarm", Confidence.MANUAL),
         Asset("dashboard", "d", "dashboard", Confidence.UNSUPPORTED),
     ]
-    assert Summary(assets, None).headline() == (
+    assert Summary(assets, {"condition": 2}).headline() == (
         "Total completion: 50% (2 of 4 assets migrated, 2 need manual work)"
+    )
+    assert Summary(assets, None).headline() == (
+        "Total completion (forecast): 50% (2 of 4 assets can be migrated, 2 need manual work; "
+        "nothing has been created in New Relic yet)"
     )
     assert "nothing found" in Summary([], None).headline()
 
 
 def test_cli_report_prints_the_headline(run_dir: Path, tmp_path: Path) -> None:
     result = CliRunner().invoke(app, ["report", str(run_dir), "--out", str(tmp_path / "r.html")])
-    assert "Total completion:" in result.output
+    assert "Total completion (forecast):" in result.output

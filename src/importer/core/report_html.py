@@ -59,8 +59,15 @@ color:var(--ink2)}
 border-bottom:2px solid var(--ink);padding-bottom:12px}
 h1{font:400 15px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;margin:0}
 .where{font:13px/1.5 var(--mono);color:var(--ink2);margin:0}
-.state{margin:24px 0 0;padding-left:16px;border-left:3px solid var(--accent);max-width:62ch}
+.state{margin:24px 0 0;padding-left:16px;border-left:3px solid var(--accent);max-width:68ch}
 .state b{font-weight:700}
+.state p{margin:6px 0}
+.cmd{font-family:var(--mono);font-size:13px;margin:10px 0;padding:10px 12px;overflow-x:auto;
+white-space:pre-wrap;word-break:break-word;border:1px solid var(--rule);background:transparent}
+.stages{list-style:none;margin:12px 0 0;padding:0;border-top:1px solid var(--rule)}
+.stages li{display:grid;grid-template-columns:9ch 1fr;gap:12px;padding:8px 0;
+border-bottom:1px solid var(--rule)}
+.stages .mark{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
 .hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,4fr);gap:48px;
 align-items:end;margin:56px 0 24px}
 .big{font:400 clamp(96px,17vw,168px)/.85 var(--serif);letter-spacing:-.04em;margin:0}
@@ -265,17 +272,79 @@ def _group(group: Group, number: int) -> str:
     )
 
 
-def _state(summary: Summary) -> str:
+def _stage(mark: str, name: str, text: str) -> str:
+    return f'<li><span class="mark">{mark}</span><span><b>{name}</b> {text}</span></li>'
+
+
+def _state(summary: Summary, aws_account: str, nr_account: int | None, region: str) -> str:
+    """Where the migration stands: what has happened, what has not, and the next command."""
+    nr = str(nr_account) if nr_account else "&lt;new relic account id&gt;"
+    aws = e(aws_account, 20) if aws_account else "&lt;aws account id&gt;"
+    area = e(region, 30) if region else "us-east-1"
     if summary.created is None:
-        return (
-            '<p class="state"><b>Plan only.</b> Nothing has been created in New Relic. '
-            '"Migrated" below means converted and ready to create.</p>'
+        create = (
+            f"importer migrate --aws-account-id {aws} --nr-account-id {nr} --region {area} "
+            f"--out out/migration-applied --apply --confirm-account {nr}"
         )
-    made = ", ".join(f"{n} {kind}" for kind, n in sorted(summary.created.items())) or "nothing"
+        stages = (
+            _stage(
+                "✓ Done",
+                "Read and convert.",
+                "Your AWS alarms, dashboards and topics were read and converted. This is the plan.",
+            )
+            + _stage(
+                "○ Not yet",
+                "Create in New Relic.",
+                "No condition, dashboard or workflow exists in New Relic yet.",
+            )
+            + _stage(
+                "→ Next",
+                "Enable and verify.",
+                "After step 2, deploy the data stream and enable conditions one at a time.",
+            )
+        )
+        return (
+            '<section class="state"><p class="label">Preview · nothing has changed in New Relic'
+            "</p>"
+            "<p>This report is a <b>forecast</b>. The percentages show what the tool expects to "
+            "create from your AWS account, not what exists in New Relic. To create it, "
+            "everything is made <b>disabled or private</b> and can be rolled back:</p>"
+            f'<pre class="cmd">{create}</pre>'
+            f'<ol class="stages">{stages}</ol></section>'
+        )
+    plural = {"policy": "policies"}
+    made = (
+        ", ".join(
+            f"{n} {kind if n == 1 else plural.get(kind, kind + 's')}"
+            for kind, n in sorted(summary.created.items())
+        )
+        or "nothing"
+    )
+    refused = (
+        f" New Relic refused <b>{summary.refused}</b>; those count as not migrated and are "
+        "listed below with the reason."
+        if summary.refused
+        else ""
+    )
+    undo = (
+        f"importer rollback --manifest &lt;run folder&gt;/manifest.json --account-id {nr} "
+        f"--apply --confirm-account {nr}"
+    )
+    stages = (
+        _stage("✓ Done", "Read and convert.", "Alarms, dashboards and topics were converted.")
+        + _stage("✓ Done", "Create in New Relic.", f"Created {e(made)}.{refused}")
+        + _stage(
+            "→ Your turn",
+            "Enable and verify.",
+            "Nothing is switched on yet; follow the checklist at the end.",
+        )
+    )
     return (
-        f'<p class="state"><b>Created in New Relic:</b> {e(made)}. Conditions and workflows were '
-        "created disabled and dashboards private; <code>importer rollback</code> removes "
-        "exactly these.</p>"
+        '<section class="state"><p class="label">Applied · created in New Relic</p>'
+        "<p>The numbers below are what <b>was created</b>. Conditions and workflows are "
+        "disabled and dashboards are private. To remove exactly these objects:</p>"
+        f'<pre class="cmd">{undo}</pre>'
+        f'<ol class="stages">{stages}</ol></section>'
     )
 
 
@@ -334,10 +403,13 @@ def render_report(
         chart = '<p class="intro">Nothing was found to migrate.</p>'
     else:
         rest = total - done
+        forecast = summary.created is None
+        word = "can be migrated" if forecast else "migrated"
         hero = (
-            f'<div class="hero"><div><p class="label">Total completion</p>'
+            '<div class="hero"><div><p class="label">Total completion'
+            f"{' · forecast' if forecast else ''}</p>"
             f'<p class="big">{percent(done, total)}%</p></div><div>'
-            f'<p class="lede"><b>{done} of {total}</b> assets migrated. '
+            f'<p class="lede"><b>{done} of {total}</b> assets {word}. '
             f"{rest} did not ({percent(rest, total)}%) and need a person.</p>"
             '<p class="label">Share of alarms, dashboards and subscriptions converted</p>'
             "</div></div>"
@@ -377,7 +449,7 @@ def render_report(
         "<title>Migration report</title>"
         f"<style>{CSS}</style></head><body><main>"
         f'<div class="masthead"><h1>Migration report</h1><p class="where">{where}</p></div>'
-        f"{_state(summary)}{hero}{chart}{_ledger(summary)}"
+        f"{_state(summary, aws_account, nr_account, region)}{hero}{chart}{_ledger(summary)}"
         f"{''.join(sections)}"
         "<footer><p><b>How this is counted.</b> One alarm, one dashboard, or one notification "
         "subscription is one asset. Migrated means converted exactly or approximately; manual "

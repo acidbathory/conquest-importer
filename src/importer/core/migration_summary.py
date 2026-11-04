@@ -54,6 +54,7 @@ class Group:
 class Summary:
     assets: list[Asset]
     created: dict[str, int] | None  # object kind -> count, from the manifest; None = plan only
+    refused: int = 0  # objects New Relic refused to create (they count as not migrated)
 
     def of(self, kind: Kind) -> list[Asset]:
         return [a for a in self.assets if a.kind == kind]
@@ -68,6 +69,12 @@ class Summary:
         if total == 0:
             return "Total completion: nothing found to migrate"
         done = counts[Confidence.EXACT] + counts[Confidence.APPROXIMATE]
+        if self.created is None:
+            return (
+                f"Total completion (forecast): {percent(done, total)}% "
+                f"({done} of {total} assets can be migrated, {total - done} need manual work; "
+                "nothing has been created in New Relic yet)"
+            )
         return (
             f"Total completion: {percent(done, total)}% "
             f"({done} of {total} assets migrated, {total - done} need manual work)"
@@ -180,10 +187,37 @@ def _created(run: Path) -> dict[str, int] | None:
     return dict(Counter(o.kind for o in manifest.objects))
 
 
+REFUSED = "could not be created in New Relic"
+
+
+def _refused(run: Path) -> int:
+    path = run / "manifest.json"
+    return len(load_manifest(path).failed) if path.is_file() else 0
+
+
+def _mark_refused(run: Path, assets: list[Asset]) -> None:
+    """An asset New Relic refused to create is not migrated, whatever the conversion said."""
+    path = run / "manifest.json"
+    if not path.is_file():
+        return
+    asset_kind = {"condition": "alarm", "dashboard": "dashboard"}
+    refused = {
+        (asset_kind[f.kind], f.name): f.reason
+        for f in load_manifest(path).failed
+        if f.kind in asset_kind
+    }
+    for asset in assets:
+        reason = refused.get((asset.kind, asset.name))
+        if reason is not None and asset.migrated:
+            asset.confidence = Confidence.MANUAL
+            asset.reasons.insert(0, f"{REFUSED}: {printable(reason, 150)}")
+
+
 def load_summary(run: Path) -> Summary:
     """Read a `migrate --out` folder. Raises OSError/ValueError on unreadable input."""
     try:
         assets = [*_alarms(run), *_dashboards(run), *_notifications(run)]
-        return Summary(assets, _created(run))
+        _mark_refused(run, assets)
+        return Summary(assets, _created(run), _refused(run))
     except json.JSONDecodeError as exc:
         raise ValueError(f"unreadable JSON in {run}: {exc.msg}") from None
