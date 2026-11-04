@@ -60,8 +60,18 @@ def quote_string(value: str) -> str:
 
 
 def identifier(name: str) -> str:
+    """A validated attribute or event name; backtick-quoted when NRQL needs it.
+
+    NRQL rejects a dotted name when a segment starts with a digit (``aws.apigateway.5XXError``),
+    so such names are wrapped in backticks. The pattern admits no backtick, so quoting is safe.
+    """
+    if len(name) > 2 and name[0] == name[-1] == "`":
+        # Already quoted by an earlier pass: check what is inside and keep it.
+        return identifier(name[1:-1])
     if not _IDENTIFIER.match(name):
         raise ValueError(f"invalid NRQL identifier: {name!r}")
+    if any(part[:1].isdigit() for part in name.split(".")):
+        return f"`{name}`"
     return name
 
 

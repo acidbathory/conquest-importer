@@ -5,7 +5,7 @@ import logging
 import os
 from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, NoReturn
 
 import typer
 
@@ -34,7 +34,7 @@ from importer.core.emit.nerdgraph import nerdgraph_payload
 from importer.core.emit.notifications import notifications_terraform
 from importer.core.emit.terraform import terraform_file
 from importer.core.ir import Confidence, IRMonitor
-from importer.core.manifest import CreatedObject, Manifest, load_manifest, save_manifest
+from importer.core.manifest import CreatedObject, Kind, Manifest, load_manifest, save_manifest
 from importer.core.migration_summary import load_summary
 from importer.core.notification_ir import NotificationPlan, build_plan
 from importer.core.report import build_report, md_cell
@@ -266,7 +266,13 @@ def apply(
         with NewRelicClient(key, region) as client:
             typer.echo(f"Account name: {printable(get_account_name(client, account_id))}")
             result = apply_plan(client, account_id, policy_name, plan)
-        _record(manifest or source / "manifest.json", account_id, region, result.objects)
+        _record(
+            manifest or source / "manifest.json",
+            account_id,
+            region,
+            result.objects,
+            ("condition", result.failed),
+        )
     except (GuardError, MissingSecretError, NewRelicAPIError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
         raise typer.Exit(code=1) from None
@@ -278,7 +284,7 @@ def apply(
     for name, reason in result.failed:
         typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
     if result.failed:
-        raise typer.Exit(code=1)
+        _partial_failure()
 
 
 @app.command("extract-cloudwatch")
@@ -326,14 +332,22 @@ def extract_cloudwatch_command(
         raise typer.Exit(code=1)
 
 
-def _record(path: Path, account_id: int, region: str, objects: list[CreatedObject]) -> None:
-    """Add what this run created to the manifest, creating it if needed."""
+def _record(
+    path: Path,
+    account_id: int,
+    region: str,
+    objects: list[CreatedObject],
+    failed: tuple[Kind, list[tuple[str, str]]] | None = None,
+) -> None:
+    """Add what this run created (and what New Relic refused) to the manifest."""
     manifest = (
         load_manifest(path) if path.exists() else Manifest(account_id=account_id, region=region)
     )
     if manifest.account_id != account_id:
         raise ValueError(f"{path} belongs to account {manifest.account_id}, not {account_id}")
     manifest.add(objects)
+    if failed:
+        manifest.add_failed(*failed)
     save_manifest(manifest, path)
 
 
@@ -381,7 +395,13 @@ def apply_dashboards_command(
         with NewRelicClient(key, region) as client:
             typer.echo(f"Account name: {printable(get_account_name(client, account_id))}")
             result = apply_dashboards(client, account_id, plan)
-        _record(manifest or source / "manifest.json", account_id, region, result.objects)
+        _record(
+            manifest or source / "manifest.json",
+            account_id,
+            region,
+            result.objects,
+            ("dashboard", result.failed),
+        )
     except (GuardError, MissingSecretError, NewRelicAPIError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
         raise typer.Exit(code=1) from None
@@ -392,7 +412,7 @@ def apply_dashboards_command(
     for name, reason in result.failed:
         typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
     if result.failed:
-        raise typer.Exit(code=1)
+        _partial_failure()
 
 
 @app.command("convert-notifications")
@@ -509,7 +529,13 @@ def apply_notifications_command(
         with NewRelicClient(key, region) as client:
             typer.echo(f"Account name: {printable(get_account_name(client, account_id))}")
             result = apply_notifications(client, account_id, plans)
-        _record(manifest or source / "manifest.json", account_id, region, result.objects)
+        _record(
+            manifest or source / "manifest.json",
+            account_id,
+            region,
+            result.objects,
+            ("workflow", result.failed),
+        )
     except (GuardError, MissingSecretError, NewRelicAPIError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
         raise typer.Exit(code=1) from None
@@ -520,7 +546,7 @@ def apply_notifications_command(
     for name, reason in result.failed:
         typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
     if result.failed:
-        raise typer.Exit(code=1)
+        _partial_failure()
 
 
 @app.command("validate")
@@ -626,15 +652,35 @@ def rollback_command(
         raise typer.Exit(code=1)
 
 
-def _step(title: str, run: Callable[[], None]) -> None:
-    """Run one stage of `migrate`; stop the whole run if the stage failed."""
+# Set when an apply command created what it could but some items failed (as opposed to a refusal
+# or an API error that stopped it), so `migrate` can carry on with the other kinds of object.
+_PARTIAL = {"failed": False}
+
+
+def _partial_failure() -> NoReturn:
+    _PARTIAL["failed"] = True
+    raise typer.Exit(code=1)
+
+
+def _step(title: str, run: Callable[[], None], *, keep_going: bool = False) -> bool:
+    """Run one stage of `migrate`. Returns False if it had partial failures it carried on past.
+
+    A stage that fails outright stops the whole run. With keep_going, a stage that only failed on
+    some items does not: dashboards and notifications are still created, and the caller reports
+    the failures at the end.
+    """
     typer.echo(f"\n== {title}")
+    _PARTIAL["failed"] = False
     try:
         run()
     except typer.Exit as exc:
         if exc.exit_code:
+            if keep_going and _PARTIAL["failed"]:
+                typer.echo(f"\n{title}: some items failed; carrying on with the rest.", err=True)
+                return False
             typer.echo(f"\nStopped at: {title}. Nothing later was run.", err=True)
             raise typer.Exit(code=1) from None
+    return True
 
 
 def _plan_text(
@@ -761,11 +807,23 @@ def migrate_command(
             notifications=True,
         ),
     )
-    _step(
-        "2. Convert alarms",
-        lambda: convert(source=export / "alarms", out=alerts, source_system="cloudwatch"),
-    )
+    metric_alarms, composite_alarms = load_alarms(export / "alarms")
+    has_alarms = bool(metric_alarms or composite_alarms)
     has_dashboards = any((export / "dashboards").glob("*.json"))
+    if not (has_alarms or has_dashboards):
+        typer.echo(
+            f"\nNothing to migrate: account {aws_account_id} has no CloudWatch alarms or "
+            f"dashboards in {region}. Check the region (--region) and the account.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    if has_alarms:
+        _step(
+            "2. Convert alarms",
+            lambda: convert(source=export / "alarms", out=alerts, source_system="cloudwatch"),
+        )
+    else:
+        typer.echo("\n== 2. Convert alarms\nNo alarms found in this region; skipping.")
     if has_dashboards:
         _step(
             "3. Convert dashboards",
@@ -782,28 +840,30 @@ def migrate_command(
             ),
         )
 
-    metric_alarms, _ = load_alarms(export / "alarms")
     dashboards_in = load_dashboards(export / "dashboards") if has_dashboards else []
     namespaces, specs = streaming_inputs(metric_alarms, dashboards_in)
     percentile_args = [
         f"{sp['namespace']}:{sp['metric_name']}:{','.join(map(str, sp['statistics']))}"  # type: ignore[call-overload]
         for sp in specs
     ]
-    _step(
-        "5. Generate the data-ingestion Terraform (not deployed)",
-        lambda: ingest_setup(
-            out=out / "ingest",
-            aws_region=region,
-            nr_region=nr_region,
-            name_prefix="cw-import",
-            namespaces=",".join(namespaces),
-            alarms=None,
-            percentile=percentile_args or None,
-        ),
-    )
+    if namespaces:
+        _step(
+            "5. Generate the data-ingestion Terraform (not deployed)",
+            lambda: ingest_setup(
+                out=out / "ingest",
+                aws_region=region,
+                nr_region=nr_region,
+                name_prefix="cw-import",
+                namespaces=",".join(namespaces),
+                alarms=None,
+                percentile=percentile_args or None,
+            ),
+        )
 
-    run = load_run(alerts)
-    stats_md = render_markdown([run], build_stats([run]), top=15).split("\n", 2)[2]
+    stats_md = ""
+    if has_alarms:
+        run = load_run(alerts)
+        stats_md = render_markdown([run], build_stats([run]), top=15).split("\n", 2)[2]
     counts = {
         "dashboards": len(list((dash / "dashboard-ir").glob("*.json"))) if has_dashboards else 0,
         "topics": len(list((export / "notifications").glob("*.json"))),
@@ -830,20 +890,23 @@ def migrate_command(
         typer.echo("PLAN ONLY: nothing was created in New Relic. Add --apply --confirm-account.")
         return
     policy = f"Imported from CloudWatch ({aws_account_id})"
-    _step(
-        "6. Create alert conditions",
-        lambda: apply(
-            source=alerts,
-            account_id=nr_account_id,
-            region=nr_region,
-            policy_name=policy,
-            do_apply=True,
-            confirm_account=confirm_account,
-            manifest=manifest_path,
-        ),
-    )
+    clean = True
+    if has_alarms:
+        clean = _step(
+            "6. Create alert conditions",
+            lambda: apply(
+                source=alerts,
+                account_id=nr_account_id,
+                region=nr_region,
+                policy_name=policy,
+                do_apply=True,
+                confirm_account=confirm_account,
+                manifest=manifest_path,
+            ),
+            keep_going=True,
+        )
     if has_topics:
-        _step(
+        clean &= _step(
             "7. Create notification workflows (disabled)",
             lambda: apply_notifications_command(
                 source=notes,
@@ -853,9 +916,10 @@ def migrate_command(
                 confirm_account=confirm_account,
                 manifest=manifest_path,
             ),
+            keep_going=True,
         )
     if has_dashboards:
-        _step(
+        clean &= _step(
             "8. Create dashboards (private)",
             lambda: apply_dashboards_command(
                 source=dash,
@@ -865,10 +929,14 @@ def migrate_command(
                 confirm_account=confirm_account,
                 manifest=manifest_path,
             ),
+            keep_going=True,
         )
     report()
     undo = f"importer rollback --manifest {manifest_path} --account-id {nr_account_id} --apply"
     typer.echo(f"\nDone. To undo exactly this run: {undo} --confirm-account {nr_account_id}")
+    if not clean:
+        typer.echo("Some items could not be created (see FAILED lines above).", err=True)
+        raise typer.Exit(code=1)
 
 
 @app.command("ingest-setup")

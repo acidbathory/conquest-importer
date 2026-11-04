@@ -113,11 +113,26 @@ _RULES: list[tuple[re.Pattern[str], str, list[str]]] = [
         ],
     ),
     (
+        re.compile(r"could not be created in new relic"),
+        "Rejected by New Relic",
+        [
+            "Read the error in the reason above. It names what New Relic objected to.",
+            "Fix the converted definition (the files under `alerts/nerdgraph` or "
+            "`dashboards/nerdgraph`), then run the same `migrate` command again. Objects that "
+            "already exist are skipped, so only this item is retried.",
+            "If it keeps failing, create it by hand in New Relic and report the error as a bug.",
+        ],
+    ),
+    (
         re.compile(r"no new relic mapping"),
         "Metric without a New Relic mapping",
         [
-            "Find the matching New Relic metric (or ingest the source metric), add it to the "
-            "source's mapping file, and re-run the conversion.",
+            "In New Relic, open the query builder and run "
+            "`SELECT uniques(metricName) FROM Metric WHERE metricName LIKE 'aws.%'` to find "
+            "the name your metric arrives under (the metric stream must be sending it).",
+            "Create the alert condition by hand with that metric name. For a custom namespace "
+            "such as `Custom/my-app`, a simpler route is publishing under a name made only of "
+            "letters and digits (`Custom/myapp`), which this tool can convert.",
         ],
     ),
     (

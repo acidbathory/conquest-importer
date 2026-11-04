@@ -22,6 +22,8 @@ class FakeNR:
         self.objects = dict(objects)
         self.foreign = foreign
         self.ignore_deletes = False
+        self.lag = 0  # reads after a delete that still see the object
+        self.ghosts: dict[tuple[str, str], list[Any]] = {}
         self.deleted: list[tuple[str, str]] = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
@@ -40,13 +42,19 @@ class FakeNR:
             if q == mutation:
                 key = (kind, v[var])
                 if not self.ignore_deletes:
-                    self.objects.pop(key, None)
+                    gone = self.objects.pop(key, None)
+                    if self.lag and gone is not None:
+                        self.ghosts[key] = [gone, self.lag]
                 self.deleted.append(key)
                 return httpx.Response(200, json={"data": {"ok": {"id": v[var]}}})
         for kind, (query, path) in READ.items():
             if q == query:
                 oid = v.get("id") or v.get("g")
                 name = self.objects.get((kind, oid))
+                ghost = self.ghosts.get((kind, oid))
+                if name is None and ghost and ghost[1] > 0:
+                    ghost[1] -= 1
+                    name = ghost[0]
                 return httpx.Response(200, json={"data": nest(path, name, oid)})
         raise AssertionError(f"unexpected query {q[:60]}")
 
@@ -170,6 +178,63 @@ def test_a_dry_run_counts_our_own_conditions_as_about_to_go() -> None:
 def test_a_delete_that_did_nothing_is_not_reported_as_deleted() -> None:
     fake = FakeNR(world())
     fake.ignore_deletes = True
-    result = rollback(client_for(fake), ACCOUNT, manifest(("condition", "c1", "cond")), apply=True)
+    result = rollback(
+        client_for(fake),
+        ACCOUNT,
+        manifest(("condition", "c1", "cond")),
+        apply=True,
+        sleep=lambda _: None,
+    )
     assert not result.deleted
     assert result.failed and "still exists" in result.failed[0][1]
+
+
+def test_a_delete_that_takes_a_moment_to_show_is_not_called_a_failure() -> None:
+    fake = FakeNR(world())
+    fake.lag = 3  # New Relic still returns each object for three reads after deleting it
+    waits: list[float] = []
+    result = rollback(client_for(fake), ACCOUNT, manifest(*ALL), apply=True, sleep=waits.append)
+    assert not result.failed and len(result.deleted) == len(ALL)
+    assert any(w > 0 for w in waits)
+
+
+def _dashboard_world(answer: dict[str, Any]) -> tuple[FakeNR, NewRelicClient]:
+    """A New Relic whose dashboard stays readable (stale index) and whose delete gives `answer`."""
+    fake = FakeNR({("dashboard", "g1"): "dash"})
+    fake.ignore_deletes = True  # the entity index never drops it
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if json.loads(request.content)["query"] == DELETE["dashboard"][0]:
+            return httpx.Response(200, json={"data": {"dashboardDelete": answer}})
+        return fake(request)
+
+    client = NewRelicClient(
+        SecretStr("k"), transport=httpx.MockTransport(handler), sleep=lambda _: None
+    )
+    return fake, client
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        {"status": "SUCCESS", "errors": []},
+        {"status": "FAILURE", "errors": [{"type": "DASHBOARD_NOT_FOUND", "description": "gone"}]},
+    ],
+)
+def test_a_dashboard_is_deleted_when_the_delete_call_says_so_even_if_the_index_is_stale(
+    answer: dict[str, Any],
+) -> None:
+    _, client = _dashboard_world(answer)
+    result = rollback(
+        client, ACCOUNT, manifest(("dashboard", "g1", "dash")), apply=True, sleep=lambda _: None
+    )
+    assert [o.kind for o in result.deleted] == ["dashboard"] and not result.failed
+
+
+def test_a_dashboard_delete_that_fails_for_another_reason_is_reported() -> None:
+    answer = {"status": "FAILURE", "errors": [{"type": "FORBIDDEN", "description": "no access"}]}
+    _, client = _dashboard_world(answer)
+    result = rollback(
+        client, ACCOUNT, manifest(("dashboard", "g1", "dash")), apply=True, sleep=lambda _: None
+    )
+    assert not result.deleted and "no access" in result.failed[0][1]

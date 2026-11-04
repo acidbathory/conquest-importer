@@ -5,6 +5,8 @@ an id that was reused or an object someone renamed is left alone. A policy is de
 is empty afterwards (something added to it later is not ours to remove). Writes are sent once.
 """
 
+import time
+from collections.abc import Callable
 from typing import Any
 
 from pydantic import BaseModel
@@ -102,7 +104,14 @@ def current(client: NewRelicClient, account_id: int, obj: CreatedObject) -> dict
     variables: dict[str, Any] = {"a": account_id, "id": obj.id}
     if obj.kind == "dashboard":
         variables = {"g": obj.id}
-    found = _dig(client.run(query, variables, is_write=False), path)
+    try:
+        found = _dig(client.run(query, variables, is_write=False), path)
+    except NewRelicAPIError as exc:
+        # New Relic answers "Not Found" (not an empty result) for a condition or policy that has
+        # been deleted. That means it is gone, which is what rollback wants to confirm.
+        if "not found" in str(exc).lower():
+            return None
+        raise
     return found if isinstance(found, dict) else None
 
 
@@ -115,8 +124,48 @@ def foreign_conditions(
     return [str(c["id"]) for c in found if str(c["id"]) not in ours]
 
 
+SETTLE_WAITS = (0.0, 1.0, 2.0, 4.0, 8.0)  # seconds before each re-read, about 15 in total
+
+
+def _still_there(
+    client: NewRelicClient,
+    account_id: int,
+    obj: CreatedObject,
+    sleep: Callable[[float], None],
+) -> bool:
+    """Whether the object is still readable after a delete, allowing for New Relic's lag.
+
+    Dashboards and other entities can stay readable for a few seconds after a successful delete,
+    so a read straight after is retried a few times before the delete is called a failure.
+    """
+    for wait in SETTLE_WAITS:
+        sleep(wait)
+        if current(client, account_id, obj) is None:
+            return False
+    return True
+
+
+def _dashboard_outcome(answer: dict[str, Any]) -> tuple[bool, str] | None:
+    """Read the answer to `dashboardDelete`: (deleted, reason), or None if it has no verdict."""
+    verdict = answer.get("dashboardDelete")
+    if not isinstance(verdict, dict):
+        return None
+    errors = verdict.get("errors") or []
+    if verdict.get("status") == "SUCCESS" or any(
+        e.get("type") == "DASHBOARD_NOT_FOUND" for e in errors
+    ):
+        return True, ""  # deleted, or already gone
+    reason = "; ".join(str(e.get("description", "")) for e in errors) or str(verdict.get("status"))
+    return False, reason[:200]
+
+
 def rollback(
-    client: NewRelicClient, account_id: int, manifest: Manifest, *, apply: bool
+    client: NewRelicClient,
+    account_id: int,
+    manifest: Manifest,
+    *,
+    apply: bool,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> RollbackResult:
     result = RollbackResult()
     our_conditions = {o.id for o in manifest.objects if o.kind == "condition"}
@@ -143,8 +192,17 @@ def rollback(
         mutation, id_var = DELETE[obj.kind]
         variables = {id_var: obj.id} if obj.kind == "dashboard" else {"a": account_id, "id": obj.id}
         try:
-            client.run(mutation, variables, is_write=True)
-            still_there = current(client, account_id, obj) is not None
+            answer = client.run(mutation, variables, is_write=True)
+            outcome = _dashboard_outcome(answer) if obj.kind == "dashboard" else None
+            if outcome is not None:
+                # New Relic's entity index keeps listing a deleted dashboard for a long time, so
+                # the delete call's own answer is the evidence, not a re-read.
+                if outcome[0]:
+                    result.deleted.append(obj)
+                else:
+                    result.failed.append((obj, outcome[1]))
+                continue
+            still_there = _still_there(client, account_id, obj, sleep)
         except NewRelicAPIError as exc:
             result.failed.append((obj, str(exc)))
             continue

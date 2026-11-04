@@ -262,10 +262,12 @@ def _resolve_term(
 ) -> tuple[MetricTerm, list[TagFilter]]:
     prefix = metric_prefix(namespace, prefixes)
     if prefix is None:
-        raise _Fail(
-            Confidence.MANUAL,
-            f"no New Relic mapping for namespace {namespace!r}; add it to cloudwatch_map.json",
+        hint = (
+            "only Custom/ followed by letters and digits is supported (no '-', '_' or '.')"
+            if namespace.startswith("Custom/")
+            else "it is not one of the supported AWS services"
         )
+        raise _Fail(Confidence.MANUAL, f"no New Relic mapping for namespace {namespace!r}: {hint}")
     percentile = _PERCENTILE.match(stat)
     # A percentile is one value per minute, so the time aggregation picks the extreme that
     # matches the alarm direction (highest for "above", lowest for "below").
@@ -416,7 +418,8 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
         if (
             "Anomaly" in alarm.ComparisonOperator
             or "Band" in alarm.ComparisonOperator
-            or ("Lower" in alarm.ComparisonOperator)
+            or "Lower" in alarm.ComparisonOperator
+            or "Upper" in alarm.ComparisonOperator
         ):
             return failed(Confidence.MANUAL, "anomaly detection alarms are not supported yet")
         return failed(
