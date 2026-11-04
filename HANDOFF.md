@@ -4,9 +4,8 @@ Written 2026-10-02 so any person or AI assistant can continue without the chat h
 Read this, then `CLAUDE.md` (rules), `ROADMAP.md` (plan), `docs/verification-log.md` (what is proven).
 
 ## WHERE WE STOPPED (2026-10-05) - read this first
-- All work is on branch `wip/cloudwatch-complete-2026-10-05` (not pushed). `main` is still green and
-  behind it. One golden test fails on the branch on purpose: see `docs/pending/README.md`. Approve
-  or reject that diff, then merge.
+- All work is on branch `wip/cloudwatch-complete-2026-10-05` (not pushed). The CloudWatch golden diff was
+  approved on 2026-11-04 and the suite is fully green (386 tests).
 - Nothing is running in AWS or New Relic (verified). `.env` holds the New Relic license key.
 - Open question for the owner, not for code: is the tool worth continuing without full coverage?
   Agreed next step (slowly): measure a sanitized real-customer export with `importer migrate` in plan

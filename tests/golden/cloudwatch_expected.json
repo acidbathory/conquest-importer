@@ -1,7 +1,7 @@
 {
   "ec2-cpu-high": {
     "confidence": "approximate",
-    "nrql": "SELECT average(aws.ec2.CPUUtilization) FROM Metric WHERE aws.ec2.InstanceId = 'i-0abc123def4567890'",
+    "nrql": "SELECT average(aws.ec2.CPUUtilization) FROM Metric WHERE aws.ec2.InstanceId = 'i-0abc123def4567890' AND aws.ec2.AutoScalingGroupName IS NULL AND aws.ec2.ImageId IS NULL AND aws.ec2.InstanceType IS NULL",
     "shape": {
       "duration": 900,
       "window": 300,
@@ -11,7 +11,7 @@
   },
   "ec2-status-check-failed": {
     "confidence": "approximate",
-    "nrql": "SELECT max(aws.ec2.StatusCheckFailed) FROM Metric WHERE aws.ec2.InstanceId = 'i-0abc123def4567890'",
+    "nrql": "SELECT max(aws.ec2.StatusCheckFailed) FROM Metric WHERE aws.ec2.InstanceId = 'i-0abc123def4567890' AND aws.ec2.AutoScalingGroupName IS NULL AND aws.ec2.ImageId IS NULL AND aws.ec2.InstanceType IS NULL",
     "shape": {
       "duration": 120,
       "window": 60,
@@ -21,7 +21,7 @@
   },
   "rds-cpu-high": {
     "confidence": "approximate",
-    "nrql": "SELECT average(aws.rds.CPUUtilization) FROM Metric WHERE aws.rds.DBInstanceIdentifier = 'prod-db-1'",
+    "nrql": "SELECT average(aws.rds.CPUUtilization) FROM Metric WHERE aws.rds.DBInstanceIdentifier = 'prod-db-1' AND aws.rds.DBClusterIdentifier IS NULL AND aws.rds.DatabaseClass IS NULL AND aws.rds.EngineName IS NULL AND aws.rds.Role IS NULL AND aws.rds.SourceRegion IS NULL",
     "shape": {
       "duration": 600,
       "window": 300,
@@ -31,7 +31,7 @@
   },
   "rds-free-storage-low": {
     "confidence": "approximate",
-    "nrql": "SELECT min(aws.rds.FreeStorageSpace) FROM Metric WHERE aws.rds.DBInstanceIdentifier = 'prod-db-1'",
+    "nrql": "SELECT min(aws.rds.FreeStorageSpace) FROM Metric WHERE aws.rds.DBInstanceIdentifier = 'prod-db-1' AND aws.rds.DBClusterIdentifier IS NULL AND aws.rds.DatabaseClass IS NULL AND aws.rds.EngineName IS NULL AND aws.rds.Role IS NULL AND aws.rds.SourceRegion IS NULL",
     "shape": {
       "duration": 300,
       "window": 300,
@@ -41,7 +41,7 @@
   },
   "rds-connections-3-of-5": {
     "confidence": "approximate",
-    "nrql": "SELECT average(aws.rds.DatabaseConnections) FROM Metric WHERE aws.rds.DBInstanceIdentifier = 'prod-db-1'",
+    "nrql": "SELECT average(aws.rds.DatabaseConnections) FROM Metric WHERE aws.rds.DBInstanceIdentifier = 'prod-db-1' AND aws.rds.DBClusterIdentifier IS NULL AND aws.rds.DatabaseClass IS NULL AND aws.rds.EngineName IS NULL AND aws.rds.Role IS NULL AND aws.rds.SourceRegion IS NULL",
     "shape": {
       "duration": 180,
       "window": 60,
@@ -51,7 +51,7 @@
   },
   "alb-5xx-any": {
     "confidence": "approximate",
-    "nrql": "SELECT sum(aws.applicationelb.HTTPCode_Target_5XX_Count) FROM Metric WHERE aws.applicationelb.LoadBalancer = 'app/my-alb/50dc6c495c0c9188'",
+    "nrql": "SELECT sum(aws.applicationelb.HTTPCode_Target_5XX_Count) FROM Metric WHERE aws.applicationelb.LoadBalancer = 'app/my-alb/50dc6c495c0c9188' AND aws.applicationelb.AvailabilityZone IS NULL AND aws.applicationelb.TargetGroup IS NULL",
     "shape": {
       "duration": 300,
       "window": 60,
@@ -60,13 +60,18 @@
     }
   },
   "alb-latency-p99": {
-    "confidence": "manual",
-    "nrql": "not emitted: confidence is manual",
-    "shape": null
+    "confidence": "approximate",
+    "nrql": "SELECT max(aws.applicationelb.TargetResponseTime.p99) FROM Metric WHERE aws.applicationelb.LoadBalancer = 'app/my-alb/50dc6c495c0c9188' AND aws.applicationelb.AvailabilityZone IS NULL AND aws.applicationelb.TargetGroup IS NULL",
+    "shape": {
+      "duration": 180,
+      "window": 60,
+      "occurrences": "ALL",
+      "expiration": false
+    }
   },
   "lambda-errors": {
     "confidence": "approximate",
-    "nrql": "SELECT sum(aws.lambda.Errors.byFunction) FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
+    "nrql": "SELECT sum(aws.lambda.Errors.byFunction) FROM Metric WHERE aws.lambda.FunctionName = 'checkout' AND aws.lambda.ExecutedVersion IS NULL AND aws.lambda.Resource IS NULL",
     "shape": {
       "duration": 60,
       "window": 60,
@@ -76,7 +81,7 @@
   },
   "lambda-duration-high": {
     "confidence": "approximate",
-    "nrql": "SELECT average(aws.lambda.Duration.byFunction) FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
+    "nrql": "SELECT average(aws.lambda.Duration.byFunction) FROM Metric WHERE aws.lambda.FunctionName = 'checkout' AND aws.lambda.ExecutedVersion IS NULL AND aws.lambda.Resource IS NULL",
     "shape": {
       "duration": 600,
       "window": 300,
@@ -86,7 +91,7 @@
   },
   "dynamodb-throttled": {
     "confidence": "approximate",
-    "nrql": "SELECT sum(aws.dynamodb.ThrottledRequests) FROM Metric WHERE aws.dynamodb.TableName = 'orders' AND aws.dynamodb.Operation = 'PutItem'",
+    "nrql": "SELECT sum(aws.dynamodb.ThrottledRequests) FROM Metric WHERE aws.dynamodb.TableName = 'orders' AND aws.dynamodb.Operation = 'PutItem' AND aws.dynamodb.GlobalSecondaryIndexName IS NULL AND aws.dynamodb.ReceivingRegion IS NULL AND aws.dynamodb.StreamLabel IS NULL",
     "shape": {
       "duration": 60,
       "window": 60,
@@ -116,7 +121,7 @@
   },
   "lambda-error-rate": {
     "confidence": "approximate",
-    "nrql": "SELECT sum(aws.lambda.Errors.byFunction) / sum(aws.lambda.Invocations.byFunction) * 100 FROM Metric WHERE aws.lambda.FunctionName = 'checkout'",
+    "nrql": "SELECT sum(aws.lambda.Errors.byFunction) / sum(aws.lambda.Invocations.byFunction) * 100 FROM Metric WHERE aws.lambda.FunctionName = 'checkout' AND aws.lambda.ExecutedVersion IS NULL AND aws.lambda.Resource IS NULL",
     "shape": {
       "duration": 180,
       "window": 60,
@@ -126,7 +131,7 @@
   },
   "ec2-network-in": {
     "confidence": "approximate",
-    "nrql": "SELECT average(aws.ec2.NetworkIn) FROM Metric WHERE aws.ec2.InstanceId = 'i-0abc123def4567890'",
+    "nrql": "SELECT average(aws.ec2.NetworkIn) FROM Metric WHERE aws.ec2.InstanceId = 'i-0abc123def4567890' AND aws.ec2.AutoScalingGroupName IS NULL AND aws.ec2.ImageId IS NULL AND aws.ec2.InstanceType IS NULL",
     "shape": {
       "duration": 600,
       "window": 300,
@@ -166,7 +171,7 @@
   },
   "actions-disabled-with-extras": {
     "confidence": "approximate",
-    "nrql": "SELECT sum(aws.sns.NumberOfNotificationsFailed) FROM Metric WHERE aws.sns.TopicName = 'orders'",
+    "nrql": "SELECT sum(aws.sns.NumberOfNotificationsFailed) FROM Metric WHERE aws.sns.TopicName = 'orders' AND aws.sns.Application IS NULL AND aws.sns.Country IS NULL AND aws.sns.Platform IS NULL AND aws.sns.SMSType IS NULL",
     "shape": {
       "duration": 300,
       "window": 300,
@@ -176,7 +181,7 @@
   },
   "Hostile \"name\" ${evil} %{if true} with\nnewline": {
     "confidence": "approximate",
-    "nrql": "SELECT average(aws.ec2.CPUUtilization) FROM Metric WHERE aws.ec2.InstanceId = 'i-x\\' OR 1=1 --'",
+    "nrql": "SELECT average(aws.ec2.CPUUtilization) FROM Metric WHERE aws.ec2.InstanceId = 'i-x\\' OR 1=1 --' AND aws.ec2.AutoScalingGroupName IS NULL AND aws.ec2.ImageId IS NULL AND aws.ec2.InstanceType IS NULL",
     "shape": {
       "duration": 60,
       "window": 60,

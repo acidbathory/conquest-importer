@@ -107,7 +107,7 @@ _ALARM_REF = re.compile(r'\b(?:ALARM|OK|INSUFFICIENT_DATA)\(\s*"?([^")]+?)"?\s*\
 MAX_DIMENSION_VALUE = 256
 
 
-class _Fail(Exception):  # noqa: N818 - control flow, not an error type
+class _Fail(Exception):
     def __init__(self, confidence: Confidence, reason: str) -> None:
         super().__init__(reason)
         self.confidence = confidence
@@ -167,7 +167,7 @@ def alarm_source_id(key: str) -> int:
 # --- metric math -------------------------------------------------------------------
 
 
-def _parse_math(expression: str, known: set[str]) -> tuple[Expr, set[str]]:
+def _parse_math(expression: str, known: set[str]) -> tuple[Expr, set[str]]:  # noqa: C901 - single-pass expression parser
     """Parse arithmetic over metric ids. Functions and anything else are rejected."""
     tokens: list[tuple[str, str]] = []
     pos = 0
@@ -282,8 +282,10 @@ def _resolve_term(
             scope.append(TagFilter(key=identifier(f"{prefix}.{d.Name}"), value=d.Value))
         # Pin the dimension set: rows of other sets share the metric name.
         used = {d.Name for d in dims}
-        for other in sorted(set(KNOWN_DIMENSIONS.get(namespace, [])) - used):
-            scope.append(TagFilter(key=identifier(f"{prefix}.{other}"), absent=True))
+        scope.extend(
+            TagFilter(key=identifier(f"{prefix}.{other}"), absent=True)
+            for other in sorted(set(KNOWN_DIMENSIONS.get(namespace, [])) - used)
+        )
     except ValueError:
         raise _Fail(
             Confidence.MANUAL, "metric or dimension name has characters that are not supported"
@@ -367,7 +369,7 @@ def _resolve(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> _Resolved:
     return out
 
 
-def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonitor:
+def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonitor:  # noqa: C901 - one sequential mapping pipeline
     key = alarm.AlarmArn or alarm.AlarmName
     reasons: list[str] = []
     handles = sorted(set(alarm.AlarmActions))

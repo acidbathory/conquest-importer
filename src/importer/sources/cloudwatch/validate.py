@@ -251,11 +251,11 @@ def render(checks: list[Check], start: datetime, end: datetime) -> str:
         "| Alarm | Result | CloudWatch | New Relic | Note |",
         "|---|---|---|---|---|",
     ]
-    for c in sorted(checks, key=lambda x: (x.status not in bad, x.name)):
-        lines.append(
-            f"| {md_cell(printable(c.name, 60))} | {c.status.value} | {num(c.cloudwatch)} | "
-            f"{num(c.new_relic)} | {md_cell(printable(c.note, 300), 300)} |"
-        )
+    lines.extend(
+        f"| {md_cell(printable(c.name, 60))} | {c.status.value} | {num(c.cloudwatch)} | "
+        f"{num(c.new_relic)} | {md_cell(printable(c.note, 300), 300)} |"
+        for c in sorted(checks, key=lambda x: (x.status not in bad, x.name))
+    )
     return "\n".join(lines) + "\n"
 
 

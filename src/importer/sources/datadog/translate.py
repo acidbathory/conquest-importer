@@ -88,7 +88,7 @@ def load_metric_map(path: Path = METRIC_MAP_PATH) -> dict[str, MetricMapping]:
     return {k: MetricMapping.model_validate(v) for k, v in raw.items() if not k.startswith("_")}
 
 
-class _Fail(Exception):  # noqa: N818 - control flow, not an error type
+class _Fail(Exception):
     def __init__(self, kind: SignalKind, confidence: Confidence, reason: str) -> None:
         super().__init__(reason)
         self.kind = kind
@@ -142,8 +142,7 @@ def _convert_metric(monitor: DatadogMonitor, metric_map: dict[str, MetricMapping
         raise _Fail(kind, Confidence.MANUAL, "unit conversion inside a formula is not supported")
 
     reasons: list[str] = []
-    for note in dict.fromkeys(m.note for m in mappings.values() if m.note):
-        reasons.append(note)
+    reasons.extend(dict.fromkeys(m.note for m in mappings.values() if m.note))
     if first.scope:
         reasons.append("scope tags were mapped to attribute names that are unverified")
     unverified = [g for g in first.group_by if g not in TAG_ATTRIBUTES[kind]]

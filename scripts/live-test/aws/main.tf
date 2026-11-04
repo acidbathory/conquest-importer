@@ -20,8 +20,8 @@ provider "aws" {
 }
 
 locals {
-  p          = "conquest-live"
-  namespace  = "Custom/ConquestLive"
+  p         = "conquest-live"
+  namespace = "Custom/ConquestLive"
 }
 
 # --- data sources of metrics and traces -----------------------------------------------------
@@ -221,7 +221,7 @@ resource "aws_cloudwatch_dashboard" "d" {
       properties = { markdown = "# Conquest live test\nCreated for the importer. Safe to delete." } },
       { type = "metric", x = 0, y = 2, width = 12, height = 6,
         properties = {
-          title = "DynamoDB writes", region = var.region, view = "timeSeries", stat = "Sum", period = 60,
+          title   = "DynamoDB writes", region = var.region, view = "timeSeries", stat = "Sum", period = 60,
           metrics = [["AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", aws_dynamodb_table.t.name]]
       } },
       { type = "metric", x = 12, y = 2, width = 12, height = 6,
@@ -242,7 +242,7 @@ resource "aws_cloudwatch_dashboard" "d" {
       } },
       { type = "metric", x = 8, y = 8, width = 8, height = 6,
         properties = {
-          title = "Custom orders", region = var.region, view = "singleValue", stat = "Sum", period = 60,
+          title   = "Custom orders", region = var.region, view = "singleValue", stat = "Sum", period = 60,
           metrics = [[local.namespace, "Orders", "Service", "checkout"]]
       } },
       { type = "log", x = 16, y = 8, width = 8, height = 6,

@@ -18,3 +18,13 @@ jobs:
       - run: uv run mypy src tests
       - run: uv run pytest
       - run: uv run pip-audit
+      - run: uv run vulture src --min-confidence 80
+      - run: uv run yamllint -d relaxed .github .pre-commit-config.yaml
+      - run: uv run actionlint
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive scripts
+      - uses: terraform-linters/setup-tflint@v4
+      - run: |
+          for d in scripts/live-test/aws scripts/live-test/services; do
+            tflint --chdir "$d"
+          done

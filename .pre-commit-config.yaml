@@ -17,3 +17,25 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
+      - id: vulture
+        name: vulture (dead code)
+        entry: uv run vulture src --min-confidence 80
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: terraform-fmt
+        name: terraform fmt
+        entry: terraform fmt -check
+        language: system
+        files: \.tf$
+      - id: yamllint
+        name: yamllint
+        entry: uv run yamllint -d relaxed
+        language: system
+        types: [yaml]
+      - id: actionlint
+        name: actionlint
+        entry: uv run actionlint
+        language: system
+        files: ^\.github/workflows/
+        pass_filenames: false

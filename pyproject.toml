@@ -18,6 +18,9 @@ dev = [
     "mypy>=1.10",
     "pip-audit>=2.7",
     "pre-commit>=3.7",
+    "yamllint>=1.38.0",
+    "actionlint-py>=1.7.12.25",
+    "vulture>=2.16",
 ]
 
 [project.scripts]
@@ -35,10 +38,22 @@ line-length = 100
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "S", "UP", "SIM"]
+select = [
+    "E", "F", "I", "B", "S", "UP", "SIM",
+    "C4", "PIE", "PERF", "RET", "RUF", "PT", "DTZ", "T20", "ARG", "C90",
+]
+# PT018: splitting `assert a and b` is style noise in table-style tests.
+ignore = ["PT018"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]
+"tests/**" = ["S101", "ARG001", "ARG002"]
+# CLI helper scripts report to the terminal.
+"scripts/**" = ["T201"]
+# Lambda handler signature is fixed by AWS.
+"scripts/live-test/aws/handler.py" = ["ARG001"]
 # Terraform template text contains long lines that cannot be wrapped.
 "src/importer/sources/cloudwatch/ingest.py" = ["E501"]
 

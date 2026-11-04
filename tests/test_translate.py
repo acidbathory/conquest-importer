@@ -367,11 +367,11 @@ def test_quote_string_escapes() -> None:
 
 
 def test_quote_string_rejects_newlines() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="control characters"):
         quote_string("a\nb")
 
 
 @pytest.mark.parametrize("bad", ["a b", "a;b", "a) FROM X", "", "1abc", "a-b"])
 def test_identifier_rejects_bad_names(bad: str) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="invalid NRQL identifier"):
         identifier(bad)

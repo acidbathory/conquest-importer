@@ -113,10 +113,8 @@ def test_missing_and_renamed_objects_are_left_alone() -> None:
     result = rollback(client_for(fake), ACCOUNT, manifest(*ALL), apply=True)
     reasons = {o.kind: why for o, why in result.skipped}
     assert (
-        reasons["condition"] == "no longer exists"
-        and "renamed" in reasons["channel"]
-        or "changed" in reasons["channel"]
-    )
+        reasons["condition"] == "no longer exists" and "renamed" in reasons["channel"]
+    ) or "changed" in reasons["channel"]
     assert ("condition", "c1") not in fake.deleted and ("channel", "ch1") not in fake.deleted
 
 

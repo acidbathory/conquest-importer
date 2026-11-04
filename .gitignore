@@ -26,3 +26,6 @@ tfplan
 *.zip
 destroyplan
 tfplan*
+
+# macOS
+.DS_Store

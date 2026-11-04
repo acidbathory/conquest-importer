@@ -272,7 +272,7 @@ def test_loader_accepts_bare_list_and_directory(tmp_path: Path) -> None:
 
 def test_loader_rejects_wrong_shape(tmp_path: Path) -> None:
     (tmp_path / "bad.json").write_text('"just a string"')
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="expected the JSON output"):
         load_alarms(tmp_path / "bad.json")
 
 
