@@ -15,6 +15,8 @@ from importer.core.ir import (
     Aggregation,
     BinOp,
     Confidence,
+    CountFilter,
+    CountSignal,
     Expr,
     IRMonitor,
     MetricSignal,
@@ -32,8 +34,14 @@ from importer.core.ir import (
     TagFilter,
     Threshold,
 )
+from importer.core.text import printable
 from importer.sources.cloudwatch.composite import analyse_rule
 from importer.sources.cloudwatch.composite import remediation as composite_remediation
+from importer.sources.cloudwatch.logfilter import (
+    LOG_GROUP_ATTRIBUTE,
+    UnsupportedPattern,
+    parse_pattern,
+)
 from importer.sources.cloudwatch.models import (
     CloudWatchAlarm,
     CompositeAlarm,
@@ -373,6 +381,57 @@ def _resolve(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> _Resolved:
     return out
 
 
+def _log_signal(alarm: CloudWatchAlarm) -> tuple[CountSignal, list[str]]:
+    """An alarm on a metric made by a log metric filter becomes a count of matching log events."""
+    refs = alarm.log_metric_filters
+    if len(refs) != 1:
+        raise _Fail(
+            Confidence.MANUAL,
+            f"{len(refs)} log metric filters publish this metric; it cannot be traced to one "
+            "log query",
+        )
+    ref = refs[0]
+    where = (
+        f"log metric filter {printable(ref.filter_name, 60)!r} on log group "
+        f"{printable(ref.log_group, 80)!r}"
+    )
+    if alarm.Metrics is not None:
+        raise _Fail(
+            Confidence.MANUAL, f"{where}: metric math over a log-derived metric is not converted"
+        )
+    if alarm.Statistic != "Sum" or alarm.ExtendedStatistic:
+        raise _Fail(
+            Confidence.MANUAL,
+            f"{where}: statistic {alarm.ExtendedStatistic or alarm.Statistic} is not converted; "
+            "only Sum, the number of matching events, is",
+        )
+    if ref.value != "1":
+        raise _Fail(
+            Confidence.MANUAL,
+            f"{where}: it publishes a value taken from the log line ({printable(ref.value, 40)}), "
+            "not a count of events",
+        )
+    if ref.has_dimensions or alarm.Dimensions:
+        raise _Fail(Confidence.MANUAL, f"{where}: dimensions on a log metric are not converted")
+    if not ref.log_group:
+        raise _Fail(Confidence.MANUAL, f"{where}: the log group is unknown")
+    try:
+        parsed = parse_pattern(ref.pattern)
+    except UnsupportedPattern as exc:
+        raise _Fail(Confidence.MANUAL, f"{where}: pattern not converted: {exc}") from None
+    count = CountSignal(
+        filters=[CountFilter(key=LOG_GROUP_ATTRIBUTE, value=ref.log_group), *parsed.filters]
+    )
+    notes = [
+        f"converted from the {where} (pattern {printable(ref.pattern, 100)!r}) to a count of "
+        "matching log events. It only returns data once that log group is forwarded to New "
+        f"Relic; the group is matched on the {LOG_GROUP_ATTRIBUTE} attribute, which New Relic adds "
+        "to logs sent through its Firehose and Lambda forwarders. Compare the counts with "
+        "CloudWatch before enabling, because text matching may differ in case sensitivity",
+    ]
+    return count, notes
+
+
 def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonitor:  # noqa: C901 - one sequential mapping pipeline
     key = alarm.AlarmArn or alarm.AlarmName
     reasons: list[str] = []
@@ -397,7 +456,7 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
         "source_system": "cloudwatch",
         "source_id": alarm_source_id(key),
         "source_key": key,
-        "source_type": "metric alarm",
+        "source_type": "log-metric alarm" if alarm.log_metric_filters else "metric alarm",
         "name": alarm.AlarmName,
         "notification": Notification(
             message_template=alarm.AlarmDescription or "", handles=handles
@@ -427,12 +486,18 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
         )
     if alarm.Threshold is None:
         return failed(Confidence.MANUAL, "alarm has no static threshold")
+    log_count: CountSignal | None = None
+    resolved: _Resolved | None = None
+    log_notes: list[str] = []
     try:
-        resolved = _resolve(alarm, prefixes)
+        if alarm.log_metric_filters:
+            log_count, log_notes = _log_signal(alarm)
+            period = alarm.Period or 0
+        else:
+            resolved = _resolve(alarm, prefixes)
+            period = resolved.period
     except _Fail as fail:
         return failed(fail.confidence, fail.reason)
-
-    period = resolved.period
     if period < 60 or period % 60:
         return failed(Confidence.MANUAL, f"period {period}s (high-resolution) is not supported")
 
@@ -451,8 +516,10 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
             f"{datapoints} consecutive breaches"
         )
 
-    reasons.append(NAMING_NOTE)
-    reasons.extend(n for n in resolved.notes if n not in reasons)
+    if resolved is not None:
+        reasons.append(NAMING_NOTE)
+        reasons.extend(n for n in resolved.notes if n not in reasons)
+    reasons.extend(log_notes)
     missing = alarm.TreatMissingData or "missing"
     no_data = NoData()
     if missing == "breaching":
@@ -464,7 +531,7 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
         )
 
     signal = Signal(
-        kind=SignalKind.METRIC,
+        kind=SignalKind.LOG if log_count is not None else SignalKind.METRIC,
         raw_query=alarm.AlarmName,
         window_seconds=duration,
         aggregation_window_seconds=period,
@@ -475,7 +542,10 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
             expression=resolved.expression,
             aggregation=resolved.aggregation,
             scope=resolved.scope,
-        ),
+        )
+        if resolved is not None
+        else None,
+        count=log_count,
     )
     return IRMonitor(
         **base,

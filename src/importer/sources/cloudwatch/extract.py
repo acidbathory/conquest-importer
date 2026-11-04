@@ -30,7 +30,17 @@ ALLOWED_OPERATIONS = {
     ("cloudwatch", "get_dashboard"),
     ("sns", "list_subscriptions_by_topic"),
     ("cloudwatch", "get_metric_statistics"),
+    # Optional inventory: each is read-only and a failure only produces a warning.
+    ("logs", "describe_metric_filters"),
+    ("events", "list_rules"),
+    ("events", "list_targets_by_rule"),
+    ("synthetics", "describe_canaries"),
+    ("cloudwatch", "describe_insight_rules"),
+    ("rum", "list_app_monitors"),
+    ("application-signals", "list_service_level_objectives"),
+    ("route53", "list_health_checks"),
 }
+MAX_RULES = 500
 MAX_DASHBOARDS = 1000
 _REGION = re.compile(r"^[a-z]{2}(-[a-z]+)+-\d$")
 _PROFILE = re.compile(r"^[A-Za-z0-9_.@+=][A-Za-z0-9_.@+=-]{0,63}$")
@@ -177,6 +187,56 @@ def fetch_subscriptions(reader: Reader, topic_arn: str) -> dict[str, Any]:
     return {"TopicArn": topic_arn, "Subscriptions": data.get("Subscriptions", [])}
 
 
+@dataclass(frozen=True)
+class Collector:
+    """One optional read-only list call whose items the report shows as inventory."""
+
+    kind: str  # also the file name under inventory/
+    label: str
+    service: str
+    operation: str
+    key: str  # the response field that holds the list
+
+
+COLLECTORS = (
+    Collector(
+        "log-metric-filters",
+        "log metric filters",
+        "logs",
+        "describe_metric_filters",
+        "metricFilters",
+    ),
+    Collector("eventbridge-rules", "EventBridge rules", "events", "list_rules", "Rules"),
+    Collector(
+        "synthetics-canaries", "Synthetics canaries", "synthetics", "describe_canaries", "Canaries"
+    ),
+    Collector(
+        "contributor-insights-rules",
+        "Contributor Insights rules",
+        "cloudwatch",
+        "describe_insight_rules",
+        "InsightRules",
+    ),
+    Collector(
+        "rum-app-monitors", "RUM app monitors", "rum", "list_app_monitors", "AppMonitorSummaries"
+    ),
+    Collector(
+        "slos",
+        "Application Signals SLOs",
+        "application-signals",
+        "list_service_level_objectives",
+        "SloSummaries",
+    ),
+    Collector(
+        "route53-health-checks",
+        "Route 53 health checks",
+        "route53",
+        "list_health_checks",
+        "HealthChecks",
+    ),
+)
+
+
 @dataclass
 class ExtractResult:
     account: str
@@ -186,6 +246,47 @@ class ExtractResult:
     failed_dashboards: list[str] = field(default_factory=list)
     topics: int = 0
     failed_topics: list[str] = field(default_factory=list)
+    inventory: dict[str, int] = field(default_factory=dict)  # collector label -> items found
+    warnings: list[str] = field(default_factory=list)  # optional reads that did not work
+
+
+def _attach_targets(reader: Reader, rules: list[Any], warnings: list[str]) -> None:
+    """Add each non-scheduled EventBridge rule's targets (what the rule actually does)."""
+    for rule in rules[:MAX_RULES]:
+        if not isinstance(rule, dict) or not isinstance(rule.get("Name"), str):
+            continue
+        if rule.get("ScheduleExpression"):
+            continue
+        try:
+            data = reader.call("events", "list_targets_by_rule", Rule=rule["Name"])
+        except AwsError as exc:
+            warnings.append(f"targets of an EventBridge rule: {exc}")
+            return
+        rule["Targets"] = data.get("Targets", [])
+
+
+def collect_inventory(reader: Reader, out: Path, result: ExtractResult) -> None:
+    """Read the optional inventory. A call that fails (often a missing permission) only warns."""
+    for c in COLLECTORS:
+        try:
+            data = reader.call(c.service, c.operation)
+        except AwsError as exc:
+            result.warnings.append(f"{c.label}: {exc}")
+            continue
+        items = data.get(c.key, [])
+        if not isinstance(items, list) or not items:
+            continue
+        if c.kind == "eventbridge-rules":
+            _attach_targets(reader, items, result.warnings)
+        folder, body = (
+            (out / "logs", {"metricFilters": items})
+            if c.kind == "log-metric-filters"
+            else (out / "inventory", {"kind": c.kind, "label": c.label, "items": items})
+        )
+        folder.mkdir(parents=True, exist_ok=True)
+        name = "metric-filters.json" if c.kind == "log-metric-filters" else f"{c.kind}.json"
+        (folder / name).write_text(json.dumps(body, indent=2) + "\n")
+        result.inventory[c.label] = len(items)
 
 
 def _check_empty(folder: Path) -> None:
@@ -247,4 +348,5 @@ def extract(
             # Numbered file names: dashboard names are untrusted text (the name is inside).
             (dash_dir / f"dashboard-{n:04d}.json").write_text(json.dumps(body, indent=2) + "\n")
             result.dashboards += 1
+    collect_inventory(reader, out, result)
     return result

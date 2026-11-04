@@ -4,7 +4,9 @@ import json
 import logging
 import os
 import sys
+import webbrowser
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, NoReturn
 
@@ -24,6 +26,7 @@ from importer.core.apply_notifications import apply_notifications
 from importer.core.dashboard_ir import IRDashboard
 from importer.core.dashboard_report import build_dashboard_report
 from importer.core.doctor import passed, render, run_checks
+from importer.core.dotenv import load_dotenv_file
 from importer.core.emit.common import CannotEmit
 from importer.core.emit.dashboard import (
     TERRAFORM_HEADER,
@@ -56,6 +59,7 @@ from importer.sources.cloudwatch.dashboard_models import load_dashboards
 from importer.sources.cloudwatch.extract import AwsError, Reader, caller_account
 from importer.sources.cloudwatch.extract import extract as extract_cloudwatch
 from importer.sources.cloudwatch.ingest import IngestConfig, ingest_files
+from importer.sources.cloudwatch.logfilter import attach_log_filters, load_metric_filters
 from importer.sources.cloudwatch.models import load_alarms
 from importer.sources.cloudwatch.notifications import load_topics, routing, translate_topic
 from importer.sources.cloudwatch.streaming import streaming_inputs
@@ -66,6 +70,16 @@ app = typer.Typer(
     help="Convert observability alerts from other platforms to New Relic alert conditions.",
     no_args_is_help=True,
 )
+
+
+@app.callback()
+def _load_settings() -> None:
+    """Pick up settings from a .env file in the current folder (never overrides the environment)."""
+    if os.environ.get("IMPORTER_NO_DOTENV"):
+        return
+    names = load_dotenv_file()
+    if names:
+        typer.echo(f"Loaded {len(names)} setting(s) from .env", err=True)
 
 
 @app.command()
@@ -274,6 +288,7 @@ def apply(
             region,
             result.objects,
             ("condition", result.failed),
+            len(result.skipped_existing),
         )
     except (GuardError, MissingSecretError, NewRelicAPIError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
@@ -321,6 +336,11 @@ def extract_cloudwatch_command(
         f"{result.composite_alarms} composite alarms, {result.dashboards} dashboards, "
         f"{result.topics} SNS topics."
     )
+    if result.inventory:
+        found = ", ".join(f"{n} {label}" for label, n in result.inventory.items())
+        typer.echo(f"Also found: {found}.")
+    for warning in result.warnings:
+        typer.echo(f"  Could not read {printable(warning, 200)}", err=True)
     typer.echo("Next:")
     typer.echo(f"  importer convert --source cloudwatch --in {out / 'alarms'} --out out/cw")
     if dashboards:
@@ -340,8 +360,9 @@ def _record(
     region: str,
     objects: list[CreatedObject],
     failed: tuple[Kind, list[tuple[str, str]]] | None = None,
+    existing: int = 0,
 ) -> None:
-    """Add what this run created (and what New Relic refused) to the manifest."""
+    """Add what this run created, what New Relic refused and what already existed."""
     manifest = (
         load_manifest(path) if path.exists() else Manifest(account_id=account_id, region=region)
     )
@@ -350,6 +371,7 @@ def _record(
     manifest.add(objects)
     if failed:
         manifest.add_failed(*failed)
+        manifest.existing[failed[0]] = existing
     save_manifest(manifest, path)
 
 
@@ -403,6 +425,7 @@ def apply_dashboards_command(
             region,
             result.objects,
             ("dashboard", result.failed),
+            len(result.skipped_existing),
         )
     except (GuardError, MissingSecretError, NewRelicAPIError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
@@ -537,6 +560,7 @@ def apply_notifications_command(
             region,
             result.objects,
             ("workflow", result.failed),
+            len(result.skipped_existing),
         )
     except (GuardError, MissingSecretError, NewRelicAPIError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
@@ -611,10 +635,15 @@ def validate_command(
 
 @app.command("rollback")
 def rollback_command(
-    manifest: Annotated[Path, typer.Option(help="manifest.json written by apply commands")],
-    account_id: Annotated[int, typer.Option(help="New Relic TEST account id")] = 0,
+    manifest: Annotated[
+        Path | None,
+        typer.Option(help="manifest.json written by apply commands (default: the latest run)"),
+    ] = None,
+    account_id: Annotated[
+        int, typer.Option(help="New Relic account id (default: NEW_RELIC_ACCOUNT_ID)")
+    ] = 0,
     do_apply: Annotated[
-        bool, typer.Option("--apply", help="Actually delete (default: dry run)")
+        bool, typer.Option("--apply", help="Actually delete (default: preview, then ask)")
     ] = False,
     confirm_account: Annotated[
         int | None, typer.Option(help="Repeat the account id to confirm --apply")
@@ -622,9 +651,18 @@ def rollback_command(
 ) -> None:
     """Delete exactly what a migration created, as recorded in its manifest.
 
-    Each object is re-read and deleted only if its id still has its recorded name. A policy is
-    kept if it still holds conditions that are not ours. Dry run by default.
+    Without arguments it undoes the latest `migrate` run: it lists what would be deleted and asks
+    before deleting. Each object is re-read and deleted only if its id still has its recorded name.
+    A policy is kept if it still holds conditions that are not ours.
     """
+    if manifest is None:
+        manifest = _latest_manifest()
+        if manifest is None or not manifest.exists():
+            typer.echo("Error: no recent run found; pass --manifest.", err=True)
+            raise typer.Exit(code=1)
+        typer.echo(f"Using the latest run: {manifest}")
+    if account_id <= 0 and os.environ.get("NEW_RELIC_ACCOUNT_ID", "").strip().isdigit():
+        account_id = int(os.environ["NEW_RELIC_ACCOUNT_ID"])
     if account_id <= 0:
         typer.echo("Error: --account-id is required", err=True)
         raise typer.Exit(code=1)
@@ -649,7 +687,20 @@ def rollback_command(
     for obj, why in result.failed:
         typer.echo(f"  FAILED {obj.kind} {obj.id}: {printable(why, 150)}", err=True)
     if not do_apply:
-        typer.echo("\nDRY RUN: nothing was deleted. Add --apply --confirm-account to delete.")
+        if (
+            result.deleted
+            and _interactive()
+            and typer.confirm(
+                f"\nDelete these {len(result.deleted)} objects from New Relic "
+                f"account {account_id}?",
+                default=False,
+            )
+        ):
+            rollback_command(
+                manifest=manifest, account_id=account_id, do_apply=True, confirm_account=account_id
+            )
+            return
+        typer.echo("\nPREVIEW: nothing was deleted. Add --apply --confirm-account to delete.")
     elif result.failed:
         raise typer.Exit(code=1)
 
@@ -765,12 +816,64 @@ def report_command(
     typer.echo(f"Report written to {target}")
 
 
+def _resolve_nr_account(given: int | None) -> int:
+    if given is not None:
+        return given
+    text = os.environ.get("NEW_RELIC_ACCOUNT_ID", "").strip()
+    if text.isdigit():
+        return int(text)
+    typer.echo(
+        "Error: pass --nr-account-id, or set NEW_RELIC_ACCOUNT_ID (a .env file works).", err=True
+    )
+    raise typer.Exit(code=1)
+
+
+def _resolve_aws_account(given: str | None, region: str, profile: str | None) -> str:
+    """The AWS account to read: the one named, or the one you are signed in to (after asking)."""
+    if given is not None:
+        return given
+    if not _interactive():
+        typer.echo(
+            "Error: pass --aws-account-id (nobody is here to confirm the account).", err=True
+        )
+        raise typer.Exit(code=1)
+    try:
+        signed_in = caller_account(Reader(region, profile))
+    except AwsError as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    if not typer.confirm(
+        f"You are signed in to AWS account {signed_in}. Migrate this account?", default=True
+    ):
+        typer.echo("Stopped. Sign in to the right account, or pass --aws-account-id.", err=True)
+        raise typer.Exit(code=1)
+    return signed_in
+
+
+LATEST = Path("out") / ".latest"
+
+
+def _remember_latest(out: Path) -> None:
+    """Note the newest run folder so `rollback` can find it without a path."""
+    LATEST.parent.mkdir(parents=True, exist_ok=True)
+    LATEST.write_text(str(out) + "\n")
+
+
+def _latest_manifest() -> Path | None:
+    try:
+        return Path(LATEST.read_text().strip()) / "manifest.json"
+    except OSError:
+        return None
+
+
 def _interactive() -> bool:
     """Whether a person can answer a question (a terminal, not a script or a pipe)."""
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def _wants_to_create(summary: Summary, nr_account: int, yes: bool) -> bool:
+def _wants_to_create(
+    summary: Summary, nr_account: int, yes: bool, report_path: Path | None = None
+) -> bool:
     """After the plan: check creating is possible, then ask (or accept --yes)."""
     try:
         check_guards(nr_account, nr_account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS"))
@@ -786,6 +889,9 @@ def _wants_to_create(summary: Summary, nr_account: int, yes: bool) -> bool:
         return True
     if not _interactive():
         return False
+    if report_path is not None:
+        webbrowser.open(report_path.resolve().as_uri())
+        typer.echo(f"\nOpened the report: {report_path}")
     shown: tuple[tuple[str, AssetKind], ...] = (("alarms", "alarm"), ("dashboards", "dashboard"))
     parts = [
         f"{n} {label}" for label, kind in shown if (n := sum(a.migrated for a in summary.of(kind)))
@@ -800,19 +906,30 @@ def _wants_to_create(summary: Summary, nr_account: int, yes: bool) -> bool:
 
 @app.command("migrate")
 def migrate_command(
-    aws_account_id: Annotated[str, typer.Option(help="AWS account id you expect (12 digits)")],
-    nr_account_id: Annotated[int, typer.Option(help="New Relic TEST account id to migrate into")],
+    aws_account_id: Annotated[
+        str | None,
+        typer.Option(
+            help="AWS account id you expect (12 digits); default: the one you are signed in to"
+        ),
+    ] = None,
+    nr_account_id: Annotated[
+        int | None,
+        typer.Option(help="New Relic account id to migrate into; default: NEW_RELIC_ACCOUNT_ID"),
+    ] = None,
     region: Annotated[str, typer.Option(help="AWS region to read")] = "us-east-1",
     profile: Annotated[
         str | None,
         typer.Option(help="AWS profile name (default: your AWS keys or default profile)"),
     ] = None,
     nr_region: Annotated[str, typer.Option(help="New Relic region: us or eu")] = "us",
-    out: Annotated[Path, typer.Option(help="New folder for everything this run writes")] = Path(
-        "out/migration"
-    ),
+    out: Annotated[
+        Path | None,
+        typer.Option(
+            help="New folder for everything this run writes (default: out/migration-<time>)"
+        ),
+    ] = None,
     do_apply: Annotated[
-        bool, typer.Option("--apply", help="Create everything in New Relic (default: plan only)")
+        bool, typer.Option("--apply", help="Create everything in New Relic without asking")
     ] = False,
     confirm_account: Annotated[
         int | None, typer.Option(help="Repeat the New Relic account id to confirm --apply")
@@ -820,16 +937,24 @@ def migrate_command(
     yes: Annotated[
         bool, typer.Option("--yes", help="Create without asking at the end of the plan")
     ] = False,
+    open_report: Annotated[
+        bool, typer.Option("--open/--no-open", help="Open the report in a browser before asking")
+    ] = True,
 ) -> None:
     """Migrate CloudWatch into New Relic in one go: read, convert, plan, and create.
 
-    It reads AWS (read-only), writes a plan and a report, then asks whether to create everything
-    in New Relic. Answer y to create alert conditions, dashboards and notification workflows, all
-    DISABLED or PRIVATE, with a manifest so `rollback` can undo exactly that. Use --yes to skip
-    the question, or --apply with --confirm-account for scripts. Creating needs
-    NEW_RELIC_API_KEY and the account in NEW_RELIC_ALLOWED_ACCOUNT_IDS. Metric data still needs the
-    ingestion Terraform (it holds a secret key, so it is generated for you to deploy, not run).
+    It reads AWS (read-only), writes a plan and a report, opens the report, then asks whether to
+    create everything in New Relic. Answer y to create alert conditions, dashboards and
+    notification workflows, all DISABLED or PRIVATE, with a manifest so `rollback` can undo exactly
+    that. Use --yes to skip the question, or --apply with --confirm-account for scripts. Creating
+    needs NEW_RELIC_API_KEY and the account in NEW_RELIC_ALLOWED_ACCOUNT_IDS; both, and
+    NEW_RELIC_ACCOUNT_ID, can live in a .env file. Metric data still needs the ingestion Terraform
+    (it holds a secret key, so it is generated for you to deploy, not run).
     """
+    aws_account_id = _resolve_aws_account(aws_account_id, region, profile)
+    nr_account_id = _resolve_nr_account(nr_account_id)
+    out = out or Path("out") / f"migration-{datetime.now(UTC):%Y%m%d-%H%M%S}"
+    _remember_latest(out)
     from importer.core.stats import build_stats, load_run, render_markdown
 
     export, alerts, dash = out / "export", out / "alerts", out / "dashboards"
@@ -847,6 +972,7 @@ def migrate_command(
         ),
     )
     metric_alarms, composite_alarms = load_alarms(export / "alarms")
+    attach_log_filters(metric_alarms, load_metric_filters(export / "logs"))
     has_alarms = bool(metric_alarms or composite_alarms)
     has_dashboards = any((export / "dashboards").glob("*.json"))
     if not (has_alarms or has_dashboards):
@@ -920,13 +1046,16 @@ def migrate_command(
     (out / "plan.md").write_text(plan)
     typer.echo(f"\nPlan written to {out / 'plan.md'}")
 
-    def report() -> None:
+    def report() -> Path:
         path = _write_html_report(out, aws_account_id, nr_account_id, region)
         typer.echo(f"Report: {path}  (contains names; review before sharing)")
+        return path
 
     if not do_apply:
-        report()
-        if not _wants_to_create(load_summary(out), nr_account_id, yes):
+        shown = report()
+        if not _wants_to_create(
+            load_summary(out), nr_account_id, yes, shown if open_report else None
+        ):
             typer.echo(
                 "\nNothing was created in New Relic. Run the command again with --yes to create "
                 "it, or answer y when asked."

@@ -41,6 +41,8 @@ class Manifest(BaseModel):
     region: str = "us"
     objects: list[CreatedObject] = []
     failed: list[FailedObject] = []
+    # How many objects of each kind already existed and were left unchanged (latest apply).
+    existing: dict[str, int] = {}
 
     def add(self, objects: list[CreatedObject]) -> None:
         known = {(o.kind, o.id) for o in self.objects}

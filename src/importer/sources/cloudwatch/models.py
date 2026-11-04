@@ -47,6 +47,16 @@ class MetricDataQuery(BaseModel):
     Period: int | None = None
 
 
+class LogMetricRef(BaseModel):
+    """A CloudWatch Logs metric filter that publishes the metric an alarm watches."""
+
+    filter_name: str
+    log_group: str
+    pattern: str
+    value: str
+    has_dimensions: bool = False
+
+
 class CloudWatchAlarm(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -71,6 +81,8 @@ class CloudWatchAlarm(BaseModel):
     TreatMissingData: str | None = None
     Metrics: list[MetricDataQuery] | None = None
     Unit: str | None = None
+    # Not part of AWS output: filled in from the exported metric filters (see logfilter.py).
+    log_metric_filters: list[LogMetricRef] = []
 
 
 class CompositeAlarm(BaseModel):

@@ -32,6 +32,7 @@ KIND_NAMES: dict[Kind, tuple[str, str]] = {
     "alarm": ("Alarms", "alarms"),
     "dashboard": ("Dashboards", "dashboards"),
     "notification": ("Notification subscriptions", "subscriptions"),
+    "other": ("Other monitoring config", "items"),
 }
 MIN_LABEL_SHARE = 10  # a segment narrower than this prints no label (its number is in the table)
 
@@ -322,6 +323,11 @@ def _state(summary: Summary, aws_account: str, nr_account: int | None, region: s
         )
         or "nothing"
     )
+    existed = ", ".join(
+        f"{n} {kind if n == 1 else plural.get(kind, kind + 's')}"
+        for kind, n in sorted(summary.existing.items())
+    )
+    kept = f" {e(existed)} already existed and were left unchanged." if existed else ""
     refused = (
         f" New Relic refused <b>{summary.refused}</b>; those count as not migrated and are "
         "listed below with the reason."
@@ -334,7 +340,7 @@ def _state(summary: Summary, aws_account: str, nr_account: int | None, region: s
     )
     stages = (
         _stage("✓ Done", "Read and convert.", "Alarms, dashboards and topics were converted.")
-        + _stage("✓ Done", "Create in New Relic.", f"Created {e(made)}.{refused}")
+        + _stage("✓ Done", "Create in New Relic.", f"Created {e(made)}.{kept}{refused}")
         + _stage(
             "→ Your turn",
             "Enable and verify.",
@@ -348,6 +354,13 @@ def _state(summary: Summary, aws_account: str, nr_account: int | None, region: s
         f'<pre class="cmd">{undo}</pre>'
         f'<ol class="stages">{stages}</ol></section>'
     )
+
+
+def _ignored(summary: Summary) -> str:
+    if not summary.ignored:
+        return ""
+    items = "; ".join(e(text, 120) for text in summary.ignored)
+    return f"<p><b>Not counted.</b> Found and left out on purpose: {items}.</p>"
 
 
 def _review_notes(summary: Summary, number: int) -> str:
@@ -413,7 +426,8 @@ def render_report(
             f'<p class="big">{percent(done, total)}%</p></div><div>'
             f'<p class="lede"><b>{done} of {total}</b> assets {word}. '
             f"{rest} did not ({percent(rest, total)}%) and need a person.</p>"
-            '<p class="label">Share of alarms, dashboards and subscriptions converted</p>'
+            '<p class="label">Share of alarms, dashboards, subscriptions and other '
+            "monitoring config converted</p>"
             "</div></div>"
         )
         chart = _bar(overall, name="All assets") + _legend()
@@ -453,10 +467,12 @@ def render_report(
         f'<div class="masthead"><h1>Migration report</h1><p class="where">{where}</p></div>'
         f"{_state(summary, aws_account, nr_account, region)}{hero}{chart}{_ledger(summary)}"
         f"{''.join(sections)}"
-        "<footer><p><b>How this is counted.</b> One alarm, one dashboard, or one notification "
-        "subscription is one asset. Migrated means converted exactly or approximately; manual "
-        "and unsupported mean not migrated. Percentages are whole numbers and never round to 0 "
-        "or 100 unless that is exact.</p>"
+        "<footer><p><b>How this is counted.</b> One alarm, one dashboard, one notification "
+        "subscription or one piece of other monitoring config (an EventBridge rule, canary, "
+        "SLO or similar) is one asset. Migrated means converted exactly or approximately; "
+        "manual and unsupported mean not migrated. Percentages are whole numbers and never "
+        "round to 0 or 100 unless that is exact.</p>"
+        f"{_ignored(summary)}"
         "<p><b>Private.</b> This file contains alarm and resource names. Review it before "
         "sharing outside the team; <code>importer stats</code> output is the safe summary.</p>"
         "</footer></main></body></html>\n"

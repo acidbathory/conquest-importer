@@ -16,6 +16,8 @@ def alarm_metrics(alarms: list[CloudWatchAlarm]) -> list[tuple[str, str, str]]:
     """(namespace, metric, statistic) for every metric an alarm reads."""
     found: list[tuple[str, str, str]] = []
     for a in alarms:
+        if a.log_metric_filters:
+            continue  # made from log events, not streamed metrics
         if a.Namespace and a.MetricName:
             found.append((a.Namespace, a.MetricName, a.ExtendedStatistic or a.Statistic or ""))
         for q in a.Metrics or []:

@@ -28,39 +28,47 @@ git clone https://github.com/acidbathory/conquest-importer.git && cd conquest-im
 python3 -m venv .venv && source .venv/bin/activate
 pip install .
 
-export AWS_ACCESS_KEY_ID=...        # read-only keys, see docs/permissions.md
-export AWS_SECRET_ACCESS_KEY=...
-export AWS_SESSION_TOKEN=...        # only if your keys are temporary
-
-importer doctor                     # checks Python, AWS keys and (optionally) New Relic
-importer migrate --aws-account-id 123456789012 --nr-account-id 1234567
+cp .env.example .env     # then fill in the three New Relic lines (skip for a plan only)
+importer migrate
 ```
 
-`migrate` reads your AWS account, writes a plan and a report on your machine, and then asks
-whether to create everything in New Relic. Answer `n` (or press Enter) and nothing is created, so
-the report opens with a Preview banner and its numbers are a forecast. Open it with
-`open out/migration/report.html`. The headline number it prints looks like this:
+AWS uses the login you already have (environment variables or a profile; add `--profile name` for
+a named one). `migrate` then:
+
+1. Tells you which AWS account you're signed in to and asks you to confirm it.
+2. Reads that account and writes a plan and a report on your machine.
+3. Opens the report in your browser. It starts with a Preview banner, and its numbers are a
+   forecast of what would be created.
+4. Asks whether to create everything in New Relic. Press Enter to stop here with nothing created,
+   or answer `y` to create it.
+
+The last line it prints before the question is the headline number:
 
 ```
 Total completion (forecast): 70% (19 of 27 assets can be migrated, 8 need manual work; nothing has been created in New Relic yet)
 ```
 
-Answer `y` and it creates the objects in New Relic straight away. Alerts and workflows are created
-disabled and dashboards private, and one command undoes it. The report is then rewritten as
-Applied: the numbers describe what was created, and anything New Relic refused counts as not
-migrated, with the reason.
+After `y`, alerts and workflows exist disabled and dashboards private. The report is rewritten as
+Applied: its numbers describe what was created, and anything New Relic refused counts as not
+migrated, with the reason. To undo it:
 
-Creating needs a New Relic API key and your account on an allow-list, so a mistyped account id
-can't write to the wrong place. [Step 5 of the walkthrough](docs/getting-started.md#step-5-create-it-in-new-relic)
-shows the two settings. Add `--yes` to skip the question in a script.
+```sh
+importer rollback
+```
+
+That lists what the latest run created and asks before deleting it. Creating needs the New Relic key
+and your account on `NEW_RELIC_ALLOWED_ACCOUNT_IDS`, so a mistyped account id can't write to the
+wrong place. In a script, pass `--aws-account-id` and `--yes`. The
+[walkthrough](docs/getting-started.md) covers the details.
 
 ## What can and cannot be migrated
 
 | Asset | Migrates | Does not migrate (and what to do) |
 |---|---|---|
-| Alarms | Single-metric alarms on 15 AWS services and `Custom/` metrics, including percentiles and simple metric math | Composite, anomaly-detection, high-resolution (under 60 s) and complex-math alarms. Each gets written manual steps |
+| Alarms | Single-metric alarms on 15 AWS services and `Custom/` metrics, including percentiles and simple metric math, and alarms on log metrics | Composite, anomaly-detection, high-resolution (under 60 s) and complex-math alarms. Each gets written manual steps |
 | Dashboards | Metric charts and text widgets | Log, alarm-status and Metrics Explorer widgets, and math inside widgets |
 | Notifications | SNS email and https subscriptions become destinations and (disabled) workflows | SMS, Lambda, SQS and mobile push. Each is reported with a replacement suggestion |
+| Log metric filters | Alarms built on a filter with a simple pattern become log queries | Complex patterns, plus EventBridge rules, canaries, SLOs and health checks. Each is listed with steps |
 | Metric data | Terraform for AWS Metric Streams is generated for you to deploy | Logs, traces, SLOs, synthetics and EventBridge are not handled |
 
 Every row, with the reason and the fix, is in [docs/what-migrates.md](docs/what-migrates.md).

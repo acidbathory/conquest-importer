@@ -29,6 +29,32 @@ The importer only reads. Create an IAM user or role with this policy, or use AWS
 (`sts:GetCallerIdentity` needs no permission.) `GetMetricStatistics` is used only by
 `importer validate`, so skip it if you don't run that.
 
+### Optional: the rest of your monitoring setup
+
+These extra read-only actions let the importer find log metric filters, EventBridge rules and
+other monitoring configuration, so the report can convert alarms built on log metrics and list
+the rest with next steps. Leave them out and the run still works: each one that is denied shows
+up as a "Could not read" warning, and alarms on log-derived metrics stay manual.
+
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "logs:DescribeMetricFilters",
+    "events:ListRules",
+    "events:ListTargetsByRule",
+    "synthetics:DescribeCanaries",
+    "cloudwatch:DescribeInsightRules",
+    "rum:ListAppMonitors",
+    "application-signals:ListServiceLevelObjectives",
+    "route53:ListHealthChecks"
+  ],
+  "Resource": "*"
+}
+```
+
+Add this statement to the policy above.
+
 Give the tool the keys the normal AWS way:
 
 ```sh
@@ -51,9 +77,12 @@ Making a plan needs no New Relic key. To create alerts, dashboards and workflows
    account you are migrating into. Try a test or sandbox account first.
 3. Export it:
 
+Put these in a `.env` file in the folder you run `importer` from, or export them in your shell:
+
 ```sh
-export NEW_RELIC_API_KEY=NRAK-...
-export NEW_RELIC_ALLOWED_ACCOUNT_IDS=1234567     # the account(s) this tool may write to
+NEW_RELIC_API_KEY=NRAK-...
+NEW_RELIC_ACCOUNT_ID=1234567
+NEW_RELIC_ALLOWED_ACCOUNT_IDS=1234567     # the account(s) this tool may write to
 ```
 
 `NEW_RELIC_ALLOWED_ACCOUNT_IDS` is a safety catch: the tool refuses to write to any account that

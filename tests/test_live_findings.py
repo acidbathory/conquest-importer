@@ -125,7 +125,7 @@ class DashboardsOnlyAws:
             },
             "cloudwatch get_dashboard": DASH,
         }
-        return answers[key]
+        return answers.get(key, {})
 
 
 def test_migrate_plans_an_account_that_has_dashboards_but_no_alarms(

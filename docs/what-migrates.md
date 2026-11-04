@@ -41,6 +41,25 @@ Some details are approximated, and the report says so:
   when data is missing.
 - Percentiles need the metric stream to send them. The generated Terraform does this.
 
+### Alarms on log metric filters
+
+A CloudWatch Logs metric filter turns matching log lines into a metric, and an alarm on that metric
+is really an alarm on a log query. When the importer can read the filter (it needs
+`logs:DescribeMetricFilters`, see [permissions](permissions.md)), the alarm becomes a New Relic
+condition that counts the matching `Log` events in the log group. This works when:
+
+- the alarm statistic is Sum and the filter publishes the value `1`, so the metric is a count of
+  events;
+- the filter has no dimensions;
+- the pattern is plain terms (all required, or excluded with `-term`), a quoted phrase, or a JSON
+  pattern that compares string fields with `=` or `!=` joined by `&&`.
+
+Anything else (OR terms, numeric or boolean comparisons, space-delimited patterns, a value taken
+from the log line) stays manual, with the reason and the steps in the report. The converted
+condition returns data only after that log group is forwarded to New Relic, which matches logs on
+the `logGroup` attribute that New Relic adds on its Firehose and Lambda paths. Text matching can
+differ from CloudWatch in case sensitivity, so compare counts before you enable it.
+
 | Not migrated | Why | Fix |
 |---|---|---|
 | Composite alarms | New Relic has no composite condition | The report reads the rule and says how to rebuild it. An OR needs nothing, because separate conditions already do it. An AND becomes one NRQL condition or workflow filtering. It lists which child alarms did convert |
@@ -87,9 +106,28 @@ Kinesis, SQS, SNS, API Gateway, EC2 (CPU) and Application Load Balancer fixed re
 other services the names follow New Relic's documented convention but aren't confirmed, so a
 converted query could return nothing. Run `importer validate` once data flows.
 
+## Other monitoring configuration
+
+The importer also lists these when it can read them. Each one counts as an asset that needs a
+person, and the report gives the steps. None of them converts automatically.
+
+| Found in AWS | New Relic equivalent | What the report tells you |
+|---|---|---|
+| Log metric filters that no converted alarm uses | A log query on `Log` | Forward the log group, then query it directly |
+| EventBridge rules that route alarm state changes | Workflows and destinations | Recreate each target as a workflow destination |
+| EventBridge rules that react to AWS service events | None documented for receiving events | An EventBridge API destination that posts to New Relic is one route; test it first |
+| Synthetics canaries | Synthetics monitors | Recreate as a ping, API or browser monitor |
+| Contributor Insights rules | A log query with `FACET` | Rebuild as a query |
+| RUM app monitors | The Browser agent | Add the agent; history doesn't carry over |
+| Application Signals SLOs | Service levels | Recreate once the service data is in New Relic |
+| Route 53 health checks | Synthetics ping monitors | Recreate; keep the check if it drives DNS failover |
+
+Scheduled and disabled EventBridge rules are not monitoring, so they aren't counted. The report
+mentions how many it left out.
+
 ## Not handled at all
 
-Logs, X-Ray traces, SLOs, synthetics and EventBridge rules. It also handles one AWS region and one
+Logs themselves, X-Ray traces and CloudTrail. It also handles one AWS region and one
 account per run. Existing New Relic objects with the same name are skipped, never updated. To apply
 a fix, roll back and re-apply.
 

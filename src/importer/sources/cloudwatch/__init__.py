@@ -5,6 +5,7 @@ from importer.core.ir import IRMonitor
 from importer.sources.base import DashboardSource, Source, register, register_dashboards
 from importer.sources.cloudwatch.dashboard_models import CloudWatchDashboard, load_dashboards
 from importer.sources.cloudwatch.dashboards import translate_dashboard
+from importer.sources.cloudwatch.logfilter import attach_log_filters, load_metric_filters
 from importer.sources.cloudwatch.models import CloudWatchAlarm, CompositeAlarm, load_alarms
 from importer.sources.cloudwatch.translate import (
     load_namespace_map,
@@ -17,6 +18,11 @@ type Alarm = CloudWatchAlarm | CompositeAlarm
 
 def load(path: Path) -> list[Alarm]:
     metric, composite = load_alarms(path)
+    # `extract-cloudwatch` writes the metric filters next to the alarms, in <export>/logs.
+    attach_log_filters(
+        metric,
+        load_metric_filters(path.parent / "logs" if path.is_dir() else path.parent.parent / "logs"),
+    )
     return [*metric, *composite]
 
 

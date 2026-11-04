@@ -19,8 +19,8 @@ from importer.core.remediation import Remedy, remedies_for
 from importer.core.stats import reason_pattern
 from importer.core.text import printable
 
-Kind = Literal["alarm", "dashboard", "notification"]
-KINDS: tuple[Kind, ...] = ("alarm", "dashboard", "notification")
+Kind = Literal["alarm", "dashboard", "notification", "other"]
+KINDS: tuple[Kind, ...] = ("alarm", "dashboard", "notification", "other")
 CONVERTED = (Confidence.EXACT, Confidence.APPROXIMATE)
 MAX_REASONS = 4
 
@@ -55,6 +55,8 @@ class Summary:
     assets: list[Asset]
     created: dict[str, int] | None  # object kind -> count, from the manifest; None = plan only
     refused: int = 0  # objects New Relic refused to create (they count as not migrated)
+    ignored: list[str] = field(default_factory=list)  # found but left out on purpose
+    existing: dict[str, int] = field(default_factory=dict)  # already there, left unchanged
 
     def of(self, kind: Kind) -> list[Asset]:
         return [a for a in self.assets if a.kind == kind]
@@ -190,6 +192,11 @@ def _created(run: Path) -> dict[str, int] | None:
 REFUSED = "could not be created in New Relic"
 
 
+def _existing(run: Path) -> dict[str, int]:
+    path = run / "manifest.json"
+    return {k: n for k, n in load_manifest(path).existing.items() if n} if path.is_file() else {}
+
+
 def _refused(run: Path) -> int:
     path = run / "manifest.json"
     return len(load_manifest(path).failed) if path.is_file() else 0
@@ -213,11 +220,27 @@ def _mark_refused(run: Path, assets: list[Asset]) -> None:
             asset.reasons.insert(0, f"{REFUSED}: {printable(reason, 150)}")
 
 
+def _other(run: Path) -> tuple[list[Asset], list[str]]:
+    """Inventory found beyond alarms, dashboards and topics (event rules, canaries, SLOs...)."""
+    from importer.sources.cloudwatch.inventory import inventory_assets
+    from importer.sources.cloudwatch.logfilter import attach_log_filters, load_metric_filters
+    from importer.sources.cloudwatch.models import load_alarms
+
+    export = run / "export"
+    try:
+        metric, _ = load_alarms(export / "alarms")
+    except (OSError, ValueError):
+        metric = []
+    attach_log_filters(metric, load_metric_filters(export / "logs"))
+    return inventory_assets(export, metric)
+
+
 def load_summary(run: Path) -> Summary:
     """Read a `migrate --out` folder. Raises OSError/ValueError on unreadable input."""
     try:
-        assets = [*_alarms(run), *_dashboards(run), *_notifications(run)]
+        other, ignored = _other(run)
+        assets = [*_alarms(run), *_dashboards(run), *_notifications(run), *other]
         _mark_refused(run, assets)
-        return Summary(assets, _created(run), _refused(run))
+        return Summary(assets, _created(run), _refused(run), ignored, _existing(run))
     except json.JSONDecodeError as exc:
         raise ValueError(f"unreadable JSON in {run}: {exc.msg}") from None

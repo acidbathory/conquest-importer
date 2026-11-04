@@ -45,6 +45,8 @@ class FakeAws:
             if name in self.fail:
                 raise ex.AwsError(self.fail[name])
             return {**DASH, "DashboardName": name}
+        if (service, op) in ex.ALLOWED_OPERATIONS and service not in ("sts", "sns"):
+            return {}  # the optional inventory reads: this account has none of them
         raise AssertionError(f"unexpected call {key}")
 
 

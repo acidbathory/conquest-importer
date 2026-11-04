@@ -11,6 +11,95 @@ from dataclasses import dataclass
 
 _RULES: list[tuple[re.Pattern[str], str, list[str]]] = [
     (
+        re.compile(r"log metric filter"),
+        "Log metric filter",
+        [
+            "New Relic has no metric filters. Forward the log group to New Relic (the Firehose "
+            "or the `NewRelic-log-ingestion` Lambda), then query it directly, for example "
+            "`SELECT count(*) FROM Log WHERE logGroup = '<group>' AND message LIKE '%term%' "
+            "TIMESERIES`.",
+            "To alert on it, create an NRQL alert condition on that query. To chart it, add "
+            "the query to a dashboard.",
+            "If the filter pulls a number out of each line, query that field with `sum()` or "
+            "`average()` instead of counting events.",
+        ],
+    ),
+    (
+        re.compile(r"eventbridge rule routes cloudwatch alarm"),
+        "EventBridge rule for alarm state changes",
+        [
+            "Alarms reach people through workflows in New Relic. Recreate each target of the "
+            "rule as a workflow destination: email or webhook for an SNS target, a webhook to "
+            "an API Gateway or Lambda function URL for a Lambda target.",
+            "If the rule matches particular alarm names, filter the workflow on the condition "
+            "name.",
+            "Systems Manager and other automation targets need the same webhook, triggered "
+            "from the workflow.",
+        ],
+    ),
+    (
+        re.compile(r"eventbridge rule reacts to aws service events"),
+        "EventBridge rule for AWS service events",
+        [
+            "To get AWS events into New Relic, create an EventBridge connection and API "
+            "destination that posts the matching events to New Relic's event or log API, then "
+            "query them with NRQL. New Relic's AWS documentation does not describe this route, "
+            "so test it with one rule first.",
+            "Keep the rule in AWS if its job is to start automation there.",
+        ],
+    ),
+    (
+        re.compile(r"synthetics canary"),
+        "Synthetics canary",
+        [
+            "Recreate as a New Relic Synthetics monitor: a ping monitor for a URL check, a "
+            "scripted API monitor for an HTTP test, or a scripted browser monitor for a "
+            "browser flow. The canary script has to be adapted to New Relic's scripting API.",
+        ],
+    ),
+    (
+        re.compile(r"contributor insights rule"),
+        "Contributor Insights rule",
+        [
+            "Rebuild as a log query that ranks contributors, for example `SELECT count(*) FROM "
+            "Log WHERE logGroup = '<group>' FACET <field> LIMIT 10`. It needs the log group "
+            "forwarded to New Relic.",
+        ],
+    ),
+    (
+        re.compile(r"cloudwatch rum app monitor"),
+        "CloudWatch RUM app monitor",
+        [
+            "Add the New Relic Browser agent to the application. It records its own data, so "
+            "CloudWatch RUM history does not carry over.",
+        ],
+    ),
+    (
+        re.compile(r"application signals slo"),
+        "Application Signals SLO",
+        [
+            "Recreate as a New Relic service level (an indicator and an objective) once the "
+            "service's data is in New Relic. Application Signals metrics arrive through Metric "
+            "Streams.",
+        ],
+    ),
+    (
+        re.compile(r"route 53 health check on an endpoint"),
+        "Route 53 health check on an endpoint",
+        [
+            "Recreate as a New Relic Synthetics ping monitor against the same endpoint. Keep "
+            "the Route 53 check if it drives DNS failover, because New Relic cannot do that.",
+        ],
+    ),
+    (
+        re.compile(r"route 53 health check that combines"),
+        "Route 53 health check built on other checks",
+        [
+            "This check combines other checks or follows a CloudWatch alarm. Recreate the "
+            "underlying checks or alarm first. Keep it in Route 53 if it drives DNS failover.",
+        ],
+    ),
+    (
         re.compile(r"composite"),
         "Composite alarm",
         [

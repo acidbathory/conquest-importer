@@ -17,6 +17,7 @@ finding about the tool (or about the docs). Read docs/testing-migration.md befor
 """
 
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -76,6 +77,7 @@ class Ctx:
     sns: Any
     sqs: Any
     xray: Any
+    events: Any = None
     arns: dict[str, str] = field(default_factory=dict)
 
 
@@ -242,6 +244,7 @@ def log_filter(ctx: Ctx) -> None:
             {"metricName": "ckt-errors", "metricNamespace": LOGNS, "metricValue": "1"}
         ],
     )
+    log_filter_extras(ctx)
     ctx.logs.create_log_stream(logGroupName=group, logStreamName="s1")
     now = int(time.time() * 1000)
     ctx.logs.put_log_events(
@@ -251,6 +254,56 @@ def log_filter(ctx: Ctx) -> None:
             {"timestamp": now, "message": "ERROR boom"},
             {"timestamp": now + 1, "message": "INFO ok"},
         ],
+    )
+
+
+def log_filter_extras(ctx: Ctx) -> None:
+    """More filters on the same group: one with an OR pattern, one nothing alarms on."""
+    group = "/ckt/app"
+    ctx.logs.put_metric_filter(
+        logGroupName=group,
+        filterName=PREFIX + "either",
+        filterPattern="?WARN ?ERROR",
+        metricTransformations=[
+            {"metricName": "ckt-either", "metricNamespace": LOGNS, "metricValue": "1"}
+        ],
+    )
+    ctx.logs.put_metric_filter(
+        logGroupName=group,
+        filterName=PREFIX + "unused-filter",
+        filterPattern='{ $.level = "DEBUG" }',
+        metricTransformations=[
+            {"metricName": "ckt-debug", "metricNamespace": LOGNS, "metricValue": "1"}
+        ],
+    )
+
+
+def event_rule(key: str, pattern: dict[str, Any] | None) -> Callable[[Ctx], None]:
+    def make(ctx: Ctx) -> None:
+        params: dict[str, Any] = {"Name": PREFIX + key, "State": "ENABLED"}
+        if pattern is None:
+            params["ScheduleExpression"] = "rate(1 day)"
+        else:
+            params["EventPattern"] = json.dumps(pattern)
+        ctx.events.put_rule(**params, Tags=[TAG])
+        if pattern is not None and "alerts" in ctx.arns:
+            ctx.events.put_targets(
+                Rule=PREFIX + key, Targets=[{"Id": "t1", "Arn": ctx.arns["alerts"]}]
+            )
+
+    return make
+
+
+def insight_rule(ctx: Ctx) -> None:
+    body = {
+        "Schema": {"Name": "CloudWatchLogRule", "Version": 1},
+        "AggregateOn": "Count",
+        "Contribution": {"Filters": [], "Keys": ["$.ip"]},
+        "LogFormat": "JSON",
+        "LogGroupNames": ["/ckt/app"],
+    }
+    ctx.cw.put_insight_rule(
+        RuleName=PREFIX + "ci-top", RuleState="ENABLED", RuleDefinition=json.dumps(body)
     )
 
 
@@ -482,11 +535,67 @@ CATALOG: list[Element] = [
     Element(
         "log-errors",
         "alarm",
-        "not_migrated",
-        reasons=("letters and digits",),
+        "migrated",
         needs=("log-source",),
         create=stat_alarm("log-errors", LOGNS, "ckt-errors", {}),
         tags=("custom", "logs"),
+    ),
+    Element(
+        "log-or",
+        "alarm",
+        "not_migrated",
+        reasons=("or terms",),
+        needs=("log-source",),
+        create=stat_alarm("log-or", LOGNS, "ckt-either", {}),
+        tags=("logs", "edge"),
+    ),
+    Element(
+        "unused-filter",
+        "inventory",
+        "not_migrated",
+        reasons=("log metric filter",),
+        needs=("log-source",),
+        tags=("logs",),
+    ),
+    Element(
+        "eb-alarm-route",
+        "inventory",
+        "not_migrated",
+        reasons=("alarm state changes",),
+        needs=("alerts",),
+        create=event_rule(
+            "eb-alarm-route",
+            {"source": ["aws.cloudwatch"], "detail-type": ["CloudWatch Alarm State Change"]},
+        ),
+        tags=("events",),
+    ),
+    Element(
+        "eb-ec2-events",
+        "inventory",
+        "not_migrated",
+        reasons=("service events",),
+        needs=("alerts",),
+        create=event_rule(
+            "eb-ec2-events",
+            {"source": ["aws.ec2"], "detail-type": ["EC2 Instance State-change Notification"]},
+        ),
+        tags=("events",),
+    ),
+    Element(
+        "eb-nightly",
+        "other",
+        "not_reported",
+        create=event_rule("eb-nightly", None),
+        tags=("events",),
+    ),
+    Element(
+        "ci-top",
+        "inventory",
+        "not_migrated",
+        reasons=("contributor insights",),
+        needs=("log-source",),
+        create=insight_rule,
+        tags=("logs", "events"),
     ),
     Element("log-source", "other", "not_reported", create=log_filter, tags=("logs",)),
     Element("xray", "other", "not_reported", create=trace_and_group, tags=("traces",)),
@@ -766,7 +875,7 @@ def pick(profile: str, seed: int) -> list[Element]:
 
     for e in chosen:
         add(e)
-    order = {"other": 0, "topic": 1, "alarm": 2, "composite": 3, "dashboard": 4}
+    order = {"other": 0, "topic": 1, "inventory": 2, "alarm": 2, "composite": 3, "dashboard": 4}
     return sorted(keys.values(), key=lambda e: order[e.group])
 
 
@@ -825,6 +934,7 @@ def make_ctx(account: str) -> Ctx:
         s.client("sns"),
         s.client("sqs"),
         s.client("xray"),
+        s.client("events"),
     )
 
 
@@ -834,6 +944,7 @@ def build(
     made: list[Element] = []
     for e in elements:
         if e.create is None:
+            made.append(e)  # created by something it needs (for example the log group)
             continue
         try:
             e.create(ctx)
@@ -879,7 +990,20 @@ def teardown(ctx: Ctx) -> list[str]:
         if t["TopicArn"].split(":")[-1].startswith(PREFIX):
             ctx.sns.delete_topic(TopicArn=t["TopicArn"])
     for q in ctx.sqs.list_queues(QueueNamePrefix=PREFIX).get("QueueUrls", []):
-        ctx.sqs.delete_queue(QueueUrl=q)
+        with contextlib.suppress(ctx.sqs.exceptions.QueueDoesNotExist):  # listed for up to 1 min
+            ctx.sqs.delete_queue(QueueUrl=q)
+    for r in ctx.events.list_rules(NamePrefix=PREFIX).get("Rules", []):
+        ids = [t["Id"] for t in ctx.events.list_targets_by_rule(Rule=r["Name"]).get("Targets", [])]
+        if ids:
+            ctx.events.remove_targets(Rule=r["Name"], Ids=ids)
+        ctx.events.delete_rule(Name=r["Name"])
+    rules = [
+        r["Name"]
+        for r in ctx.cw.describe_insight_rules().get("InsightRules", [])
+        if r["Name"].startswith(PREFIX)
+    ]
+    if rules:
+        ctx.cw.delete_insight_rules(RuleNames=rules)
     for g in ctx.logs.describe_log_groups(logGroupNamePrefix="/ckt/")["logGroups"]:
         ctx.logs.delete_log_group(logGroupName=g["logGroupName"])
     for g in ctx.xray.get_groups().get("Groups", []):
@@ -889,7 +1013,10 @@ def teardown(ctx: Ctx) -> list[str]:
 
 
 def leftovers(ctx: Ctx) -> list[str]:
-    left = [a["AlarmName"] for a in ctx.cw.describe_alarms(AlarmNamePrefix=PREFIX)["MetricAlarms"]]
+    left_rules = [r["Name"] for r in ctx.events.list_rules(NamePrefix=PREFIX).get("Rules", [])]
+    left = left_rules + [
+        a["AlarmName"] for a in ctx.cw.describe_alarms(AlarmNamePrefix=PREFIX)["MetricAlarms"]
+    ]
     left += [
         a["AlarmName"]
         for a in ctx.cw.describe_alarms(AlarmNamePrefix=PREFIX, AlarmTypes=["CompositeAlarm"])[
@@ -1290,6 +1417,64 @@ def iterate(
     return info
 
 
+def populate(ctx: Ctx) -> None:
+    """Create the whole catalogue plus extra data, and leave it for a person to migrate."""
+    if leftovers(ctx):
+        sys.exit(f"{PREFIX} resources already exist; run --cleanup first: {leftovers(ctx)[:5]}")
+    findings: list[Finding] = []
+    made = build(ctx, pick("full", 1), 0, findings)
+    now = datetime.now(UTC)
+    # More history for the custom metrics, logs and traces than the single data point per item.
+    points = [
+        {
+            "MetricName": name,
+            "Dimensions": [{"Name": "Shop", "Value": "web"}] if name == "Orders" else [],
+            "Timestamp": now.timestamp() - m * 60,
+            "Value": float((m * 7) % 13 + 1),
+            "Unit": "Count",
+        }
+        for name in ("Orders", "Heartbeat")
+        for m in range(0, 120, 5)
+    ]
+    for chunk in range(0, len(points), 20):
+        batch = [
+            {**d, "Timestamp": datetime.fromtimestamp(d["Timestamp"], UTC)}
+            for d in points[chunk : chunk + 20]
+        ]
+        ctx.cw.put_metric_data(Namespace=NS, MetricData=batch)
+    stamp = int(time.time() * 1000)
+    events = [
+        {"timestamp": stamp + n, "message": ("ERROR" if n % 4 == 0 else "INFO") + f" request {n}"}
+        for n in range(1, 41)
+    ]
+    ctx.logs.put_log_events(logGroupName="/ckt/app", logStreamName="s1", logEvents=events)
+    for _ in range(5):
+        trace_and_trace_only(ctx)
+    print(f"Created {len(made)} test resources in account {ctx.account} ({REGION}):")
+    by_group: dict[str, int] = {}
+    for e in made:
+        by_group[e.group] = by_group.get(e.group, 0) + 1
+    for group, n in sorted(by_group.items()):
+        print(f"  {group}: {n}")
+    for f in findings:
+        print(f"  could not create {f.where}: {f.what}")
+    print("Plus custom metric history, 40 log events and 5 more trace segments.")
+    print("They stay until you run:  suite.py --cleanup --aws-account-id <id>")
+
+
+def trace_and_trace_only(ctx: Ctx) -> None:
+    """Send one more X-Ray trace segment (the group already exists)."""
+    epoch = f"{int(time.time()):08x}"
+    seg = {
+        "trace_id": f"1-{epoch}-{random.getrandbits(96):024x}",
+        "id": f"{random.getrandbits(64):016x}",
+        "name": "ckt-service",
+        "start_time": time.time() - 1,
+        "end_time": time.time(),
+    }
+    ctx.xray.put_trace_segments(TraceSegmentDocuments=[json.dumps(seg)])
+
+
 def main() -> None:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -1298,7 +1483,21 @@ def main() -> None:
     p.add_argument("--iterations", type=int, default=12)
     p.add_argument("--only", type=int, help="run just this iteration number")
     p.add_argument("--yes", action="store_true", help="confirm you accept the cost and the writes")
+    p.add_argument(
+        "--populate",
+        action="store_true",
+        help="create the full set of test resources and leave them (no migration, no teardown)",
+    )
+    p.add_argument(
+        "--cleanup", action="store_true", help="delete every resource this suite created"
+    )
     args = p.parse_args()
+    if args.cleanup:
+        left = teardown(make_ctx(args.aws_account_id))
+        sys.exit(f"left behind: {left}" if left else print("AWS is clean: no ckt- resources left."))
+    if args.populate:
+        populate(make_ctx(args.aws_account_id))
+        return
     if not args.yes:
         sys.exit(
             "This creates real AWS resources (pennies) and writes disabled objects to New Relic. Re-run with --yes."

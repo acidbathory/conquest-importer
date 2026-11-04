@@ -152,3 +152,11 @@ def test_headline_states_total_completion() -> None:
 def test_cli_report_prints_the_headline(run_dir: Path, tmp_path: Path) -> None:
     result = CliRunner().invoke(app, ["report", str(run_dir), "--out", str(tmp_path / "r.html")])
     assert "Total completion (forecast):" in result.output
+
+
+def test_the_applied_banner_says_what_already_existed() -> None:
+    page = render_report(
+        Summary([], {"condition": 1}, existing={"condition": 20, "dashboard": 1}), nr_account=7
+    )
+    assert "20 conditions, 1 dashboard already existed and were left unchanged." in page
+    assert "already existed" not in render_report(Summary([], {"condition": 1}), nr_account=7)
