@@ -121,3 +121,21 @@ def test_cli_report_rejects_bad_input(tmp_path: Path) -> None:
     result = CliRunner().invoke(app, ["report", str(tmp_path)])
     assert result.exit_code == 1
     assert "Error" in result.output
+
+
+def test_headline_states_total_completion() -> None:
+    assets = [
+        Asset("alarm", "a", "metric alarm", Confidence.APPROXIMATE),
+        Asset("alarm", "b", "metric alarm", Confidence.EXACT),
+        Asset("alarm", "c", "metric alarm", Confidence.MANUAL),
+        Asset("dashboard", "d", "dashboard", Confidence.UNSUPPORTED),
+    ]
+    assert Summary(assets, None).headline() == (
+        "Total completion: 50% (2 of 4 assets migrated, 2 need manual work)"
+    )
+    assert "nothing found" in Summary([], None).headline()
+
+
+def test_cli_report_prints_the_headline(run_dir: Path, tmp_path: Path) -> None:
+    result = CliRunner().invoke(app, ["report", str(run_dir), "--out", str(tmp_path / "r.html")])
+    assert "Total completion:" in result.output

@@ -6,7 +6,6 @@ mismatch is explained when possible (several data sources delivering the same me
 cannot compare (percentiles, metric math, not converted) are listed, never guessed. Read-only.
 """
 
-import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -56,31 +55,25 @@ def cloudwatch_value(
     reader: Reader, alarm: CloudWatchAlarm, start: datetime, end: datetime
 ) -> float | None:
     """The alarm's statistic over the window, from CloudWatch's own per-minute data."""
-    dims = json.dumps([{"Name": d.Name, "Value": d.Value} for d in alarm.Dimensions])
+    dims = [{"Name": d.Name, "Value": d.Value} for d in alarm.Dimensions]
     percentile = alarm.ExtendedStatistic
-    kind = (
-        ["--extended-statistics", percentile]
+    kind: dict[str, Any] = (
+        {"ExtendedStatistics": [percentile]}
         if percentile
-        else [
-            "--statistics",
-            "Sum",
-            "SampleCount",
-            "Minimum",
-            "Maximum",
-        ]
+        else {"Statistics": ["Sum", "SampleCount", "Minimum", "Maximum"]}
     )
     data = reader.call(
         "cloudwatch",
-        "get-metric-statistics",
-        f"--namespace={alarm.Namespace}",
-        f"--metric-name={alarm.MetricName}",
-        f"--dimensions={dims}",
-        f"--start-time={start:%Y-%m-%dT%H:%M:%SZ}",
-        f"--end-time={end:%Y-%m-%dT%H:%M:%SZ}",
-        "--period=60",
-        *kind,
+        "get_metric_statistics",
+        Namespace=alarm.Namespace,
+        MetricName=alarm.MetricName,
+        Dimensions=dims,
+        StartTime=start,
+        EndTime=end,
+        Period=60,
+        **kind,
     )
-    points = data.get("Datapoints", []) if isinstance(data, dict) else []
+    points = data.get("Datapoints", [])
     if not points:
         return None
     if percentile:

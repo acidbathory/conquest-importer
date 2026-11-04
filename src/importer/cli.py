@@ -132,7 +132,7 @@ def convert(
 @app.command()
 def doctor(
     region: Annotated[str, typer.Option(help="AWS region to check")] = "us-east-1",
-    profile: Annotated[str | None, typer.Option(help="AWS CLI profile")] = None,
+    profile: Annotated[str | None, typer.Option(help="AWS profile name")] = None,
 ) -> None:
     """Check that the tools and AWS sign-in a run needs are in place. Read-only."""
     try:
@@ -286,7 +286,8 @@ def extract_cloudwatch_command(
     account_id: Annotated[str, typer.Option(help="AWS account id you expect (12 digits)")],
     region: Annotated[str, typer.Option(help="AWS region to read")] = "us-east-1",
     profile: Annotated[
-        str | None, typer.Option(help="AWS CLI profile (default: CLI default)")
+        str | None,
+        typer.Option(help="AWS profile name (default: your AWS keys or default profile)"),
     ] = None,
     out: Annotated[Path, typer.Option(help="New folder for the export")] = Path("out/cloudwatch"),
     dashboards: Annotated[bool, typer.Option(help="Also export dashboards")] = True,
@@ -294,7 +295,7 @@ def extract_cloudwatch_command(
         bool, typer.Option(help="Also export the SNS subscriptions behind alarm actions")
     ] = True,
 ) -> None:
-    """Read CloudWatch alarms and dashboards from an AWS account (read-only) via the AWS CLI.
+    """Read CloudWatch alarms and dashboards from an AWS account (read-only) with boto3.
 
     Runs only describe-alarms, list-dashboards, get-dashboard and sts get-caller-identity.
     Stops before reading anything if the signed-in account is not --account-id. The export can
@@ -532,7 +533,10 @@ def validate_command(
     ),
     account_id: Annotated[str, typer.Option(help="AWS account id you expect (12 digits)")] = "",
     region: Annotated[str, typer.Option(help="AWS region to read")] = "us-east-1",
-    profile: Annotated[str | None, typer.Option(help="AWS CLI profile (default: CLI's)")] = None,
+    profile: Annotated[
+        str | None,
+        typer.Option(help="AWS profile name (default: your AWS keys or default profile)"),
+    ] = None,
     nr_account_id: Annotated[int, typer.Option(help="New Relic account id to query")] = 0,
     nr_region: Annotated[str, typer.Option(help="us or eu")] = "us",
     since: Annotated[
@@ -560,7 +564,7 @@ def validate_command(
             raise ValueError("--since must be earlier than --until")
         reader = Reader(region, profile)
         if caller_account(reader) != account_id:
-            raise AwsError("the AWS CLI is signed in to a different account than --account-id")
+            raise AwsError("the AWS credentials belong to a different account than --account-id")
         with NewRelicClient(require_env("NEW_RELIC_API_KEY"), nr_region) as client:
             checks = cw_validate.validate(
                 reader, client, nr_account_id, alarms, alerts / "ir", start, end
@@ -641,11 +645,14 @@ def _plan_text(
     stats_md: str,
     counts: dict[str, int],
     stream: tuple[int, int],
+    headline: str = "",
 ) -> str:
     """The reviewable summary written by `migrate` (plain text, no untrusted names)."""
     ingest = out / "ingest"
     lines = [
         "# Migration plan",
+        "",
+        headline,
         "",
         f"AWS account {aws_account} ({region}) to New Relic account {nr_account}.",
         "",
@@ -680,6 +687,7 @@ def _write_html_report(
 ) -> Path:
     path = target or run / "report.html"
     summary = load_summary(run)
+    typer.echo(summary.headline())
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         render_report(summary, aws_account=aws_account, nr_account=nr_account, region=region)
@@ -714,7 +722,10 @@ def migrate_command(
     aws_account_id: Annotated[str, typer.Option(help="AWS account id you expect (12 digits)")],
     nr_account_id: Annotated[int, typer.Option(help="New Relic TEST account id to migrate into")],
     region: Annotated[str, typer.Option(help="AWS region to read")] = "us-east-1",
-    profile: Annotated[str | None, typer.Option(help="AWS CLI profile (default: CLI's)")] = None,
+    profile: Annotated[
+        str | None,
+        typer.Option(help="AWS profile name (default: your AWS keys or default profile)"),
+    ] = None,
     nr_region: Annotated[str, typer.Option(help="New Relic region: us or eu")] = "us",
     out: Annotated[Path, typer.Option(help="New folder for everything this run writes")] = Path(
         "out/migration"
@@ -798,7 +809,14 @@ def migrate_command(
         "topics": len(list((export / "notifications").glob("*.json"))),
     }
     plan = _plan_text(
-        aws_account_id, nr_account_id, region, out, stats_md, counts, (len(namespaces), len(specs))
+        aws_account_id,
+        nr_account_id,
+        region,
+        out,
+        stats_md,
+        counts,
+        (len(namespaces), len(specs)),
+        load_summary(out).headline(),
     )
     (out / "plan.md").write_text(plan)
     typer.echo(f"\nPlan written to {out / 'plan.md'}")

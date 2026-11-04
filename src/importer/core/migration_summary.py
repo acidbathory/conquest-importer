@@ -61,6 +61,18 @@ class Summary:
     def counts(self, kind: Kind | None = None) -> Counter[Confidence]:
         return Counter(a.confidence for a in self.assets if kind is None or a.kind == kind)
 
+    def headline(self) -> str:
+        """One line: total completion across alarms, dashboards and subscriptions."""
+        counts = self.counts()
+        total = sum(counts.values())
+        if total == 0:
+            return "Total completion: nothing found to migrate"
+        done = counts[Confidence.EXACT] + counts[Confidence.APPROXIMATE]
+        return (
+            f"Total completion: {percent(done, total)}% "
+            f"({done} of {total} assets migrated, {total - done} need manual work)"
+        )
+
     def groups(self) -> list[Group]:
         """Remediation groups for assets that did not migrate, largest first."""
         found: dict[str, Group] = {}

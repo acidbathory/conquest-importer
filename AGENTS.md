@@ -6,6 +6,7 @@ Rules for AI assistants working in this repository. See also `CLAUDE.md` and `HA
   "Generated with" lines in commits or pull requests).
 - Python code is checked with ruff (lint) and `mypy --strict`, plus `pytest` and `pip-audit`, as in
   `.github/workflows/ci.yml`. Any JavaScript/TypeScript code is checked with ESLint.
+  User-facing docs are in `README.md` and `docs/` (keep `docs/what-migrates.md` true when converters change).
   Details: `docs/dev/linting.md`, `docs/dev/dry-guidelines.md`, `docs/dev/testing.md`.
 - Any infrastructure that carries cost must be clearly highlighted. Costs must be reported daily,
   with a dedicated budget alarm that does not exceed $10.

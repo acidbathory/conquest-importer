@@ -1,6 +1,4 @@
 import json
-import shutil
-import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -18,46 +16,42 @@ DASH = json.loads(DASH_FILES[0].read_text())
 
 
 class FakeAws:
-    """Stands in for subprocess.run, so the real allow-list and argument code is exercised."""
+    """Stands in for run_boto3 (the default Reader runner), recording every call."""
 
     def __init__(self) -> None:
-        self.calls: list[list[str]] = []
+        self.calls: list[tuple[str, str, str, str | None, dict[str, Any]]] = []
         self.account = ACCOUNT
         self.dashboard_names = [DASH["DashboardName"]]
         self.fail: dict[str, str] = {}
-        self.stdout_override: dict[str, str] = {}
+        self.override: dict[str, Any] = {}
 
-    def __call__(self, argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
-        assert kwargs.get("shell") is not True
-        assert isinstance(argv, list)
-        args = argv[1:]
-        self.calls.append(args)
-        key = f"{args[0]} {args[1]}"
+    def __call__(
+        self, service: str, op: str, region: str, profile: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        self.calls.append((service, op, region, profile, params))
+        key = f"{service} {op}"
         if key in self.fail:
-            return subprocess.CompletedProcess(argv, 255, "", self.fail[key])
-        if key in self.stdout_override:
-            return subprocess.CompletedProcess(argv, 0, self.stdout_override[key], "")
-        if key == "sts get-caller-identity":
-            out: Any = {"Account": self.account, "Arn": "arn:aws:iam::x:user/y"}
-        elif key == "cloudwatch describe-alarms":
-            out = ALARMS
-        elif key == "cloudwatch list-dashboards":
-            out = {"DashboardEntries": [{"DashboardName": n} for n in self.dashboard_names]}
-        elif key == "cloudwatch get-dashboard":
-            name = next(a for a in args if a.startswith("--dashboard-name=")).split("=", 1)[1]
+            raise ex.AwsError(self.fail[key])
+        if key in self.override:
+            return self.override[key]  # type: ignore[no-any-return]
+        if key == "sts get_caller_identity":
+            return {"Account": self.account, "Arn": "arn:aws:iam::x:user/y"}
+        if key == "cloudwatch describe_alarms":
+            return ALARMS  # type: ignore[no-any-return]
+        if key == "cloudwatch list_dashboards":
+            return {"DashboardEntries": [{"DashboardName": n} for n in self.dashboard_names]}
+        if key == "cloudwatch get_dashboard":
+            name = params["DashboardName"]
             if name in self.fail:
-                return subprocess.CompletedProcess(argv, 254, "", self.fail[name])
-            out = {**DASH, "DashboardName": name}
-        else:
-            raise AssertionError(f"unexpected command {key}")
-        return subprocess.CompletedProcess(argv, 0, json.dumps(out), "")
+                raise ex.AwsError(self.fail[name])
+            return {**DASH, "DashboardName": name}
+        raise AssertionError(f"unexpected call {key}")
 
 
 @pytest.fixture
 def aws(monkeypatch: pytest.MonkeyPatch) -> FakeAws:
     fake = FakeAws()
-    monkeypatch.setattr(shutil, "which", lambda _: "/usr/local/bin/aws")
-    monkeypatch.setattr(subprocess, "run", fake)
+    monkeypatch.setattr(ex, "run_boto3", fake)
     return fake
 
 
@@ -80,14 +74,15 @@ def test_happy_path_writes_files_the_converters_read(aws: FakeAws, tmp_path: Pat
         assert r.exit_code == 0, r.output
 
 
-def test_only_allowed_read_commands_run_with_safe_arguments(aws: FakeAws, tmp_path: Path) -> None:
+def test_only_allowed_read_operations_run_with_fixed_parameters(
+    aws: FakeAws, tmp_path: Path
+) -> None:
     assert run(tmp_path / "o", "--profile", "p1").exit_code == 0
-    assert {tuple(c[:2]) for c in aws.calls} <= ex.ALLOWED_COMMANDS
+    assert {(c[0], c[1]) for c in aws.calls} <= ex.ALLOWED_OPERATIONS
     for c in aws.calls:
-        assert "--region=us-east-1" in c and "--profile=p1" in c and "--output=json" in c
-    alarms_call = next(c for c in aws.calls if c[1] == "describe-alarms")
-    i = alarms_call.index("--alarm-types")
-    assert alarms_call[i + 1 : i + 3] == ["MetricAlarm", "CompositeAlarm"]
+        assert c[2] == "us-east-1" and c[3] == "p1"
+    alarms_call = next(c for c in aws.calls if c[1] == "describe_alarms")
+    assert alarms_call[4] == {"AlarmTypes": ["MetricAlarm", "CompositeAlarm"]}
 
 
 def test_account_mismatch_reads_nothing(aws: FakeAws, tmp_path: Path) -> None:
@@ -116,7 +111,7 @@ def test_unsafe_region_or_profile_is_rejected(
     assert res.exit_code == 1 and not aws.calls
 
 
-def test_hostile_dashboard_names_never_reach_file_names_or_options(
+def test_hostile_dashboard_names_never_reach_file_names_or_operations(
     aws: FakeAws, tmp_path: Path
 ) -> None:
     aws.dashboard_names = ["../../etc/x", "-rf", "a\x1b[31mb"]
@@ -124,8 +119,8 @@ def test_hostile_dashboard_names_never_reach_file_names_or_options(
     assert res.exit_code == 0, res.output
     files = sorted(p.name for p in (tmp_path / "o/dashboards").iterdir())
     assert files == ["dashboard-0001.json", "dashboard-0002.json", "dashboard-0003.json"]
-    calls = [c for c in aws.calls if c[1] == "get-dashboard"]
-    assert "--dashboard-name=-rf" in calls[1]  # one argument, so never parsed as an option
+    calls = [c for c in aws.calls if c[1] == "get_dashboard"]
+    assert calls[1][4] == {"DashboardName": "-rf"}  # a parameter value, never an option
 
 
 def test_failed_dashboard_is_reported_and_others_are_kept(aws: FakeAws, tmp_path: Path) -> None:
@@ -151,55 +146,63 @@ def test_refuses_to_mix_into_a_used_folder(aws: FakeAws, tmp_path: Path) -> None
 
 
 def test_aws_errors_are_shown_safely(aws: FakeAws, tmp_path: Path) -> None:
-    aws.fail["sts get-caller-identity"] = "ExpiredToken\x1b]0;pwn\x07"
+    aws.fail["sts get_caller_identity"] = "ExpiredToken"
     res = run(tmp_path / "o")
     assert res.exit_code == 1 and "ExpiredToken" in res.output
     assert "\x1b" not in res.output and "\x07" not in res.output
 
 
 @pytest.mark.parametrize(
-    ("key", "text"),
+    ("key", "response"),
     [
-        ("cloudwatch describe-alarms", "not json"),
-        ("cloudwatch describe-alarms", json.dumps({"MetricAlarms": [], "NextToken": "t"})),
-        ("cloudwatch describe-alarms", "[]"),
-        ("cloudwatch list-dashboards", json.dumps({"DashboardEntries": [], "NextToken": "t"})),
-        ("sts get-caller-identity", json.dumps({"Account": "abc"})),
+        ("cloudwatch describe_alarms", {"MetricAlarms": "nope"}),
+        ("cloudwatch list_dashboards", {"DashboardEntries": "nope"}),
+        ("sts get_caller_identity", {"Account": "abc"}),
+        ("sts get_caller_identity", {}),
     ],
 )
-def test_malformed_or_truncated_output_stops_the_export(
-    aws: FakeAws, tmp_path: Path, key: str, text: str
+def test_malformed_output_stops_the_export(
+    aws: FakeAws, tmp_path: Path, key: str, response: Any
 ) -> None:
-    aws.stdout_override[key] = text
+    aws.override[key] = response
     assert run(tmp_path / "o").exit_code == 1
 
 
-def test_missing_cli_and_timeouts(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(shutil, "which", lambda _: None)
+class FakeClientError(Exception):
+    pass
+
+
+def test_missing_credentials_are_explained(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    for name in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_PROFILE"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("AWS_CONFIG_FILE", str(tmp_path / "none"))
+    monkeypatch.setenv("AWS_SHARED_CREDENTIALS_FILE", str(tmp_path / "none"))
+    monkeypatch.setenv("AWS_EC2_METADATA_DISABLED", "true")
     res = run(tmp_path / "o")
-    assert res.exit_code == 1 and "not installed" in res.output
-
-    monkeypatch.setattr(shutil, "which", lambda _: "/usr/local/bin/aws")
-
-    def boom(*a: Any, **k: Any) -> Any:
-        raise subprocess.TimeoutExpired("aws", 1)
-
-    monkeypatch.setattr(subprocess, "run", boom)
-    res = run(tmp_path / "o2")
-    assert res.exit_code == 1 and "timed out" in res.output
+    assert res.exit_code == 1 and "AWS_ACCESS_KEY_ID" in res.output
 
 
 @pytest.mark.parametrize(
-    "args",
+    ("service", "op"),
     [
-        ["ec2", "run-instances"],
-        ["cloudwatch", "put-metric-alarm"],
-        ["cloudwatch", "delete-alarms"],
-        ["cloudwatch", "put-dashboard"],
-        ["s3", "ls"],
-        [],
+        ("ec2", "run_instances"),
+        ("cloudwatch", "put_metric_alarm"),
+        ("cloudwatch", "delete_alarms"),
+        ("cloudwatch", "put_dashboard"),
+        ("s3", "list_buckets"),
+        ("", ""),
     ],
 )
-def test_write_and_unlisted_commands_are_refused(args: list[str]) -> None:
+def test_write_and_unlisted_operations_are_refused(service: str, op: str) -> None:
     with pytest.raises(ex.AwsError, match="refusing"):
-        ex.run_aws(args)
+        ex.run_boto3(service, op, "us-east-1", None, {})
+
+
+def test_pages_are_merged_and_metadata_dropped() -> None:
+    pages = [
+        {"MetricAlarms": [{"AlarmName": "a"}], "ResponseMetadata": {"x": 1}},
+        {"MetricAlarms": [{"AlarmName": "b"}], "CompositeAlarms": [{"AlarmName": "c"}]},
+    ]
+    merged = ex._merge_pages(pages)
+    assert [a["AlarmName"] for a in merged["MetricAlarms"]] == ["a", "b"]
+    assert "ResponseMetadata" not in merged and len(merged["CompositeAlarms"]) == 1

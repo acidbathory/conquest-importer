@@ -1,0 +1,25 @@
+name: Bug report
+description: The importer crashed, printed an error, or behaved unexpectedly.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Remove account ids, ARNs, names and keys before pasting.
+  - type: textarea
+    id: command
+    attributes:
+      label: The command you ran
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: The full error or output
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Output of `importer version` and `python3 --version`

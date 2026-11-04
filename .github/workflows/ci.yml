@@ -18,6 +18,11 @@ jobs:
       - run: uv run mypy src tests
       - run: uv run pytest
       - run: uv run pip-audit
+      - name: Plain pip install works (what users do)
+        run: |
+          python3 -m venv /tmp/user-venv
+          /tmp/user-venv/bin/pip install .
+          /tmp/user-venv/bin/importer --help
       - run: uv run vulture src --min-confidence 80
       - run: uv run yamllint -d relaxed .github .pre-commit-config.yaml
       - run: uv run actionlint

@@ -3,9 +3,13 @@
 No scripts, no external fonts or images, and a Content-Security-Policy that forbids all network
 access, so it can be opened offline and mailed around. Every piece of source-controlled text
 (alarm names, reasons, steps built from names) goes through `e()`; markup is built only from
-constants and numbers. Styling follows the beautiful-ui principles: a visible type scale, a
-steady spacing rhythm, colour only where it carries meaning (always with an icon and a label),
-restrained cards, reduced motion respected, accessible contrast and a table view of every chart.
+constants and numbers.
+
+Design direction: an editorial audit document, deliberately not a dashboard. Serif text with a
+monospaced label face (system fonts only, so it works offline), warm paper and ink, ONE accent
+colour used sparingly, structure from spacing and hairline rules instead of boxed cards, an
+asymmetric hero. Status colours appear only where they mean something, always with a glyph and a
+label. Forbidden: gradients, shadows, radius above 4px, pure black, emoji, card grids.
 """
 
 import re
@@ -14,6 +18,7 @@ from html import escape
 
 from importer.core.ir import Confidence
 from importer.core.migration_summary import KINDS, MAX_REASONS, Asset, Group, Kind, Summary, percent
+from importer.core.taxonomy import Category, classify
 from importer.core.text import printable
 
 # (confidence, css class, glyph, short label, what it means)
@@ -30,71 +35,101 @@ KIND_NAMES: dict[Kind, tuple[str, str]] = {
 }
 MIN_LABEL_SHARE = 10  # a segment narrower than this prints no label (its number is in the table)
 
+GRAIN = (
+    "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'"
+    "%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' "
+    "numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' "
+    "filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E"
+)
+
 CSS = """
-:root{color-scheme:light dark;--bg:#f7f8fa;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;
---line:#d9e0e7;--accent:#2a78d6;--ok:#0ca30c;--warn:#fab219;--serious:#ec835a;--crit:#d03b3b;
---okink:#006300;--s1:4px;--s2:8px;--s3:16px;--s4:24px;--s5:40px;--r:8px}
-@media (prefers-color-scheme:dark){:root{--bg:#121211;--surface:#1a1a19;--ink:#f0efec;
---ink2:#c3c2b7;--line:#383835;--accent:#3987e5;--okink:#5fd35f}}
+:root{color-scheme:light dark;--paper:#f5f1e8;--ink:#1b1a17;--ink2:#5b574d;--rule:#cfc8b8;
+--accent:#b4441f;--ok:#0ca30c;--warn:#fab219;--serious:#ec835a;--crit:#d03b3b;--okink:#0a6b0a;
+--serif:Charter,"Bitstream Charter","Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+--mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+@media (prefers-color-scheme:dark){:root{--paper:#1a1814;--ink:#ece7da;--ink2:#aaa393;
+--rule:#3a362d;--accent:#e0714a;--okink:#5fd35f}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,ui-sans-serif,system-ui,
--apple-system,"Segoe UI",sans-serif}
-main{max-width:1040px;margin:0 auto;padding:var(--s5) var(--s4)}
-h1{font-size:28px;line-height:1.2;margin:0 0 var(--s1);font-weight:700}
-h2{font-size:20px;line-height:1.3;margin:var(--s5) 0 var(--s3);padding-top:var(--s4);
-border-top:1px solid var(--line);font-weight:650}
-h3{font-size:16px;margin:0;font-weight:650}
-p{margin:0 0 var(--s2)}
-.muted{color:var(--ink2)}.small{font-size:14px}
-.chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 12px;
-font-size:14px;color:var(--ink2);background:var(--surface)}
-.hero{display:flex;align-items:baseline;gap:var(--s3);flex-wrap:wrap;margin:var(--s4) 0 var(--s2)}
-.hero .big{font-size:64px;line-height:1;font-weight:700;letter-spacing:-.02em}
-.hero .of{font-size:18px;color:var(--ink2)}
-.bar{display:flex;gap:2px;height:28px;margin:var(--s2) 0}
-.bar.thin{height:8px;border-radius:999px;overflow:hidden}
-.seg{display:flex;align-items:center;padding:0 var(--s2);border-radius:4px;font-size:13px;
-font-weight:650;white-space:nowrap;overflow:hidden;color:#0b0b0b}
-.thin .seg{border-radius:0;padding:0}
+body{margin:0;background:var(--paper) url("GRAIN");color:var(--ink);font:18px/1.6 var(--serif)}
+main{max-width:960px;margin:0 auto;padding:64px 32px 96px}
+.label{font:600 12px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;
+color:var(--ink2)}
+.mono{font-family:var(--mono)}
+.masthead{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;
+border-bottom:2px solid var(--ink);padding-bottom:12px}
+h1{font:400 15px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;margin:0}
+.where{font:13px/1.5 var(--mono);color:var(--ink2);margin:0}
+.state{margin:24px 0 0;padding-left:16px;border-left:3px solid var(--accent);max-width:62ch}
+.state b{font-weight:700}
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,4fr);gap:48px;
+align-items:end;margin:56px 0 24px}
+.big{font:400 clamp(96px,17vw,168px)/.85 var(--serif);letter-spacing:-.04em;margin:0}
+.lede{font-size:22px;line-height:1.4;margin:0 0 8px}
+.lede b{font-weight:700}
+@media (max-width:720px){.hero{grid-template-columns:1fr;gap:16px}}
+.bar{display:flex;gap:2px;height:28px;margin:24px 0 12px}
+.bar.thin{height:6px;margin:12px 0 0}
+.seg{display:flex;align-items:center;padding:0 8px;border-radius:2px;font:600 12px var(--mono);
+white-space:nowrap;overflow:hidden;color:#1b1a17}
+.thin .seg{padding:0;border-radius:0}
 .seg.ok{background:var(--ok)}.seg.warn{background:var(--warn)}
 .seg.serious{background:var(--serious)}.seg.crit{background:var(--crit);color:#fff}
-.legend{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);margin:var(--s2) 0 0;padding:0;
-list-style:none;font-size:14px}
-.dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;
-vertical-align:-1px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 32px;margin:0;padding:0;list-style:none;
+font:12px/1.5 var(--mono)}
+.legend .m{color:var(--ink2)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
 .dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}
 .dot.serious{background:var(--serious)}.dot.crit{background:var(--crit)}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--s3);
-margin:var(--s4) 0}
-.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
-padding:var(--s3)}
-.tile .label{font-size:14px;color:var(--ink2)}
-.tile .value{font-size:36px;font-weight:700;line-height:1.2}
-table{border-collapse:collapse;width:100%;font-size:14px;margin:var(--s2) 0}
-th,td{text-align:left;padding:var(--s2) var(--s3) var(--s2) 0;border-bottom:1px solid var(--line);
-vertical-align:top}
-th{font-weight:650;color:var(--ink2)}
-td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;padding-right:var(--s3)}
-.st{white-space:nowrap;font-weight:600}
-.st.ok{color:var(--okink)}
-details{border-top:1px solid var(--line);padding:var(--s2) 0}
-summary{cursor:pointer;font-weight:600}
-summary:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.group{margin:var(--s4) 0;padding-bottom:var(--s2)}
-.group header{display:flex;justify-content:space-between;gap:var(--s3);align-items:baseline}
-.count{color:var(--ink2);font-size:14px;white-space:nowrap}
-ol,ul.plain{margin:var(--s2) 0 var(--s3);padding-left:var(--s4)}
-li{margin-bottom:var(--s1)}
-.callout{border-left:4px solid var(--accent);background:var(--surface);padding:var(--s2) var(--s3);
-border-radius:0 var(--r) var(--r) 0;margin:var(--s3) 0}
-.callout.warn{border-color:var(--warn)}
-code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface);
-border:1px solid var(--line);border-radius:4px;padding:1px 4px}
-footer{margin-top:var(--s5);padding-top:var(--s3);border-top:1px solid var(--line)}
+.ledger{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin:56px 0 0;
+border-top:1px solid var(--ink)}
+.ledger>div{padding:16px 24px 8px 0}
+.ledger>div+div{padding-left:24px;border-left:1px solid var(--rule)}
+.ledger .n{font-size:48px;line-height:1.1;margin:4px 0}
+.ledger .sub{font-size:15px;color:var(--ink2)}
+h2{display:flex;gap:16px;align-items:baseline;font:400 28px/1.2 var(--serif);
+margin:80px 0 24px;padding-top:12px;border-top:1px solid var(--ink)}
+h2 .no{font:600 13px var(--mono);color:var(--accent);letter-spacing:.1em}
+.intro{max-width:62ch;color:var(--ink2);margin:0 0 24px}
+table{border-collapse:collapse;width:100%;font:14px/1.4 var(--mono);margin:8px 0 0}
+caption{text-align:left;padding-bottom:8px}
+th,td{text-align:left;padding:10px 16px 10px 0;border-bottom:1px solid var(--rule)}
+thead th{border-bottom:1px solid var(--ink);font-weight:600;color:var(--ink2);
+font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.total td{border-top:1px solid var(--ink);border-bottom:2px solid var(--ink);font-weight:700}
+.problem{display:grid;grid-template-columns:72px minmax(0,1fr);gap:0 16px;
+padding:32px 0;border-top:1px solid var(--rule)}
+.problem .idx{font:600 13px var(--mono);color:var(--accent);padding-top:8px}
+.problem header{display:flex;justify-content:space-between;gap:16px;align-items:baseline}
+h3{font:700 22px/1.3 var(--serif);margin:0}
+.count{font:12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);
+white-space:nowrap}
+ol.steps{list-style:none;counter-reset:s;margin:12px 0 20px;padding:0;max-width:66ch}
+ol.steps>li{counter-increment:s;position:relative;padding-left:36px;margin-bottom:12px}
+ol.steps>li::before{content:counter(s);position:absolute;left:0;top:2px;font:600 12px var(--mono);
+color:var(--ink2);border:1px solid var(--rule);border-radius:2px;width:22px;height:22px;
+text-align:center;line-height:20px}
+details{border-top:1px solid var(--rule);padding:10px 0}
+summary{cursor:pointer;font:600 14px var(--mono);list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";display:inline-block;width:20px;color:var(--accent)}
+details[open]>summary::before{content:"\\2212"}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.why{font-size:15px;color:var(--ink2);margin:8px 0 0 20px;padding:0;list-style:none}
+.why li{margin-bottom:4px}
+.also{margin:12px 0 0 20px}
+.also .label{display:block;margin-bottom:4px}
+code{font:.85em var(--mono);background:color-mix(in srgb,var(--ink) 8%,transparent);
+padding:1px 5px;border-radius:2px}
+ul.notes{list-style:none;padding:0;margin:0;max-width:70ch}
+ul.notes li{padding:12px 0;border-top:1px solid var(--rule)}
+.num{font:13px var(--mono);color:var(--ink2);white-space:nowrap}
+footer{margin-top:80px;padding-top:16px;border-top:2px solid var(--ink);font-size:15px;
+color:var(--ink2);max-width:70ch}
+footer p{margin:0 0 8px}
+@media print{body{background:#fff;color:#000}details>*{display:block}.problem{break-inside:avoid}}
 @media (prefers-reduced-motion:no-preference){.seg{transition:flex-grow .3s}}
-@media print{body{background:#fff}details{display:block}details>*{display:block}
-.tile{break-inside:avoid}}
-"""
+""".replace("GRAIN", GRAIN)
 
 
 def e(text: str, limit: int = 300) -> str:
@@ -138,8 +173,8 @@ def _bar(counts: dict[Confidence, int], *, thin: bool = False, name: str = "") -
 
 def _legend() -> str:
     items = "".join(
-        f'<li><span class="dot {cls}" aria-hidden="true"></span><b>{glyph} {label}</b>'
-        f' <span class="muted">{meaning}</span></li>'
+        f'<li><span class="dot {cls}" aria-hidden="true"></span><b>{glyph} {label}</b> '
+        f'<span class="m">{meaning}</span></li>'
         for _, cls, glyph, label, meaning in STATES
     )
     return f'<ul class="legend">{items}</ul>'
@@ -150,19 +185,22 @@ def _kind_counts(summary: Summary, kind: Kind | None) -> dict[Confidence, int]:
     return {conf: counts.get(conf, 0) for conf, *_ in STATES}
 
 
-def _tile(summary: Summary, kind: Kind) -> str:
-    title, unit = KIND_NAMES[kind]
-    counts = _kind_counts(summary, kind)
-    total = sum(counts.values())
-    done = counts[Confidence.EXACT] + counts[Confidence.APPROXIMATE]
-    if total == 0:
-        value, sub = "none", f"No {unit} found"
-    else:
-        value, sub = f"{percent(done, total)}%", f"{done} of {total} {unit} migrated"
-    return (
-        f'<div class="tile"><div class="label">{title}</div><div class="value">{value}</div>'
-        f'<div class="small muted">{sub}</div>{_bar(counts, thin=True, name=title)}</div>'
-    )
+def _ledger(summary: Summary) -> str:
+    """One ruled column per asset type: no boxes, structure comes from the rules."""
+    cols = []
+    for kind in KINDS:
+        if not summary.of(kind):
+            continue
+        title, unit = KIND_NAMES[kind]
+        counts = _kind_counts(summary, kind)
+        total = sum(counts.values())
+        done = counts[Confidence.EXACT] + counts[Confidence.APPROXIMATE]
+        cols.append(
+            f'<div><div class="label">{title}</div><div class="n">{percent(done, total)}%</div>'
+            f'<div class="sub">{done} of {total} {unit} migrated</div>'
+            f"{_bar(counts, thin=True, name=title)}</div>"
+        )
+    return f'<div class="ledger">{"".join(cols)}</div>' if cols else ""
 
 
 def _table(summary: Summary) -> str:
@@ -175,76 +213,84 @@ def _table(summary: Summary) -> str:
         done = counts[Confidence.EXACT] + counts[Confidence.APPROXIMATE]
         name = KIND_NAMES[kind][0] if kind else "All assets"
         cells = "".join(f'<td class="n">{counts[c]}</td>' for c, *_ in STATES)
-        weight = ("<b>", "</b>") if kind is None else ("", "")
         rows.append(
-            f'<tr><td>{weight[0]}{name}{weight[1]}</td><td class="n">{total}</td>{cells}'
+            f"<tr{'' if kind else ' class="total"'}><td>{name}</td>"
+            f'<td class="n">{total}</td>{cells}'
             f'<td class="n">{_share(done, total)}</td>'
             f'<td class="n">{_share(total - done, total)}</td></tr>'
         )
     heads = "".join(f'<th class="n" scope="col">{label}</th>' for _, _, _, label, _ in STATES)
     return (
-        '<table><caption class="muted small" style="text-align:left">Counts behind the '
-        'charts (table view)</caption><thead><tr><th scope="col">Asset type</th>'
+        '<table><caption class="label">Counts behind the chart</caption>'
+        '<thead><tr><th scope="col">Asset type</th>'
         f'<th class="n" scope="col">Total</th>{heads}'
-        '<th class="n" scope="col">Migrated %</th><th class="n" scope="col">Not migrated %</th>'
+        '<th class="n" scope="col">Migrated</th><th class="n" scope="col">Not migrated</th>'
         f"</tr></thead><tbody>{''.join(rows)}</tbody></table>"
     )
 
 
 def _asset_row(asset: Asset, extra: list[str]) -> str:
-    reasons = "".join(f"<li>{e(r)}</li>" for r in asset.reasons[:MAX_REASONS])
-    more = len(asset.reasons) - MAX_REASONS
-    tail = f'<li class="muted">and {more} more</li>' if more > 0 else ""
+    shown = [r for r in asset.reasons if classify(r) is not Category.UNVERIFIED_NAMES] or (
+        asset.reasons
+    )
+    reasons = "".join(f"<li>{e(r)}</li>" for r in shown[:MAX_REASONS])
+    more = len(shown) - MAX_REASONS
+    tail = f"<li>and {more} more</li>" if more > 0 else ""
     also = ""
     if extra:
         steps = "".join(f"<li>{rich(s)}</li>" for s in extra)
-        also = f'<p class="small"><b>Also for this one</b></p><ol>{steps}</ol>'
-    detail = f' <span class="muted">({e(asset.detail)})</span>' if asset.detail else ""
+        also = (
+            '<div class="also"><span class="label">Also for this one</span>'
+            f'<ol class="steps">{steps}</ol></div>'
+        )
+    detail = f' <span class="num">{e(asset.detail)}</span>' if asset.detail else ""
     return (
-        f"<details{' open' if extra else ''}><summary>{e(asset.name, 120)}{detail}</summary>"
-        f'<p class="small muted">{e(asset.source_type, 60)}</p>'
-        f'<ul class="plain small">{reasons}{tail}</ul>{also}</details>'
+        f"<details{' open' if asset.own_steps else ''}>"
+        f"<summary>{e(asset.name, 120)}{detail}</summary>"
+        f'<ul class="why"><li class="label">{e(asset.source_type, 60)}</li>{reasons}{tail}</ul>'
+        f"{also}</details>"
     )
 
 
-def _group(group: Group) -> str:
+def _group(group: Group, number: int) -> str:
     steps = "".join(f"<li>{rich(s)}</li>" for s in group.steps)
     n = len(group.items)
     return (
-        f'<section class="group"><header><h3>{e(group.title, 100)}</h3>'
+        f'<section class="problem"><div class="idx">{number:02d}</div><div>'
+        f"<header><h3>{e(group.title, 100)}</h3>"
         f'<span class="count">{n} asset{"s" if n != 1 else ""}</span></header>'
-        f'<p class="small muted">Manual steps</p><ol>{steps}</ol>'
+        f'<ol class="steps">{steps}</ol>'
         + "".join(_asset_row(a, extra) for a, extra in group.items)
-        + "</section>"
+        + "</div></section>"
     )
 
 
-def _created(summary: Summary) -> str:
+def _state(summary: Summary) -> str:
     if summary.created is None:
         return (
-            '<div class="callout warn"><b>Plan only.</b> Nothing has been created in New Relic. '
-            '"Migrated" below means converted and ready to create.</div>'
+            '<p class="state"><b>Plan only.</b> Nothing has been created in New Relic. '
+            '"Migrated" below means converted and ready to create.</p>'
         )
     made = ", ".join(f"{n} {kind}" for kind, n in sorted(summary.created.items())) or "nothing"
     return (
-        f'<div class="callout"><b>Created in New Relic:</b> {e(made)}. Conditions and workflows '
-        "were created disabled and dashboards private; "
-        "<code>importer rollback</code> removes exactly these.</div>"
+        f'<p class="state"><b>Created in New Relic:</b> {e(made)}. Conditions and workflows were '
+        "created disabled and dashboards private; <code>importer rollback</code> removes "
+        "exactly these.</p>"
     )
 
 
-def _review_notes(summary: Summary) -> str:
+def _review_notes(summary: Summary, number: int) -> str:
     notes = summary.review_notes()
     if not notes:
         return ""
     items = "".join(
-        f'<li>{e(text, 400)} <span class="muted">({n} asset{"s" if n != 1 else ""})</span></li>'
+        f'<li>{e(text, 400)} <span class="num">{n} asset{"s" if n != 1 else ""}</span></li>'
         for text, n in notes
     )
     return (
-        "<h2>Migrated, but read these first</h2>"
-        '<p class="muted">Converted assets carry caveats. These are the most common.</p>'
-        f'<ul class="plain">{items}</ul>'
+        f'<h2><span class="no">{number:02d}</span>Migrated, but read these first</h2>'
+        '<p class="intro">Converted assets carry caveats. These are the most common.</p>'
+        f'<ul class="notes">{items}</ul>'
     )
 
 
@@ -271,55 +317,72 @@ def render_report(
     overall = _kind_counts(summary, None)
     total = sum(overall.values())
     done = overall[Confidence.EXACT] + overall[Confidence.APPROXIMATE]
-    where = " · ".join(
+    where = "<br>".join(
         x
         for x in (
-            f"AWS account {e(aws_account, 20)}" if aws_account else "",
-            e(region, 30),
+            f"AWS account {e(aws_account, 20)} · {e(region, 30)}" if aws_account else e(region, 30),
             f"New Relic account {nr_account}" if nr_account else "",
             stamp,
         )
         if x
     )
     if total == 0:
-        hero = '<p class="hero"><span class="big">0</span><span class="of">assets found</span></p>'
-        body = '<p class="muted">Nothing was found to migrate.</p>'
-    else:
         hero = (
-            f'<p class="hero"><span class="big">{percent(done, total)}%</span>'
-            f'<span class="of">migrated · {done} of {total} assets · '
-            f"{percent(total - done, total)}% not migrated ({total - done})</span></p>"
+            '<div class="hero"><p class="big">0</p><p class="lede">No assets were found, so '
+            "there was nothing to migrate.</p></div>"
         )
-        body = _bar(overall, name="All assets") + _legend()
-    tiles = "".join(_tile(summary, k) for k in KINDS if summary.of(k))
+        chart = '<p class="intro">Nothing was found to migrate.</p>'
+    else:
+        rest = total - done
+        hero = (
+            f'<div class="hero"><div><p class="label">Total completion</p>'
+            f'<p class="big">{percent(done, total)}%</p></div><div>'
+            f'<p class="lede"><b>{done} of {total}</b> assets migrated. '
+            f"{rest} did not ({percent(rest, total)}%) and need a person.</p>"
+            '<p class="label">Share of alarms, dashboards and subscriptions converted</p>'
+            "</div></div>"
+        )
+        chart = _bar(overall, name="All assets") + _legend()
     groups = summary.groups()
+    n = 1
+    sections = [f'<h2><span class="no">{n:02d}</span>What was migrated</h2>{_table(summary)}']
+    n += 1
     if groups:
-        remediation = (
-            "<h2>What was not migrated, and how to fix it</h2>"
-            '<p class="muted">Grouped by problem, largest first. The manual steps are written '
-            "once per group; open an asset to see why it failed.</p>"
-            + "".join(_group(g) for g in groups)
+        sections.append(
+            f'<h2><span class="no">{n:02d}</span>What was not migrated, and how to fix it</h2>'
+            '<p class="intro">Grouped by problem, largest first. The steps are written once per '
+            "problem; open an asset to see why it failed.</p>"
+            + "".join(_group(g, i) for i, g in enumerate(groups, start=1))
         )
     else:
-        remediation = "<h2>What was not migrated</h2><p>Everything found was converted.</p>"
+        sections.append(
+            f'<h2><span class="no">{n:02d}</span>What was not migrated</h2>'
+            '<p class="intro">Everything found was converted.</p>'
+        )
+    n += 1
+    notes = _review_notes(summary, n)
+    if notes:
+        sections.append(notes)
+        n += 1
     checklist = "".join(f"<li>{c}</li>" for c in CHECKLIST)
+    sections.append(
+        f'<h2><span class="no">{n:02d}</span>Before you enable anything</h2>'
+        f'<ol class="steps">{checklist}</ol>'
+    )
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
-        "style-src 'unsafe-inline'\">"
+        "style-src 'unsafe-inline'; img-src data:\">"
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         "<title>Migration report</title>"
         f"<style>{CSS}</style></head><body><main>"
-        f'<h1>Migration report</h1><p class="muted">{where}</p>'
-        f"{_created(summary)}{hero}{body}"
-        f'<div class="tiles">{tiles}</div>'
-        f"<h2>What was migrated</h2>{_table(summary)}"
-        f"{remediation}{_review_notes(summary)}"
-        f"<h2>Before you enable anything</h2><ol>{checklist}</ol>"
-        '<footer class="small muted"><p><b>How this is counted.</b> One alarm, one dashboard, or '
-        "one notification subscription is one asset. Migrated = converted exactly or "
-        "approximately; manual and unsupported = not migrated. Percentages are whole numbers and "
-        "never round to 0 or 100 unless that is exact.</p>"
+        f'<div class="masthead"><h1>Migration report</h1><p class="where">{where}</p></div>'
+        f"{_state(summary)}{hero}{chart}{_ledger(summary)}"
+        f"{''.join(sections)}"
+        "<footer><p><b>How this is counted.</b> One alarm, one dashboard, or one notification "
+        "subscription is one asset. Migrated means converted exactly or approximately; manual "
+        "and unsupported mean not migrated. Percentages are whole numbers and never round to 0 "
+        "or 100 unless that is exact.</p>"
         "<p><b>Private.</b> This file contains alarm and resource names. Review it before "
         "sharing outside the team; <code>importer stats</code> output is the safe summary.</p>"
         "</footer></main></body></html>\n"

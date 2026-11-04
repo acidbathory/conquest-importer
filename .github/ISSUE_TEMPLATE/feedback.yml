@@ -1,0 +1,35 @@
+name: Migration feedback
+description: You ran the importer. Tell us what worked and what did not.
+labels: [feedback]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. **Do not paste** alarm names, account ids, ARNs, email addresses or keys.
+        The output of `importer stats` is safe: it contains no names.
+  - type: textarea
+    id: stats
+    attributes:
+      label: Output of `importer stats out/migration/alerts`
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: completion
+    attributes:
+      label: The "Total completion" line
+      placeholder: "Total completion: 70% (19 of 27 assets migrated, 8 need manual work)"
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to migrate that did not?
+    validations:
+      required: true
+  - type: textarea
+    id: wrong
+    attributes:
+      label: Anything that converted but looked wrong (numbers, thresholds, names)?
+  - type: textarea
+    id: docs
+    attributes:
+      label: Was anything in the docs unclear or wrong?

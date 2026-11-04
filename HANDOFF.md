@@ -14,6 +14,11 @@ Read this, then `CLAUDE.md` (rules), `ROADMAP.md` (plan), `docs/verification-log
 - Gaps and their reasons (not built / needs verification / real mismatch / deliberate) are listed under
   "Known CloudWatch gaps" below and in the 2026-10-05 verification-log section.
 
+## Prerequisites changed (2026-11-04)
+The tool now reads AWS with **boto3** (no AWS CLI) and installs with plain `pip install .`.
+Users need only Python 3.12+, AWS keys (env vars or `--profile`) and, to create things, a New
+Relic API key. See `README.md` and `docs/`. `uv` is for contributors only.
+
 ## What this project is
 "Conquest Importer": a prototype that migrates observability configuration from other platforms
 into New Relic. The owner is a non-coder architect at New Relic who wants to understand the

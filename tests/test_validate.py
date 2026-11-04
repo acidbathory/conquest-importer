@@ -51,12 +51,13 @@ class World:
         self.cw: dict[str, list[dict[str, Any]]] = {}
         self.nr: dict[str, float | None] = {}
         self.sources: dict[str, dict[str, float]] = {}
-        self.aws_calls: list[list[str]] = []
+        self.aws_calls: list[dict[str, Any]] = []
 
-    def runner(self, args: list[str]) -> str:
-        self.aws_calls.append(args)
-        metric = next(a for a in args if a.startswith("--metric-name=")).split("=", 1)[1]
-        return json.dumps({"Datapoints": self.cw.get(metric, [])})
+    def runner(
+        self, service: str, op: str, region: str, profile: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        self.aws_calls.append(params)
+        return {"Datapoints": self.cw.get(params["MetricName"], [])}
 
     def nr_handler(self, request: httpx.Request) -> httpx.Response:
         query = json.loads(request.content)["variables"]["n"]
@@ -191,9 +192,7 @@ def test_dimensions_reach_the_cli_as_one_json_argument(tmp_path: Path) -> None:
         [alarm("t", MetricName="M", Dimensions=[{"Name": "QueueName", "Value": tricky}])],
     )
     (call,) = world.aws_calls
-    dims = next(a for a in call if a.startswith("--dimensions="))
-    assert json.loads(dims.split("=", 1)[1]) == [{"Name": "QueueName", "Value": tricky}]
-    assert sum(a.startswith("--dimensions") for a in call) == 1
+    assert call["Dimensions"] == [{"Name": "QueueName", "Value": tricky}]
 
 
 @pytest.mark.parametrize(
@@ -262,10 +261,8 @@ def test_percentile_alarms_compare_the_extreme_of_the_per_minute_values(tmp_path
     checks = by_name(run(tmp_path, world, [pct]))
     assert checks["pct"].cloudwatch == 9.0 and checks["pct"].status == Status.MATCH
     call = world.aws_calls[0]
-    assert (
-        "--extended-statistics" in call and call[call.index("--extended-statistics") + 1] == "p99"
-    )
-    assert "--statistics" not in call
+    assert call["ExtendedStatistics"] == ["p99"]
+    assert "Statistics" not in call
 
 
 def test_a_below_threshold_percentile_alarm_compares_the_minimum(tmp_path: Path) -> None:
