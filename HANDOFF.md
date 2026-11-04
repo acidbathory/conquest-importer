@@ -94,6 +94,7 @@ then **review the diff by hand** before committing.
   CloudWatch's `ingest.py` (Metric Streams Terraform) lives in its folder; Datadog's API `client.py`
   in its.
 - `src/importer/core/doctor.py` preflight for `importer doctor`
+- `src/importer/core/migration_summary.py` + `report_html.py`: the post-migration HTML report (`importer report`, also written by `migrate`); `remediation.py`: manual steps per kind of failure (a test fails when an unconverted fixture reason has none); `sources/cloudwatch/composite.py`: parses composite-alarm rules and writes specific rebuild steps
 - `scripts/` fixture generators and the Datadog sample-monitor creator (writes to Datadog)
 - `tests/fixtures/` synthetic and real-sanitized inputs; `tests/golden/` expected results
 - `docs/` IR spec, threat model, verification log, decisions

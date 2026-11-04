@@ -22,6 +22,12 @@ uv run importer stats out/cw --out out/stats.md            # the summary to send
 One region per run. The command stops before reading if the signed-in account is not `--account-id`.
 For the one-command version (read, convert, plan; no writes) see `importer migrate --help`.
 
+## The migration report
+`importer migrate` writes `report.html` next to its plan (also standalone:
+`importer report out/migration`). One self-contained page, no network needed: what migrated and
+what did not (counts and percentages per asset type), and for every unmigrated asset the reason
+and the manual steps to fix it, grouped by problem. It contains real names: review before sharing.
+
 ## What to send back
 | Send | Contains | Notes |
 |---|---|---|

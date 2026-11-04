@@ -22,8 +22,12 @@ def load(path: Path) -> list[Alarm]:
 
 def translate(alarms: list[Alarm]) -> list[IRMonitor]:
     prefixes = load_namespace_map()
+    metric = {
+        a.AlarmName: translate_alarm(a, prefixes) for a in alarms if isinstance(a, CloudWatchAlarm)
+    }
+    status = {name: m.confidence for name, m in metric.items()}
     return [
-        translate_composite(a) if isinstance(a, CompositeAlarm) else translate_alarm(a, prefixes)
+        translate_composite(a, status) if isinstance(a, CompositeAlarm) else metric[a.AlarmName]
         for a in alarms
     ]
 

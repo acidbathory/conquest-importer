@@ -173,4 +173,5 @@ class IRMonitor(BaseModel):
     notification: Notification = Notification()
     confidence: Confidence
     reasons: list[str] = []
+    remediation: list[str] = []  # specific manual steps; see core/remediation.py for generic ones
     unmapped: dict[str, Any] = Field(default_factory=dict)

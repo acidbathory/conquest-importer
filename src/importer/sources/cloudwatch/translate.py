@@ -32,6 +32,8 @@ from importer.core.ir import (
     TagFilter,
     Threshold,
 )
+from importer.sources.cloudwatch.composite import analyse_rule
+from importer.sources.cloudwatch.composite import remediation as composite_remediation
 from importer.sources.cloudwatch.models import (
     CloudWatchAlarm,
     CompositeAlarm,
@@ -485,7 +487,9 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
     )
 
 
-def translate_composite(alarm: CompositeAlarm) -> IRMonitor:
+def translate_composite(
+    alarm: CompositeAlarm, child_status: dict[str, Confidence] | None = None
+) -> IRMonitor:
     key = alarm.AlarmArn or alarm.AlarmName
     names = _ALARM_REF.findall(alarm.AlarmRule)
     shown = ", ".join(n[:60] for n in names[:5]) + (" ..." if len(names) > 5 else "")
@@ -503,4 +507,7 @@ def translate_composite(alarm: CompositeAlarm) -> IRMonitor:
         notification=Notification(handles=sorted(set(alarm.AlarmActions))),
         confidence=Confidence.UNSUPPORTED,
         reasons=[reason],
+        remediation=composite_remediation(
+            analyse_rule(alarm.AlarmRule), child_status or {}, sorted(set(alarm.AlarmActions))
+        ),
     )

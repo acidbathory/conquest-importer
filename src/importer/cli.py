@@ -35,8 +35,10 @@ from importer.core.emit.notifications import notifications_terraform
 from importer.core.emit.terraform import terraform_file
 from importer.core.ir import Confidence, IRMonitor
 from importer.core.manifest import CreatedObject, Manifest, load_manifest, save_manifest
+from importer.core.migration_summary import load_summary
 from importer.core.notification_ir import NotificationPlan, build_plan
 from importer.core.report import build_report, md_cell
+from importer.core.report_html import render_report
 from importer.core.rollback import rollback
 from importer.core.secrets import (
     DatadogCredentials,
@@ -673,6 +675,40 @@ def _plan_text(
     return "\n".join(lines) + "\n"
 
 
+def _write_html_report(
+    run: Path, aws_account: str, nr_account: int | None, region: str, target: Path | None = None
+) -> Path:
+    path = target or run / "report.html"
+    summary = load_summary(run)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_report(summary, aws_account=aws_account, nr_account=nr_account, region=region)
+    )
+    return path
+
+
+@app.command("report")
+def report_command(
+    run: Annotated[Path, typer.Argument(help="The --out folder of a `migrate` run")],
+    out: Annotated[
+        Path | None, typer.Option(help="Where to write (default: RUN/report.html)")
+    ] = None,
+    aws_account_id: Annotated[str, typer.Option(help="Shown in the header")] = "",
+    nr_account_id: Annotated[int | None, typer.Option(help="Shown in the header")] = None,
+    region: Annotated[str, typer.Option(help="Shown in the header")] = "",
+) -> None:
+    """Write the post-migration HTML report: what migrated, what did not, and how to fix it.
+
+    Read-only and offline. The file holds alarm and resource names: review it before sharing.
+    """
+    try:
+        target = _write_html_report(run, aws_account_id, nr_account_id, region, out)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"Report written to {target}")
+
+
 @app.command("migrate")
 def migrate_command(
     aws_account_id: Annotated[str, typer.Option(help="AWS account id you expect (12 digits)")],
@@ -767,7 +803,12 @@ def migrate_command(
     (out / "plan.md").write_text(plan)
     typer.echo(f"\nPlan written to {out / 'plan.md'}")
 
+    def report() -> None:
+        path = _write_html_report(out, aws_account_id, nr_account_id, region)
+        typer.echo(f"Report: {path}  (contains names; review before sharing)")
+
     if not do_apply:
+        report()
         typer.echo("PLAN ONLY: nothing was created in New Relic. Add --apply --confirm-account.")
         return
     policy = f"Imported from CloudWatch ({aws_account_id})"
@@ -807,6 +848,7 @@ def migrate_command(
                 manifest=manifest_path,
             ),
         )
+    report()
     undo = f"importer rollback --manifest {manifest_path} --account-id {nr_account_id} --apply"
     typer.echo(f"\nDone. To undo exactly this run: {undo} --confirm-account {nr_account_id}")
 
