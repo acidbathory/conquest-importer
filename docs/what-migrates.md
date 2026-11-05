@@ -155,5 +155,18 @@ a fix, roll back and re-apply.
 
 ## Other platforms
 
-Only AWS CloudWatch is supported today. Other platforms are planned; see the
-[roadmap](../README.md#roadmap).
+AWS CloudWatch is the supported platform. Google Cloud is in progress: `--source gcp` converts
+Cloud Monitoring alert policies from the JSON of `gcloud alpha monitoring policies list
+--format=json`.
+
+- **Converts:** metric threshold conditions (including percentile series for distribution
+  metrics) and log-match conditions with plain terms.
+- **Manual, with steps:** absence, MQL, PromQL, SQL, ratio and forecast conditions, and filters
+  with OR, regular expressions or functions.
+- **Not done yet:** dashboards, notification channels, uptime checks and a scanner that reads the
+  project for you.
+- **Metric names:** checked on real data for Compute Engine and Pub/Sub only. See
+  [the verification note](research/gcp-metric-names-verified.md), including one metric (VM CPU
+  utilization) that did not arrive in New Relic.
+
+Azure and other platforms are planned; see the [roadmap](../README.md#roadmap).

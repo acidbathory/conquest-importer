@@ -26,7 +26,7 @@ not yet checked. Nothing here has been tested against a live GCP project yet.
 
 Dimensional names follow `gcp.<service>.<resource>.<metric>` in snake_case, for example
 `compute.googleapis.com/instance/cpu/utilization` becomes `gcp.compute.instance.cpu.utilization`.
-Counters (delta and cumulative) get a `_count` suffix. The service segment does not always match
+No suffix is added (corrected after the live test: Google's own counter names already end in `_count`). The service segment does not always match
 Google's prefix (GKE is `gcp.kubernetes.io.*`, Cloud Run is `gcp.run.*`, Cloud Storage is
 `gcp.storage.*`), so the converter must use New Relic's mapping table, not a rule.
 

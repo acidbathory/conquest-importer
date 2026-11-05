@@ -54,7 +54,7 @@ def test_a_threshold_policy_becomes_a_metric_condition() -> None:
     assert m.thresholds[0].severity is Severity.WARNING
     assert (m.signal.window_seconds, m.signal.aggregation_window_seconds) == (600, 300)
     assert nrql_for(m) == (
-        "SELECT average(gcp.compute.instance.cpu.utilization) FROM Metric FACET zone"
+        "SELECT average(gcp.compute.instance.cpu.utilization) FROM Metric FACET gcp.zone"
     )
     assert m.notification.message_template == "CPU is high"
 
@@ -81,7 +81,7 @@ def test_a_plain_log_match_becomes_a_log_count() -> None:
     )
 
 
-def test_label_filters_become_scope_and_counters_get_the_count_suffix() -> None:
+def test_label_filters_become_scope_and_counters_keep_google_name() -> None:
     m = translate_policy(
         policy(
             threshold(
@@ -92,8 +92,8 @@ def test_label_filters_become_scope_and_counters_get_the_count_suffix() -> None:
         )
     )[0]
     assert nrql_for(m) == (
-        "SELECT sum(gcp.pubsub.subscription.ack_message_count_count) FROM Metric "
-        "WHERE subscription_id = 's'"
+        "SELECT sum(gcp.pubsub.subscription.ack_message_count) FROM Metric "
+        "WHERE gcp.subscription_id = 's'"
     )
 
 
@@ -108,7 +108,7 @@ def test_label_filters_become_scope_and_counters_get_the_count_suffix() -> None:
         (
             {
                 "aggregations": [
-                    {"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_PERCENTILE_99"}
+                    {"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_PERCENTILE_5"}
                 ]
             },
             "aligner",
@@ -148,11 +148,15 @@ def test_missing_data_active_becomes_a_no_data_alert() -> None:
 
 
 def test_metric_names_follow_the_documented_rule() -> None:
-    assert nr_metric_name("compute.googleapis.com/instance/cpu/utilization", counter=False) == (
+    assert nr_metric_name("compute.googleapis.com/instance/cpu/utilization") == (
         "gcp.compute.instance.cpu.utilization"
     )
-    assert nr_metric_name("kubernetes.io/container/cpu/core_usage_time", counter=True) == (
-        "gcp.kubernetes.io.container.cpu.core_usage_time_count"
+    assert nr_metric_name("kubernetes.io/container/cpu/core_usage_time") == (
+        "gcp.kubernetes.io.container.cpu.core_usage_time"
+    )
+    # Confirmed on live data: no suffix is added, Google's own counter names already end in _count.
+    assert nr_metric_name("compute.googleapis.com/instance/disk/read_bytes_count") == (
+        "gcp.compute.instance.disk.read_bytes_count"
     )
 
 
@@ -168,3 +172,60 @@ def test_quoted_values_may_contain_spaces_and_the_word_and() -> None:
         ("textPayload", "a AND b"),
         ("severity", "ERROR"),
     ]
+
+
+def test_resource_and_metric_labels_use_the_attribute_names_seen_on_live_data() -> None:
+    (m,) = translate_policy(
+        policy(
+            threshold(
+                filter='metric.type="pubsub.googleapis.com/topic/send_request_count" '
+                'AND resource.labels.project_id="p" AND metric.labels.response_code="ok"',
+                aggregations=[
+                    {
+                        "alignmentPeriod": "60s",
+                        "perSeriesAligner": "ALIGN_RATE",
+                        "crossSeriesReducer": "REDUCE_SUM",
+                        "groupByFields": ["resource.label.topic_id"],
+                    }
+                ],
+            )
+        )
+    )
+    assert nrql_for(m) == (
+        "SELECT sum(gcp.pubsub.topic.send_request_count) FROM Metric "
+        "WHERE gcp.projectId = 'p' AND metric.response_code = 'ok' FACET gcp.topic_id"
+    )
+
+
+def test_a_percentile_aligner_uses_the_series_new_relic_publishes() -> None:
+    (m,) = translate_policy(
+        policy(
+            threshold(
+                filter='metric.type="pubsub.googleapis.com/topic/message_sizes"',
+                aggregations=[
+                    {"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_PERCENTILE_99"}
+                ],
+            )
+        )
+    )
+    assert m.confidence is Confidence.APPROXIMATE
+    assert nrql_for(m) == "SELECT average(gcp.pubsub.topic.message_sizes.p99) FROM Metric"
+
+
+def test_a_metric_confirmed_on_live_data_carries_no_naming_warning() -> None:
+    (m,) = translate_policy(
+        policy(threshold(filter='metric.type="pubsub.googleapis.com/topic/send_request_count"'))
+    )
+    assert not any("did not appear in our live test" in r for r in m.reasons)
+
+
+def test_a_metric_never_received_in_the_live_test_says_so() -> None:
+    (m,) = translate_policy(policy(threshold()))  # compute cpu/utilization
+    assert any("never arrived" in r for r in m.reasons)
+
+
+def test_an_unseen_metric_keeps_the_unconfirmed_name_warning() -> None:
+    (m,) = translate_policy(
+        policy(threshold(filter='metric.type="spanner.googleapis.com/instance/cpu/utilization"'))
+    )
+    assert any("did not appear in our live test" in r for r in m.reasons)

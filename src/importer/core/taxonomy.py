@@ -34,7 +34,13 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
         ),
     ),
     # Before the approximation rule: the Metric Streams note says "assumed".
-    (Category.UNVERIFIED_NAMES, re.compile(r"unverified|convention|not yet confirmed")),
+    (
+        Category.UNVERIFIED_NAMES,
+        re.compile(
+            r"unverified|convention|not yet confirmed|check the rest|not confirmed|never arrived"
+            r"|not others"
+        ),
+    ),
     (
         # Before the query rule: "differs from the query" is a note, not a parse failure.
         Category.APPROXIMATION,

@@ -45,3 +45,6 @@ docs/testing-results/
 *.tfplan
 tfplan
 destroyplan
+
+# Local collateral (not for the repo)
+collateral/

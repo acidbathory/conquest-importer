@@ -7,7 +7,9 @@ live data, so every conversion is approximate until they are.
 """
 
 import hashlib
+import json
 import re
+from pathlib import Path
 
 from importer.core.ir import (
     Aggregation,
@@ -47,6 +49,9 @@ ALIGNERS = {
     "ALIGN_SUM": (Aggregation.SUM, False),
     "ALIGN_RATE": (Aggregation.SUM, True),
     "ALIGN_DELTA": (Aggregation.SUM, True),
+    "ALIGN_PERCENTILE_50": (Aggregation.AVG, False),
+    "ALIGN_PERCENTILE_95": (Aggregation.AVG, False),
+    "ALIGN_PERCENTILE_99": (Aggregation.AVG, False),
     "ALIGN_NONE": (Aggregation.AVG, False),
     "": (Aggregation.AVG, False),
 }
@@ -65,15 +70,34 @@ MANUAL_KINDS = {
 SERVICE_SEGMENT = re.compile(r"^(?P<service>[a-z0-9_.]+?)(?:\.googleapis\.com)?/(?P<path>.+)$")
 SAFE_PATH = re.compile(r"^[a-z0-9_/]+$")
 NAMING_NOTE = (
-    "metric and attribute names follow New Relic's documented rule for Google Cloud metrics "
-    "(a gcp. prefix, then the service and metric path; counters end in _count) but are not "
-    "yet confirmed against live data; run `importer validate` once data flows"
+    "this metric did not appear in our live test, so its New Relic name follows the documented "
+    "rule (a gcp. prefix, then the service and metric path) and is not confirmed; check it with "
+    "`importer validate` once data flows"
 )
 LOG_NOTE = (
     "converts to a count of Log events, so the project's logs must be forwarded to New Relic; "
     "attribute names for forwarded Google Cloud logs are not yet confirmed"
 )
+LABEL_NOTE = (
+    "label attributes such as gcp.zone and gcp.instance_id are on some New Relic metrics and not "
+    "others (event-style metrics carry only fullResourceName and the project); if the query "
+    "returns nothing, filter on fullResourceName instead"
+)
+MISSING_NOTE = (
+    "New Relic documents this metric and Google has it, but it never arrived in our live test "
+    "(over an hour on a new VM), so the converted query may return no data; check before you "
+    "enable it"
+)
+VERIFIED_PATH = Path(__file__).with_name("gcp_verified.json")
 AGGREGATION_DELAY_SECONDS = 120  # Cloud Monitoring can delay metrics by 2 to 3 minutes
+
+
+def _load_verified() -> tuple[frozenset[str], frozenset[str]]:
+    data = json.loads(VERIFIED_PATH.read_text())
+    return frozenset(data["received"]), frozenset(data["documented_not_received"])
+
+
+RECEIVED, NOT_RECEIVED = _load_verified()
 
 
 class _Fail(Exception):
@@ -87,19 +111,35 @@ def source_id(key: str) -> int:
     return int(hashlib.sha256(key.encode()).hexdigest()[:12], 16)
 
 
-def nr_metric_name(metric_type: str, *, counter: bool) -> str:
-    """New Relic's name for a Cloud Monitoring metric type, by the documented rule."""
+def nr_metric_name(metric_type: str) -> str:
+    """New Relic's name for a Cloud Monitoring metric type.
+
+    Confirmed on live data: `gcp.` plus the service and the metric path with dots, and the name
+    is otherwise unchanged. No suffix is added: Google's own counter names already end in
+    `_count` where they should (`disk/read_bytes_count`).
+    """
     match = SERVICE_SEGMENT.match(metric_type)
     if match is None or not SAFE_PATH.match(match["path"]):
         raise _Fail(Confidence.MANUAL, f"metric type {metric_type!r} is not a recognised name")
-    name = f"gcp.{match['service']}.{match['path'].replace('/', '.')}"
-    return name + "_count" if counter else name
+    return f"gcp.{match['service']}.{match['path'].replace('/', '.')}"
+
+
+PROJECT_LABELS = {"project_id": "gcp.projectId"}
 
 
 def _label_name(field: str) -> str | None:
-    for prefix in ("resource.labels.", "resource.label.", "metric.labels.", "metric.label."):
+    """New Relic's attribute for a Cloud Monitoring label (confirmed on live data).
+
+    Resource labels become `gcp.<label>` (`gcp.zone`, `gcp.instance_id`, `gcp.topic_id`); the
+    project is `gcp.projectId`; metric labels become `metric.<label>`.
+    """
+    for prefix in ("resource.labels.", "resource.label."):
         if field.startswith(prefix):
-            return field[len(prefix) :]
+            label = field[len(prefix) :]
+            return PROJECT_LABELS.get(label, f"gcp.{label}")
+    for prefix in ("metric.labels.", "metric.label."):
+        if field.startswith(prefix):
+            return f"metric.{field[len(prefix) :]}"
     return None
 
 
@@ -168,9 +208,16 @@ def _metric_condition(
         metric_type, scope, scope_notes = _scope(parse_filter(str(body.get("filter", ""))))
     except FilterError as err:
         raise _Fail(Confidence.MANUAL, f"filter not supported: {err}") from err
-    name = nr_metric_name(metric_type, counter=counter)
+    name = nr_metric_name(metric_type)
+    if aligner.startswith("ALIGN_PERCENTILE_"):
+        name += "." + "p" + aligner.rsplit("_", 1)[1]
+        notes.append(
+            "a distribution metric: New Relic publishes the percentile as its own series, "
+            "already computed for each polling interval"
+        )
     if counter:
-        notes.append("a counter metric: New Relic stores the change per interval (_count)")
+        notes.append("a counter metric: New Relic stores the change in each polling interval")
+    notes += _name_notes(name, aligner, uses_labels=bool(scope or group_by))
     term = MetricTerm(
         metric=metric_type,
         space_aggregation=aggregation,
@@ -180,6 +227,19 @@ def _metric_condition(
         terms={"a": term}, aggregation=aggregation, scope=scope, group_by=group_by
     )
     return signal, period, max(duration, period), [*scope_notes, *notes]
+
+
+def _name_notes(name: str, aligner: str, *, uses_labels: bool) -> list[str]:
+    """Say what is and is not confirmed about the New Relic name and attributes."""
+    notes: list[str] = []
+    base = name.rsplit(".", 1)[0] if aligner.startswith("ALIGN_PERCENTILE_") else name
+    if base in NOT_RECEIVED:
+        notes.append(MISSING_NOTE)
+    elif base not in RECEIVED:
+        notes.append(NAMING_NOTE)
+    if uses_labels:
+        notes.append(LABEL_NOTE)
+    return notes
 
 
 def _log_count(body: dict[str, object]) -> CountSignal:
@@ -260,7 +320,7 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
                     Confidence.MANUAL, f"comparison {body.get('comparison')!r} is not supported"
                 )
             metric, period, duration, notes = _metric_condition(body)
-            reasons += [NAMING_NOTE, *notes]
+            reasons += notes
             missing = str(body.get("evaluationMissingData", ""))
             if missing.endswith("_ACTIVE"):
                 no_data = NoData(notify=True, timeout_minutes=max(1, duration // 60))
