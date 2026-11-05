@@ -19,7 +19,7 @@ from importer.core.apply import (
 from importer.core.text import printable
 
 KEY = "NRAK-SECRET-KEY-123"
-FIXTURES = Path(__file__).parent / "fixtures" / "datadog"
+FIXTURES = Path(__file__).parent / "fixtures" / "cloudwatch-real"
 
 
 class FakeNewRelic:
@@ -72,7 +72,9 @@ def client_for(fake: FakeNewRelic, sleeps: list[float] | None = None) -> NewReli
 @pytest.fixture(scope="module")
 def converted(tmp_path_factory: pytest.TempPathFactory) -> Path:
     out = tmp_path_factory.mktemp("converted")
-    result = CliRunner().invoke(app, ["convert", "--in", str(FIXTURES), "--out", str(out)])
+    result = CliRunner().invoke(
+        app, ["convert", "--source", "cloudwatch", "--in", str(FIXTURES), "--out", str(out)]
+    )
     assert result.exit_code == 0, result.output
     return out
 
@@ -82,8 +84,8 @@ def converted(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 def test_plan_contains_only_emittable_monitors(converted: Path) -> None:
     plan = load_plan(converted / "ir")
-    assert len(plan.items) == 21
-    assert plan.skipped == 9
+    assert len(plan.items) == 8
+    assert plan.skipped == 1
     assert all(i.nrql.startswith("SELECT") for i in plan.items)
 
 
@@ -131,7 +133,7 @@ def test_cli_dry_run_sends_nothing_and_needs_no_key(
     result = CliRunner().invoke(app, ["apply", "--in", str(converted), "--account-id", "123"])
     assert result.exit_code == 0, result.output
     assert "DRY RUN" in result.output
-    assert "21 conditions" in result.output
+    assert "8 conditions" in result.output
 
 
 @pytest.mark.parametrize(
@@ -170,9 +172,9 @@ def test_apply_creates_policy_and_disabled_conditions(converted: Path) -> None:
     plan = load_plan(converted / "ir")
     fake = FakeNewRelic()
     with client_for(fake) as client:
-        result = apply_plan(client, 123, "Imported from Datadog", plan)
-    assert len(result.created) == 21 and not result.failed
-    assert fake.policies == {"Imported from Datadog": "555"}
+        result = apply_plan(client, 123, "Imported by Conquest Importer", plan)
+    assert len(result.created) == 8 and not result.failed
+    assert fake.policies == {"Imported by Conquest Importer": "555"}
     first = fake.creates()[0]["variables"]
     assert first["accountId"] == 123
     assert first["policyId"] == "555"
@@ -184,11 +186,11 @@ def test_apply_creates_policy_and_disabled_conditions(converted: Path) -> None:
 def test_apply_reuses_policy_and_skips_existing_conditions(converted: Path) -> None:
     plan = load_plan(converted / "ir")
     already = plan.items[0].name
-    fake = FakeNewRelic(policies=["Imported from Datadog"], conditions=[already])
+    fake = FakeNewRelic(policies=["Imported by Conquest Importer"], conditions=[already])
     with client_for(fake) as client:
-        result = apply_plan(client, 123, "Imported from Datadog", plan)
+        result = apply_plan(client, 123, "Imported by Conquest Importer", plan)
     assert result.skipped_existing == [already]
-    assert len(result.created) == 20
+    assert len(result.created) == 7
     assert not any("alertsPolicyCreate" in c["query"] for c in fake.calls)
 
 
@@ -200,7 +202,7 @@ def test_rerun_creates_nothing_new(converted: Path) -> None:
         second = apply_plan(client, 123, "P", plan)
     assert not second.created
     assert len(second.skipped_existing) == len({i.name for i in plan.items})
-    assert len(fake.creates()) == 21
+    assert len(fake.creates()) == 8
 
 
 def test_create_is_never_retried(converted: Path) -> None:
@@ -210,8 +212,8 @@ def test_create_is_never_retried(converted: Path) -> None:
     sleeps: list[float] = []
     with client_for(fake, sleeps) as client:
         result = apply_plan(client, 123, "P", plan)
-    assert len(result.failed) == 21
-    assert len(fake.creates()) == 21  # exactly one attempt each
+    assert len(result.failed) == 8
+    assert len(fake.creates()) == 8  # exactly one attempt each
     assert sleeps == []
 
 

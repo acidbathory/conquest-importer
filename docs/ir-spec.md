@@ -1,9 +1,9 @@
 # IR Spec (v0.1, draft for review)
 
-The IR is the vendor-neutral middle of the pipeline. The source of truth is `src/importer/models/ir.py`; this document explains the rules.
+The IR is the vendor-neutral middle of the pipeline. The source of truth is `src/importer/core/ir.py`; this document explains the rules.
 
 ```
-Datadog JSON -> DatadogMonitor -> [translate] -> IRMonitor -> [emit] -> NerdGraph JSON | Terraform HCL
+Source JSON -> source models -> [translate] -> IRMonitor -> [emit] -> NerdGraph JSON | Terraform HCL
                                                           \-> [report] -> report.md
 ```
 
@@ -35,14 +35,11 @@ Datadog JSON -> DatadogMonitor -> [translate] -> IRMonitor -> [emit] -> NerdGrap
 5. Conditions are emitted **disabled**.
 
 ## Metric mapping
-`src/importer/translate/metric_map.json` maps Datadog metric names to a New Relic event and attribute, with an optional unit `scale` and a `note` that marks the mapping approximate. It is the main extension point and is **unverified** against a live New Relic account.
+Each source keeps its own mapping tables next to its translator (for CloudWatch, `cloudwatch_map.json`
+and its dimension and suffix files). Names are unverified until checked against live New Relic data,
+and every conversion says so. See `docs/research/metric-names-verified.md`.
 
-## Supported query forms
-- **Metric:** `agg(last_N):space:metric{scope} by {tags}` including arithmetic (`+ - * /`, parentheses) between metrics that live on the same New Relic event with the same scope and grouping.
-- **Log / APM count:** `logs("k:v -k:v k:v*")` and `trace-analytics(...)` with `rollup("count")`, optional `by(...)`.
-- **Service check:** `"datadog.agent.up".over("*")` becomes a heartbeat (count of agent samples plus signal-loss expiration).
-
-## CloudWatch (second source)
+## CloudWatch
 Input is the JSON from `aws cloudwatch describe-alarms` (a file or folder); no AWS credentials are handled. Mapping:
 - **Period / EvaluationPeriods / DatapointsToAlarm** become the aggregation window, the breach duration and the occurrences setting. N of N is `all`, 1 of N is `at_least_once` (both exact); other M of N is approximated as M consecutive breaches and flagged.
 - **Statistic** Average/Sum/Minimum/Maximum are supported. Percentiles, SampleCount and anomaly detection are manual.
@@ -58,6 +55,13 @@ Anomaly/forecast/outlier, composite, SLO/process/other types, non-count log roll
 Settings that are not migrated (priority, renotify, evaluation delay, ...) are listed per monitor and downgrade it to `approximate`. Defaults and record metadata are ignored.
 
 ## Open questions
-1. Window semantics: Datadog evaluates a single aggregate over the window; the emitted conditions use 1-minute windows with a breach duration. Should the emitter use sliding windows instead?
+1. Window semantics: a source evaluates one aggregate over its window; the emitted conditions use the aggregation window with a breach duration. Should the emitter use sliding windows instead?
 2. Should notification handles be mapped through a user-supplied file (handle to New Relic destination)?
-3. Which tag names should be mapped by default (`host` only today)?
+3. Should sources share a table of common attribute names, or keep mapping their own?
+
+## Google Cloud
+Input is the JSON from `gcloud alpha monitoring policies list --format=json`. One IR monitor is made per condition.
+- **Threshold conditions** become metric conditions: `alignmentPeriod` is the aggregation window, `duration` the breach duration, `perSeriesAligner` the aggregation, `groupByFields` the facet, and `metric.labels` / `resource.labels` equality terms the scope.
+- **Metric names** follow New Relic's documented rule (`gcp.<service>.<metric path>`, counters end in `_count`). Unverified.
+- **Log-match conditions** with plain terms become a count of `Log` events; ranges and OR stay manual.
+- **Absence, MQL, PromQL, SQL, ratio and forecast** conditions are manual with steps. Notification channels are listed, never migrated.

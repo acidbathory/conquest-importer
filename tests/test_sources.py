@@ -9,14 +9,13 @@ from importer.sources import REGISTRY
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SAMPLE_INPUT = {
-    "datadog": FIXTURES / "datadog",
     "cloudwatch": FIXTURES / "cloudwatch-real",
     "gcp": FIXTURES / "gcp",
 }
 
 
 def test_every_source_is_registered_and_has_a_sample_input() -> None:
-    assert sorted(REGISTRY) == ["cloudwatch", "datadog", "gcp"]
+    assert sorted(REGISTRY) == ["cloudwatch", "gcp"]
     assert sorted(SAMPLE_INPUT) == sorted(REGISTRY)
 
 
@@ -45,4 +44,4 @@ def test_unknown_source_is_rejected_by_cli(tmp_path: Path) -> None:
         app, ["convert", "--source", "nope", "--in", str(tmp_path), "--out", str(tmp_path / "o")]
     )
     assert result.exit_code == 1
-    assert "cloudwatch" in result.output and "datadog" in result.output
+    assert "cloudwatch" in result.output and "gcp" in result.output

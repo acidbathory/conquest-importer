@@ -1,7 +1,6 @@
 """Command line entry point. Commands are added as each pipeline stage lands."""
 
 import json
-import logging
 import os
 import sys
 import webbrowser
@@ -46,9 +45,7 @@ from importer.core.report import build_report, md_cell
 from importer.core.report_html import render_report
 from importer.core.rollback import rollback
 from importer.core.secrets import (
-    DatadogCredentials,
     MissingSecretError,
-    RedactingFilter,
     require_env,
 )
 from importer.core.stats import build_stats, load_run, render_markdown
@@ -69,7 +66,6 @@ from importer.sources.cloudwatch.models import load_alarms
 from importer.sources.cloudwatch.notifications import load_topics, routing, translate_topic
 from importer.sources.cloudwatch.streaming import streaming_inputs
 from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
-from importer.sources.datadog.client import DatadogAPIError, DatadogClient, InvalidSiteError
 
 app = typer.Typer(
     help="Convert observability alerts from other platforms to New Relic alert conditions.",
@@ -97,11 +93,11 @@ def version() -> None:
 def convert(
     source: Annotated[
         Path, typer.Option("--in", help="Directory of extracted monitor JSON")
-    ] = Path("out/datadog"),
+    ] = Path("out/cloudwatch"),
     out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/converted"),
     source_system: Annotated[
         str, typer.Option("--source", help="Source platform: " + ", ".join(sorted(REGISTRY)))
-    ] = "datadog",
+    ] = "cloudwatch",
 ) -> None:
     """Convert extracted alarms to IR, NerdGraph payloads, Terraform and a report.
 
@@ -246,7 +242,7 @@ def apply(
     account_id: Annotated[int, typer.Option(help="New Relic TEST account id")] = 0,
     region: Annotated[str, typer.Option(help="us or eu")] = "us",
     policy_name: Annotated[str, typer.Option(help="Alert policy to create or reuse")] = (
-        "Imported from Datadog"
+        "Imported by Conquest Importer"
     ),
     do_apply: Annotated[
         bool, typer.Option("--apply", help="Actually create conditions (default: dry run)")
@@ -1245,29 +1241,3 @@ def ingest_setup(
     )
     typer.echo("  terraform init && terraform plan")
     typer.echo("Note: Terraform state will contain the license key. Protect it.")
-
-
-@app.command(hidden=True)
-def extract(
-    out: Annotated[Path, typer.Option(help="Directory for monitor JSON files")] = Path(
-        "out/datadog"
-    ),
-) -> None:
-    """Download all monitors from Datadog (read-only) and save one JSON file per monitor."""
-    try:
-        creds = DatadogCredentials.from_env()
-        logging.basicConfig(level=logging.INFO)
-        for handler in logging.getLogger().handlers:
-            handler.addFilter(RedactingFilter([creds.api_key, creds.app_key]))
-        out.mkdir(parents=True, exist_ok=True)
-        count = 0
-        with DatadogClient(creds) as client:
-            for monitor in client.list_monitors():
-                # File names use the numeric id only: monitor names are untrusted text.
-                path = out / f"{monitor.id}.json"
-                path.write_text(json.dumps(monitor.model_dump(mode="json"), indent=2) + "\n")
-                count += 1
-    except (MissingSecretError, InvalidSiteError, DatadogAPIError) as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from None
-    typer.echo(f"Saved {count} monitors to {out}")

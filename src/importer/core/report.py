@@ -11,11 +11,6 @@ COMMON_NOTES = [
     "Metric and tag mappings are unverified against a live New Relic account.",
 ]
 SOURCE_NOTES = {
-    "datadog": [
-        "Datadog evaluates one value over the whole window (for example avg over 5 minutes). "
-        "The New Relic conditions evaluate 1-minute values and require a breach for the full "
-        "duration. The behaviour is close but not identical; review before enabling.",
-    ],
     "cloudwatch": [
         "CloudWatch periods, evaluation periods and datapoints map directly to New Relic "
         "aggregation windows and breach durations. 'M of N' alarms (0 < M < N) are approximated "
@@ -34,7 +29,7 @@ def md_cell(text: str, limit: int = 120) -> str:
     return text
 
 
-def build_report(monitors: list[IRMonitor], emitted_ids: set[int], source: str = "datadog") -> str:
+def build_report(monitors: list[IRMonitor], emitted_ids: set[int], source: str) -> str:
     counts = Counter(m.confidence for m in monitors)
     total = len(monitors)
     converted = len(emitted_ids)

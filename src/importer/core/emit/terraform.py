@@ -27,7 +27,7 @@ HEADER = """terraform {
 provider "newrelic" {}
 
 resource "newrelic_alert_policy" "imported" {
-  name = "Imported from Datadog"
+  name = "Imported by Conquest Importer"
 }
 """
 

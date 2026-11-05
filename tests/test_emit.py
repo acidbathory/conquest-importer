@@ -1,8 +1,6 @@
-import json
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
 
 import pytest
 from typer.testing import CliRunner
@@ -11,35 +9,74 @@ from importer.cli import app
 from importer.core.emit.common import CannotEmit
 from importer.core.emit.nerdgraph import MUTATION, nerdgraph_payload
 from importer.core.emit.terraform import hcl_string, resource_block, terraform_file
-from importer.core.ir import Confidence, IRMonitor
+from importer.core.ir import (
+    Aggregation,
+    Confidence,
+    IRMonitor,
+    MetricSignal,
+    MetricTerm,
+    NoData,
+    NrTarget,
+    Operator,
+    Severity,
+    Signal,
+    SignalKind,
+    Threshold,
+)
 from importer.core.report import build_report, md_cell
-from importer.sources.datadog.models import DatadogMonitor
-from importer.sources.datadog.translate import load_metric_map, translate_monitor
 
-METRIC_MAP = load_metric_map()
-SCRIPTS = Path(__file__).parent.parent / "scripts"
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
-def convert(name: str = "CPU high", query: str | None = None, **kw: Any) -> IRMonitor:
-    m = DatadogMonitor(
-        id=7,
-        name=name,
-        type="metric alert",
-        query=query or "avg(last_5m):avg:system.cpu.user{*} by {host} > 90",
-        **kw,
+def convert(
+    name: str = "CPU high",
+    *,
+    window: int = 300,
+    notify_no_data: bool = False,
+    no_data_minutes: int = 10,
+    confidence: Confidence = Confidence.APPROXIMATE,
+    warning: float | None = None,
+) -> IRMonitor:
+    """A converted CPU monitor, built directly so these tests cover only the emitters."""
+    term = MetricTerm(
+        metric="cpu",
+        space_aggregation=Aggregation.AVG,
+        nr_target=NrTarget(event="Metric", attribute="aws.ec2.CPUUtilization"),
     )
-    return translate_monitor(m, METRIC_MAP)
+    thresholds = [Threshold(severity=Severity.CRITICAL, operator=Operator.ABOVE, value=90)]
+    if warning is not None:
+        thresholds.append(
+            Threshold(severity=Severity.WARNING, operator=Operator.ABOVE, value=warning)
+        )
+    return IRMonitor(
+        source_system="cloudwatch",
+        source_id=7,
+        source_type="metric alarm",
+        name=name,
+        signal=Signal(
+            kind=SignalKind.METRIC,
+            raw_query=name,
+            window_seconds=window,
+            aggregation_window_seconds=60,
+            metric=MetricSignal(
+                terms={"a": term}, aggregation=Aggregation.AVG, group_by=["InstanceId"]
+            ),
+        ),
+        thresholds=thresholds,
+        no_data=NoData(notify=notify_no_data, timeout_minutes=no_data_minutes),
+        confidence=confidence,
+    )
 
 
 # --- NerdGraph ------------------------------------------------------------
 
 
 def test_nerdgraph_payload_shape() -> None:
-    ir = convert(options={"thresholds": {"critical": 90, "warning": 80}})
+    ir = convert(warning=80)
     p = nerdgraph_payload(ir)
     cond = p["variables"]["condition"]
     assert cond["nrql"]["query"] == (
-        "SELECT average(cpuUserPercent) FROM SystemSample FACET hostname"
+        "SELECT average(aws.ec2.CPUUtilization) FROM Metric FACET InstanceId"
     )
     assert cond["enabled"] is False
     assert [t["priority"] for t in cond["terms"]] == ["CRITICAL", "WARNING"]
@@ -56,20 +93,20 @@ def test_nerdgraph_query_is_constant_and_untrusted_text_stays_in_variables() -> 
 
 
 def test_no_data_becomes_expiration() -> None:
-    ir = convert(options={"notify_no_data": True, "no_data_timeframe": 10})
+    ir = convert(notify_no_data=True, no_data_minutes=10)
     cond = nerdgraph_payload(ir)["variables"]["condition"]
     assert cond["expiration"]["expirationDuration"] == 600
 
 
 def test_manual_monitor_cannot_be_emitted() -> None:
-    ir = convert(query="avg(last_5m):avg:custom.unknown{*} > 1")
+    ir = convert(confidence=Confidence.MANUAL)
     assert ir.confidence == Confidence.MANUAL
     with pytest.raises(CannotEmit):
         nerdgraph_payload(ir)
 
 
 def test_window_outside_range_cannot_be_emitted() -> None:
-    ir = convert(query="avg(last_1w):avg:system.cpu.user{*} > 90")
+    ir = convert(window=7 * 86400)
     with pytest.raises(CannotEmit, match="window"):
         nerdgraph_payload(ir)
 
@@ -129,8 +166,8 @@ def test_md_cell_neutralises_markdown_and_newlines() -> None:
 
 def test_report_counts() -> None:
     good = convert()
-    bad = convert(query="avg(last_5m):avg:custom.unknown{*} > 1")
-    report = build_report([good, bad], {good.source_id})
+    bad = convert(confidence=Confidence.MANUAL)
+    report = build_report([good, bad], {good.source_id}, "cloudwatch")
     assert "Monitors read: **2**" in report
     assert "Emitted as conditions: **1**" in report
 
@@ -138,27 +175,16 @@ def test_report_counts() -> None:
 # --- End to end -----------------------------------------------------------
 
 
-def test_end_to_end_on_sample_definitions(tmp_path: Path) -> None:
-    defs = json.loads((SCRIPTS / "sample_monitors.json").read_text())
-    src = tmp_path / "dd"
-    src.mkdir()
-    for i, d in enumerate(defs, start=1000):
-        d = {
-            **d,
-            "id": i,
-            "query": d["query"].replace("{ref:cpu_high}", "1").replace("{ref:mem_high}", "2"),
-        }
-        d.pop("ref", None)
-        (src / f"{i}.json").write_text(json.dumps(d))
+def test_end_to_end_on_real_cloudwatch_alarms(tmp_path: Path) -> None:
     out = tmp_path / "out"
-    result = CliRunner().invoke(app, ["convert", "--in", str(src), "--out", str(out)])
+    args = ["convert", "--source", "cloudwatch", "--in", str(FIXTURES / "cloudwatch-real")]
+    result = CliRunner().invoke(app, [*args, "--out", str(out)])
     assert result.exit_code == 0, result.output
     assert (out / "report.md").exists()
     assert (out / "main.tf").read_text().count("newrelic_nrql_alert_condition") >= 5
-    emitted = list((out / "nerdgraph").glob("*.json"))
-    assert 5 <= len(emitted) < 20
+    assert len(list((out / "nerdgraph").glob("*.json"))) >= 5
     report = (out / "report.md").read_text()
-    assert "Monitors read: **20**" in report
+    assert "Monitors read: **9**" in report
     for c in ("exact", "approximate", "manual", "unsupported"):
         assert f"| {c} |" in report
 

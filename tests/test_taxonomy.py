@@ -52,7 +52,7 @@ def test_classify(reason: str, category: Category) -> None:
 
 @pytest.mark.parametrize(
     ("source", "folder"),
-    [("datadog", "datadog"), ("cloudwatch", "cloudwatch"), ("cloudwatch", "cloudwatch-real")],
+    [("gcp", "gcp"), ("cloudwatch", "cloudwatch"), ("cloudwatch", "cloudwatch-real")],
 )
 def test_every_reason_in_the_fixtures_is_categorised(source: str, folder: str) -> None:
     monitors = REGISTRY[source].convert(FIXTURES / folder)

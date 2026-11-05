@@ -99,9 +99,9 @@ def test_a_reason_repeated_on_one_monitor_counts_once() -> None:
 def test_sources_are_reported_separately() -> None:
     runs = [
         Run(Path("a"), [_monitor(Confidence.EXACT, [])]),
-        Run(Path("b"), REGISTRY["datadog"].convert(FIXTURES / "datadog")),
+        Run(Path("b"), REGISTRY["gcp"].convert(FIXTURES / "gcp")),
     ]
-    assert list(build_stats(runs)) == ["cloudwatch", "datadog"]
+    assert list(build_stats(runs)) == ["cloudwatch", "gcp"]
 
 
 def test_hostile_text_cannot_reach_output() -> None:
@@ -120,8 +120,8 @@ def test_load_run_rejects_folder_without_ir(tmp_path: Path) -> None:
 
 def test_cli_end_to_end(tmp_path: Path) -> None:
     runner = CliRunner()
-    for name, src in (("cw", "cloudwatch-real"), ("dd", "datadog")):
-        source = "cloudwatch" if name == "cw" else "datadog"
+    for name, src in (("cw", "cloudwatch-real"), ("gcp", "gcp")):
+        source = "cloudwatch" if name == "cw" else "gcp"
         res = runner.invoke(
             app,
             [
@@ -137,10 +137,10 @@ def test_cli_end_to_end(tmp_path: Path) -> None:
         assert res.exit_code == 0, res.output
     report = tmp_path / "stats.md"
     res = runner.invoke(
-        app, ["stats", str(tmp_path / "cw"), str(tmp_path / "dd"), "--out", str(report)]
+        app, ["stats", str(tmp_path / "cw"), str(tmp_path / "gcp"), "--out", str(report)]
     )
     assert res.exit_code == 0, res.output
-    assert "## cloudwatch: 9 monitors" in res.output and "## datadog:" in res.output
+    assert "## cloudwatch: 9 monitors" in res.output and "## gcp:" in res.output
     assert report.read_text() == res.output
 
 

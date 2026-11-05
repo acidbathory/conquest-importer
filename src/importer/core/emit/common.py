@@ -3,7 +3,8 @@
 from importer.core.emit.nrql import build_nrql
 from importer.core.ir import Confidence, IRMonitor, SignalKind
 
-# A Datadog "avg over last 5m" becomes: evaluate 1-minute windows, breach for 5 minutes.
+# A source "avg over the last 5 minutes" is evaluated as 1-minute windows that must breach
+# for 5 minutes.
 # This is a close but not identical semantic; the report states it once for all monitors.
 AGGREGATION_WINDOW_SECONDS = 60
 AGGREGATION_DELAY_SECONDS = 120
@@ -15,8 +16,8 @@ EMITTABLE_KINDS = (SignalKind.METRIC, SignalKind.LOG, SignalKind.APM, SignalKind
 MAX_NAME_LENGTH = 128
 MIN_AGGREGATION_WINDOW_SECONDS = 30
 MAX_AGGREGATION_WINDOW_SECONDS = 3600
-SOURCE_LABELS = {"datadog": "Datadog monitor", "cloudwatch": "CloudWatch alarm"}
-RESOURCE_PREFIXES = {"datadog": "dd", "cloudwatch": "cw"}
+SOURCE_LABELS = {"cloudwatch": "CloudWatch alarm", "gcp": "Google Cloud alert policy"}
+RESOURCE_PREFIXES = {"cloudwatch": "cw", "gcp": "gcp"}
 
 
 def condition_name(name: str) -> str:

@@ -30,26 +30,15 @@ NRQL_FUNCTIONS = {
     Aggregation.MAX: "max",
     Aggregation.SUM: "sum",
 }
-# Datadog tag/attribute -> New Relic attribute, per data type. Anything not listed is used
-# as-is and flagged as unverified by the translator.
-TAG_ATTRIBUTES = {
-    SignalKind.METRIC: {"host": "hostname", "service": "appName"},
-    SignalKind.LOG: {"host": "hostname", "status": "level"},
-    SignalKind.APM: {"service": "appName", "host": "host"},
-    SignalKind.HEARTBEAT: {"host": "hostname"},
-}
-# Search terms that become a fixed predicate instead of an equality test.
-SPECIAL_PREDICATES = {
-    (SignalKind.APM, "status", "error"): ("error IS true", "error IS NOT true"),
-}
 COUNT_EVENTS = {SignalKind.LOG: "Log", SignalKind.APM: "Transaction"}
 PRECEDENCE = {"+": 1, "-": 1, "*": 2, "/": 2}
 MAX_ALIAS = 100
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]*$")
 
 
-def attribute_for(kind: SignalKind, key: str) -> str:
-    return TAG_ATTRIBUTES[kind].get(key, key)
+def attribute_for(kind: SignalKind, key: str) -> str:  # noqa: ARG001 - kept for call-site clarity
+    """Source attribute names are used as they are; each source maps its own names."""
+    return key
 
 
 def quote_string(value: str) -> str:
@@ -142,9 +131,6 @@ def widget_nrql(series: Series, timeseries: bool) -> str:
 
 
 def _filter_clause(kind: SignalKind, f: CountFilter) -> str:
-    special = SPECIAL_PREDICATES.get((kind, f.key, f.value))
-    if special:
-        return special[1] if f.negate else special[0]
     attr = identifier(attribute_for(kind, f.key))
     if f.wildcard:
         op = "NOT LIKE" if f.negate else "LIKE"

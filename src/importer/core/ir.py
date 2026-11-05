@@ -173,7 +173,7 @@ class Notification(BaseModel):
 
 
 class IRMonitor(BaseModel):
-    source_system: str = "datadog"
+    source_system: str
     source_id: int
     source_key: str = ""  # original identifier when it is not an integer (for example an ARN)
     source_type: str

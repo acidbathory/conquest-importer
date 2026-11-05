@@ -5,7 +5,6 @@ from pydantic import SecretStr
 
 from importer.core.secrets import (
     REDACTED,
-    DatadogCredentials,
     MissingSecretError,
     RedactingFilter,
     redact,
@@ -16,24 +15,15 @@ KEY = "dd-super-secret-123"
 
 
 def test_require_env_missing_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("DD_API_KEY", raising=False)
+    monkeypatch.delenv("TEST_SECRET_KEY", raising=False)
     with pytest.raises(MissingSecretError):
-        require_env("DD_API_KEY")
+        require_env("TEST_SECRET_KEY")
 
 
 def test_require_env_blank_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("DD_API_KEY", "   ")
+    monkeypatch.setenv("TEST_SECRET_KEY", "   ")
     with pytest.raises(MissingSecretError):
-        require_env("DD_API_KEY")
-
-
-def test_credentials_repr_hides_keys(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("DD_API_KEY", KEY)
-    monkeypatch.setenv("DD_APP_KEY", "app-key-456")
-    creds = DatadogCredentials.from_env()
-    assert KEY not in repr(creds)
-    assert KEY not in str(creds)
-    assert "app-key-456" not in repr(creds)
+        require_env("TEST_SECRET_KEY")
 
 
 def test_redact_replaces_secret() -> None:

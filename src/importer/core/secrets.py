@@ -8,7 +8,7 @@ secret must go through redact() before it is logged or written out.
 import logging
 import os
 
-from pydantic import BaseModel, SecretStr
+from pydantic import SecretStr
 
 REDACTED = "***REDACTED***"
 
@@ -22,20 +22,6 @@ def require_env(name: str) -> SecretStr:
     if not value:
         raise MissingSecretError(f"Environment variable {name} is not set")
     return SecretStr(value)
-
-
-class DatadogCredentials(BaseModel):
-    api_key: SecretStr
-    app_key: SecretStr
-    site: str = "datadoghq.com"
-
-    @classmethod
-    def from_env(cls) -> "DatadogCredentials":
-        return cls(
-            api_key=require_env("DD_API_KEY"),
-            app_key=require_env("DD_APP_KEY"),
-            site=os.environ.get("DD_SITE", "datadoghq.com"),
-        )
 
 
 def redact(text: str, secrets: list[SecretStr]) -> str:

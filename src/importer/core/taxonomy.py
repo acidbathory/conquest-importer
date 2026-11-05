@@ -29,24 +29,27 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
         Category.UNSUPPORTED_FEATURE,
         re.compile(
             r"monitor type|composite|anomaly|forecast|outlier|percentile|no new relic equivalent"
-            r"|high-resolution"
+            r"|high-resolution|mql conditions|promql conditions|sql conditions|metric-absence"
+            r"|ratio conditions|trigger on several"
         ),
     ),
     # Before the approximation rule: the Metric Streams note says "assumed".
-    (Category.UNVERIFIED_NAMES, re.compile(r"unverified|convention")),
+    (Category.UNVERIFIED_NAMES, re.compile(r"unverified|convention|not yet confirmed")),
     (
         # Before the query rule: "differs from the query" is a note, not a parse failure.
         Category.APPROXIMATION,
         re.compile(
             r"approximated|was ignored|were dropped|collapsed|has no equivalent|is assumed"
-            r"|converted to like|differs from|may differ"
+            r"|converted to like|differs from|may differ|on its own|not part of the query"
+            r"|a counter metric"
         ),
     ),
     (
         Category.UNSUPPORTED_QUERY,
         re.compile(
             r"formula|metric math|query|expression|scope|search syntax|rollup|service check"
-            r"|unit conversion|statistic|characters|has no metric|dimension"
+            r"|unit conversion|statistic|characters|has no metric|dimension|filter|aligner|reducer"
+            r"|second-stage|alignment period"
         ),
     ),
     (

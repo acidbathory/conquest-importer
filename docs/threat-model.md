@@ -1,12 +1,12 @@
 # Threat Model (v0.1, draft for review)
 
 ## Assets
-- Datadog API/App keys (read-only, trial account)
+- Cloud provider credentials (read-only: AWS keys, Google sign-in)
 - New Relic user key (alert-write, test account only)
 - Generated alert configuration (incorrect output = missed or noisy alerts in a real environment)
 
 ## Trust boundaries
-1. **Datadog API responses are untrusted input.** Monitor names, queries, messages and tags are free text authored by anyone with Datadog access.
+1. **Cloud provider data is untrusted input.** Alarm and policy names, queries, messages and tags are free text authored by anyone with access to the monitored account.
 2. **Generated NRQL/HCL/GraphQL is an output that is executed** by New Relic or Terraform, so it must be treated like code generation.
 3. **The local machine and CI logs** can leak secrets if they are not redacted.
 
@@ -20,7 +20,7 @@
 | T4 | Injection via GraphQL variables | Use GraphQL variables, never string-format untrusted values into the query document | Code review + tests (week 5) |
 | T5 | Unintended writes to a real New Relic account | Dry-run by default (offline); writing needs `--apply`, `--confirm-account`, and the account in `NEW_RELIC_ALLOWED_ACCOUNT_IDS`; plan printed first; conditions created disabled; creates never retried; re-runs skip existing | `tests/test_apply.py` |
 | T11 | Terminal escape sequences in monitor names printed by the CLI | `printable()` strips control characters before printing | `tests/test_apply.py` |
-| T6 | Over-privileged keys | Read-only Datadog key; NR key scoped to alert write in a test account; documented in `.env.example` | Manual checklist |
+| T6 | Over-privileged keys | Read-only cloud credentials; NR key scoped to alert write in a test account; documented in `.env.example` | Manual checklist |
 | T7 | Silently wrong conversion | Confidence label + reason on every monitor; `unmapped` fields preserved; gap report | Golden tests; report review |
 | T8 | Supply-chain compromise | Pinned lockfile (`uv.lock`); `pip-audit` in CI; few dependencies | CI |
 | T9 | Denial of service / API abuse | Timeouts, bounded retries with backoff, respect rate limits | Tests with mocked HTTP (week 2) |

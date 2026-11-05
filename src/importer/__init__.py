@@ -1,1 +1,1 @@
-"""Conquest Importer: Datadog monitors to New Relic alert conditions."""
+"""Conquest Importer: cloud monitoring configuration to New Relic."""
