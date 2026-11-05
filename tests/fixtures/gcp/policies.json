@@ -1,0 +1,97 @@
+[
+  {
+    "alertStrategy": {
+      "notificationRateLimit": {
+        "period": "300s"
+      }
+    },
+    "combiner": "OR",
+    "conditions": [
+      {
+        "conditionMatchedLog": {
+          "filter": "severity>=ERROR AND resource.type=\"gce_instance\" AND textPayload:\"timeout\""
+        },
+        "displayName": "errors",
+        "name": "projects/my-project/alertPolicies/2076827162159470351/conditions/2076827162159469902"
+      }
+    ],
+    "displayName": "ckg-log-match",
+    "enabled": true,
+    "name": "projects/my-project/alertPolicies/2076827162159470351"
+  },
+  {
+    "combiner": "OR",
+    "conditions": [
+      {
+        "conditionMonitoringQueryLanguage": {
+          "duration": "300s",
+          "query": "fetch gce_instance | metric 'compute.googleapis.com/instance/cpu/utilization' | group_by 5m, [value_utilization_mean: mean(value.utilization)] | condition val() > 0.9 '1'"
+        },
+        "displayName": "mql cpu",
+        "name": "projects/my-project/alertPolicies/3671063504463609927/conditions/3671063504463613608"
+      }
+    ],
+    "displayName": "ckg-mql",
+    "enabled": true,
+    "name": "projects/my-project/alertPolicies/3671063504463609927"
+  },
+  {
+    "combiner": "OR",
+    "conditions": [
+      {
+        "conditionAbsent": {
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "perSeriesAligner": "ALIGN_RATE"
+            }
+          ],
+          "duration": "900s",
+          "filter": "metric.type=\"pubsub.googleapis.com/subscription/ack_message_count\" AND resource.type=\"pubsub_subscription\""
+        },
+        "displayName": "no acks",
+        "name": "projects/my-project/alertPolicies/3671063504463612507/conditions/3671063504463612092"
+      }
+    ],
+    "displayName": "ckg-pubsub-absent",
+    "enabled": true,
+    "name": "projects/my-project/alertPolicies/3671063504463612507"
+  },
+  {
+    "combiner": "OR",
+    "conditions": [
+      {
+        "conditionThreshold": {
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "crossSeriesReducer": "REDUCE_MEAN",
+              "groupByFields": [
+                "resource.label.zone"
+              ],
+              "perSeriesAligner": "ALIGN_MEAN"
+            }
+          ],
+          "comparison": "COMPARISON_GT",
+          "duration": "600s",
+          "evaluationMissingData": "EVALUATION_MISSING_DATA_INACTIVE",
+          "filter": "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" AND resource.type=\"gce_instance\"",
+          "thresholdValue": 0.8,
+          "trigger": {
+            "count": 1
+          }
+        },
+        "displayName": "cpu > 80%",
+        "name": "projects/my-project/alertPolicies/5497100058362790246/conditions/5497100058362791101"
+      }
+    ],
+    "displayName": "ckg-gce-cpu-high",
+    "documentation": {
+      "content": "CPU is high",
+      "mimeType": "text/markdown"
+    },
+    "enabled": true,
+    "name": "projects/my-project/alertPolicies/5497100058362790246",
+    "severity": "WARNING"
+  }
+]

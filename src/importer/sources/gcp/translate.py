@@ -1,0 +1,313 @@
+"""Alert policies to IR.
+
+One IR monitor per condition. Threshold and log-match conditions convert; the rest (absence, MQL,
+PromQL, SQL, ratios, forecasts) stay manual with the reason. `translate_policy` never raises.
+New Relic's names for GCP metrics follow the documented rule but are not yet confirmed against
+live data, so every conversion is approximate until they are.
+"""
+
+import hashlib
+import re
+
+from importer.core.ir import (
+    Aggregation,
+    Confidence,
+    CountFilter,
+    CountSignal,
+    IRMonitor,
+    MetricSignal,
+    MetricTerm,
+    NoData,
+    Notification,
+    NrTarget,
+    Occurrences,
+    Operator,
+    Severity,
+    Signal,
+    SignalKind,
+    TagFilter,
+    Threshold,
+)
+from importer.sources.gcp.filter import FilterError, Term, parse_filter
+from importer.sources.gcp.models import GcpAlertPolicy, GcpCondition
+
+OPERATORS = {
+    "COMPARISON_GT": Operator.ABOVE,
+    "COMPARISON_GE": Operator.ABOVE_OR_EQUALS,
+    "COMPARISON_LT": Operator.BELOW,
+    "COMPARISON_LE": Operator.BELOW_OR_EQUALS,
+    "COMPARISON_EQ": Operator.EQUALS,
+    "COMPARISON_NE": Operator.NOT_EQUALS,
+}
+# per-series aligner -> (time aggregation, metric is a counter)
+ALIGNERS = {
+    "ALIGN_MEAN": (Aggregation.AVG, False),
+    "ALIGN_MAX": (Aggregation.MAX, False),
+    "ALIGN_MIN": (Aggregation.MIN, False),
+    "ALIGN_SUM": (Aggregation.SUM, False),
+    "ALIGN_RATE": (Aggregation.SUM, True),
+    "ALIGN_DELTA": (Aggregation.SUM, True),
+    "ALIGN_NONE": (Aggregation.AVG, False),
+    "": (Aggregation.AVG, False),
+}
+REDUCERS = {
+    "REDUCE_MEAN": Aggregation.AVG,
+    "REDUCE_MAX": Aggregation.MAX,
+    "REDUCE_MIN": Aggregation.MIN,
+    "REDUCE_SUM": Aggregation.SUM,
+}
+MANUAL_KINDS = {
+    "conditionAbsent": "a metric-absence condition has no automatic conversion",
+    "conditionMonitoringQueryLanguage": "MQL conditions are not converted",
+    "conditionPrometheusQueryLanguage": "PromQL conditions are not converted",
+    "conditionSql": "SQL conditions are not converted",
+}
+SERVICE_SEGMENT = re.compile(r"^(?P<service>[a-z0-9_.]+?)(?:\.googleapis\.com)?/(?P<path>.+)$")
+SAFE_PATH = re.compile(r"^[a-z0-9_/]+$")
+NAMING_NOTE = (
+    "metric and attribute names follow New Relic's documented rule for Google Cloud metrics "
+    "(a gcp. prefix, then the service and metric path; counters end in _count) but are not "
+    "yet confirmed against live data; run `importer validate` once data flows"
+)
+LOG_NOTE = (
+    "converts to a count of Log events, so the project's logs must be forwarded to New Relic; "
+    "attribute names for forwarded Google Cloud logs are not yet confirmed"
+)
+AGGREGATION_DELAY_SECONDS = 120  # Cloud Monitoring can delay metrics by 2 to 3 minutes
+
+
+class _Fail(Exception):
+    def __init__(self, confidence: Confidence, reason: str) -> None:
+        super().__init__(reason)
+        self.confidence = confidence
+        self.reason = reason
+
+
+def source_id(key: str) -> int:
+    return int(hashlib.sha256(key.encode()).hexdigest()[:12], 16)
+
+
+def nr_metric_name(metric_type: str, *, counter: bool) -> str:
+    """New Relic's name for a Cloud Monitoring metric type, by the documented rule."""
+    match = SERVICE_SEGMENT.match(metric_type)
+    if match is None or not SAFE_PATH.match(match["path"]):
+        raise _Fail(Confidence.MANUAL, f"metric type {metric_type!r} is not a recognised name")
+    name = f"gcp.{match['service']}.{match['path'].replace('/', '.')}"
+    return name + "_count" if counter else name
+
+
+def _label_name(field: str) -> str | None:
+    for prefix in ("resource.labels.", "resource.label.", "metric.labels.", "metric.label."):
+        if field.startswith(prefix):
+            return field[len(prefix) :]
+    return None
+
+
+def _scope(terms: list[Term]) -> tuple[str, list[TagFilter], list[str]]:
+    metric_type = ""
+    scope: list[TagFilter] = []
+    notes: list[str] = []
+    for term in terms:
+        if term.field == "metric.type" and term.op == "=" and not term.negate:
+            metric_type = term.value
+        elif term.field == "resource.type" and term.op == "=" and not term.negate:
+            notes.append(f"resource type {term.value!r} is not part of the query")
+        elif (label := _label_name(term.field)) and term.op == "=" and not term.negate:
+            scope.append(TagFilter(key=label, value=term.value))
+        else:
+            raise _Fail(Confidence.MANUAL, f"filter term on {term.field!r} is not supported")
+    if not metric_type:
+        raise _Fail(Confidence.MANUAL, "the filter has no metric.type")
+    return metric_type, scope, notes
+
+
+def _seconds(value: object) -> int:
+    text = str(value or "")
+    return int(text[:-1]) if text.endswith("s") and text[:-1].isdigit() else 0
+
+
+def _metric_condition(
+    body: dict[str, object],
+) -> tuple[MetricSignal, int, int, list[str]]:
+    notes: list[str] = []
+    if body.get("denominatorFilter"):
+        raise _Fail(Confidence.MANUAL, "ratio conditions (denominator filter) are not supported")
+    if body.get("forecastOptions"):
+        raise _Fail(Confidence.MANUAL, "forecast conditions are not supported")
+    trigger = body.get("trigger")
+    if isinstance(trigger, dict) and (trigger.get("percent") or int(trigger.get("count", 1)) > 1):
+        raise _Fail(Confidence.MANUAL, "a trigger on several time series is not supported")
+    aggregations = body.get("aggregations")
+    if isinstance(aggregations, list) and len(aggregations) > 1:
+        raise _Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
+    first = aggregations[0] if isinstance(aggregations, list) and aggregations else {}
+    agg = first if isinstance(first, dict) else {}
+    aligner = str(agg.get("perSeriesAligner", ""))
+    if aligner not in ALIGNERS:
+        raise _Fail(Confidence.MANUAL, f"aligner {aligner!r} is not supported")
+    aggregation, counter = ALIGNERS[aligner]
+    reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
+    group_by = [label for f in agg.get("groupByFields") or [] if (label := _label_name(str(f)))]
+    if reducer in REDUCERS:
+        if REDUCERS[reducer] != aggregation:
+            notes.append(
+                f"{reducer} and {aligner} become one {aggregation.value} in New Relic's query"
+            )
+    elif reducer != "REDUCE_NONE":
+        raise _Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
+    else:
+        notes.append(
+            "Google evaluates each time series on its own; the New Relic query combines them "
+            "unless you facet by the resource id"
+        )
+    period = _seconds(agg.get("alignmentPeriod"))
+    duration = _seconds(body.get("duration"))
+    if period < 60 or period % 60:
+        raise _Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
+    try:
+        metric_type, scope, scope_notes = _scope(parse_filter(str(body.get("filter", ""))))
+    except FilterError as err:
+        raise _Fail(Confidence.MANUAL, f"filter not supported: {err}") from err
+    name = nr_metric_name(metric_type, counter=counter)
+    if counter:
+        notes.append("a counter metric: New Relic stores the change per interval (_count)")
+    term = MetricTerm(
+        metric=metric_type,
+        space_aggregation=aggregation,
+        nr_target=NrTarget(event="Metric", attribute=name),
+    )
+    signal = MetricSignal(
+        terms={"a": term}, aggregation=aggregation, scope=scope, group_by=group_by
+    )
+    return signal, period, max(duration, period), [*scope_notes, *notes]
+
+
+def _log_count(body: dict[str, object]) -> CountSignal:
+    try:
+        terms = parse_filter(str(body.get("filter", "")))
+    except FilterError as err:
+        raise _Fail(Confidence.MANUAL, f"log filter not supported: {err}") from err
+    filters: list[CountFilter] = []
+    for term in terms:
+        if term.op == ":":
+            filters.append(
+                CountFilter(
+                    key=term.field, value=f"*{term.value}*", negate=term.negate, wildcard=True
+                )
+            )
+        elif term.op in ("=", "!="):
+            filters.append(
+                CountFilter(
+                    key=term.field, value=term.value, negate=term.negate != (term.op == "!=")
+                )
+            )
+        else:
+            raise _Fail(
+                Confidence.MANUAL, f"log filter comparison on {term.field!r} is not supported"
+            )
+    return CountSignal(filters=filters)
+
+
+def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor:
+    key = cond.name or f"{policy.name}/{cond.displayName}"
+    reasons: list[str] = []
+    if policy.notificationChannels:
+        reasons.append("notification channels must be configured manually")
+    base = {
+        "source_system": "gcp",
+        "source_id": source_id(key),
+        "source_key": key,
+        "source_type": cond.kind or "unknown condition",
+        "name": name,
+        "notification": Notification(
+            message_template=str(policy.documentation.get("content", "")),
+            handles=sorted(policy.notificationChannels),
+        ),
+    }
+
+    def failed(confidence: Confidence, reason: str) -> IRMonitor:
+        return IRMonitor(
+            **base,
+            signal=Signal(kind=SignalKind.METRIC, raw_query=name),
+            confidence=confidence,
+            reasons=[reason, *reasons],
+        )
+
+    if cond.kind in MANUAL_KINDS:
+        return failed(Confidence.MANUAL, MANUAL_KINDS[cond.kind])
+    if not cond.kind:
+        return failed(Confidence.MANUAL, "condition type is not recognised")
+    severity = Severity.WARNING if policy.severity == "WARNING" else Severity.CRITICAL
+    body = cond.body
+    no_data = NoData()
+    try:
+        if cond.kind == "conditionMatchedLog":
+            count = _log_count(body)
+            reasons.append(LOG_NOTE)
+            signal = Signal(
+                kind=SignalKind.LOG,
+                raw_query=name,
+                window_seconds=60,
+                aggregation_window_seconds=60,
+                occurrences=Occurrences.AT_LEAST_ONCE,
+                count=count,
+            )
+            thresholds = [Threshold(severity=severity, operator=Operator.ABOVE, value=0)]
+        else:
+            operator = OPERATORS.get(str(body.get("comparison", "")))
+            if operator is None:
+                return failed(
+                    Confidence.MANUAL, f"comparison {body.get('comparison')!r} is not supported"
+                )
+            metric, period, duration, notes = _metric_condition(body)
+            reasons += [NAMING_NOTE, *notes]
+            missing = str(body.get("evaluationMissingData", ""))
+            if missing.endswith("_ACTIVE"):
+                no_data = NoData(notify=True, timeout_minutes=max(1, duration // 60))
+            elif missing.endswith(("_INACTIVE", "_NO_OP")):
+                reasons.append(
+                    f"{missing} has no equivalent; New Relic leaves the condition unchanged "
+                    "when data is missing"
+                )
+            signal = Signal(
+                kind=SignalKind.METRIC,
+                raw_query=name,
+                window_seconds=duration,
+                aggregation_window_seconds=period,
+                aggregation_delay_seconds=AGGREGATION_DELAY_SECONDS,
+                occurrences=Occurrences.ALL,
+                metric=metric,
+            )
+            value = float(str(body.get("thresholdValue", 0)))
+            thresholds = [Threshold(severity=severity, operator=operator, value=value)]
+    except _Fail as fail:
+        return failed(fail.confidence, fail.reason)
+    return IRMonitor(
+        **base,
+        signal=signal,
+        thresholds=thresholds,
+        no_data=no_data,
+        confidence=Confidence.APPROXIMATE,
+        reasons=reasons,
+    )
+
+
+def translate_policy(policy: GcpAlertPolicy) -> list[IRMonitor]:
+    many = len(policy.conditions) > 1
+    monitors = []
+    for cond in policy.conditions:
+        name = f"{policy.displayName} / {cond.displayName}" if many else policy.displayName
+        monitor = _convert(policy, cond, name)
+        if many and policy.combiner.startswith("AND") and monitor.confidence != Confidence.MANUAL:
+            monitor.reasons.append(
+                f"the Google policy fires only when all {len(policy.conditions)} conditions "
+                "hold; New Relic evaluates each condition on its own"
+            )
+        if not policy.enabled:
+            monitor.unmapped["enabled"] = False
+        monitors.append(monitor)
+    return monitors
+
+
+def translate(policies: list[GcpAlertPolicy]) -> list[IRMonitor]:
+    return [m for p in policies for m in translate_policy(p)]

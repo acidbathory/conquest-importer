@@ -8,11 +8,16 @@ from importer.core.ir import IRMonitor
 from importer.sources import REGISTRY
 
 FIXTURES = Path(__file__).parent / "fixtures"
-SAMPLE_INPUT = {"datadog": FIXTURES / "datadog", "cloudwatch": FIXTURES / "cloudwatch-real"}
+SAMPLE_INPUT = {
+    "datadog": FIXTURES / "datadog",
+    "cloudwatch": FIXTURES / "cloudwatch-real",
+    "gcp": FIXTURES / "gcp",
+}
 
 
-def test_both_sources_are_registered() -> None:
-    assert sorted(REGISTRY) == ["cloudwatch", "datadog"]
+def test_every_source_is_registered_and_has_a_sample_input() -> None:
+    assert sorted(REGISTRY) == ["cloudwatch", "datadog", "gcp"]
+    assert sorted(SAMPLE_INPUT) == sorted(REGISTRY)
 
 
 @pytest.mark.parametrize("name", sorted(SAMPLE_INPUT))
