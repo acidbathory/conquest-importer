@@ -107,10 +107,16 @@ Alerts and dashboards need data behind them. The importer generates the Terrafor
 Streams into New Relic (step 6 of [getting started](getting-started.md)) but doesn't run it,
 because it needs your license key. It streams only the namespaces your alarms use.
 
-New Relic metric names are confirmed against real data for DynamoDB, Lambda (per function),
-Kinesis, SQS, SNS, API Gateway, EC2 (CPU) and Application Load Balancer fixed responses. For the
-other services the names follow New Relic's documented convention but aren't confirmed, so a
-converted query could return nothing. Run `importer validate` once data flows.
+New Relic metric names are confirmed against real data, with CloudWatch's own numbers matching
+exactly, for DynamoDB, Lambda (per function), Kinesis, SQS, SNS, API Gateway, EC2 (CPU), the
+Application, Network and classic load balancers, RDS, ElastiCache, EBS, S3 request metrics and ECS
+services. See [the verification note](research/metric-names-verified.md) for what was tested.
+
+Some names are not confirmed: S3 storage metrics (they arrive once a day), ECS metrics for a
+cluster rather than a service, and metrics that need traffic or a healthy target to exist, such
+as classic load balancer `RequestCount` and `Latency`. For those the names follow New Relic's
+documented convention, so a converted query could return nothing. Run `importer validate` once
+data flows.
 
 ## Other monitoring configuration
 

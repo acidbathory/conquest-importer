@@ -160,7 +160,7 @@ def test_unsupported_forms_are_manual_not_errors(fields: dict[str, Any]) -> None
 
 def test_every_converted_alarm_stays_approximate_until_all_services_are_verified() -> None:
     assert alarm().confidence == Confidence.APPROXIMATE
-    assert any("assumed for other services" in r for r in alarm().reasons)
+    assert any("assumed for anything else" in r for r in alarm().reasons)
 
 
 def test_actions_are_listed_not_migrated() -> None:
@@ -544,3 +544,15 @@ def test_mapping_files_agree_with_each_other() -> None:
         assert namespace in namespaces
         for dim_set in by_dims:
             assert set(dim_set.split(",")) <= set(KNOWN_DIMENSIONS[namespace])
+
+
+def test_ecs_service_alarms_use_the_by_service_suffix_confirmed_on_real_data() -> None:
+    ir = alarm(
+        Namespace="AWS/ECS",
+        MetricName="CPUUtilization",
+        Dimensions=[{"Name": "ClusterName", "Value": "c"}, {"Name": "ServiceName", "Value": "s"}],
+        Statistic="Average",
+        Period=60,
+        EvaluationPeriods=1,
+    )
+    assert nrql_for(ir).startswith("SELECT average(aws.ecs.CPUUtilization.byService) FROM Metric")

@@ -111,7 +111,7 @@
   },
   "ecs-service-cpu": {
     "confidence": "approximate",
-    "nrql": "SELECT average(aws.ecs.CPUUtilization) FROM Metric WHERE aws.ecs.ClusterName = 'prod' AND aws.ecs.ServiceName = 'api'",
+    "nrql": "SELECT average(aws.ecs.CPUUtilization.byService) FROM Metric WHERE aws.ecs.ClusterName = 'prod' AND aws.ecs.ServiceName = 'api'",
     "shape": {
       "duration": 300,
       "window": 60,

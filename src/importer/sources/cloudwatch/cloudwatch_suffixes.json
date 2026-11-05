@@ -1,9 +1,12 @@
 {
-  "_comment": "Some New Relic AWS Metric Streams names carry a suffix that depends on the metric's CloudWatch dimension set (and varies by service). Keyed by namespace, then by the sorted, comma-joined dimension names. Only CONFIRMED entries belong here. Confirmed 2026-10-03 on real data: AWS/Lambda metrics with only the FunctionName dimension are named aws.lambda.<Metric>.byFunction (the plain aws.lambda.<Metric> is the account-wide metric). Also confirmed 2026-10-05: AWS/Kinesis metrics with only the StreamName dimension are named aws.kinesis.<Metric>.byStream. Confirmed to need NO suffix: AWS/SQS (QueueName), AWS/SNS (TopicName), AWS/ApiGateway (ApiName, with or without Stage), AWS/ApplicationELB (LoadBalancer), AWS/EC2 (InstanceId), AWS/DynamoDB (TableName). NOT yet confirmed: other Lambda dimension sets (the names .byFunctionAlias, .byRegion exist but their dimension sets were not checked) and every other service. Check with: SELECT uniques(metricName) FROM Metric WHERE aws.Namespace = '<namespace>'",
+  "_comment": "Some New Relic AWS Metric Streams names carry a suffix that depends on the metric's CloudWatch dimension set (and varies by service). Keyed by namespace, then by the sorted, comma-joined dimension names. Only CONFIRMED entries belong here. Confirmed 2026-10-03 on real data: AWS/Lambda metrics with only the FunctionName dimension are named aws.lambda.<Metric>.byFunction (the plain aws.lambda.<Metric> is the account-wide metric). Also confirmed 2026-10-05: AWS/Kinesis metrics with only the StreamName dimension are named aws.kinesis.<Metric>.byStream. Confirmed 2026-11-05 on real data: AWS/ECS service metrics (dimensions ClusterName and ServiceName) are named aws.ecs.<Metric>.byService; the plain aws.ecs.<Metric> does not exist for a service. Confirmed to need NO suffix: AWS/SQS (QueueName), AWS/SNS (TopicName), AWS/ApiGateway (ApiName, with or without Stage), AWS/ApplicationELB (LoadBalancer), AWS/EC2 (InstanceId), AWS/DynamoDB (TableName), and, confirmed 2026-11-05, AWS/RDS (DBInstanceIdentifier), AWS/ElastiCache (CacheClusterId), AWS/EBS (VolumeId), AWS/NetworkELB (LoadBalancer), AWS/ELB (LoadBalancerName) and AWS/S3 request metrics (BucketName and FilterId). NOT yet confirmed: other Lambda dimension sets (the names .byFunctionAlias, .byRegion exist but their dimension sets were not checked) and every service not named above, including ECS metrics with only ClusterName. Check with: SELECT uniques(metricName) FROM Metric WHERE aws.Namespace = '<namespace>'",
   "AWS/Lambda": {
     "FunctionName": ".byFunction"
   },
   "AWS/Kinesis": {
     "StreamName": ".byStream"
+  },
+  "AWS/ECS": {
+    "ClusterName,ServiceName": ".byService"
   }
 }

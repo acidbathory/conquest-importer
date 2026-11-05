@@ -28,7 +28,7 @@ DTZ T20 ARG C90`, max complexity 15.
 
 ```sh
 terraform fmt -check -recursive scripts
-tflint --chdir scripts/live-test/aws        # likewise .../services
+tflint --chdir scripts/live-test/aws        # likewise .../services and .../metric-naming
 ```
 
 `out/` is generated and git-ignored, so don't lint or commit it.

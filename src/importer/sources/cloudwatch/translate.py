@@ -66,9 +66,11 @@ PERCENTILE_NOTE = (
 _CUSTOM_NAMESPACE = re.compile(r"^Custom/([A-Za-z0-9]+)$")
 NAMING_NOTE = (
     "AWS metric and dimension names follow the New Relic Metric Streams convention "
-    "(aws.<service>.<Metric>): confirmed against real data for DynamoDB, Lambda per-function "
-    "metrics (suffix .byFunction) and Custom/<name> namespaces; assumed for other services, "
-    "where a dimension-dependent suffix may apply"
+    "(aws.<service>.<Metric>): confirmed against real data for DynamoDB, Lambda, Kinesis, SQS, "
+    "SNS, API Gateway, EC2 (CPU), the three load balancer types, RDS, ElastiCache, EBS, S3 "
+    "request metrics, ECS services and Custom/<name> namespaces; assumed for anything else "
+    "(such as S3 storage metrics or ECS cluster-level metrics), where a "
+    "dimension-dependent suffix may apply"
 )
 AGGREGATION_DELAY_SECONDS = 300  # AWS metrics arrive later than agent metrics
 OPERATORS = {
