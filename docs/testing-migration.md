@@ -43,6 +43,17 @@ uv run python scripts/live-test/suite.py --aws-account-id <aws-account-id> --ite
 `--yes` is required: it confirms that you accept the writes and the (small) cost. Twelve
 iterations take about 30 to 40 minutes.
 
+To leave the full set of test resources in place for a hands-on try, without migrating or
+tearing down, use `--populate`, then remove it again with `--cleanup`:
+
+```sh
+uv run python scripts/live-test/suite.py --populate --aws-account-id <aws-account-id>
+uv run python scripts/live-test/suite.py --cleanup --aws-account-id <aws-account-id>
+```
+
+Don't run anything else against the same AWS account while the suite runs. It converts every
+alarm it finds, so extra alarms change the counts and look like failures.
+
 Results land in `out/suite/` (git-ignored):
 
 | File | Content |
@@ -120,3 +131,22 @@ add the tag to a profile if it needs its own iteration. Keep it cheap and keep i
 - Logs and traces are not migrated by this tool. The suite checks that they are ignored
   cleanly and that alarms built on top of them are handled.
 - One region and one account only.
+
+## Checking New Relic metric names on real services
+
+The suite creates only cheap resources. To check the metric names for RDS, ElastiCache, EBS, ECS,
+load balancers and S3, there is a separate stack, `scripts/live-test/metric-naming`, plus a helper,
+`scripts/live-test/metric_naming.py`. The results of the last run are in
+[research/metric-names-verified.md](research/metric-names-verified.md).
+
+The stack costs roughly $0.15 per hour while it exists, so work quickly and destroy it.
+
+1. `terraform apply` in `scripts/live-test/metric-naming` with `-var my_ip_cidr=<your ip>/32`.
+2. `uv run python scripts/live-test/metric_naming.py alarms` creates one alarm per metric.
+3. Generate the stream with `importer ingest-setup --namespaces ...` and apply it. This also tests
+   the generated Terraform.
+4. `uv run python scripts/live-test/metric_naming.py traffic` sends requests to the load balancers
+   and S3. Wait at least ten minutes before comparing, because sums lag.
+5. `importer validate` against a window that ended at least ten minutes ago compares New Relic
+   with CloudWatch for every alarm.
+6. Run `metric_naming.py cleanup`, destroy the stream stack, then destroy the metric-naming stack.

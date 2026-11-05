@@ -18,6 +18,7 @@ finding about the tool (or about the docs). Read docs/testing-migration.md befor
 
 import argparse
 import contextlib
+import dataclasses
 import hashlib
 import json
 import os
@@ -874,6 +875,10 @@ def pick(profile: str, seed: int) -> list[Element]:
 
     for e in chosen:
         add(e)
+    if "with-queue-topic" not in keys and "queue-topic" in keys:
+        # The importer reads SNS topics only through alarm actions, so a topic that no selected
+        # alarm uses is never reported.
+        keys["queue-topic"] = dataclasses.replace(keys["queue-topic"], expect="not_reported")
     order = {"other": 0, "topic": 1, "inventory": 2, "alarm": 2, "composite": 3, "dashboard": 4}
     return sorted(keys.values(), key=lambda e: order[e.group])
 
@@ -1136,6 +1141,13 @@ def level_integration(
     counts = summary.counts()
     total = sum(counts.values())
     expected_total = sum(1 for e in made if e.expect != "not_reported")
+    # The log group helper makes three metric filters. Each one no selected alarm or element
+    # accounts for is reported by the importer as a "log metric filter" asset.
+    keys = {e.key for e in made}
+    if "log-source" in keys:
+        expected_total += sum(
+            1 for consumer in ("log-errors", "log-or", "unused-filter") if consumer not in keys
+        )
     if total != expected_total:
         add("integration", "totals", f"report counts {total} assets, expected {expected_total}")
     if not (plan / "report.html").exists():
