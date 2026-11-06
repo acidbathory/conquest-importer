@@ -66,6 +66,8 @@ from importer.sources.cloudwatch.models import load_alarms
 from importer.sources.cloudwatch.notifications import load_topics, routing, translate_topic
 from importer.sources.cloudwatch.streaming import streaming_inputs
 from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
+from importer.sources.gcp.extract import GcpError, access_token, http_getter
+from importer.sources.gcp.extract import extract as extract_gcp
 
 app = typer.Typer(
     help="Convert observability alerts from other platforms to New Relic alert conditions.",
@@ -303,6 +305,34 @@ def apply(
         typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
     if result.failed:
         _partial_failure()
+
+
+@app.command("extract-gcp")
+def extract_gcp_command(
+    project: Annotated[str, typer.Option(help="Google Cloud project id to read")],
+    out: Annotated[Path, typer.Option(help="New folder for the export")] = Path("out/gcp"),
+) -> None:
+    """Read alert policies, notification channels and uptime checks from a Google Cloud project.
+
+    Read-only: lists alertPolicies, notificationChannels and uptimeCheckConfigs through the Cloud
+    Monitoring API. Credentials come from GOOGLE_OAUTH_ACCESS_TOKEN or `gcloud auth login`; they
+    are never stored. Channels are saved as type and name only. The export can contain project
+    ids and resource names: review it before sharing.
+    """
+    try:
+        result = extract_gcp(http_getter(access_token()), project, out)
+    except (GcpError, ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(
+        f"Read project {result.project}: {result.policies} alert policies "
+        f"({result.conditions} conditions), {result.channels} notification channels, "
+        f"{result.uptime_checks} uptime checks."
+    )
+    for warning in result.warnings:
+        typer.echo(f"  Could not read {printable(warning, 200)}", err=True)
+    typer.echo("Next:")
+    typer.echo(f"  importer convert --source gcp --in {out / 'policies'} --out out/gcp-alerts")
 
 
 @app.command("extract-cloudwatch")
