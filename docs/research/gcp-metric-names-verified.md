@@ -46,6 +46,24 @@ that conversion. Worth raising with New Relic support.
 Not tested: Cloud Run, Cloud SQL, GKE, load balancing, BigQuery and the other services.
 Metrics from those still carry the "not confirmed" note.
 
+## Second run (2026-11-06): converted conditions against live data
+
+A fresh link (new workload identity pool) and a new VM, topic and subscription gave the same
+result: `cpu.utilization` and `cpu.usage_time` did not arrive (checked for 40 minutes), although
+the Cloud Monitoring API returned both for the same VM. `cpu.reserved_cores` arrived. Also missing:
+`gcp.pubsub.topic.send_message_operation_count` (Google has it; `send_request_count` arrived).
+
+Five conditions converted from real alert policies were created in the sandbox (disabled) and
+their queries run against the data:
+
+- Counter metrics arrive as one change per 5 minute poll (25 publishes showed as a total of 25;
+  80 as 80 in one bucket). A 60 second window sees a point about one time in five, so the
+  converter now uses a window of at least 300 seconds and scales the threshold: a rate per second
+  is multiplied by the window, a change per period by window divided by period.
+- A `sum()` over a metric that does not exist returns 0, not an error, so a condition on a missing
+  metric looks healthy and never fires. `max()` and `average()` return null.
+- Undelivered messages: 25 against a threshold of 5, so that condition would fire.
+
 ## Cost of the test
 
 An `e2-micro` VM (about $0.01 an hour) for a few hours, and Pub/Sub and Storage at a volume that

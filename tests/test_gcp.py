@@ -304,3 +304,37 @@ def test_an_unsupported_log_comparison_gets_the_filter_steps_not_the_aggregation
         )
     )
     assert [r.title for r in remedies_for(m.reasons)] == ["Filter not supported"]
+
+
+def _counter(aligner: str, value: float, period: str = "60s") -> IRMonitor:
+    (m,) = translate_policy(
+        policy(
+            threshold(
+                filter='metric.type="pubsub.googleapis.com/topic/send_request_count" '
+                'AND resource.type="pubsub_topic"',
+                aggregations=[{"alignmentPeriod": period, "perSeriesAligner": aligner}],
+                thresholdValue=value,
+                duration="0s",
+            )
+        )
+    )
+    return m
+
+
+def test_a_rate_threshold_becomes_a_total_over_the_five_minute_window() -> None:
+    m = _counter("ALIGN_RATE", 10)  # 10 per second
+    assert m.signal.aggregation_window_seconds == 300
+    assert m.thresholds[0].value == 3000
+    assert any("rescaled" in r for r in m.reasons)
+
+
+def test_a_delta_threshold_scales_with_the_window() -> None:
+    m = _counter("ALIGN_DELTA", 5)  # 5 per 60 seconds
+    assert m.signal.aggregation_window_seconds == 300
+    assert m.thresholds[0].value == 25
+
+
+def test_a_long_counter_window_is_kept() -> None:
+    m = _counter("ALIGN_DELTA", 5, period="600s")
+    assert m.signal.aggregation_window_seconds == 600
+    assert m.thresholds[0].value == 5

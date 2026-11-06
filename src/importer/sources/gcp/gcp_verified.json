@@ -1,5 +1,5 @@
 {
-  "_comment": "Metric names that arrived in New Relic from a real Google Cloud project (Workload Identity Federation link, 5 minute polling), checked 2026-11-05 with a Compute Engine VM, a Pub/Sub topic and subscription and a Cloud Storage bucket. 'documented_not_received' are in New Relic's mapping table and exist in Cloud Monitoring for the test VM, but never arrived in over an hour.",
+  "_comment": "Metric names that arrived in New Relic from a real Google Cloud project (Workload Identity Federation link, 5 minute polling), checked 2026-11-05 and again 2026-11-06 (second project link; VM CPU utilization and usage_time still did not arrive although Google returns them for the same VM) with a Compute Engine VM, a Pub/Sub topic and subscription and a Cloud Storage bucket. 'documented_not_received' are in New Relic's mapping table and exist in Cloud Monitoring for the test VM, but never arrived in over an hour.",
   "received": [
     "gcp.compute.firewall.dropped_bytes_count",
     "gcp.compute.firewall.dropped_packets_count",
@@ -43,10 +43,13 @@
     "gcp.pubsub.topic.message_sizes.p95",
     "gcp.pubsub.topic.message_sizes.p99",
     "gcp.pubsub.topic.num_retained_acked_messages_by_region",
+    "gcp.pubsub.topic.num_retained_messages",
     "gcp.pubsub.topic.num_unacked_messages_by_region",
     "gcp.pubsub.topic.oldest_retained_acked_message_age_by_region",
+    "gcp.pubsub.topic.oldest_retained_message_age",
     "gcp.pubsub.topic.oldest_unacked_message_age_by_region",
     "gcp.pubsub.topic.retained_acked_bytes_by_region",
+    "gcp.pubsub.topic.retained_bytes",
     "gcp.pubsub.topic.send_request_count",
     "gcp.pubsub.topic.send_request_latencies",
     "gcp.pubsub.topic.send_request_latencies.p50",
@@ -60,8 +63,9 @@
     "gcp.storage.network.sent_bytes_count"
   ],
   "documented_not_received": [
-    "gcp.compute.instance.cpu.utilization",
     "gcp.compute.instance.cpu.usage_time",
-    "gcp.compute.instance.uptime"
+    "gcp.compute.instance.cpu.utilization",
+    "gcp.compute.instance.uptime",
+    "gcp.pubsub.topic.send_message_operation_count"
   ]
 }

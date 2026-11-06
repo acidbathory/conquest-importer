@@ -102,6 +102,7 @@ MISSING_NOTE = (
     "enable it"
 )
 VERIFIED_PATH = Path(__file__).with_name("gcp_verified.json")
+POLL_SECONDS = 300  # New Relic reads Google Cloud metrics every 5 minutes
 AGGREGATION_DELAY_SECONDS = 120  # Cloud Monitoring can delay metrics by 2 to 3 minutes
 
 
@@ -194,9 +195,22 @@ def _seconds(value: object) -> int:
     return int(text[:-1]) if text.endswith("s") and text[:-1].isdigit() else 0
 
 
+def _counter_window(aligner: str, period: int) -> tuple[int, float, str]:
+    """Window, threshold scale and note for a counter: New Relic stores one change per poll."""
+    window = max(period, POLL_SECONDS)
+    # a rate is per second, so the total over the window is rate x window; a delta scales
+    scale = float(window) if aligner == "ALIGN_RATE" else window / period
+    note = (
+        "a counter metric: New Relic stores the change in each 5 minute polling interval, "
+        f"so the window is {window}s and the threshold is rescaled by {scale:g} "
+        "(Google compares a rate or change per alignment period)"
+    )
+    return window, scale, note
+
+
 def _metric_condition(
     body: dict[str, object],
-) -> tuple[MetricSignal, int, int, list[str]]:
+) -> tuple[MetricSignal, int, int, float, list[str]]:
     notes: list[str] = []
     if body.get("denominatorFilter"):
         raise _Fail(Confidence.MANUAL, "ratio conditions (denominator filter) are not supported")
@@ -250,8 +264,10 @@ def _metric_condition(
             "a distribution metric: New Relic publishes the percentile as its own series, "
             "already computed for each polling interval"
         )
+    scale = 1.0
     if counter:
-        notes.append("a counter metric: New Relic stores the change in each polling interval")
+        period, scale, note = _counter_window(aligner, period)
+        notes.append(note)
     notes += _name_notes(name, aligner, uses_labels=bool(scope or group_by))
     term = MetricTerm(
         metric=metric_type,
@@ -261,7 +277,7 @@ def _metric_condition(
     signal = MetricSignal(
         terms={"a": term}, aggregation=aggregation, scope=scope, group_by=group_by
     )
-    return signal, period, max(duration, period), [*scope_notes, *notes]
+    return signal, period, max(duration, period), scale, [*scope_notes, *notes]
 
 
 def _name_notes(name: str, aligner: str, *, uses_labels: bool) -> list[str]:
@@ -366,7 +382,7 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
                 return failed(
                     Confidence.MANUAL, f"comparison {body.get('comparison')!r} is not supported"
                 )
-            metric, period, duration, notes = _metric_condition(body)
+            metric, period, duration, scale, notes = _metric_condition(body)
             reasons += notes
             missing = str(body.get("evaluationMissingData", ""))
             if missing.endswith("_ACTIVE"):
@@ -385,7 +401,7 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
                 occurrences=Occurrences.ALL,
                 metric=metric,
             )
-            value = float(str(body.get("thresholdValue", 0)))
+            value = float(str(body.get("thresholdValue", 0))) * scale
             thresholds = [Threshold(severity=severity, operator=operator, value=value)]
     except _Fail as fail:
         return failed(fail.confidence, fail.reason)
