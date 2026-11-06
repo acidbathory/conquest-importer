@@ -127,6 +127,21 @@ def nr_metric_name(metric_type: str) -> str:
 PROJECT_LABELS = {"project_id": "gcp.projectId"}
 
 
+NOT_GOOGLE_SERVICE = (
+    "custom.googleapis.com/",
+    "external.googleapis.com/",
+    "workload.googleapis.com/",
+    "prometheus.googleapis.com/",
+    "agent.googleapis.com/",
+    "logging.googleapis.com/user/",
+)
+UNCOLLECTED = (
+    "the metric is not one of the Google Cloud service metrics that New Relic documents "
+    "collecting (custom, Ops Agent, Prometheus and log-based metrics are not listed), so a "
+    "converted query would return no data"
+)
+
+
 def _label_name(field: str) -> str | None:
     """New Relic's attribute for a Cloud Monitoring label (confirmed on live data).
 
@@ -177,6 +192,17 @@ def _metric_condition(
     trigger = body.get("trigger")
     if isinstance(trigger, dict) and (trigger.get("percent") or int(trigger.get("count", 1)) > 1):
         raise _Fail(Confidence.MANUAL, "a trigger on several time series is not supported")
+    try:
+        metric_type, scope, scope_notes = _scope(parse_filter(str(body.get("filter", ""))))
+    except FilterError as err:
+        raise _Fail(Confidence.MANUAL, f"filter not supported: {err}") from err
+    if metric_type.startswith("monitoring.googleapis.com/uptime_check/"):
+        raise _Fail(
+            Confidence.MANUAL,
+            "an uptime check alert depends on the check itself, which is not migrated",
+        )
+    if metric_type.startswith(NOT_GOOGLE_SERVICE):
+        raise _Fail(Confidence.MANUAL, UNCOLLECTED)
     aggregations = body.get("aggregations")
     if isinstance(aggregations, list) and len(aggregations) > 1:
         raise _Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
@@ -204,10 +230,6 @@ def _metric_condition(
     duration = _seconds(body.get("duration"))
     if period < 60 or period % 60:
         raise _Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
-    try:
-        metric_type, scope, scope_notes = _scope(parse_filter(str(body.get("filter", ""))))
-    except FilterError as err:
-        raise _Fail(Confidence.MANUAL, f"filter not supported: {err}") from err
     name = nr_metric_name(metric_type)
     if aligner.startswith("ALIGN_PERCENTILE_"):
         name += "." + "p" + aligner.rsplit("_", 1)[1]

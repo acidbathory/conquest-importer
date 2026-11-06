@@ -161,10 +161,14 @@ Cloud Monitoring alert policies from the JSON of `gcloud alpha monitoring polici
 
 - **Converts:** metric threshold conditions (including percentile series for distribution
   metrics) and log-match conditions with plain terms.
-- **Manual, with steps:** absence, MQL, PromQL, SQL, ratio and forecast conditions, and filters
-  with OR, regular expressions or functions.
+- **Manual, with steps:** absence, MQL, PromQL, SQL, ratio and forecast conditions, filters with
+  OR, regular expressions or functions, uptime-check alerts, and alerts on custom, Ops Agent,
+  Prometheus or log-based metrics (New Relic does not document collecting those from Google
+  Cloud, so a converted query would return nothing).
 - **Not done yet:** dashboards, notification channels, uptime checks and a scanner that reads the
   project for you.
+- **Report:** `importer report <run folder> --source gcp` writes the same report with Google
+  Cloud wording.
 - **Metric names:** checked on real data for Compute Engine and Pub/Sub only. See
   [the verification note](research/gcp-metric-names-verified.md), including one metric (VM CPU
   utilization) that did not arrive in New Relic.

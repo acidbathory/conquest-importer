@@ -42,7 +42,7 @@ from importer.core.migration_summary import Kind as AssetKind
 from importer.core.migration_summary import Summary, load_summary
 from importer.core.notification_ir import NotificationPlan, build_plan
 from importer.core.report import build_report, md_cell
-from importer.core.report_html import render_report
+from importer.core.report_html import PROFILES, render_report
 from importer.core.rollback import rollback
 from importer.core.secrets import (
     MissingSecretError,
@@ -783,14 +783,25 @@ def _plan_text(
 
 
 def _write_html_report(
-    run: Path, aws_account: str, nr_account: int | None, region: str, target: Path | None = None
+    run: Path,
+    aws_account: str,
+    nr_account: int | None,
+    region: str,
+    target: Path | None = None,
+    source: str = "cloudwatch",
 ) -> Path:
     path = target or run / "report.html"
     summary = load_summary(run)
     typer.echo(summary.headline())
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        render_report(summary, aws_account=aws_account, nr_account=nr_account, region=region)
+        render_report(
+            summary,
+            aws_account=aws_account,
+            nr_account=nr_account,
+            region=region,
+            source=source,
+        )
     )
     return path
 
@@ -801,16 +812,21 @@ def report_command(
     out: Annotated[
         Path | None, typer.Option(help="Where to write (default: RUN/report.html)")
     ] = None,
-    aws_account_id: Annotated[str, typer.Option(help="Shown in the header")] = "",
+    aws_account_id: Annotated[
+        str, typer.Option(help="AWS account id or Google Cloud project, shown in the header")
+    ] = "",
     nr_account_id: Annotated[int | None, typer.Option(help="Shown in the header")] = None,
     region: Annotated[str, typer.Option(help="Shown in the header")] = "",
+    source: Annotated[str, typer.Option(help="cloudwatch or gcp")] = "cloudwatch",
 ) -> None:
     """Write the post-migration HTML report: what migrated, what did not, and how to fix it.
 
     Read-only and offline. The file holds alarm and resource names: review it before sharing.
     """
     try:
-        target = _write_html_report(run, aws_account_id, nr_account_id, region, out)
+        if source not in PROFILES:
+            raise ValueError(f"unknown source {source!r}; choose one of {', '.join(PROFILES)}")
+        target = _write_html_report(run, aws_account_id, nr_account_id, region, out, source)
     except (OSError, ValueError) as exc:
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
         raise typer.Exit(code=1) from None

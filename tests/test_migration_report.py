@@ -160,3 +160,19 @@ def test_the_applied_banner_says_what_already_existed() -> None:
     )
     assert "20 conditions, 1 dashboard already existed and were left unchanged." in page
     assert "already existed" not in render_report(Summary([], {"condition": 1}), nr_account=7)
+
+
+def test_a_google_cloud_report_uses_google_wording_and_a_command_that_exists() -> None:
+    assets = [Asset("alarm", "cpu", "conditionThreshold", Confidence.APPROXIMATE)]
+    html = render_report(
+        Summary(assets, None), aws_account="my-project", nr_account=7, source="gcp"
+    )
+    assert "Google Cloud project my-project" in html
+    assert "Alert conditions" in html and "importer apply --in" in html
+    assert "AWS" not in html and "CloudWatch" not in html and "EventBridge" not in html
+    assert "Workload Identity Federation" in html
+
+
+def test_the_default_report_is_still_the_aws_one() -> None:
+    html = render_report(Summary([], None), aws_account="123456789012")
+    assert "AWS account 123456789012" in html and "importer migrate" in html

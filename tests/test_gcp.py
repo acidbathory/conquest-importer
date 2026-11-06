@@ -229,3 +229,55 @@ def test_an_unseen_metric_keeps_the_unconfirmed_name_warning() -> None:
         policy(threshold(filter='metric.type="spanner.googleapis.com/instance/cpu/utilization"'))
     )
     assert any("did not appear in our live test" in r for r in m.reasons)
+
+
+@pytest.mark.parametrize(
+    "metric",
+    [
+        "custom.googleapis.com/orders/failed",
+        "agent.googleapis.com/memory/percent_used",
+        "workload.googleapis.com/jvm.memory.used",
+        "prometheus.googleapis.com/up/gauge",
+        "logging.googleapis.com/user/timeouts",
+    ],
+)
+def test_metrics_new_relic_does_not_document_collecting_stay_manual_with_steps(metric: str) -> None:
+    (m,) = translate_policy(policy(threshold(filter=f'metric.type="{metric}"')))
+    assert m.confidence is Confidence.MANUAL
+    assert "not one of the Google Cloud service metrics" in m.reasons[0]
+    assert steps_for(m.reasons)
+
+
+def test_promql_is_not_filed_under_the_mql_steps() -> None:
+    from importer.core.remediation import remedies_for
+
+    (m,) = translate_policy(
+        policy({"conditionPrometheusQueryLanguage": {"query": "up == 0", "duration": "60s"}})
+    )
+    assert [r.title for r in remedies_for(m.reasons)] == ["PromQL condition"]
+
+
+def test_an_uptime_check_alert_gets_synthetics_steps() -> None:
+    from importer.core.remediation import remedies_for
+
+    (m,) = translate_policy(
+        policy(
+            threshold(
+                filter='metric.type="monitoring.googleapis.com/uptime_check/check_passed"',
+                aggregations=[{"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_NEXT_OLDER"}],
+            )
+        )
+    )
+    assert m.confidence is Confidence.MANUAL
+    assert [r.title for r in remedies_for(m.reasons)] == ["Uptime check alert"]
+
+
+def test_a_log_severity_range_gets_the_filter_steps_not_the_aggregation_steps() -> None:
+    from importer.core.remediation import remedies_for
+
+    (m,) = translate_policy(
+        policy(
+            {"conditionMatchedLog": {"filter": 'severity>=ERROR AND resource.type="gce_instance"'}}
+        )
+    )
+    assert [r.title for r in remedies_for(m.reasons)] == ["Filter not supported"]

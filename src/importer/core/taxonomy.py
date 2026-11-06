@@ -30,7 +30,8 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
         re.compile(
             r"monitor type|composite|anomaly|forecast|outlier|percentile|no new relic equivalent"
             r"|high-resolution|mql conditions|promql conditions|sql conditions|metric-absence"
-            r"|ratio conditions|trigger on several"
+            r"|ratio conditions|trigger on several|not one of the google cloud service metrics"
+            r"|uptime check"
         ),
     ),
     # Before the approximation rule: the Metric Streams note says "assumed".

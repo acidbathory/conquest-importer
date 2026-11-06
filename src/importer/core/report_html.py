@@ -13,6 +13,8 @@ label. Forbidden: gradients, shadows, radius above 4px, pure black, emoji, card 
 """
 
 import re
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from html import escape
 
@@ -34,6 +36,86 @@ KIND_NAMES: dict[Kind, tuple[str, str]] = {
     "notification": ("Notification subscriptions", "subscriptions"),
     "other": ("Other monitoring config", "items"),
 }
+
+
+@dataclass(frozen=True)
+class Profile:
+    """The wording that depends on which cloud the assets came from."""
+
+    account_label: str  # header: "AWS account 1234"
+    read_phrase: str  # "Your AWS alarms, dashboards and topics"
+    source_phrase: str  # "your AWS account"
+    alarm_title: tuple[str, str]  # table heading and unit for the main asset kind
+    share_label: str
+    unit_sentence: str  # what counts as one asset
+    names_word: str  # what the file contains names of
+    create_command: Callable[[str, str, str], str]  # (cloud account, nr account, area) -> shell
+    checklist: tuple[str, ...]
+
+
+def _aws_create(account: str, nr: str, area: str) -> str:
+    return (
+        f"importer migrate --aws-account-id {account} --nr-account-id {nr} --region {area} "
+        f"--out out/migration-applied --yes"
+    )
+
+
+def _gcp_create(_project: str, nr: str, _area: str) -> str:
+    return (
+        f"importer apply --in &lt;run folder&gt;/alerts --account-id {nr} "
+        f"--apply --confirm-account {nr}"
+    )
+
+
+CHECKLIST = (
+    "Deploy the data-ingestion Terraform (<code>ingest/</code>) so metrics reach New Relic; "
+    "converted conditions return nothing until data flows.",
+    "Run <code>importer validate</code> after ingestion starts, to compare CloudWatch and New "
+    "Relic values side by side.",
+    "Review each condition and workflow, then enable them one at a time.",
+    "Avoid double counting: do not run New Relic's AWS polling integration and Metric Streams "
+    "for the same metrics.",
+)
+GCP_CHECKLIST = (
+    "Link the Google Cloud project to New Relic with Workload Identity Federation, so metrics "
+    "are polled every 5 minutes. Converted conditions return nothing until data flows. The "
+    "importer does not generate this Terraform yet; <code>scripts/live-test/gcp-link</code> is a "
+    "working example.",
+    "Compare a few converted queries with the same chart in Cloud Monitoring before you trust "
+    "them. Metric names are confirmed on live data for Compute Engine and Pub/Sub only.",
+    "Conditions have no notifications yet. Recreate each notification channel as a destination "
+    "and attach a workflow.",
+    "Review each condition, then enable them one at a time.",
+)
+PROFILES: dict[str, Profile] = {
+    "cloudwatch": Profile(
+        account_label="AWS account",
+        read_phrase="Your AWS alarms, dashboards and topics were read and converted.",
+        source_phrase="your AWS account",
+        alarm_title=("Alarms", "alarms"),
+        share_label="Share of alarms, dashboards, subscriptions and other monitoring config "
+        "converted",
+        unit_sentence="One alarm, one dashboard, one notification subscription or one piece of "
+        "other monitoring config (an EventBridge rule, canary, SLO or similar) is one asset.",
+        names_word="alarm",
+        create_command=_aws_create,
+        checklist=CHECKLIST,
+    ),
+    "gcp": Profile(
+        account_label="Google Cloud project",
+        read_phrase="Your Google Cloud alert policies were read and converted.",
+        source_phrase="your Google Cloud project",
+        alarm_title=("Alert conditions", "conditions"),
+        share_label="Share of alert conditions converted",
+        unit_sentence="One alert condition is one asset (a policy with two conditions counts "
+        "as two). Dashboards, notification channels and uptime checks are not read yet, so "
+        "they are not counted.",
+        names_word="policy",
+        create_command=_gcp_create,
+        checklist=GCP_CHECKLIST,
+    ),
+}
+
 MIN_LABEL_SHARE = 10  # a segment narrower than this prints no label (its number is in the table)
 
 GRAIN = (
@@ -195,13 +277,13 @@ def _kind_counts(summary: Summary, kind: Kind | None) -> dict[Confidence, int]:
     return {conf: counts.get(conf, 0) for conf, *_ in STATES}
 
 
-def _ledger(summary: Summary) -> str:
+def _ledger(summary: Summary, names: dict[Kind, tuple[str, str]]) -> str:
     """One ruled column per asset type: no boxes, structure comes from the rules."""
     cols = []
     for kind in KINDS:
         if not summary.of(kind):
             continue
-        title, unit = KIND_NAMES[kind]
+        title, unit = names[kind]
         counts = _kind_counts(summary, kind)
         total = sum(counts.values())
         done = counts[Confidence.EXACT] + counts[Confidence.APPROXIMATE]
@@ -213,7 +295,7 @@ def _ledger(summary: Summary) -> str:
     return f'<div class="ledger">{"".join(cols)}</div>' if cols else ""
 
 
-def _table(summary: Summary) -> str:
+def _table(summary: Summary, names: dict[Kind, tuple[str, str]]) -> str:
     rows = []
     for kind in (*KINDS, None):
         counts = _kind_counts(summary, kind)
@@ -221,7 +303,7 @@ def _table(summary: Summary) -> str:
         if kind is not None and total == 0:
             continue
         done = counts[Confidence.EXACT] + counts[Confidence.APPROXIMATE]
-        name = KIND_NAMES[kind][0] if kind else "All assets"
+        name = names[kind][0] if kind else "All assets"
         cells = "".join(f'<td class="n">{counts[c]}</td>' for c, *_ in STATES)
         rows.append(
             f"<tr{'' if kind else ' class="total"'}><td>{name}</td>"
@@ -279,21 +361,20 @@ def _stage(mark: str, name: str, text: str) -> str:
     return f'<li><span class="mark">{mark}</span><span><b>{name}</b> {text}</span></li>'
 
 
-def _state(summary: Summary, aws_account: str, nr_account: int | None, region: str) -> str:
+def _state(
+    summary: Summary, aws_account: str, nr_account: int | None, region: str, profile: Profile
+) -> str:
     """Where the migration stands: what has happened, what has not, and the next command."""
     nr = str(nr_account) if nr_account else "&lt;new relic account id&gt;"
     aws = e(aws_account, 20) if aws_account else "&lt;aws account id&gt;"
     area = e(region, 30) if region else "us-east-1"
     if summary.created is None:
-        create = (
-            f"importer migrate --aws-account-id {aws} --nr-account-id {nr} --region {area} "
-            f"--out out/migration-applied --yes"
-        )
+        create = profile.create_command(aws, nr, area)
         stages = (
             _stage(
                 "✓ Done",
                 "Read and convert.",
-                "Your AWS alarms, dashboards and topics were read and converted. This is the plan.",
+                f"{profile.read_phrase} This is the plan.",
             )
             + _stage(
                 "○ Not yet",
@@ -310,7 +391,7 @@ def _state(summary: Summary, aws_account: str, nr_account: int | None, region: s
             '<section class="state"><p class="label">Preview · nothing has changed in New Relic'
             "</p>"
             "<p>This report is a <b>forecast</b>. The percentages show what the tool expects to "
-            "create from your AWS account, not what exists in New Relic. To create it, "
+            f"create from {profile.source_phrase}, not what exists in New Relic. To create it, "
             "everything is made <b>disabled or private</b> and can be rolled back:</p>"
             f'<pre class="cmd">{create}</pre>'
             f'<ol class="stages">{stages}</ol></section>'
@@ -378,17 +459,6 @@ def _review_notes(summary: Summary, number: int) -> str:
     )
 
 
-CHECKLIST = (
-    "Deploy the data-ingestion Terraform (<code>ingest/</code>) so metrics reach New Relic; "
-    "converted conditions return nothing until data flows.",
-    "Run <code>importer validate</code> after ingestion starts, to compare CloudWatch and New "
-    "Relic values side by side.",
-    "Review each condition and workflow, then enable them one at a time.",
-    "Avoid double counting: do not run New Relic's AWS polling integration and Metric Streams "
-    "for the same metrics.",
-)
-
-
 def render_report(
     summary: Summary,
     *,
@@ -396,7 +466,10 @@ def render_report(
     nr_account: int | None = None,
     region: str = "",
     generated: datetime | None = None,
+    source: str = "cloudwatch",
 ) -> str:
+    profile = PROFILES[source]
+    names: dict[Kind, tuple[str, str]] = {**KIND_NAMES, "alarm": profile.alarm_title}
     stamp = (generated or datetime.now(UTC)).strftime("%Y-%m-%d %H:%M UTC")
     overall = _kind_counts(summary, None)
     total = sum(overall.values())
@@ -404,7 +477,9 @@ def render_report(
     where = "<br>".join(
         x
         for x in (
-            f"AWS account {e(aws_account, 20)} · {e(region, 30)}" if aws_account else e(region, 30),
+            f"{profile.account_label} {e(aws_account, 20)} · {e(region, 30)}"
+            if aws_account
+            else e(region, 30),
             f"New Relic account {nr_account}" if nr_account else "",
             stamp,
         )
@@ -426,14 +501,15 @@ def render_report(
             f'<p class="big">{percent(done, total)}%</p></div><div>'
             f'<p class="lede"><b>{done} of {total}</b> assets {word}. '
             f"{rest} did not ({percent(rest, total)}%) and need a person.</p>"
-            '<p class="label">Share of alarms, dashboards, subscriptions and other '
-            "monitoring config converted</p>"
+            f'<p class="label">{profile.share_label}</p>'
             "</div></div>"
         )
         chart = _bar(overall, name="All assets") + _legend()
     groups = summary.groups()
     n = 1
-    sections = [f'<h2><span class="no">{n:02d}</span>What was migrated</h2>{_table(summary)}']
+    sections = [
+        f'<h2><span class="no">{n:02d}</span>What was migrated</h2>{_table(summary, names)}'
+    ]
     n += 1
     if groups:
         sections.append(
@@ -452,7 +528,7 @@ def render_report(
     if notes:
         sections.append(notes)
         n += 1
-    steps = list(CHECKLIST)
+    steps = list(profile.checklist)
     if summary.log_groups:
         steps.insert(
             1,
@@ -473,15 +549,16 @@ def render_report(
         "<title>Migration report</title>"
         f"<style>{CSS}</style></head><body><main>"
         f'<div class="masthead"><h1>Migration report</h1><p class="where">{where}</p></div>'
-        f"{_state(summary, aws_account, nr_account, region)}{hero}{chart}{_ledger(summary)}"
+        f"{_state(summary, aws_account, nr_account, region, profile)}{hero}{chart}"
+        f"{_ledger(summary, names)}"
         f"{''.join(sections)}"
-        "<footer><p><b>How this is counted.</b> One alarm, one dashboard, one notification "
-        "subscription or one piece of other monitoring config (an EventBridge rule, canary, "
-        "SLO or similar) is one asset. Migrated means converted exactly or approximately; "
+        f"<footer><p><b>How this is counted.</b> {profile.unit_sentence} "
+        "Migrated means converted exactly or approximately; "
         "manual and unsupported mean not migrated. Percentages are whole numbers and never "
         "round to 0 or 100 unless that is exact.</p>"
         f"{_ignored(summary)}"
-        "<p><b>Private.</b> This file contains alarm and resource names. Review it before "
-        "sharing outside the team; <code>importer stats</code> output is the safe summary.</p>"
+        f"<p><b>Private.</b> This file contains {profile.names_word} and resource names. "
+        "Review it before sharing outside the team; <code>importer stats</code> output is the "
+        "safe summary.</p>"
         "</footer></main></body></html>\n"
     )

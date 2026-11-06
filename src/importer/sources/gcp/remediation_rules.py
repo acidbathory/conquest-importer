@@ -16,7 +16,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"mql conditions"),
+        re.compile(r"(?<![a-z])mql conditions"),
         "Monitoring Query Language condition",
         [
             "Google has ended MQL, so existing conditions keep working but cannot be edited in "
@@ -63,12 +63,46 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"uptime check"),
+        "Uptime check alert",
+        [
+            "The alert watches an uptime check, and uptime checks are not migrated. Recreate the "
+            "check as a New Relic Synthetics monitor (a ping monitor for a URL, a scripted API "
+            "monitor for a request with assertions), choosing the same locations.",
+            "Then add an alert condition on the monitor's failures, which Synthetics offers "
+            "when you create it.",
+        ],
+    ),
+    (
         re.compile(r"filter (term|not supported)|log filter"),
         "Filter not supported",
         [
             "The filter uses a feature the importer does not read (OR, regular expressions, "
             "functions such as starts_with, or a severity range). Write the matching NRQL "
             "`WHERE` clause by hand.",
+        ],
+    ),
+    (
+        re.compile(r"aligner|reducer|alignment period|comparison .* is not supported"),
+        "Aggregation not supported",
+        [
+            "The condition uses an aggregation the importer does not convert. Work out what it "
+            "measures in Cloud Monitoring (metrics explorer shows the aligner and reducer), then "
+            "write the equivalent NRQL: `average`, `max`, `sum` or `percentile` over the `gcp.` "
+            "metric, faceted by the resource.",
+        ],
+    ),
+    (
+        re.compile(r"not one of the google cloud service metrics"),
+        "Metric New Relic does not collect from Google Cloud",
+        [
+            "Collect the data in New Relic directly. For a metric from the Ops Agent, install the "
+            "New Relic infrastructure agent or the OpenTelemetry Collector on the VM. For a "
+            "custom or Prometheus metric, send it to New Relic with OpenTelemetry (OTLP) or "
+            "Prometheus remote write from where it is produced.",
+            "For an alert on a log-based metric, forward the logs and alert on a `Log` query "
+            "instead (the same way log-match conditions convert).",
+            "Then write the NRQL condition over the new metric by hand.",
         ],
     ),
     (
