@@ -66,6 +66,7 @@ from importer.sources.cloudwatch.models import load_alarms
 from importer.sources.cloudwatch.notifications import load_topics, routing, translate_topic
 from importer.sources.cloudwatch.streaming import streaming_inputs
 from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
+from importer.sources.gcp import data_check as gcp_data
 from importer.sources.gcp.extract import GcpError, access_token, http_getter
 from importer.sources.gcp.extract import extract as extract_gcp
 from importer.sources.gcp.link_terraform import link_terraform, services_for
@@ -348,6 +349,42 @@ def gcp_link_terraform_command(
     for prefix in unknown:
         typer.echo(f"  No New Relic service block known for {printable(prefix, 80)}.", err=True)
     typer.echo("Next: review it, set NEW_RELIC_API_KEY, then `terraform init && terraform apply`.")
+
+
+@app.command("check-gcp-data")
+def check_gcp_data_command(
+    alerts: Annotated[Path, typer.Option(help="Output folder of `convert` (has ir/)")] = Path(
+        "out/gcp-alerts"
+    ),
+    nr_account_id: Annotated[int, typer.Option(help="New Relic account id to query")] = 0,
+    nr_region: Annotated[str, typer.Option(help="us or eu")] = "us",
+    hours: Annotated[int, typer.Option(help="How far back to look (1 to 168)")] = 24,
+    out: Annotated[Path | None, typer.Option(help="Also write the markdown report here")] = None,
+) -> None:
+    """Check that the data behind each converted Google condition reaches New Relic (read-only).
+
+    A condition on a metric that never arrives would look healthy and never fire. Exits with
+    code 2 if any converted condition has no data.
+    """
+    if not nr_account_id or not 1 <= hours <= 168:
+        typer.echo("Error: --nr-account-id is required and --hours must be 1 to 168", err=True)
+        raise typer.Exit(code=1)
+    try:
+        monitors = [
+            IRMonitor.model_validate_json(p.read_text())
+            for p in sorted((alerts / "ir").glob("*.json"))
+        ]
+        with NewRelicClient(require_env("NEW_RELIC_API_KEY"), nr_region) as client:
+            checks = gcp_data.check_all(client, nr_account_id, monitors, hours)
+    except (NewRelicAPIError, ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    text = gcp_data.render(checks, hours)
+    typer.echo(text)
+    if out:
+        out.write_text(text)
+    if gcp_data.has_blind_conditions(checks):
+        raise typer.Exit(code=2)
 
 
 @app.command("extract-gcp")
