@@ -155,9 +155,9 @@ a fix, roll back and re-apply.
 
 ## Other platforms
 
-AWS CloudWatch is the supported platform. Google Cloud is in progress: `--source gcp` converts
-Cloud Monitoring alert policies from the JSON of `gcloud alpha monitoring policies list
---format=json`.
+AWS CloudWatch is the supported platform. Google Cloud is in progress: `importer extract-gcp
+--project <id>` reads the alert policies (read-only), and `--source gcp` converts them. It also
+accepts the JSON of `gcloud alpha monitoring policies list --format=json`.
 
 - **Converts:** metric threshold conditions (including percentile series for distribution
   metrics) and log-match conditions with plain terms.
@@ -165,8 +165,18 @@ Cloud Monitoring alert policies from the JSON of `gcloud alpha monitoring polici
   OR, regular expressions or functions, uptime-check alerts, and alerts on custom, Ops Agent,
   Prometheus or log-based metrics (New Relic does not document collecting those from Google
   Cloud, so a converted query would return nothing).
-- **Not done yet:** dashboards, notification channels, uptime checks and a scanner that reads the
-  project for you.
+- **Counters:** New Relic stores one change per 5 minute poll, so counter conditions use a window
+  of at least 300 seconds and a rescaled threshold (the condition's notes say by how much).
+- **Log severity:** `severity>=ERROR` and the other ranges become a list of levels. The attribute
+  name for forwarded Google Cloud logs is not confirmed.
+- **Link:** `importer gcp-link-terraform --project <id> --nr-account-id <n> --alerts <run>` writes
+  the Terraform that links the project, with only the services the conditions use. You review it
+  and run `terraform apply` yourself (it grants IAM roles).
+- **Check the data:** `importer check-gcp-data --alerts <run> --nr-account-id <n>` asks New Relic
+  whether each converted condition's metric is arriving (read-only). A condition on a missing
+  metric never fires, and a `sum()` on it returns 0 without an error.
+- **Not done yet:** dashboards, notification channels, uptime checks and SLOs are listed by
+  `extract-gcp` (channels and checks as inventory only) but not converted.
 - **Report:** `importer report <run folder> --source gcp` writes the same report with Google
   Cloud wording.
 - **Metric names:** checked on real data for Compute Engine and Pub/Sub only. See
