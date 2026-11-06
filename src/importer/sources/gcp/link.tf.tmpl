@@ -1,0 +1,108 @@
+# Link a Google Cloud project to New Relic with Workload Identity Federation (no keys).
+# Written by `importer gcp-link-terraform`. Review it, then run `terraform apply` yourself.
+#
+# COST: nothing to create. Google bills the Cloud Monitoring API reads that New Relic makes every
+# 5 minutes to this project, and more services mean more reads. Run `terraform destroy` to stop.
+# NOTE: a deleted workload identity pool keeps its ID reserved for 30 days; change pool_id to
+# link again within that time.
+#
+# The apply grants IAM roles (viewer, service usage consumer, cloud asset viewer) to a new
+# service account. IAM changes take a minute or two to spread: if the link step fails with a 403
+# on iam.serviceAccounts.getAccessToken, wait and run `terraform apply` again.
+
+terraform {
+  required_providers {
+    google   = { source = "hashicorp/google" }
+    newrelic = { source = "newrelic/newrelic" }
+  }
+}
+
+variable "gcp_project_id" {
+  type    = string
+  default = @@PROJECT@@
+}
+
+variable "nr_account_id" {
+  type    = string
+  default = @@NR_ACCOUNT@@
+}
+
+variable "pool_id" {
+  type    = string
+  default = @@POOL@@
+}
+
+provider "google" {
+  project = var.gcp_project_id
+}
+
+# The New Relic API key and region come from NEW_RELIC_API_KEY and NEW_RELIC_REGION.
+provider "newrelic" {
+  account_id = var.nr_account_id
+}
+
+locals {
+  apis = @@APIS@@
+  roles = @@ROLES@@
+}
+
+resource "google_project_service" "api" {
+  for_each           = toset(local.apis)
+  service            = each.value
+  disable_on_destroy = false
+}
+
+resource "google_service_account" "newrelic" {
+  account_id   = "newrelic-gcp-integration"
+  display_name = "New Relic GCP Integration"
+  depends_on   = [google_project_service.api]
+}
+
+resource "google_project_iam_member" "newrelic" {
+  for_each = toset(local.roles)
+  project  = var.gcp_project_id
+  role     = each.value
+  member   = "serviceAccount:${google_service_account.newrelic.email}"
+}
+
+resource "google_iam_workload_identity_pool" "newrelic" {
+  workload_identity_pool_id = var.pool_id
+  display_name              = "New Relic Pool"
+  depends_on                = [google_project_service.api]
+}
+
+resource "google_iam_workload_identity_pool_provider" "newrelic" {
+  workload_identity_pool_id          = google_iam_workload_identity_pool.newrelic.workload_identity_pool_id
+  workload_identity_pool_provider_id = "newrelic-provider"
+  display_name                       = "New Relic OIDC Provider"
+
+  attribute_mapping = {
+    "google.subject"          = "assertion.sub"
+    "attribute.nr_account_id" = "assertion.nr_account_id"
+  }
+  attribute_condition = "assertion.nr_account_id == '${var.nr_account_id}'"
+
+  oidc {
+    issuer_uri        = @@ISSUER@@
+    allowed_audiences = ["newrelic-gcp-integrations"]
+  }
+}
+
+resource "google_service_account_iam_member" "impersonate" {
+  service_account_id = google_service_account.newrelic.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.newrelic.name}/attribute.nr_account_id/${var.nr_account_id}"
+}
+
+resource "newrelic_cloud_gcp_link_account" "this" {
+  name                             = "conquest-${var.gcp_project_id}"
+  project_id                       = var.gcp_project_id
+  use_workload_identity_federation = true
+  audience                         = "//iam.googleapis.com/${google_iam_workload_identity_pool_provider.newrelic.name}"
+  service_account_email            = google_service_account.newrelic.email
+  depends_on                       = [google_service_account_iam_member.impersonate, google_project_iam_member.newrelic]
+}
+
+resource "newrelic_cloud_gcp_dm_integrations" "this" {
+  linked_account_id = newrelic_cloud_gcp_link_account.this.id
+@@SERVICES@@}

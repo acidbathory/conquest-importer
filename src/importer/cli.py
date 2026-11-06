@@ -68,6 +68,7 @@ from importer.sources.cloudwatch.streaming import streaming_inputs
 from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
 from importer.sources.gcp.extract import GcpError, access_token, http_getter
 from importer.sources.gcp.extract import extract as extract_gcp
+from importer.sources.gcp.link_terraform import link_terraform, services_for
 
 app = typer.Typer(
     help="Convert observability alerts from other platforms to New Relic alert conditions.",
@@ -305,6 +306,48 @@ def apply(
         typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
     if result.failed:
         _partial_failure()
+
+
+@app.command("gcp-link-terraform")
+def gcp_link_terraform_command(
+    project: Annotated[str, typer.Option(help="Google Cloud project id to link")],
+    nr_account_id: Annotated[int, typer.Option(help="New Relic account id to link it to")],
+    alerts: Annotated[
+        Path | None,
+        typer.Option(help="Output folder of `convert` (has ir/); enables only the services used"),
+    ] = None,
+    services: Annotated[
+        list[str] | None,
+        typer.Option(help="Extra service blocks to enable, such as run or sql (repeatable)"),
+    ] = None,
+    pool_id: Annotated[str, typer.Option(help="Workload identity pool id")] = "newrelic-pool",
+    out: Annotated[Path, typer.Option(help="New folder for main.tf")] = Path("out/gcp-link"),
+) -> None:
+    """Write Terraform that links a Google Cloud project to New Relic. Offline: runs nothing.
+
+    You review the file and run `terraform apply` yourself; the apply creates a read-only service
+    account and grants it IAM roles. Services come from the converted conditions in --alerts.
+    """
+    try:
+        monitors = (
+            [
+                IRMonitor.model_validate_json(p.read_text())
+                for p in sorted((alerts / "ir").glob("*.json"))
+            ]
+            if alerts
+            else []
+        )
+        blocks, unknown = services_for(monitors)
+        text = link_terraform(project, nr_account_id, [*blocks, *(services or [])], pool_id)
+    except (ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
+        raise typer.Exit(code=1) from None
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "main.tf").write_text(text)
+    typer.echo(f"Wrote {out / 'main.tf'} with services: {', '.join(blocks) or 'none'}.")
+    for prefix in unknown:
+        typer.echo(f"  No New Relic service block known for {printable(prefix, 80)}.", err=True)
+    typer.echo("Next: review it, set NEW_RELIC_API_KEY, then `terraform init && terraform apply`.")
 
 
 @app.command("extract-gcp")
