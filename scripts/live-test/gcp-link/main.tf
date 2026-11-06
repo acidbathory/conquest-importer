@@ -19,6 +19,12 @@ variable "nr_account_id" {
   type = string
 }
 
+# A deleted pool keeps its ID reserved for 30 days, so a second test needs a new ID.
+variable "pool_id" {
+  type    = string
+  default = "newrelic-pool-2"
+}
+
 provider "google" {
   project = var.gcp_project_id
 }
@@ -64,7 +70,7 @@ resource "google_project_iam_member" "newrelic" {
 }
 
 resource "google_iam_workload_identity_pool" "newrelic" {
-  workload_identity_pool_id = "newrelic-pool"
+  workload_identity_pool_id = var.pool_id
   display_name              = "New Relic Pool"
   depends_on                = [google_project_service.api]
 }

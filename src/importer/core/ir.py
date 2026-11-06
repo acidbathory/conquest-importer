@@ -110,6 +110,7 @@ class CountFilter(BaseModel):
     value: str
     negate: bool = False
     wildcard: bool = False  # value contains * which becomes a LIKE match
+    values: list[str] = []  # when set, the match is IN (values) and `value` is ignored
 
 
 class CountSignal(BaseModel):

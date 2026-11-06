@@ -74,6 +74,19 @@ NAMING_NOTE = (
     "rule (a gcp. prefix, then the service and metric path) and is not confirmed; check it with "
     "`importer validate` once data flows"
 )
+# Cloud Logging severity levels, lowest to highest
+SEVERITIES = [
+    "DEFAULT",
+    "DEBUG",
+    "INFO",
+    "NOTICE",
+    "WARNING",
+    "ERROR",
+    "CRITICAL",
+    "ALERT",
+    "EMERGENCY",
+]
+SEVERITY_OPS = {">=", ">", "<=", "<"}
 LOG_NOTE = (
     "converts to a count of Log events, so the project's logs must be forwarded to New Relic; "
     "attribute names for forwarded Google Cloud logs are not yet confirmed"
@@ -271,7 +284,19 @@ def _log_count(body: dict[str, object]) -> CountSignal:
         raise _Fail(Confidence.MANUAL, f"log filter not supported: {err}") from err
     filters: list[CountFilter] = []
     for term in terms:
-        if term.op == ":":
+        if (
+            term.field == "severity"
+            and term.op in SEVERITY_OPS
+            and term.value.upper() in SEVERITIES
+        ):
+            first = SEVERITIES.index(term.value.upper())
+            levels = SEVERITIES[first:] if term.op in (">=", ">") else SEVERITIES[: first + 1]
+            if term.op == ">":
+                levels = SEVERITIES[first + 1 :]
+            elif term.op == "<":
+                levels = SEVERITIES[:first]
+            filters.append(CountFilter(key="severity", value="", values=levels, negate=term.negate))
+        elif term.op == ":":
             filters.append(
                 CountFilter(
                     key=term.field, value=f"*{term.value}*", negate=term.negate, wildcard=True

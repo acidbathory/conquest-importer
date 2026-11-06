@@ -132,6 +132,9 @@ def widget_nrql(series: Series, timeseries: bool) -> str:
 
 def _filter_clause(kind: SignalKind, f: CountFilter) -> str:
     attr = identifier(attribute_for(kind, f.key))
+    if f.values:
+        items = ", ".join(quote_string(v) for v in f.values)
+        return f"{attr} {'NOT IN' if f.negate else 'IN'} ({items})"
     if f.wildcard:
         op = "NOT LIKE" if f.negate else "LIKE"
         return f"{attr} {op} {quote_string(f.value.replace('*', '%'))}"

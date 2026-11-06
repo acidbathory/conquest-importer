@@ -66,8 +66,27 @@ def test_unconverted_kinds_stay_manual_with_steps(name: str) -> None:
     assert steps_for(m.reasons)
 
 
-def test_a_log_match_with_a_severity_range_stays_manual() -> None:
+def test_a_log_severity_range_becomes_a_list_of_levels() -> None:
     m = by_name()["ckg-log-match"]
+    assert m.confidence is Confidence.APPROXIMATE
+    assert "severity IN ('ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY')" in nrql_for(m)
+
+
+@pytest.mark.parametrize(
+    ("expr", "levels"),
+    [
+        ("severity>WARNING", "'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'"),
+        ("severity<=INFO", "'DEFAULT', 'DEBUG', 'INFO'"),
+        ("severity<NOTICE", "'DEFAULT', 'DEBUG', 'INFO'"),
+    ],
+)
+def test_other_severity_comparisons(expr: str, levels: str) -> None:
+    (m,) = translate_policy(policy({"conditionMatchedLog": {"filter": expr}}))
+    assert nrql_for(m) == f"SELECT count(*) FROM Log WHERE severity IN ({levels})"  # noqa: S608
+
+
+def test_a_comparison_on_another_field_stays_manual() -> None:
+    (m,) = translate_policy(policy({"conditionMatchedLog": {"filter": "httpRequest.status>=500"}}))
     assert m.confidence is Confidence.MANUAL and "comparison" in m.reasons[0]
 
 
@@ -272,12 +291,16 @@ def test_an_uptime_check_alert_gets_synthetics_steps() -> None:
     assert [r.title for r in remedies_for(m.reasons)] == ["Uptime check alert"]
 
 
-def test_a_log_severity_range_gets_the_filter_steps_not_the_aggregation_steps() -> None:
+def test_an_unsupported_log_comparison_gets_the_filter_steps_not_the_aggregation_steps() -> None:
     from importer.core.remediation import remedies_for
 
     (m,) = translate_policy(
         policy(
-            {"conditionMatchedLog": {"filter": 'severity>=ERROR AND resource.type="gce_instance"'}}
+            {
+                "conditionMatchedLog": {
+                    "filter": 'httpRequest.status>=500 AND resource.type="gce_instance"'
+                }
+            }
         )
     )
     assert [r.title for r in remedies_for(m.reasons)] == ["Filter not supported"]
