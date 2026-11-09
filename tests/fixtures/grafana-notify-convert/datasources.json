@@ -1,0 +1,7 @@
+[
+  {
+    "type": "prometheus",
+    "uid": "prom-main",
+    "name": "LEAK-name"
+  }
+]

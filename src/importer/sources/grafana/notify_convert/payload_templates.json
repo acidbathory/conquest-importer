@@ -1,0 +1,277 @@
+{
+  "source": "Payload shapes follow what Grafana sends to each service (docs/research/grafana-notifications-datapath.md section 1.4) and what the service's public API takes, from memory. No template was sent to the real service. Every template marked unverified needs a test message to a sandbox receiver before it is relied on. Values go into JSON only through the json or escape helper.",
+  "templates": {
+    "generic": {
+      "status": "documented",
+      "summary": "A small JSON object with the issue id, title, state, priority and link. The receiver must be written for this shape; it is not the Grafana alerts[] body.",
+      "url": null,
+      "auth": null,
+      "channel_headers": null,
+      "placeholders": {},
+      "unverified": [],
+      "body": [
+        "{",
+        "  \"issueId\": {{json issueId}},",
+        "  \"title\": {{json issueTitle}},",
+        "  \"state\": {{json state}},",
+        "  \"priority\": {{json priority}},",
+        "  \"issueUrl\": {{json issuePageUrl}}",
+        "}"
+      ]
+    },
+    "oncall": {
+      "status": "unverified",
+      "summary": "An Alertmanager-style body for a Grafana OnCall Alertmanager or Grafana Alerting integration URL.",
+      "url": null,
+      "auth": null,
+      "channel_headers": null,
+      "placeholders": {},
+      "unverified": [
+        "That the OnCall integration accepts this reduced Alertmanager body is not confirmed; it accepts the full Grafana body."
+      ],
+      "body": [
+        "{",
+        "  \"receiver\": \"new-relic\",",
+        "  \"status\": {{#eq state \"CLOSED\"}}\"resolved\"{{else}}\"firing\"{{/eq}},",
+        "  \"alerts\": [",
+        "    {",
+        "      \"status\": {{#eq state \"CLOSED\"}}\"resolved\"{{else}}\"firing\"{{/eq}},",
+        "      \"labels\": {\"alertname\": {{json issueTitle}}, \"severity\": {{json priority}}},",
+        "      \"annotations\": {\"summary\": {{json issueTitle}}},",
+        "      \"generatorURL\": {{json issuePageUrl}},",
+        "      \"fingerprint\": {{json issueId}}",
+        "    }",
+        "  ],",
+        "  \"groupKey\": {{json issueId}},",
+        "  \"externalURL\": {{json issuePageUrl}},",
+        "  \"version\": \"4\"",
+        "}"
+      ]
+    },
+    "prometheus-alertmanager": {
+      "status": "unverified",
+      "summary": "A one-element array for POST /api/v2/alerts of an Alertmanager. Of little value once New Relic replaces the Alertmanager.",
+      "url": null,
+      "auth": null,
+      "channel_headers": null,
+      "placeholders": {},
+      "unverified": [
+        "That the Alertmanager API accepts this array and resolves the alert without an endsAt time is not confirmed.",
+        "The format of issueClosedAtUtc is not documented; the Alertmanager needs RFC 3339."
+      ],
+      "body": [
+        "[",
+        "  {",
+        "    \"labels\": {\"alertname\": {{json issueTitle}}, \"severity\": {{json priority}}},",
+        "    \"annotations\": {\"summary\": {{json issueTitle}}, \"issue_url\": {{json issuePageUrl}}},",
+        "    \"generatorURL\": {{json issuePageUrl}}{{#eq state \"CLOSED\"}},",
+        "    \"endsAt\": {{json issueClosedAtUtc}}{{/eq}}",
+        "  }",
+        "]"
+      ]
+    },
+    "opsgenie": {
+      "status": "unverified",
+      "summary": "The Opsgenie alert API body (POST /v2/alerts). The API key goes in the Authorization header as GenieKey <key>.",
+      "url": {"plain": "https://api.opsgenie.com/v2/alerts", "host_option": "https://{host}/v2/alerts"},
+      "auth": {"kind": "header", "key": "Authorization", "scheme": "GenieKey"},
+      "channel_headers": null,
+      "placeholders": {},
+      "unverified": [
+        "Atlassian publishes a New Relic template for Opsgenie that was not read; this body is built from the public alert API.",
+        "Closing the alert when the issue closes needs a second request to /v2/alerts/<alias>/close and is not done."
+      ],
+      "body": [
+        "{",
+        "  \"message\": {{json issueTitle}},",
+        "  \"alias\": {{json issueId}},",
+        "  \"source\": \"New Relic\",",
+        "  \"priority\": {{#eq priority \"CRITICAL\"}}\"P1\"{{else}}{{#eq priority \"HIGH\"}}\"P2\"{{else}}{{#eq priority \"MEDIUM\"}}\"P3\"{{else}}\"P4\"{{/eq}}{{/eq}}{{/eq}},",
+        "  \"details\": {\"issueUrl\": {{json issuePageUrl}}, \"state\": {{json state}}}",
+        "}"
+      ]
+    },
+    "victorops": {
+      "status": "unverified",
+      "summary": "The Splunk On-Call REST endpoint body. The integration and routing key are part of the URL.",
+      "url": {"prefix": "https://alert.victorops.com/", "secret": "the path of the REST endpoint URL, from integrations/ to the routing key"},
+      "auth": null,
+      "channel_headers": null,
+      "placeholders": {},
+      "unverified": [
+        "Splunk links a New Relic template that was not read; the fields are those Grafana sends."
+      ],
+      "body": [
+        "{",
+        "  \"message_type\": {{#eq state \"CLOSED\"}}\"RECOVERY\"{{else}}\"CRITICAL\"{{/eq}},",
+        "  \"entity_id\": {{json issueId}},",
+        "  \"entity_display_name\": {{json issueTitle}},",
+        "  \"state_message\": {{json issueTitle}},",
+        "  \"monitoring_tool\": \"New Relic\",",
+        "  \"alert_url\": {{json issuePageUrl}}",
+        "}"
+      ]
+    },
+    "discord": {
+      "status": "unverified",
+      "summary": "A Discord webhook message with one embed. The webhook URL holds the secret.",
+      "url": {"prefix": "https://discord.com/api/webhooks/", "secret": "the webhook id and token after /api/webhooks/"},
+      "auth": null,
+      "channel_headers": null,
+      "placeholders": {},
+      "unverified": [],
+      "body": [
+        "{",
+        "  \"username\": \"New Relic\",",
+        "  \"embeds\": [",
+        "    {",
+        "      \"title\": {{json issueTitle}},",
+        "      \"url\": {{json issuePageUrl}},",
+        "      \"description\": {{json stateText}},",
+        "      \"color\": {{#eq state \"CLOSED\"}}3066993{{else}}15158332{{/eq}}",
+        "    }",
+        "  ]",
+        "}"
+      ]
+    },
+    "googlechat": {
+      "status": "unverified",
+      "summary": "A Google Chat card message with a header and an open-issue button. The webhook URL holds the secret.",
+      "url": {"prefix": "https://chat.googleapis.com/", "secret": "the space, key and token after the host"},
+      "auth": null,
+      "channel_headers": null,
+      "placeholders": {},
+      "unverified": [
+        "Grafana sends a legacy cards message; whether the space accepts it (not cardsV2) was not checked."
+      ],
+      "body": [
+        "{",
+        "  \"cards\": [",
+        "    {",
+        "      \"header\": {\"title\": {{json issueTitle}}, \"subtitle\": {{json stateText}}},",
+        "      \"sections\": [",
+        "        {",
+        "          \"widgets\": [",
+        "            {\"keyValue\": {\"topLabel\": \"Priority\", \"content\": {{json priorityText}}}},",
+        "            {\"buttons\": [{\"textButton\": {\"text\": \"OPEN ISSUE\", \"onClick\": {\"openLink\": {\"url\": {{json issuePageUrl}}}}}}]}",
+        "          ]",
+        "        }",
+        "      ]",
+        "    }",
+        "  ]",
+        "}"
+      ]
+    },
+    "telegram": {
+      "status": "unverified",
+      "summary": "A Telegram sendMessage body. The bot token is part of the URL path.",
+      "url": {"prefix": "https://api.telegram.org/", "secret": "bot<token>/sendMessage"},
+      "auth": null,
+      "channel_headers": null,
+      "placeholders": {"REPLACE_CHAT_ID": "the Telegram chat id"},
+      "unverified": [
+        "Grafana sends form fields; that the Bot API accepts this JSON body from New Relic is from memory.",
+        "The escape helper is assumed to escape for a JSON string."
+      ],
+      "body": [
+        "{",
+        "  \"chat_id\": \"REPLACE_CHAT_ID\",",
+        "  \"text\": \"{{escape issueTitle}} is {{escape stateText}}. {{escape issuePageUrl}}\",",
+        "  \"disable_web_page_preview\": true",
+        "}"
+      ]
+    },
+    "webex": {
+      "status": "unverified",
+      "summary": "A Webex message to a room. The bot token is a bearer token on the destination.",
+      "url": {"plain": "https://webexapis.com/v1/messages"},
+      "auth": {"kind": "token", "prefix": "Bearer"},
+      "channel_headers": null,
+      "placeholders": {"REPLACE_ROOM_ID": "the Webex room id"},
+      "unverified": ["The escape helper is assumed to escape for a JSON string."],
+      "body": [
+        "{",
+        "  \"roomId\": \"REPLACE_ROOM_ID\",",
+        "  \"markdown\": \"**{{escape issueTitle}}** is {{escape stateText}}. {{escape issuePageUrl}}\"",
+        "}"
+      ]
+    },
+    "sensugo": {
+      "status": "unverified",
+      "summary": "A Sensu Go event for the events API. The API key goes in the Authorization header as Key <key>.",
+      "url": {"prefix": "https://", "secret": "the rest of the events URL, <host>/api/core/v2/namespaces/<namespace>/events"},
+      "auth": {"kind": "header", "key": "Authorization", "scheme": "Key"},
+      "channel_headers": null,
+      "placeholders": {"REPLACE_ENTITY": "the Sensu entity name", "REPLACE_CHECK": "the Sensu check name"},
+      "unverified": [
+        "The event body is not mapped in the research note; this one is built from the public events API.",
+        "The API may need PUT instead of POST; New Relic always posts."
+      ],
+      "body": [
+        "{",
+        "  \"entity\": {\"entity_class\": \"proxy\", \"metadata\": {\"name\": \"REPLACE_ENTITY\"}},",
+        "  \"check\": {",
+        "    \"metadata\": {\"name\": \"REPLACE_CHECK\"},",
+        "    \"status\": {{#eq state \"CLOSED\"}}0{{else}}2{{/eq}},",
+        "    \"output\": {{json issueTitle}},",
+        "    \"interval\": 60,",
+        "    \"handlers\": []",
+        "  }",
+        "}"
+      ]
+    },
+    "kafka": {
+      "status": "unverified",
+      "summary": "A Kafka REST proxy records body (API v2). The URL is the proxy's topic endpoint.",
+      "url": {"prefix": "https://", "secret": "the rest of the topic URL, <proxy>/topics/<topic>"},
+      "auth": null,
+      "channel_headers": {"Content-Type": "application/vnd.kafka.json.v2+json"},
+      "placeholders": {},
+      "unverified": [
+        "Whether New Relic honours a Content-Type set in the channel headers is not confirmed.",
+        "The format of the channel headers property is not documented."
+      ],
+      "body": [
+        "{",
+        "  \"records\": [",
+        "    {\"value\": {\"issueId\": {{json issueId}}, \"title\": {{json issueTitle}}, \"state\": {{json state}}, \"url\": {{json issuePageUrl}}}}",
+        "  ]",
+        "}"
+      ]
+    },
+    "dingding": {
+      "status": "unverified",
+      "summary": "A DingTalk robot link message. The URL carries the access token.",
+      "url": {"prefix": "https://oapi.dingtalk.com/", "secret": "robot/send?access_token=<token>"},
+      "auth": null,
+      "channel_headers": null,
+      "placeholders": {},
+      "unverified": [],
+      "body": [
+        "{",
+        "  \"msgtype\": \"link\",",
+        "  \"link\": {",
+        "    \"title\": {{json issueTitle}},",
+        "    \"text\": {{json stateText}},",
+        "    \"messageUrl\": {{json issuePageUrl}}",
+        "  }",
+        "}"
+      ]
+    },
+    "wecom": {
+      "status": "unverified",
+      "summary": "A WeCom robot markdown message (robot mode only). The URL carries the robot key.",
+      "url": {"prefix": "https://qyapi.weixin.qq.com/", "secret": "cgi-bin/webhook/send?key=<key>"},
+      "auth": null,
+      "channel_headers": null,
+      "placeholders": {},
+      "unverified": ["The escape helper is assumed to escape for a JSON string."],
+      "body": [
+        "{",
+        "  \"msgtype\": \"markdown\",",
+        "  \"markdown\": {\"content\": \"**{{escape issueTitle}}** is {{escape stateText}}. {{escape issuePageUrl}}\"}",
+        "}"
+      ]
+    }
+  }
+}

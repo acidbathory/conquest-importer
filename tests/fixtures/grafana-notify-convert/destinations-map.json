@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "contact_points": {
+    "Data team": {
+      "email": [
+        "data-oncall@example.com"
+      ]
+    },
+    "Generic hook": {
+      "webhook_url": "TEAM_HOOK_URL"
+    },
+    "PagerDuty platform": {
+      "pagerduty_key": "PLATFORM_PD_KEY"
+    },
+    "cp-threema": {
+      "skip": true
+    },
+    "Not a contact point": {
+      "skip": true
+    }
+  }
+}

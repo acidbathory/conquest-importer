@@ -1,0 +1,457 @@
+[
+  {
+    "uid": "r-api",
+    "title": "API latency high",
+    "folderUID": "folder-uid-1",
+    "ruleGroup": "group1",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-main",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "expr": "avg by (service) (request_latency_seconds)",
+          "instant": true,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "mean",
+          "refId": "B",
+          "settings": {
+            "mode": "dropNN"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  1
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "for": "5m",
+    "labels": {
+      "severity": "critical",
+      "team": "platform"
+    },
+    "annotations": {
+      "summary": "API latency high"
+    },
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": false
+  },
+  {
+    "uid": "r-disk",
+    "title": "Disk nearly full",
+    "folderUID": "folder-uid-1",
+    "ruleGroup": "group1",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-main",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "expr": "avg by (service) (disk_used_ratio)",
+          "instant": true,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "mean",
+          "refId": "B",
+          "settings": {
+            "mode": "dropNN"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  0.9
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "for": "5m",
+    "labels": {
+      "severity": "warning",
+      "team": "infra"
+    },
+    "annotations": {
+      "summary": "Disk nearly full"
+    },
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": false
+  },
+  {
+    "uid": "r-err",
+    "title": "Error budget burn",
+    "folderUID": "folder-uid-1",
+    "ruleGroup": "group1",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-main",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "expr": "avg by (service, env) (errors_ratio)",
+          "instant": true,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "mean",
+          "refId": "B",
+          "settings": {
+            "mode": "dropNN"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  0.05
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "for": "5m",
+    "labels": {
+      "severity": "critical",
+      "team": "platform",
+      "env": "prod"
+    },
+    "annotations": {
+      "summary": "Error budget burn"
+    },
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": false
+  },
+  {
+    "uid": "r-queue",
+    "title": "Queue depth",
+    "folderUID": "folder-uid-1",
+    "ruleGroup": "group1",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-main",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "expr": "avg(queue_depth)",
+          "instant": true,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "mean",
+          "refId": "B",
+          "settings": {
+            "mode": "dropNN"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  1000
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "for": "5m",
+    "labels": {
+      "team": "data"
+    },
+    "annotations": {
+      "summary": "Queue depth"
+    },
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": false
+  },
+  {
+    "uid": "r-batch",
+    "title": "Nightly batch lag",
+    "folderUID": "folder-uid-1",
+    "ruleGroup": "group1",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-main",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "expr": "avg(batch_lag_seconds)",
+          "instant": true,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "mean",
+          "refId": "B",
+          "settings": {
+            "mode": "dropNN"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  600
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "for": "5m",
+    "labels": {
+      "severity": "warning",
+      "team": "data"
+    },
+    "annotations": {
+      "summary": "Nightly batch lag"
+    },
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": false
+  },
+  {
+    "uid": "r-manual",
+    "title": "Unconverted topk",
+    "folderUID": "folder-uid-1",
+    "ruleGroup": "group1",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-main",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "expr": "topk(3, sum by (service) (rate(x_total[5m])))",
+          "instant": true,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "mean",
+          "refId": "B",
+          "settings": {
+            "mode": "dropNN"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  1
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "for": "5m",
+    "labels": {
+      "team": "platform"
+    },
+    "annotations": {
+      "summary": "Unconverted topk"
+    },
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": false
+  }
+]

@@ -72,6 +72,7 @@ class RuleLabels:
     receiver: str | None = None  # simplified routing: skips the tree
     uid: str = ""  # the rule uid, the value of __alert_rule_uid__ (empty when not carried)
     namespace_uid: str = ""  # the folder uid, the value of __alert_rule_namespace_uid__
+    settings: PolicyNode | None = None  # simplified routing: the rule's own route options
 
 
 class Predicate(BaseModel):
@@ -432,7 +433,24 @@ def flatten_policy_tree(tree: PolicyTree, rules: Sequence[RuleLabels]) -> Routin
     leaves: list[_Leaf] = []
     for rule in rules:
         if rule.receiver:  # simplified routing names its receiver and skips the tree
-            leaves.append(_Leaf(rule.name, rule.receiver, (), (), (), None, (None, None, None)))
+            own = rule.settings
+            leaves.append(
+                _Leaf(
+                    rule.name,
+                    rule.receiver,
+                    (),
+                    tuple(own.mute_time_intervals) if own else (),
+                    tuple(own.active_time_intervals) if own else (),
+                    tuple(own.group_by) if own and own.group_by is not None else None,
+                    (
+                        own.group_wait_seconds,
+                        own.group_interval_seconds,
+                        own.repeat_interval_seconds,
+                    )
+                    if own
+                    else (None, None, None),
+                )
+            )
             continue
         walk = _Walk(rule, deadline)
         try:

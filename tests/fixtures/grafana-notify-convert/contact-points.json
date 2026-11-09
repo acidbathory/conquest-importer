@@ -1,0 +1,274 @@
+[
+  {
+    "uid": "cp-email",
+    "name": "Platform email",
+    "type": "email",
+    "settings": {
+      "addresses": "EMAILADDR-platform@example.com; EMAILADDR-second@example.com"
+    }
+  },
+  {
+    "uid": "cp-email-bare",
+    "name": "Data team",
+    "type": "email",
+    "settings": {
+      "subject": "LEAK-subject {{ .CommonLabels.alertname }}"
+    }
+  },
+  {
+    "uid": "cp-hook",
+    "name": "Generic hook",
+    "type": "webhook",
+    "settings": {
+      "url": "https://hooks.example.com/LEAK-path?token=LEAK-query",
+      "httpMethod": "PUT",
+      "username": "LEAK-user",
+      "password": "[REDACTED]",
+      "authorization_credentials": "[REDACTED]",
+      "headers": {
+        "X-Api-Key": "LEAK-header"
+      },
+      "hmacConfig": {
+        "secret": "[REDACTED]"
+      },
+      "payload": {
+        "template": "{{ .Labels.password }} LEAK-payload"
+      }
+    },
+    "disableResolveMessage": true
+  },
+  {
+    "uid": "cp-slack",
+    "name": "Slack alerts",
+    "type": "slack",
+    "settings": {
+      "recipient": "#LEAK-channel",
+      "token": "[REDACTED]",
+      "url": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-pd",
+    "name": "PagerDuty platform",
+    "type": "pagerduty",
+    "settings": {
+      "integrationKey": "[REDACTED]",
+      "severity": "LEAK-sev"
+    }
+  },
+  {
+    "uid": "cp-teams",
+    "name": "Teams ops",
+    "type": "teams",
+    "settings": {
+      "url": "https://LEAK-teams.example.com/webhook"
+    }
+  },
+  {
+    "uid": "cp-jira",
+    "name": "Jira tickets",
+    "type": "jira",
+    "settings": {
+      "api_url": "https://LEAK-tenant.atlassian.net",
+      "user": "[REDACTED]",
+      "api_token": "[REDACTED]",
+      "project": "LEAK",
+      "issue_type": "Task"
+    }
+  },
+  {
+    "uid": "cp-oncall",
+    "name": "OnCall",
+    "type": "oncall",
+    "settings": {
+      "url": "https://hooks.example.com/LEAK-oncall",
+      "httpMethod": "POST"
+    }
+  },
+  {
+    "uid": "cp-ops",
+    "name": "Opsgenie infra",
+    "type": "opsgenie",
+    "settings": {
+      "apiKey": "[REDACTED]",
+      "apiUrl": "https://api.eu.opsgenie.com/v2/alerts"
+    }
+  },
+  {
+    "uid": "cp-vo",
+    "name": "VictorOps",
+    "type": "victorops",
+    "settings": {
+      "url": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-discord",
+    "name": "Discord alerts",
+    "type": "discord",
+    "settings": {
+      "url": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-gchat",
+    "name": "Google Chat",
+    "type": "googlechat",
+    "settings": {
+      "url": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-tg",
+    "name": "Telegram",
+    "type": "telegram",
+    "settings": {
+      "bottoken": "[REDACTED]",
+      "chatid": "LEAK-chat"
+    }
+  },
+  {
+    "uid": "cp-webex",
+    "name": "Webex",
+    "type": "webex",
+    "settings": {
+      "bot_token": "[REDACTED]",
+      "room_id": "LEAK-room"
+    }
+  },
+  {
+    "uid": "cp-sensu",
+    "name": "Sensu",
+    "type": "sensugo",
+    "settings": {
+      "url": "https://hooks.example.com/LEAK-sensu",
+      "apikey": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-kafka",
+    "name": "Kafka",
+    "type": "kafka",
+    "settings": {
+      "kafkaRestProxy": "https://hooks.example.com/LEAK-kafka",
+      "kafkaTopic": "LEAK-topic",
+      "password": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-ding",
+    "name": "DingTalk",
+    "type": "dingding",
+    "settings": {
+      "url": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-wecom-robot",
+    "name": "WeCom robot",
+    "type": "wecom",
+    "settings": {
+      "url": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-wecom-app",
+    "name": "WeCom app",
+    "type": "wecom",
+    "settings": {
+      "corp_id": "LEAK-corp",
+      "agent_id": "LEAK-agent",
+      "secret": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-am",
+    "name": "Alertmanager",
+    "type": "prometheus-alertmanager",
+    "settings": {
+      "url": "https://alertmanager.example.com",
+      "basicAuthPassword": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-push",
+    "name": "Pushover",
+    "type": "pushover",
+    "settings": {
+      "apiToken": "[REDACTED]",
+      "userKey": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-sns",
+    "name": "SNS topic",
+    "type": "sns",
+    "settings": {
+      "topic_arn": "arn:aws:sns:us-east-1:123456789012:LEAK",
+      "sigv4": {
+        "access_key": "[REDACTED]",
+        "secret_key": "[REDACTED]"
+      }
+    }
+  },
+  {
+    "uid": "cp-threema",
+    "name": "Threema",
+    "type": "threema",
+    "settings": {
+      "gateway_id": "LEAK",
+      "recipient_id": "LEAK",
+      "api_secret": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-line",
+    "name": "LINE",
+    "type": "LINE",
+    "settings": {
+      "token": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-mqtt",
+    "name": "MQTT",
+    "type": "mqtt",
+    "settings": {
+      "brokerUrl": "tcp://LEAK-broker:1883",
+      "topic": "alerts/LEAK",
+      "password": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-wechat",
+    "name": "WeChat",
+    "type": "wechat",
+    "settings": {
+      "secret": "[REDACTED]"
+    }
+  },
+  {
+    "uid": "cp-new",
+    "name": "Something new",
+    "type": "future-type",
+    "settings": {
+      "key": "LEAK-value"
+    }
+  },
+  {
+    "uid": "cp-both-mail",
+    "name": "Both chat",
+    "type": "email",
+    "settings": {
+      "addresses": "EMAILADDR-both@example.com"
+    }
+  },
+  {
+    "uid": "cp-both-slack",
+    "name": "Both chat",
+    "type": "slack",
+    "settings": {
+      "token": "[REDACTED]"
+    }
+  }
+]

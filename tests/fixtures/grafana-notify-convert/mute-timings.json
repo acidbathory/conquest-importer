@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Nights",
+    "time_intervals": [
+      {
+        "times": [
+          {
+            "start_time": "22:00",
+            "end_time": "24:00"
+          }
+        ],
+        "weekdays": [
+          "monday:friday"
+        ],
+        "location": "Europe/Berlin"
+      }
+    ]
+  },
+  {
+    "name": "Business hours",
+    "time_intervals": [
+      {
+        "times": [
+          {
+            "start_time": "09:00",
+            "end_time": "17:00"
+          }
+        ],
+        "weekdays": [
+          "monday:friday"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Month end",
+    "time_intervals": [
+      {
+        "days_of_month": [
+          "-1"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Unused",
+    "time_intervals": [
+      {
+        "times": [
+          {
+            "start_time": "01:00",
+            "end_time": "02:00"
+          }
+        ]
+      }
+    ]
+  }
+]
