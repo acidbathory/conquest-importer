@@ -28,8 +28,9 @@ from pydantic import BaseModel
 from importer.core.remediation import remedies_for
 from importer.core.report import md_cell
 from importer.core.text import printable
+from importer.sources.dynatrace.dashboards.report_util import table
 from importer.sources.dynatrace.inventory import reasons as r
-from importer.sources.dynatrace.inventory.models import Location, Monitor
+from importer.sources.dynatrace.inventory.models import Location, Monitor, dicts
 
 DATA = Path(__file__).parent / "data"
 PERIODS = {
@@ -88,17 +89,13 @@ def _locations() -> tuple[dict[tuple[str, str], tuple[str, str]], dict[str, tupl
     return cities, countries
 
 
-def _dicts(value: object, limit: int) -> list[dict[str, Any]]:
-    return [i for i in value[:limit] if isinstance(i, dict)] if isinstance(value, list) else []
-
-
 def _http_requests(script: dict[str, Any]) -> list[dict[str, Any]]:
-    return _dicts(script.get("requests"), MAX_REQUESTS)
+    return dicts(script.get("requests"), MAX_REQUESTS)
 
 
 def _rules(request: dict[str, Any]) -> list[dict[str, Any]]:
     validation = request.get("validation")
-    return _dicts(validation.get("rules"), 50) if isinstance(validation, dict) else []
+    return dicts(validation.get("rules"), 50) if isinstance(validation, dict) else []
 
 
 def _has_script(request: dict[str, Any]) -> bool:
@@ -146,7 +143,7 @@ def _simple_notes(request: dict[str, Any]) -> list[str]:
 
 def _classify_browser(monitor: Monitor) -> tuple[TYPES, list[str], list[str]]:
     script = monitor.script
-    events = _dicts(script.get("events"), MAX_EVENTS)
+    events = dicts(script.get("events"), MAX_EVENTS)
     kinds = {str(e.get("type", "")).lower() for e in events}
     if not events:
         return "NONE", [r.S_NO_SCRIPT], []
@@ -239,11 +236,6 @@ def plan_synthetics(
     return SyntheticsPlan(monitors=[plan_monitor(m, by_id) for m in monitors], skipped=skipped)
 
 
-def _table(header: list[str], rows: list[list[str]]) -> list[str]:
-    lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
-    return lines + ["| " + " | ".join(row) + " |" for row in rows]
-
-
 def render_report(plan: SyntheticsPlan) -> str:
     by_target: dict[str, int] = {}
     for m in plan.monitors:
@@ -255,13 +247,11 @@ def render_report(plan: SyntheticsPlan) -> str:
         f"Monitors read: **{len(plan.monitors)}** (entries not read: {plan.skipped}). "
         f"Creatable from the JSON alone: **{creatable}**. No monitor is created by this plan.",
         "",
-        *_table(
-            ["New Relic monitor", "Count"], [[k, str(v)] for k, v in sorted(by_target.items())]
-        ),
+        *table(["New Relic monitor", "Count"], [[k, str(v)] for k, v in sorted(by_target.items())]),
         "",
         "## Monitors",
         "",
-        *_table(
+        *table(
             [
                 "Monitor",
                 "Dynatrace type",
@@ -274,7 +264,7 @@ def render_report(plan: SyntheticsPlan) -> str:
             [
                 [
                     md_cell(m.name, 60),
-                    m.dynatrace_type,
+                    md_cell(m.dynatrace_type, 40),
                     m.target,
                     "yes" if m.creatable_from_json else "no",
                     m.period,

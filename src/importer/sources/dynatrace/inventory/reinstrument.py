@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from importer.core.remediation import remedies_for
 from importer.core.report import md_cell
 from importer.core.text import printable
+from importer.sources.dynatrace.dashboards.report_util import table
 from importer.sources.dynatrace.inventory import reasons as r
 from importer.sources.dynatrace.inventory.models import Entity, Loaded, Slo
 
@@ -109,7 +110,7 @@ class ReinstrumentPlan(BaseModel):
 
 
 @lru_cache(maxsize=1)
-def _entity_table() -> tuple[dict[str, Target], list[tuple[str, Target]]]:
+def _entitytable() -> tuple[dict[str, Target], list[tuple[str, Target]]]:
     raw = json.loads((DATA / "entity_types.json").read_text())
     exact = {row["type"]: Target(**_target(row)) for row in raw["types"]}
     prefixes = [(row["prefix"], Target(**_target(row))) for row in raw["prefixes"]]
@@ -121,7 +122,7 @@ def _target(row: dict[str, str]) -> dict[str, str]:
 
 
 @lru_cache(maxsize=1)
-def _technology_table() -> tuple[dict[str, tuple[str, Target]], list[str]]:
+def _technologytable() -> tuple[dict[str, tuple[str, Target]], list[str]]:
     """alias (lower case) -> (row name, target), and the UNVERIFIED row names."""
     raw = json.loads((DATA / "technology_agents.json").read_text())
     by_alias: dict[str, tuple[str, Target]] = {}
@@ -135,14 +136,14 @@ def _technology_table() -> tuple[dict[str, tuple[str, Target]], list[str]]:
 
 
 def target_for_type(entity_type: str) -> Target | None:
-    exact, prefixes = _entity_table()
+    exact, prefixes = _entitytable()
     if entity_type in exact:
         return exact[entity_type]
     return next((t for prefix, t in prefixes if entity_type.startswith(prefix)), None)
 
 
 def target_for_technology(name: str) -> tuple[str, Target] | None:
-    return _technology_table()[0].get(name.strip().lower())
+    return _technologytable()[0].get(name.strip().lower())
 
 
 def _type_rows(entities: list[Entity]) -> list[TypeRow]:
@@ -236,7 +237,7 @@ def _target_rows(entities: list[Entity], service_targets: Counter[str]) -> list[
         status[target.target] = target.status
     for name, count in service_targets.items():
         totals[name] += count
-        match = next((t for _, t in _technology_table()[0].values() if t.target == name), None)
+        match = next((t for _, t in _technologytable()[0].values() if t.target == name), None)
         status[name] = match.status if match else "UNVERIFIED"
     return [TargetRow(target=t, count=c, status=status[t]) for t, c in totals.most_common()]
 
@@ -275,7 +276,7 @@ def plan_reinstrumentation(
         services_without_technology=without,
         targets=_target_rows(entities, service_targets),
         no_path=[{"capability": c, "path": p} for c, p in NO_PATH],
-        unverified_rows=sorted(_technology_table()[1]),
+        unverified_rows=sorted(_technologytable()[1]),
         slos=summarize_slos(slos) if slos is not None and slos.items else None,
     )
     if loaded.reported_total is not None and loaded.reported_total > len(entities):
@@ -285,11 +286,6 @@ def plan_reinstrumentation(
     if without:
         plan.notes.append(r.I_NO_TECH)
     return plan
-
-
-def _table(header: list[str], rows: list[list[str]]) -> list[str]:
-    lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
-    return lines + ["| " + " | ".join(row) + " |" for row in rows]
 
 
 def _slo_lines(plan: ReinstrumentPlan) -> list[str]:
@@ -317,7 +313,7 @@ def render_report(plan: ReinstrumentPlan) -> str:
         "",
         "## By entity type",
         "",
-        *_table(
+        *table(
             ["Entity type", "Count", "New Relic target", "Status"],
             [
                 [md_cell(t.type, 60), str(t.count), md_cell(t.target, 200), t.status]
@@ -327,18 +323,18 @@ def render_report(plan: ReinstrumentPlan) -> str:
         "",
         "## What to install, by New Relic target",
         "",
-        *_table(
+        *table(
             ["Target", "Count", "Status"],
             [[md_cell(t.target, 200), str(t.count), t.status] for t in plan.targets],
         ),
         "",
         "## Hosts by operating system",
         "",
-        *_table(["OS", "Hosts"], [[md_cell(k, 40), str(v)] for k, v in plan.hosts_by_os.items()]),
+        *table(["OS", "Hosts"], [[md_cell(k, 40), str(v)] for k, v in plan.hosts_by_os.items()]),
         "",
         "## Services by technology",
         "",
-        *_table(
+        *table(
             ["Technology", "Services", "New Relic target", "Status"],
             [
                 [md_cell(t.technology, 60), str(t.count), md_cell(t.target, 200), t.status]

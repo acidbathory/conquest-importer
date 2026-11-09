@@ -25,6 +25,7 @@ from importer.sources.dynatrace.dashboards.plan_models import (
     VariablePlan,
     Verdict,
 )
+from importer.sources.dynatrace.dashboards.report_util import table
 from importer.sources.dynatrace.dashboards.tiles import classify_tile, unreadable_tile
 from importer.sources.dynatrace.dashboards.variables import classify_variable
 
@@ -107,11 +108,6 @@ def plan_documents(documents: list[Document], copies_skipped: int = 0) -> Dashbo
     return plans
 
 
-def _table(header: list[str], rows: list[list[str]]) -> list[str]:
-    lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
-    return lines + ["| " + " | ".join(row) + " |" for row in rows]
-
-
 def _reason_counts(plans: DashboardPlans) -> Counter[str]:
     found: Counter[str] = Counter()
     for dash in plans.dashboards:
@@ -134,7 +130,7 @@ def _summary(plans: DashboardPlans) -> list[str]:
         "No New Relic dashboard is created from this plan. It says what could be created and "
         "what a person must do for the rest.",
         "",
-        *_table(
+        *table(
             ["Tiles", "Count"],
             [
                 ["data tiles", str(t.data)],
@@ -149,7 +145,7 @@ def _summary(plans: DashboardPlans) -> list[str]:
             ],
         ),
         "",
-        *_table(
+        *table(
             ["Variables", "Count"],
             [
                 ["exact", str(t.variables_exact)],
@@ -174,7 +170,7 @@ def _per_dashboard(plans: DashboardPlans) -> list[str]:
         ]
         for d in plans.dashboards
     ]
-    return _table(
+    return table(
         ["Dashboard", "Kind", "Data", "Exact", "Draft", "Manual", "Markdown", "Variables e/d/m"],
         rows,
     )
@@ -191,7 +187,7 @@ def _tile_rows(plans: DashboardPlans) -> list[str]:
         rows = [
             [
                 md_cell(t.id, 40),
-                t.kind,
+                md_cell(t.kind, 40),
                 md_cell(t.title, 60),
                 t.verdict.value + (f" ({t.action})" if t.action else ""),
                 t.widget,
@@ -200,20 +196,20 @@ def _tile_rows(plans: DashboardPlans) -> list[str]:
             for t in dash.tiles
         ]
         if rows:
-            lines += _table(
+            lines += table(
                 ["Tile", "Type", "Title", "Verdict", "Widget", "Reasons and notes"], rows
             )
         vrows = [
             [
                 md_cell(v.key, 40),
-                v.type,
+                md_cell(v.type, 40),
                 v.verdict.value,
                 md_cell("; ".join([*v.reasons, *v.notes]), 400),
             ]
             for v in dash.variables
         ]
         if vrows:
-            lines += ["", *_table(["Variable", "Type", "Verdict", "Reasons and notes"], vrows)]
+            lines += ["", *table(["Variable", "Type", "Verdict", "Reasons and notes"], vrows)]
     return lines
 
 

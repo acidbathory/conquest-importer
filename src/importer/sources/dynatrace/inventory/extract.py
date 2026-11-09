@@ -52,6 +52,7 @@ from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.redact import safe_name, safe_path
 from importer.core.safe_http import ReadBudget, get_json, is_plain_token
 from importer.sources.dynatrace.extract import DynatraceError
+from importer.sources.dynatrace.inventory.models import dicts
 
 ENV_URL = re.compile(r"https://[a-z0-9]+\.apps\.dynatrace\.com")
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
@@ -176,10 +177,6 @@ def _url(host: str, name: str, ident: str = "") -> str:
     return host + READ_PATHS[name].replace("{id}", ident)
 
 
-def _dicts(value: object) -> list[dict[str, Any]]:
-    return [i for i in value if isinstance(i, dict)] if isinstance(value, list) else []
-
-
 def _list_pages(
     get: Getter, url: str, first: dict[str, str], label: str, budget: PageBudget, cursor: str
 ) -> Iterator[dict[str, Any]]:
@@ -290,7 +287,7 @@ def read_dashboards(get: Getter, host: str, out: Path, budget: PageBudget) -> in
     for page in _list_pages(
         get, host + READ_PATHS["documents"], first, "documents", budget, "page-key"
     ):
-        listed += _dicts(page.get("documents"))
+        listed += dicts(page.get("documents"))
     ids, unusable = _ids(listed, "id", UUID)
     count = 0
     for number, ident in enumerate(ids, 1):
@@ -313,7 +310,7 @@ def read_classic_dashboards(get: Getter, host: str, out: Path, budget: PageBudge
     for page in _list_pages(
         get, host + READ_PATHS["classic_dashboards"], {}, "dashboards", budget, ""
     ):
-        listed += _dicts(page.get("dashboards"))
+        listed += dicts(page.get("dashboards"))
     ids, unusable = _ids(listed, "id", UUID)
     for number, ident in enumerate(ids, 1):
         body = get(_url(host, "classic_dashboard", ident), {})
@@ -329,7 +326,7 @@ def read_classic_dashboards(get: Getter, host: str, out: Path, budget: PageBudge
 def read_monitors(get: Getter, host: str, out: Path, budget: PageBudget) -> int:
     listed: list[dict[str, Any]] = []
     for page in _list_pages(get, host + READ_PATHS["monitors"], {}, "monitors", budget, ""):
-        listed += _dicts(page.get("monitors"))
+        listed += dicts(page.get("monitors"))
     ids, unusable = _ids(listed, "entityId", MONITOR_ID)
     monitors: list[dict[str, Any]] = []
     for number, ident in enumerate(ids, 1):
@@ -357,7 +354,7 @@ def read_locations(get: Getter, host: str, out: Path, budget: PageBudget) -> int
     keep = ("entityId", "name", "type", "cloudPlatform", "countryCode", "city")
     found: list[dict[str, Any]] = []
     for page in _list_pages(get, host + READ_PATHS["locations"], {}, "locations", budget, ""):
-        found += [{k: item[k] for k in keep if k in item} for item in _dicts(page.get("locations"))]
+        found += [{k: item[k] for k in keep if k in item} for item in dicts(page.get("locations"))]
     _write(out / "synthetics" / "locations.json", {"locations": found})
     return len(found)
 
@@ -385,7 +382,7 @@ def read_entities(get: Getter, host: str, out: Path, budget: PageBudget) -> int:
         for page in _list_pages(
             get, host + READ_PATHS["entities"], first, kind, budget, "nextPageKey"
         ):
-            entities += [_entity(kind, e) for e in _dicts(page.get("entities"))]
+            entities += [_entity(kind, e) for e in dicts(page.get("entities"))]
             count = page.get("totalCount")
             reported = count if isinstance(count, int) else reported
         if reported or entities:

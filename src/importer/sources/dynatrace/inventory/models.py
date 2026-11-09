@@ -14,6 +14,8 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.text import printable
+from importer.sources.dynatrace.dashboards.models import depth_exceeds
 
 MAX_MONITORS = 10_000
 MAX_ENTITIES = 500_000
@@ -69,17 +71,11 @@ class Loaded[T](BaseModel):
     reported_total: int | None = None  # totalCount from the API, when it was given
 
 
-def _depth_exceeds(value: Any) -> bool:
-    stack: list[tuple[Any, int]] = [(value, 1)]
-    while stack:
-        item, depth = stack.pop()
-        if depth > MAX_DEPTH:
-            return True
-        children = (
-            item.values() if isinstance(item, dict) else item if isinstance(item, list) else ()
-        )
-        stack.extend((child, depth + 1) for child in children)
-    return False
+def dicts(value: object, limit: int | None = None) -> list[dict[str, Any]]:
+    """The objects in a list (at most `limit`); anything else gives an empty list."""
+    if not isinstance(value, list):
+        return []
+    return [i for i in (value if limit is None else value[:limit]) if isinstance(i, dict)]
 
 
 def read_json(path: Path) -> Any:
@@ -92,7 +88,7 @@ def read_json(path: Path) -> Any:
         if isinstance(exc, ValueError) and "larger than" in str(exc):
             raise
         raise ValueError(f"{path.name} is not readable JSON") from None
-    if _depth_exceeds(data):
+    if depth_exceeds(data, MAX_DEPTH):
         raise ValueError(f"{path.name} is nested more deeply than the planner accepts")
     return data
 
@@ -154,7 +150,7 @@ def parse_monitor(ref: str, raw: object) -> Monitor | None:
     return Monitor(
         ref=ref,
         name=_text(raw.get("name")),
-        type=raw["type"][:40],
+        type=printable(raw["type"], 40),
         enabled=raw.get("enabled") is not False,
         frequency_min=frequency if isinstance(frequency, int) else None,
         locations=_strings(raw.get("locations")),

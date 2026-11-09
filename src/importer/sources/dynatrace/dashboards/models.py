@@ -19,6 +19,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.text import printable
 
 MAX_FILES = 5000
 MAX_DOCUMENTS = 5000
@@ -130,7 +131,7 @@ def _str(value: object, limit: int = MAX_TEXT) -> str:
     return value[:limit] if isinstance(value, str) else ""
 
 
-def _depth_exceeds(value: Any, limit: int) -> bool:
+def depth_exceeds(value: Any, limit: int) -> bool:
     """True when the parsed JSON nests deeper than `limit` (checked without recursion)."""
     stack: list[tuple[Any, int]] = [(value, 1)]
     while stack:
@@ -173,8 +174,8 @@ def parse_tile(tile_id: str, raw: object, layout: object) -> Tile | Unreadable:
     timeframe = raw.get("timeframe")
     segments = raw.get("segments")
     return Tile(
-        id=tile_id[:80],
-        kind=kind[:40],  # shown in reports; the cap is applied here, once
+        id=printable(tile_id, 80),
+        kind=printable(kind, 40),  # shown in reports; the cap is applied here, once
         title=_str(raw.get("title"), 300),
         content=_str(raw.get("content")),
         query=_str(raw.get("query")),
@@ -205,8 +206,8 @@ def parse_variable(index: int, raw: object) -> Variable | Unreadable:
     if isinstance(text, str) and len(text) > MAX_TEXT:
         return Unreadable(ref=key[:80], code=TOO_LARGE)
     return Variable(
-        key=key[:80],
-        type=kind[:40],
+        key=printable(key, 80),
+        type=printable(kind, 40),
         input=text if isinstance(text, str) else "",
         multiple=raw.get("multiple") is True,
         default=_default(raw.get("defaultValue")),
@@ -260,7 +261,7 @@ def parse_classic_tile(index: int, raw: object) -> ClassicTile | Unreadable:
     filt = raw.get("tileFilter")
     return ClassicTile(
         name=_str(raw.get("name"), 300),
-        tile_type=raw["tileType"][:80],
+        tile_type=printable(raw["tileType"], 40),
         markdown=_str(markdown),
         metrics=_classic_metrics(raw.get("queries")),
         management_zone=isinstance(filt, dict) and bool(filt.get("managementZone")),
@@ -338,7 +339,7 @@ def read_file(path: Path) -> list[Document]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (ValueError, RecursionError, OSError):
         return [_fail(ref, NOT_JSON)]
-    if _depth_exceeds(data, MAX_DEPTH):
+    if depth_exceeds(data, MAX_DEPTH):
         return [_fail(ref, TOO_DEEP)]
     items = data if isinstance(data, list) else [data]
     if len(items) > MAX_DOCUMENTS:
