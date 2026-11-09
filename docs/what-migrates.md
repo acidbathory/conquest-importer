@@ -148,6 +148,47 @@ metric stream, it is generated and never deployed, because it needs your license
 two subscription filters per log group, so a group that already has two needs one removed first.
 `importer ingest-logs-setup --log-group /my/group` generates the same thing for groups you choose.
 
+## Grafana dashboards
+
+No dashboard is built in New Relic yet. Two commands read Grafana dashboards and say how much of
+them could convert; they are offline apart from the read, and nothing is created anywhere. The
+reading and the plan are described here; the conversion comes next.
+
+- **Read:** `importer extract-grafana-dashboards --out <folder>` reads dashboards, folders and
+  library panels from a Grafana stack with `GET` calls on four fixed paths (`/api/search`,
+  `/api/dashboards/uid/{uid}`, `/api/folders`, `/api/library-elements`). It uses `GRAFANA_URL` and
+  `GRAFANA_SA_TOKEN` under the same host rule as `extract-grafana`; the token needs to read
+  dashboards, folders and library panels, which the alert-only token may not. The `/apis`
+  dashboard API is not used. These paths have not been run against a live stack yet.
+- **Shapes read:** the classic JSON, the same object under `spec` of a v1 resource, and the v2
+  resource (`elements` with a Grid, Rows, Tabs or AutoGrid layout), as a file, a list, an API
+  response or a folder. Old schemas are read as stored (`rows` with `span`, string data source
+  names, old `hide` values). A dashboard that cannot be read is listed with a fixed reason and the
+  others load. Limits: 10,000 panels per dashboard, 200 nested levels, 5,000 dashboards.
+- **Plan:** `importer plan-grafana-dashboards --in <folder> --out <folder>` writes `report.md` and
+  `plan.json`. Every panel is placed at a tier, or stays manual with one specific reason:
+  - T1: a Prometheus selector with matchers and an optional `avg`, `sum`, `min` or `max` (what the
+    alert converter reads), plus regex matchers that RLIKE can express; a LogQL count.
+  - T2: also `rate`, `irate`, `increase`, `histogram_quantile` over `_bucket` series, `topk`, and
+    LogQL `rate`.
+  - T3: also arithmetic between those terms and numbers, and `count`.
+  - Panels of type gauge, bar gauge, bar chart, heatmap, histogram and logs have a New Relic widget
+    that the importer cannot create yet; they are counted separately ("with extra widget types").
+    State timeline, status history, alert list, geomap and the other types in the report have no
+    widget at all.
+- **Also reported:** panel types and data sources; variables (convert, drop, manual); variables
+  used but not defined and defined but not used; annotations (dropped), links, rows, repeats.
+- **Manual, with steps:** transformations, library panels missing from the export, other data
+  sources (CloudWatch, SQL, Elasticsearch, InfluxDB, Azure Monitor and so on), server-side
+  expressions, comparisons, vector matching, `offset`, subqueries, `*_over_time`, `label_replace`,
+  nested aggregation, raw counters, LogQL parser stages, and variables that are ad hoc, nested or
+  use a regex with lookahead.
+- **What the tiers do not say:** whether the metric exists in New Relic, whether names match, or
+  whether the chart looks the same. The query classification reuses the alert translator's own
+  PromQL and LogQL handlers and will be replaced by the real conversion.
+- **Sequence:** `importer extract-grafana-dashboards --out out/gd`, then `importer
+  plan-grafana-dashboards --in out/gd --out out/gd-plan`.
+
 ## Not handled at all
 
 Forwarding logs in general (only the groups behind converted conditions get Terraform), X-Ray traces and CloudTrail. It also handles one AWS region and one
