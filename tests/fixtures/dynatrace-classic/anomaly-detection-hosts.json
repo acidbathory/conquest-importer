@@ -1,0 +1,32 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-adh-0001",
+      "schemaId": "builtin:anomaly-detection.infrastructure-hosts",
+      "scope": "HOST-32D0DB4904B28FB3",
+      "value": {
+        "host": {
+          "connectionLostDetection": {
+            "enabled": true,
+            "onGracefulShutdowns": "DONT_ALERT_ON_GRACEFUL_SHUTDOWN"
+          },
+          "highCpuSaturationDetection": {
+            "enabled": true,
+            "detectionMode": "custom",
+            "customThresholds": {
+              "cpuSaturation": 95,
+              "eventThresholds": {
+                "violatingSamples": 18,
+                "violatingEvaluationWindow": 30,
+                "dealertingSamples": 18,
+                "dealertingEvaluationWindow": 30
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

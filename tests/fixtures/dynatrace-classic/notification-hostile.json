@@ -1,0 +1,44 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-notification-0005",
+      "schemaId": "builtin:problem.notifications",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "type": "WEBHOOK",
+        "displayName": "<script>alert(1)</script> | `x` ${y}",
+        "alertingProfile": "does-not-exist",
+        "webHookNotification": {
+          "urlContainsSecret": false,
+          "url": "https://hooks.example.invalid/in?token=SHOULD-NEVER-BE-PRINTED",
+          "secretUrl": null,
+          "acceptAnyCertificate": true,
+          "notifyEventMergesEnabled": false,
+          "notifyClosedProblems": false,
+          "headers": [
+            {
+              "name": "X-A\r\nX-Injected",
+              "secret": false,
+              "value": "v\r\nX-B: c",
+              "secretValue": null
+            }
+          ],
+          "payload": "{ProblemTitle} {Tags[env]} {Unknown}"
+        },
+        "emailNotification": {
+          "toRecipients": [
+            "Jane Q. <jane@example.invalid>"
+          ],
+          "ccRecipients": [],
+          "bccRecipients": [],
+          "subject": "",
+          "body": "",
+          "notifyClosedProblems": false
+        }
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

@@ -1,0 +1,45 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-profile-0003",
+      "schemaId": "builtin:alerting.profile",
+      "scope": "environment",
+      "value": {
+        "name": "p\"r|o}{f' -- é中",
+        "severityRules": [
+          {
+            "severityLevel": "ERRORS",
+            "delayInMinutes": 99999,
+            "tagFilterIncludeMode": "INCLUDE_ANY",
+            "tagFilter": [
+              "[Kubernetes]app:a:b",
+              "kéy:v'al",
+              "",
+              "x\"y"
+            ]
+          }
+        ],
+        "eventFilters": [
+          {
+            "source": "CUSTOM",
+            "predefinedFilter": {
+              "eventType": "SERVICE_SLOWDOWN",
+              "negate": false
+            },
+            "customFilter": {
+              "descriptionFilter": {
+                "operator": "REGEX_MATCHES",
+                "value": "(a+)+$",
+                "negate": true,
+                "enabled": true,
+                "caseSensitive": true
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

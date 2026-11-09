@@ -1,0 +1,44 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-detector-0004",
+      "schemaId": "builtin:davis.anomaly-detectors",
+      "scope": "tenant",
+      "value": {
+        "title": "${var.x} \"detector\" | cell",
+        "enabled": true,
+        "source": "Davis Anomaly Detection",
+        "analyzer": {
+          "name": "dt.statistics.ui.anomaly_detection.SomethingNewAnalyzer",
+          "input": [
+            {
+              "key": "threshold",
+              "value": 80
+            },
+            {
+              "key": "threshold",
+              "value": "81"
+            },
+            {
+              "key": "query",
+              "value": "fetch logs | filter content == \"a\\\"b\" // `x`\n| summarize c = count()"
+            }
+          ]
+        },
+        "eventTemplate": {
+          "properties": [
+            {
+              "key": "event.name",
+              "value": "%{ for }[x](http://e) {dims:"
+            }
+          ]
+        },
+        "executionSettings": {
+          "actor": null
+        }
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

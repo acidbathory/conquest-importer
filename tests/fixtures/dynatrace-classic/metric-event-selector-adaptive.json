@@ -1,0 +1,64 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-metric-event-0002",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "Error ratio above learned range, checkout services",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricSelector": "(builtin:service.errors.total.count:splitBy(\"dt.entity.service\"):value:default(0)) / (builtin:service.requestCount.server:splitBy(\"dt.entity.service\"):value) * 100",
+          "managementZone": "-189204438944455158",
+          "queryOffset": 2,
+          "entityFilter": {
+            "dimensionKey": "dt.entity.service",
+            "conditions": [
+              {
+                "type": "TAG",
+                "operator": "EQUALS",
+                "value": "env:production"
+              },
+              {
+                "type": "NAME",
+                "operator": "STARTS_WITH",
+                "value": "checkout-"
+              }
+            ]
+          },
+          "dimensionFilter": [
+            {
+              "dimensionKey": "k8s.cluster.name",
+              "operator": "DOES_NOT_EQUAL",
+              "dimensionValue": "sandbox"
+            }
+          ]
+        },
+        "modelProperties": {
+          "type": "AUTO_ADAPTIVE_THRESHOLD",
+          "signalFluctuation": 1,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": true,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "Checkout error ratio high on {dims:dt.entity.service}",
+          "description": "Baseline {baseline}, observed above it.",
+          "eventType": "ERROR",
+          "davisMerge": false,
+          "metadata": [
+            {
+              "metadataKey": "dt.owner",
+              "metadataValue": "payments"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

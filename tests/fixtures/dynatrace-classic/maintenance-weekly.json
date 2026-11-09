@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-maint-0001",
+      "schemaId": "builtin:alerting.maintenance-window",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "generalProperties": {
+          "name": "Weekly patching",
+          "description": "Sunday patch window",
+          "maintenanceType": "PLANNED",
+          "suppression": "DETECT_PROBLEMS_DONT_ALERT",
+          "disableSyntheticMonitorExecution": false
+        },
+        "schedule": {
+          "scheduleType": "WEEKLY",
+          "weeklyRecurrence": {
+            "dayOfWeek": "SUNDAY",
+            "timeWindow": {
+              "startTime": "02:00:00",
+              "endTime": "04:00:00",
+              "timeZone": "Europe/Vienna"
+            },
+            "recurrenceRange": {
+              "scheduleStartDate": "2026-01-01",
+              "scheduleEndDate": "2026-12-31"
+            }
+          }
+        },
+        "filters": [
+          {
+            "entityTags": [
+              "Team:platform"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}
