@@ -25,6 +25,7 @@ from importer.core.ir import (
     Confidence,
     CountFilter,
     CountSignal,
+    EmitOptions,
     HeartbeatSignal,
     IRMonitor,
     MetricSignal,
@@ -42,6 +43,7 @@ from importer.core.ir import (
 )
 from importer.sources.grafana.models import GfNode, GrafanaRule
 from importer.sources.grafana.notifications.promrules import split_comparison
+from importer.sources.grafana.rules2 import fields
 
 MIN_WINDOW_SECONDS = 60
 MAX_EXPRESSION = 10_000
@@ -267,6 +269,10 @@ N_NODATA_ALERTING = (
 )
 N_NODATA_DEFAULT = (
     "on no data Grafana raises a separate no-data alert; New Relic does not, so it may differ"
+)
+N_NODATA_OK = (
+    "on no data Grafana sets the state to normal; New Relic has no such state, so it may "
+    "differ: an open violation can stay open until data returns"
 )
 N_NODATA_KEEP = "on no data Grafana keeps the last state, which has no equivalent in New Relic"
 N_ERROR_STATE = (
@@ -919,6 +925,8 @@ def _states(rule: GrafanaRule, duration: int, heartbeat: bool) -> tuple[NoData, 
         notes.append(N_NODATA_DEFAULT)
     elif rule.no_data_state == "KeepLast":
         notes.append(N_NODATA_KEEP)
+    elif rule.no_data_state == "OK":
+        notes.append(N_NODATA_OK)
     return no_data, notes + _error_notes(rule)
 
 
@@ -937,6 +945,29 @@ def _plan(rule: GrafanaRule) -> _Plan:
     return _grafana_plan(rule)
 
 
+def _rule_notes(rule: GrafanaRule, plan: _Plan) -> list[str]:
+    """Notes about the rule's own settings, in the order they are shown."""
+    notes = [N_INFERRED] if plan.inferred else []
+    if rule.expr:
+        notes.append(N_RULE_FILE)
+    return notes
+
+
+def _tail_notes(rule: GrafanaRule, runbook_refused: bool) -> list[str]:
+    """Paused, duplicate, origin and routing notes that close the list."""
+    notes: list[str] = []
+    if rule.duplicate_uid:
+        notes.append(N_DUP_UID)
+    if rule.copies_merged:
+        notes.append(N_COPIES.format(count=rule.copies_merged))
+    if runbook_refused:
+        notes.append(fields.N_RUNBOOK_IGNORED)
+    origin = fields.origin_note(rule.folder, rule.group, rule.labels)
+    if origin:
+        notes.append(origin)
+    return [*notes, N_ROUTING]
+
+
 def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
     if rule.unreadable:
         raise _Fail(R_UNREADABLE)
@@ -947,28 +978,21 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
     threshold = built.threshold or plan.threshold
     if threshold is None:
         raise _Fail(R_NO_COMPARISON)
-    recovery, pipeline_notes, inferred = plan.recovery, plan.notes, plan.inferred
     window, duration, window_notes = _windows(rule, built.window, built.minimum_duration)
     no_data, state_notes = _states(rule, duration, built.kind is SignalKind.HEARTBEAT)
-    notes = [N_INFERRED] if inferred else []
-    if rule.expr:
-        notes.append(N_RULE_FILE)
-    notes += built.notes + pipeline_notes
+    notes = _rule_notes(rule, plan) + built.notes + plan.notes
     if built.kind is SignalKind.LOG and threshold.operator in EMPTY_SENSITIVE:
         notes.append(N_COUNT_EMPTY)
     notes += window_notes
-    if recovery:
+    if plan.recovery:
         notes.append(N_RECOVERY)
     if rule.keep_firing_for_seconds:
         notes.append(N_KEEP_FIRING)
     notes += state_notes
     if rule.is_paused:
         notes.insert(0, N_PAUSED_UNKNOWN if rule.paused_unknown else N_PAUSED)
-    if rule.duplicate_uid:
-        notes.append(N_DUP_UID)
-    if rule.copies_merged:
-        notes.append(N_COPIES.format(count=rule.copies_merged))
-    notes.append(N_ROUTING)
+    runbook, refused = fields.runbook(rule.annotations)
+    notes += _tail_notes(rule, refused)
     annotations = rule.annotations
     message = _text(annotations.get("description")) or _text(annotations.get("summary"))
     monitor = _monitor(rule, key, Confidence.APPROXIMATE, notes)
@@ -985,6 +1009,8 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
     monitor.thresholds = [threshold]
     monitor.no_data = no_data
     monitor.notification = Notification(message_template=message)
+    if runbook:
+        monitor.emit = EmitOptions(runbook_url=runbook)
     return monitor
 
 

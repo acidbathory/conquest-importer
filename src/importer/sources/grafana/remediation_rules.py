@@ -430,6 +430,17 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^grafana origin:"),
+        "Grafana folder, group and labels",
+        [
+            "The folder, group and labels are not carried onto the New Relic condition. "
+            "Notification policies in Grafana route on labels such as these, so rebuild the "
+            "routing as workflow filters (see the notification conversion) and decide where "
+            "the folder and group should live, for example in the policy name. Whether rule "
+            "labels can be used to filter New Relic issues has not been verified.",
+        ],
+    ),
+    (
         re.compile(r"^notifications \(contact points"),
         "Grafana notifications",
         [

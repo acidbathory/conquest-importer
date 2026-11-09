@@ -11,6 +11,7 @@ from importer.core.remediation import remedies_for, steps_for
 from importer.core.taxonomy import Category, classify
 from importer.sources import REGISTRY
 from importer.sources.grafana import remediation_rules
+from importer.sources.grafana.rules2 import fields
 
 # the package re-exports the function `translate`, which hides the module of the same name
 t = importlib.import_module("importer.sources.grafana.translate")
@@ -84,6 +85,8 @@ NOTES = [
     (t.N_NODATA_KEEP, "Grafana no-data and error states"),
     (t.N_NODATA_ALERTING.format(minutes=5), "Grafana no-data and error states"),
     (t.N_ERROR_STATE, "Grafana no-data and error states"),
+    (fields.N_ORIGIN.format(where="folder ops", labels=""), "Grafana folder, group and labels"),
+    (t.N_NODATA_OK, "Grafana no-data and error states"),
     (t.N_METRIC, "Metric must reach New Relic"),
     (t.N_LOGS, "Logs must reach New Relic"),
 ]
@@ -104,6 +107,9 @@ EXPECTED_CATEGORY = {
     t.R_RATIO_AGG.format(agg="max"): C.UNSUPPORTED_QUERY,
     t.R_ABSENT_THRESHOLD: C.UNSUPPORTED_QUERY,
     t.R_COMPARE_AND_NODE: C.UNSUPPORTED_QUERY,
+    fields.N_ORIGIN.format(where="folder ops", labels=""): C.MANUAL_FOLLOWUP,
+    fields.N_RUNBOOK_IGNORED: C.APPROXIMATION,
+    t.N_NODATA_OK: C.APPROXIMATION,
     t.N_CLASSIC: C.APPROXIMATION,
     t.N_RESAMPLE: C.APPROXIMATION,
     t.N_COUNTER: C.APPROXIMATION,
