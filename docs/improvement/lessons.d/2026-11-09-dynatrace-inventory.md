@@ -30,3 +30,17 @@ Dashboards, synthetic monitors and the instrumentation inventory, read side and 
   extractor); a third copy would be the time to move it to `core/safe_http.py`.
 - Reasons carry no source, so one rule list is shared. This cycle anchored every rule on the whole
   reason sentence, which cannot shadow anything; the earlier sources could do the same.
+
+## Round two (independent review)
+
+| Defect | How it hid | Check that catches the class |
+|---|---|---|
+| The planner said "exact" for tiles that dropped options, ignored parameters or relied on unverified wildcard rules | The research counts were treated as the answer and the reader was tuned to reproduce them | A parametrized table of query rules where every unmapped parameter, option and order is a blocker or a named draft; the totals are no longer a target |
+| Parsed fields were never read (`subtype`, `multiple`, the default, tile timeframe, segments, settings) | The model looked complete | Each parsed field is used in the plan or removed; `test_the_select_all_default_and_multiple_selection_are_read` and the tile tests |
+| A query with only comments crashed the command | Fixtures had real queries only | `|`, a comment, `/* */` and `append [ ]` are cases in the table, and an unexpected error in any command is a clean exit that names only its type |
+| A deny-list of secret field names in the saved export | The first hostile test used the fields I knew about | An allow-list rebuilt per object, with a canary in every other field and a test that no canary reaches disk |
+| Limits tested with the code's own constant | `== m.MAX_LIST_ITEMS` passes for any value | Edge tests write the number: 99,999 / 100,000 / 100,001, depth 64 and 65, 2000 and 2001 characters |
+| A control character in a short field (variable type) reached the report | Only `md_cell` was applied; it does not remove control characters | `printable` is applied when the field is read, `md_cell` when it is written |
+
+Where I slipped: the first round of this work claimed to reproduce the research counts, which made
+the counts the goal. The second round reports what the stricter rules give instead.

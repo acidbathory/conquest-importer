@@ -162,28 +162,50 @@ the plans say what could be, with what confidence, and what a person must do. Re
 
 - **Extract:** `importer extract-dynatrace-inventory --out out/dynatrace-inventory` reads Platform
   dashboard documents, classic dashboards, synthetic monitors and locations, and an entity
-  inventory (type, technologies and operating system only; no names or addresses), with GET
-  requests to a fixed list of paths on `https://<tenant id>.apps.dynatrace.com`. An area that
-  cannot be read is a warning and the others still run. The document content path and the
-  classic, synthetic and entity endpoints on that host are UNVERIFIED (never called on a tenant).
-  Smartscape counts are not read: they need a POST query.
+  inventory, with GET requests to a fixed list of paths on
+  `https://<tenant id>.apps.dynatrace.com`. What is saved is built from an allow-list, in files
+  only the owner can read. Monitors keep their structure (methods, cleaned URLs, event and rule
+  types, flags that say a body, header or credential was present) and never a body, a header or
+  cookie value, a credential, typed text, script code or a validation pattern. Entities keep only
+  their type, product names of their technologies and operating system (a value that does not look
+  like a product name is dropped); no name, id or address. Platform dashboards keep the tile fields
+  the planner reads, and their titles, queries and markdown are stored as written, so they can
+  name internal systems: review the export before sharing it. An area that cannot be read is a
+  warning and the others still run. The document content path and the classic, synthetic and
+  entity endpoints on that host are UNVERIFIED (never called on a tenant). Smartscape counts are
+  not read: they need a POST query.
 - **Dashboard plan:** `importer plan-dynatrace-dashboards --in <folder or file> --out <folder>`
-  writes `report.md` and `plan.json`. A data tile is exact when every clause maps to NRQL
-  unchanged, draft when one plumbing clause is dropped with a note (a Smartscape id or primary tag
-  filter, a second sort key, link columns, a variable in a limit, an average of averages), and
-  manual otherwise (join, lookup, append, expand, parse, dedup, `shift`, array arithmetic,
-  Smartscape or Davis sources, computed fields, unknown visualizations, code and SLO tiles).
-  Markdown tiles convert; spacers are dropped, and Dynatrace links, `dt-cdn.net` images and script
-  links are flagged. Each tile that reads Dynatrace-only data (self-monitoring metrics, Kubernetes
-  metrics, security events, Smartscape, Davis) is marked "no New Relic data source". Variables are
-  classed the same way. On the four ready-made Dynatrace dashboards in the fixtures it gives 59
-  data tiles: 10 exact, 22 draft, 27 manual; 34 markdown tiles; 18 variables: 1 exact, 4 draft,
-  13 manual. None of the 10 exact tiles has data in New Relic.
+  writes `report.md` and `plan.json`. A data tile is exact only when every clause maps to NRQL
+  with the same meaning and nothing is dropped: plain aggregations without options, plain fields,
+  `==`, `!=`, `in()` and null checks, one plain sort key, a numeric limit, plain renames, and
+  commands in an order NRQL keeps. It is a draft when something is dropped or not verified, and
+  the note says what: an entity-selection clause (Smartscape id or primary tag), a second sort
+  key, link columns, a variable in a limit, an average of averages, `matchesValue` or `contains`
+  (wildcard and case rules differ from `LIKE`), an aggregation option such as `rate` or
+  `default`, an interval, a time range in the query, a tile timeframe or segment, a select-all
+  test, a sort by a series average. It is manual otherwise (join, lookup, append, expand, parse,
+  dedup, `shift`, `scalar`, array arithmetic, computed fields and sort keys, a sort or filter after
+  a limit, `bins`, Smartscape or Davis sources, unknown visualizations, code and SLO tiles).
+  Display settings (thresholds and colours) are noted but do not change the verdict, which is
+  about the query. Markdown tiles convert; spacers are dropped, and Dynatrace links, `dt-cdn.net`
+  images, raw HTML and script-scheme links are flagged (a tile without a flag was not found unsafe
+  by these checks, which is not proof). Each tile that reads Dynatrace-only data
+  (self-monitoring, OneAgent host, service and process, Kubernetes and cloud metrics, security
+  events, entities, Smartscape, Davis) is marked "no New Relic data source"; `cloud.aws.*` and
+  `cloud.azure.*` metrics are not, because the research lists documented counterparts. Variables
+  are classed the same way, and a default of `*` (or a UUID and `*`) is read as select-all. On the
+  four ready-made Dynatrace dashboards in the fixtures it gives 59 data tiles: 5 exact, 21 draft,
+  33 manual; 34 markdown tiles; 18 variables: 1 exact, 4 draft, 13 manual. The earlier, more
+  optimistic reading gave 10, 22 and 27; the five tiles that moved to manual all use
+  `scalar: true`. All 5 exact tiles read Dynatrace security events, which New Relic does not have.
+  Exact copies of a dashboard (same content, any name or id) are read once and listed.
 - **Classic dashboards:** markdown and header tiles convert; metric charts are manual until a
   metric name map exists; every other tile type and every management zone filter is manual.
 - **Re-instrumentation:** `importer plan-dynatrace-reinstrumentation --in <folder> --out
   <folder>` counts entities per type and per technology and names the New Relic agent or
-  integration for each, from two data files whose rows are marked DOCS or UNVERIFIED. It lists
+  integration for each, from two data files whose rows are marked DOCS or UNVERIFIED (a target
+  is UNVERIFIED when any row naming it is, and a spelling that matched only after changing
+  underscores or hyphens is marked). It lists
   what has no migration path (OneAgent deep monitoring, PurePath, Davis, Smartscape filters,
   management zones) and counts SLOs whose window fits a New Relic rolling window.
 - **Synthetics:** `importer plan-dynatrace-synthetics --in <folder> --out <folder>` maps each

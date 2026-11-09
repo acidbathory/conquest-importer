@@ -17,8 +17,9 @@ New code, all in the workstream's own paths:
   DOCS or UNVERIFIED status on every row, and the reasons and rules.
 - `commands/dynatrace_inventory.py`: `extract-dynatrace-inventory`, `plan-dynatrace-dashboards`,
   `plan-dynatrace-reinstrumentation`, `plan-dynatrace-synthetics`.
-- Tests (357, nine files `tests/test_dynatrace_dashboards_*.py` and
-  `tests/test_dynatrace_inventory_*.py`), fixtures in `tests/fixtures/dynatrace-dashboards/`
+- Tests (618, in `tests/test_dynatrace_dashboards_*.py` and
+  `tests/test_dynatrace_inventory_*.py`; round two added `..._strict`, `..._injection`, `..._copies`,
+  `..._allowlist` and `..._limits`), fixtures in `tests/fixtures/dynatrace-dashboards/`
   (four scrubbed real dashboards, one classic dashboard, monitors, locations, entities, SLOs, a
   `hostile/` folder), a section in `docs/what-migrates.md`, lessons in
   `docs/improvement/lessons.d/2026-11-09-dynatrace-inventory.md`.
@@ -29,38 +30,61 @@ baseline, golden files untouched). The conversion measure is unchanged because t
 registered with `register_fixtures`: their inputs are dashboards, not the workflows and SLOs that
 `convert --source dynatrace` reads.
 
-## Coverage against the research
+## Coverage, round two (the numbers changed on purpose)
 
-The planner reproduces the research counts on the four real dashboards (fixtures are copies with
-the tenant id and UUIDs replaced).
+Owner decision: the planner must not overstate. Exact now means every clause maps to NRQL with the
+same meaning and nothing is dropped. The research counts (10 exact, 22 draft, 27 manual) came from
+a more optimistic reading and are not a target. A reviewer showed that tiles counted as exact
+dropped options (`rate`, `scalar`), ignored timeseries parameters, accepted computed fields and
+sort expressions, and read `matchesValue` as `LIKE`. After the fixes, on the four real dashboards:
 
 | File | Data tiles | Exact | Draft | Manual | Markdown | Variables e/d/m |
 |---|---|---|---|---|---|---|
-| AWS | 8 | 1 | 5 | 2 | 4 | 0/3/1 |
+| AWS | 8 | 0 (was 1) | 5 | 3 (was 2) | 4 | 0/3/1 |
 | Azure | 19 | 0 | 14 | 5 | 8 | 0/0/7 |
 | Host | 22 | 5 | 2 | 15 | 15 | 0/0/5 |
-| K8s | 10 | 4 | 1 | 5 | 7 | 1/1/0 |
-| Total | 59 | 10 | 22 | 27 | 34 | 1/4/13 |
+| K8s | 10 | 0 (was 4) | 0 (was 1) | 10 (was 5) | 7 | 1/1/0 |
+| Total | 59 | 5 (was 10) | 21 (was 22) | 33 (was 27) | 34 | 1/4/13 |
 
-The tile ids of each class are the ones the research lists (`test_the_named_tiles_have_the_researched_verdicts`).
-No difference to explain. Further results of the same run:
+Every tile that moved class:
 
-- 40 of the 59 data tiles read Dynatrace-only data and are flagged "no New Relic data source":
-  AWS 3, Azure 5 (Smartscape and Davis tiles), Host 22, K8s 10. All 10 exact tiles are flagged,
-  as the research says. The 11 Azure and AWS cloud-metric tiles that do have a documented
-  New Relic counterpart are drafts and are not flagged; the planner has no metric name map and
-  does not create one (another workstream).
-- Markdown: 34 convert; 4 spacers are marked "drop"; 2 images from `dt-cdn.net`; 8 tiles with a
-  Dynatrace link (3 Azure, 1 Host, 4 K8s), which is the research's 4 `/ui/` plus 4 `dt-url.net`.
+- AWS 14, K8s 1, 4, 5, 6: exact to manual. Each has `value.A = avg(m, scalar: true)`, an
+  aggregation that returns one number per group instead of a series. That changes the shape of the
+  result, so the reason is "the query asks for a single value (the scalar option)". K8s 1, 4, 5
+  and 6 also carry `rate: 1m`, which is now a draft note (`rate()` over the same interval, result
+  unverified), and all of them use `matchesValue`, which is a draft note (case and wildcard rules).
+- K8s 8: draft to manual, for the same `scalar: true` (its link columns are still a draft note).
+- Unchanged: the 5 Host exact tiles (`in()`, `==`, null checks, `countDistinctExact`, one plain
+  sort key; no options), the 2 Host drafts (second sort key), the 14 Azure drafts (entity filters
+  dropped, a variable in the limit, and a sort by the average of a series that is now stated as a
+  draft note), the 5 Azure manual and the 15 Host manual tiles, AWS 1, 3, 4, 5 and 6 (drafts),
+  AWS 10 and 12, K8s 10, 15, 18, 19, 20 (manual).
+- Variables: 1 exact, 4 draft, 13 manual, unchanged.
+
+If the owner wants `scalar: true` read as a helper used only to rank (the K8s tiles rank by
+`value.A`), those 5 tiles become drafts and the totals are 5 exact, 27 draft, 27 manual. I did not
+do it: the plan would then describe a ranking that NRQL cannot reproduce as if it could.
+
+Other results of the same run:
+
+- 40 of the 59 data tiles read Dynatrace-only data and are flagged "no New Relic data source"
+  (AWS 3, Azure 5, Host 22, K8s 10). All 5 exact tiles are flagged.
+- Markdown: 34 convert; 4 spacers marked "drop"; 2 images from `dt-cdn.net`; 8 tiles with a
+  Dynatrace link. No tile in the fixtures has an unsafe-link or html flag.
 - Classic dashboards (not in the research counts): markdown and header convert, metric charts are
   manual until the name map exists, other tile types and management zone filters are manual.
+- Copies: identical dashboards (same raw JSON apart from name, owner and ids) are read once and
+  listed by name in the report. Dashboards that differ in any field, including filters the models
+  do not read, are all kept.
 
 ## How "exact" is decided
 
-Exact means every clause maps to NRQL unchanged by the rules in section 2.9 of the research. It does
-not mean the numbers match. Known gaps that the plan does not flag: Dynatrace `matchesValue()` and
-`contains()` wildcard and case rules against `LIKE`; time bucketing; `scalar` and `rate` options.
-`REVIEW` steps in the rules say to compare numbers. A live data check is the only test of that.
+`dashboards/dql_rules.py` has the rules in its docstring. In short: a parameter or option that is
+not mapped is a blocker or a named draft note; a clause under `filterOut` that would be dropped is
+manual; entity clauses are found in the masked text, so a string that mentions
+`dt.smartscape_source.id` is not one; commands after `limit` that NRQL would run before it are
+manual; a select-all test (`$v == "*" or f == $v`) is replaced by the variable default `*` and
+stated as a draft. Exact still does not prove the numbers match: that needs a live check.
 
 ## Risks
 
@@ -80,17 +104,18 @@ not mean the numbers match. Known gaps that the plan does not flag: Dynatrace `m
 ## Requests for the integrator (not made by me)
 
 1. `tests/test_extension_points.py` (not my file, not frozen): two assertions assumed that no real
-   command module exists (`load_all(...) == [...]` and `== []`). Any new command module breaks
-   them. I changed them to look only at the modules the test creates (two lines). Other workstreams
-   will hit the same; take one version.
-2. `core/dashboard_ir.py` (frozen, being changed by another agent): the plan already carries, per
-   tile, the New Relic visualization id (`viz.line`, `viz.billboard`, `viz.table`, `viz.pie`,
-   `viz.bar`, `viz.area`, `viz.bullet`, `viz.markdown`) and the 12-column layout (`column`, `width`,
-   `row`, `height`), and per variable the verdict. The emit step needs from the IR: raw-NRQL
-   series, a table widget, billboard and line thresholds, variables, and an event type per widget
-   (research section 2.10).
-3. `core/safe_http.py`: `PageBudget` now exists in the Google and the inventory extractors. A third
-   use would be the time to move it. Not requested yet.
+   command module exists. I changed them to look only at the modules the test creates (two lines).
+   Other workstreams will hit the same; take one version.
+2. `core/dashboard_ir.py` (frozen, being changed by another agent): the plan carries, per tile, the
+   New Relic visualization id and the 12-column layout, and per variable the verdict, `multiple`
+   and `select_all`. The emit step needs from the IR: raw-NRQL series, a table widget, billboard and
+   line thresholds, variables, and an event type per widget (research section 2.10).
+3. `core/safe_http.py` and `core/` (reviewer asked me to list, not touch): these are copied in the
+   inventory extractor and should move to core: `inventory_token`, `environment_url`,
+   `is_platform_host` and `ENV_URL` (also in `sources/dynatrace/extract.py`), `PageBudget` (also in
+   the Google extractor), and an `InvalidURL` catch in `get_json` (my getter wraps it for now).
+   `core/report.md_cell` does not remove control characters or escape Markdown emphasis; my code
+   applies `printable` at parse time for that.
 4. Dashboards as a measured source: if the owner wants the plan counts in `improve-measure`, that
    needs a decision on the baseline (frozen) and on whether a plan is an `IRMonitor`.
 
@@ -100,8 +125,10 @@ not mean the numbers match. Known gaps that the plan does not flag: Dynatrace `m
   and does not read them. Allow one read-only POST, with a short allow-list of DQL strings?
 - Exact copies are counted once even under different names (the name is not part of the identity).
   Keep that, or count every copy?
-- Dashboard and monitor names are kept in exports unless they look like an address or a token
-  (`safe_name`). Entities lose names, ids and addresses. Is that enough?
+- Dashboard titles, queries and markdown are stored as written because the plan needs them; they
+  can name internal systems. Monitor and dashboard names are replaced when they look like an
+  address or a token. Entities keep only type, product-like technology names and OS. Is that enough?
+- Read `scalar: true` as a ranking helper (draft) or as a different result shape (manual, as now)?
 - Classic metric charts are manual until the name map exists. Should they be drafts with the
   Dynatrace metric key listed, so the map can fill them later?
 - Check whether the operating-system list of the New Relic infrastructure agent should be added to
@@ -140,3 +167,40 @@ From the code docstrings and the data files, none confirmed on a tenant or on a 
 - Fixtures: the four dashboards come from the owner's tenant. The tenant id appeared in two
   Markdown links and every "select all" token is a UUID; both are replaced. `grep` for the tenant
   id, UUID shapes and `@` finds nothing else.
+
+## Round two: what the reviewer proved and what was done
+
+- Exact verdicts were wrong (timeseries parameters, aggregation options, summarize `by`, computed
+  fields, sort expressions, order after `limit`, `matchesValue`, `filterOut`, entity markers inside
+  strings, tile timeframe and segments). Fixed in `dql_rules.py`; every item has a parametrized
+  test in `tests/test_dynatrace_dashboards_strict.py`.
+- `analyse()` and the variable reader raised IndexError on a query with nothing in it (`|`, a
+  comment, `append [ ]`). Fixed; every command now turns an unexpected error into a clean exit
+  that names only its type.
+- Report columns (tile kind, variable type, monitor type) are now cut and made printable when read
+  and passed through `md_cell` when written.
+- Page keys over 2000 characters are refused, `InvalidURL` is caught in the getter, a JSON `true`
+  is not a count, and a repeated id in a listing is read once.
+- The saved export is built from an allow-list (`inventory/sanitize.py`) and written 0600 in
+  0700 folders. The `else body` fallback is gone.
+- Copies are matched on the raw dashboard without name, owner and ids; skipped copies are listed.
+- Synthetics: authentication, client certificates and regex rules need a script; the default
+  status rule no longer blocks a simple monitor; a frequency that is not a positive whole number
+  is missing; country codes compare in any case and a guessed location carries a reason.
+- Re-instrumentation: a target's status is the worst of the rows naming it; names that match after
+  changing underscores or hyphens are mapped and marked; a service counts a technology once;
+  Azure is documented only for App Service plans; the table rows the extractor can never produce
+  are removed and `CLOUD_APPLICATION` is requested; the location marks follow the research note
+  (only Frankfurt is documented).
+- Markdown flags cover raw HTML, reference definitions, autolinks, entity-encoded and split
+  schemes, and the other Dynatrace hosts.
+- The data-source flag covers `dt.host.*`, `dt.service.*`, `dt.process.*`, `dt.cloud.*`,
+  `dt.entity` fetches; the select-all test is implemented; `Variable.multiple` and the default are
+  read; the unread `subtype` field was removed from the tile model (it only marked Explore
+  tiles, and the compiled `query` is what the plan reads).
+
+Mutation check: 38 mutants of limits, flags and mappings were run against the Dynatrace tests
+(`/tmp` script, not committed). 14 survived the first time (MAX_LIST_ITEMS read from the module,
+layout field ranges, MAX_TILES of the extractor, MAX_DEPTH in three places, MAX_VARIABLES,
+MAX_TEXT, MAX_PAGE_KEY, MAX_TOTAL_PAGES, `md_cell` on the summary name). Each now has a test with
+the number written out, and a second run killed all 38.
