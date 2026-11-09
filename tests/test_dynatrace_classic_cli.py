@@ -65,3 +65,25 @@ def test_extract_then_convert_then_read_the_report(
 def test_convert_lists_the_source_in_its_help() -> None:
     result = CliRunner().invoke(app, ["convert", "--help"])
     assert "dynatrace-classic" in result.output
+
+
+def test_the_summary_shows_listed_only_rows_on_their_own_line(tmp_path: Path) -> None:
+    runner = CliRunner()
+    alerts = tmp_path / "alerts"
+    done = runner.invoke(
+        app,
+        ["convert", "--source", "dynatrace-classic", "--in", str(FIXTURES), "--out", str(alerts)],
+    )
+    assert done.exit_code == 0, done.output
+    result = runner.invoke(app, ["summarize-dynatrace-classic", "--alerts", str(alerts)])
+    assert result.exit_code == 0, result.output
+    lines = result.output.splitlines()
+    assert lines[0].startswith("Converted: ") and "of 85" in lines[0]
+    assert lines[1].startswith("Listed only: 19 ")
+    assert lines[2].startswith("Converted, not counting the listed-only rows: ")
+    assert "of 66" in lines[2]
+
+
+def test_the_summary_needs_a_converted_folder(tmp_path: Path) -> None:
+    result = CliRunner().invoke(app, ["summarize-dynatrace-classic", "--alerts", str(tmp_path)])
+    assert result.exit_code == 0 and "0 of 0" in result.output

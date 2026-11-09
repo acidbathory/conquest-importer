@@ -318,3 +318,81 @@ def test_an_unfiltered_condition_counts_without_where() -> None:
     client = ScopedClient("SystemSample")
     check_all(client, 1, [m])  # type: ignore[arg-type]
     assert "SELECT count(cpuPercent) FROM SystemSample SINCE 24 hours ago" in client.queries
+
+
+# ----- boundaries found alive by the second round of mutation checks -----------------------
+
+
+def test_one_page_over_the_cap_is_an_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cx, "MAX_PAGES", 3)
+    with pytest.raises(ClassicError, match="more than 3 pages"):
+        read(serve(1, pages=4), tmp_path)
+
+
+def test_one_request_over_the_total_cap_is_an_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cx, "MAX_TOTAL_PAGES", len(models.READ_SCHEMAS) - 1)
+    with pytest.raises(ClassicError, match="in total"):
+        read(serve(), tmp_path)
+
+
+def test_the_schema_allow_list_is_exactly_these_23() -> None:
+    assert len(models.READ_SCHEMAS) == 23
+    assert all(s.startswith("builtin:") and " " not in s for s in models.READ_SCHEMAS)
+    assert "builtin:evil" not in models.READ_SCHEMAS
+
+
+def test_clean_name_caps_and_strips() -> None:
+    from importer.sources.dynatrace.classic.common import clean_name
+
+    assert clean_name("a" * 500) == "a" * 120
+    assert clean_name("  a\u202eb\u200bc\n ") == "abc"
+
+
+def test_generated_keys_skip_every_taken_suffix() -> None:
+    ids = ["A#2", "A#3", "A", "A"]
+    keys = [m.source_key for m in translate([event(object_id=i) for i in ids])]
+    assert len(set(keys)) == 4 and keys[2] == "A" and keys[3] == "A#4"
+
+
+def with_input(key: str, value: object) -> list[dict[str, Any]]:
+    return [*(i for i in GOOD if i["key"] != key), {"key": key, "value": value}]
+
+
+def test_a_detector_number_is_accepted_exactly_up_to_its_cap() -> None:
+    ok = one(detector(with_input("threshold", 10**15)))
+    over = one(detector(with_input("threshold", 10**15 + 1)))
+    assert ok.confidence is Confidence.APPROXIMATE and over.confidence is Confidence.MANUAL
+    fine = one(detector(with_input("dealertingSamples", 10**9)))
+    big = one(detector(with_input("dealertingSamples", 10**9 + 1)))
+    assert fine.confidence is Confidence.APPROXIMATE and big.confidence is Confidence.MANUAL
+
+
+def test_the_data_check_never_facets_its_count() -> None:
+    query = {"type": "METRIC_SELECTOR", "metricSelector": f'{CPU}:splitBy("dt.entity.host"):avg'}
+    (m,) = translate([event(query)])
+    assert m.signal.metric is not None and m.signal.metric.group_by == ["hostname"]
+    client = ScopedClient("SystemSample")
+    check_all(client, 1, [m])  # type: ignore[arg-type]
+    assert client.queries and not any("FACET" in q for q in client.queries[:1])
+
+
+def test_an_id_shaped_value_on_a_dimension_that_is_not_an_entity_converts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    row = {
+        **ROW,
+        "keys": ["my.pod"],
+        "dimensions": {"pod.uid": "podUid"},
+        "default_aggregation": "average",
+    }
+    monkeypatch.setenv(metric_map.MAP_ENV, str(write_map(tmp_path, [row])))
+    flt = {
+        "dimensionKey": "pod.uid",
+        "operator": "EQUALS",
+        "dimensionValue": "POD-0123456789ABCDEF",
+    }
+    assert one(event({"metricKey": "my.pod", "dimensionFilter": [flt]})).confidence is (
+        Confidence.APPROXIMATE
+    )

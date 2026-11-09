@@ -31,6 +31,7 @@ NOTIFICATION_TYPES = frozenset(
         "SERVICE_NOW",
     }
 )
+BUILTIN_LABEL = "built-in anomaly detection setting"
 SCHEDULES = frozenset({"ONCE", "DAILY", "WEEKLY", "MONTHLY"})
 SUPPRESSIONS = frozenset(
     {"DETECT_PROBLEMS_AND_ALERT", "DETECT_PROBLEMS_DONT_ALERT", "DONT_DETECT_PROBLEMS"}
@@ -119,13 +120,21 @@ def is_inventory(schema: str) -> bool:
     return schema in KINDS or schema.startswith(models.DETECTION_PREFIX)
 
 
+INVENTORY_TYPES = frozenset({label for label, _ in KINDS.values()} | {BUILTIN_LABEL})
+
+
+def is_inventory_row(monitor: IRMonitor) -> bool:
+    """True for a row that only lists an object this source does not convert yet."""
+    return monitor.source_type in INVENTORY_TYPES and monitor.confidence is Confidence.MANUAL
+
+
 def translate_inventory(obj: SettingsObject, key: str) -> IRMonitor:
     """A manual row for an object this source lists but does not convert."""
     if obj.schemaId in KINDS:
         label, describe = KINDS[obj.schemaId]
         reason = describe(obj.value)
     elif obj.schemaId.startswith(models.DETECTION_PREFIX):
-        label, reason = "built-in anomaly detection setting", _detection(obj.value)
+        label, reason = BUILTIN_LABEL, _detection(obj.value)
     else:
         label = "settings object"
         reason = (

@@ -6,7 +6,7 @@ from typing import Annotated
 import typer
 
 from importer.core.apply import NewRelicAPIError, NewRelicClient
-from importer.core.ir import IRMonitor
+from importer.core.ir import Confidence, IRMonitor
 from importer.core.secrets import MissingSecretError, require_env
 from importer.core.text import printable
 from importer.sources.dynatrace.classic import data_check
@@ -17,6 +17,7 @@ from importer.sources.dynatrace.classic.extract import (
     extract,
     http_getter,
 )
+from importer.sources.dynatrace.classic.inventory import is_inventory_row
 from importer.sources.dynatrace.classic.metric_map import MapError, load_metric_map
 
 MAX_HOURS = 168
@@ -52,6 +53,7 @@ def extract_command(
     typer.echo("Next:")
     typer.echo(f"  importer convert --source dynatrace-classic --in {out} --out {out / 'alerts'}")
     typer.echo(f"  then read {out / 'alerts' / 'report.md'}")
+    typer.echo(f"  importer summarize-dynatrace-classic --alerts {out / 'alerts'}")
 
 
 def check_command(
@@ -106,7 +108,47 @@ def validate_map_command(
     typer.echo(f"The metric map is valid: {len(loaded.metrics)} rows, {unverified} not verified.")
 
 
+def summary_text(monitors: list[IRMonitor]) -> str:
+    """The conversion rate, and the rate without the rows that only list an object."""
+    converted = sum(
+        1 for m in monitors if m.confidence in (Confidence.EXACT, Confidence.APPROXIMATE)
+    )
+    listed = sum(1 for m in monitors if is_inventory_row(m))
+    total = len(monitors)
+
+    def rate(n: int, of: int) -> str:
+        return f"{n} of {of} ({n / of:.0%})" if of else "0 of 0"
+
+    return "\n".join(
+        [
+            f"Converted: {rate(converted, total)}.",
+            f"Listed only: {listed} alerting profiles, notifications, maintenance windows, "
+            "management zones and built-in settings. They are not converted yet, so they lower "
+            "the rate above.",
+            f"Converted, not counting the listed-only rows: {rate(converted, total - listed)}.",
+        ]
+    )
+
+
+def summary_command(
+    alerts: Annotated[Path, typer.Option(help="Output folder of `convert` (has ir/)")] = Path(
+        "out/dynatrace-classic/alerts"
+    ),
+) -> None:
+    """Print the conversion rate with the listed-only rows shown on their own line."""
+    try:
+        monitors = [
+            IRMonitor.model_validate_json(p.read_text())
+            for p in sorted((alerts / "ir").glob("*.json"))
+        ]
+    except (ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(summary_text(monitors))
+
+
 def register(app: typer.Typer) -> None:
     app.command("extract-dynatrace-classic")(extract_command)
     app.command("check-dynatrace-metrics")(check_command)
     app.command("validate-dynatrace-map")(validate_map_command)
+    app.command("summarize-dynatrace-classic")(summary_command)
