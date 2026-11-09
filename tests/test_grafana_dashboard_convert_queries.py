@@ -1,7 +1,10 @@
 """PromQL and LogQL to NRQL for dashboard widgets: exact text for each shape of the research."""
 
+import time
+
 import pytest
 
+from importer.core.dashboard_nrql import check_raw_nrql
 from importer.sources.grafana.dashboard_convert import reasons as r
 from importer.sources.grafana.dashboard_convert.legend import Legend, read_legend
 from importer.sources.grafana.dashboard_convert.name_map import NameEntry, NameMap
@@ -328,3 +331,35 @@ def test_the_increase_window_becomes_the_largest_whole_unit(window: str, interva
 def test_a_legend_asks_for_at_most_five_labels() -> None:
     legend = read_legend(" ".join(f"{{{{l{i}}}}}" for i in range(8)))
     assert legend.labels == ("l0", "l1", "l2", "l3", "l4")
+
+
+HOSTILE = {
+    "operands": "a_free + " * 1100 + "a",
+    "parentheses": "(" * 5000,
+    "balanced": "(" * 2500 + ")" * 2500,
+    "matchers": "up{" + 'job="x",' * 1200 + "}",
+    "labels": "sum by (" + "a," * 3000 + "z) (up)",
+    "long name": "sum(rate(" + "x" * 9000 + "[5m]))",
+    "brackets": "[" * 9000,
+    "backslashes": 'up{job="' + "\\" * 4000 + '"}',
+    "nested sums": "histogram_quantile(0.9, "
+    + "sum by (le) (" * 300
+    + "x_bucket"
+    + ")" * 300
+    + ")",
+    "nested topk": "topk(5, " * 300 + "up" + ")" * 300,
+    "variables": "VARV0 " * 1000,
+}
+
+
+@pytest.mark.parametrize("name", sorted(HOSTILE))
+def test_hostile_queries_are_refused_or_valid_and_quick(name: str) -> None:
+    started = time.perf_counter()
+    try:
+        out = nrql(HOSTILE[name])
+    except Unconvertible:
+        out = ""
+    assert time.perf_counter() - started < 1.0
+    if out:
+        check_raw_nrql(out)  # whatever was written passes the structural checks
+        assert out.count("FACET") <= 1 and len(out) < 4096
