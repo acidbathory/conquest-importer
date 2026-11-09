@@ -1,0 +1,28 @@
+{
+  "receiver": "HOSTILE-mail",
+  "group_by": ["grafana_folder", "alertname"],
+  "group_wait": "45s",
+  "routes": [
+    {
+      "receiver": "HOSTILE-pd",
+      "object_matchers": [["severity", "=", "critical"]],
+      "mute_time_intervals": ["HOSTILE-nights"],
+      "routes": [
+        {"receiver": "HOSTILE-slack `x` | <b>", "matchers": ["team=~\"(a+)+$\""]},
+        {"receiver": "HOSTILE-hook\nnewline", "matchers": ["service=~\"api|web\""], "continue": true}
+      ]
+    },
+    {
+      "receiver": "HOSTILE-discord",
+      "matchers": ["env=~\"prod.*\"", "team!=\"HOSTILE-team\""],
+      "active_time_intervals": ["HOSTILE-work"]
+    },
+    {
+      "receiver": "HOSTILE-telegram",
+      "matchers": ["((((((((((a)))))))))=\"1\"", "x=~\"(.*)*HOSTILE\"", "=nothing"],
+      "match": {"legacy": "HOSTILE-legacy"},
+      "match_re": {"legacy2": "(a|aa)+HOSTILE"}
+    },
+    {"receiver": "HOSTILE-jira", "matchers": ["pod=\"p-HOSTILE\""]}
+  ]
+}

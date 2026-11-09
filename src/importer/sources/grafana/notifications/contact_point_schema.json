@@ -1,0 +1,1551 @@
+{
+ "source": "grafana/alerting receivers/<type>/v1/config.go Schema blocks, read 2026-11-09 (docs/research/grafana-notifications-datapath.md section 1.2). The running Grafana's integrationtypeschemas endpoint is authoritative.",
+ "kinds": {
+  "secret": "value never kept",
+  "url": "host only, and only when the field is not secure",
+  "address": "email addresses, only for type email",
+  "ident": "name only: free text, an id, a user name or a key",
+  "template": "only classified as default, empty or custom",
+  "structured": "name only",
+  "option": "a value of a known type (boolean, integer range, one of a list, or a fixed shape); any other value is dropped and its name is listed as dropped"
+ },
+ "types": {
+  "prometheus-alertmanager": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "url",
+     "secure": false,
+     "protected": true,
+     "required": true,
+     "kind": "url"
+    },
+    {
+     "name": "basicAuthUser",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "basicAuthPassword",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    }
+   ]
+  },
+  "dingding": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "url",
+     "secure": true,
+     "protected": true,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "msgType",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "link",
+      "actionCard"
+     ]
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    }
+   ]
+  },
+  "discord": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "url",
+     "secure": true,
+     "protected": true,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "avatar_url",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "url"
+    },
+    {
+     "name": "use_discord_username",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    },
+    {
+     "name": "use_embed_description",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    }
+   ]
+  },
+  "email": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "addresses",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "address"
+    },
+    {
+     "name": "singleEmail",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    },
+    {
+     "name": "subject",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    }
+   ]
+  },
+  "googlechat": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "url",
+     "secure": true,
+     "protected": true,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "hide_open_button",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    },
+    {
+     "name": "hide_version_info",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    }
+   ]
+  },
+  "jira": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "api_url",
+     "secure": false,
+     "protected": true,
+     "required": true,
+     "kind": "url"
+    },
+    {
+     "name": "user",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "password",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "api_token",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "project",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "issue_type",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "summary",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "description",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "labels",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "structured"
+    },
+    {
+     "name": "priority",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "resolve_transition",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "reopen_transition",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "reopen_duration",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "pattern": "[0-9]{1,5}[smhd]?"
+    },
+    {
+     "name": "wont_fix_resolution",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "dedup_key_field",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "fields",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "structured"
+    }
+   ]
+  },
+  "kafka": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "kafkaRestProxy",
+     "secure": false,
+     "protected": true,
+     "required": true,
+     "kind": "url"
+    },
+    {
+     "name": "kafkaTopic",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "apiVersion",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "v2",
+      "v3"
+     ]
+    },
+    {
+     "name": "kafkaClusterId",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "username",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "password",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "description",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "details",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "structured"
+    }
+   ]
+  },
+  "LINE": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "token",
+     "secure": true,
+     "protected": false,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "description",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    }
+   ]
+  },
+  "mqtt": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "brokerUrl",
+     "secure": false,
+     "protected": true,
+     "required": true,
+     "kind": "url"
+    },
+    {
+     "name": "topic",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "messageFormat",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "json",
+      "text"
+     ]
+    },
+    {
+     "name": "clientId",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "username",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "password",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "qos",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "int",
+     "min": 0,
+     "max": 2
+    },
+    {
+     "name": "retain",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    },
+    {
+     "name": "tlsConfig.insecureSkipVerify",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    },
+    {
+     "name": "tlsConfig.caCertificate",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "tlsConfig.clientCertificate",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "tlsConfig.clientKey",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    }
+   ]
+  },
+  "oncall": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "url",
+     "secure": false,
+     "protected": true,
+     "required": true,
+     "kind": "url"
+    },
+    {
+     "name": "httpMethod",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "POST",
+      "PUT"
+     ]
+    },
+    {
+     "name": "username",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "password",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "authorization_scheme",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "Bearer",
+      "Basic"
+     ]
+    },
+    {
+     "name": "authorization_credentials",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "maxAlerts",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "int",
+     "min": 0,
+     "max": 1000000
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    }
+   ]
+  },
+  "opsgenie": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "apiKey",
+     "secure": true,
+     "protected": false,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "apiUrl",
+     "secure": false,
+     "protected": true,
+     "required": true,
+     "kind": "url"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "description",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "autoClose",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    },
+    {
+     "name": "overridePriority",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    },
+    {
+     "name": "sendTagsAs",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "tags",
+      "details",
+      "both"
+     ]
+    },
+    {
+     "name": "responders",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "structured"
+    }
+   ]
+  },
+  "pagerduty": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "integrationKey",
+     "secure": true,
+     "protected": false,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "severity",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "critical",
+      "error",
+      "warning",
+      "info"
+     ]
+    },
+    {
+     "name": "class",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "component",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "group",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "summary",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "source",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "client",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "client_url",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "url"
+    },
+    {
+     "name": "details",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "structured"
+    },
+    {
+     "name": "url",
+     "secure": false,
+     "protected": true,
+     "required": false,
+     "kind": "url"
+    }
+   ]
+  },
+  "pushover": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "apiToken",
+     "secure": true,
+     "protected": false,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "userKey",
+     "secure": true,
+     "protected": false,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "device",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "priority",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "int",
+     "min": -2,
+     "max": 2
+    },
+    {
+     "name": "okPriority",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "int",
+     "min": -2,
+     "max": 2
+    },
+    {
+     "name": "retry",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "int",
+     "min": 30,
+     "max": 86400
+    },
+    {
+     "name": "expire",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "int",
+     "min": 0,
+     "max": 10800
+    },
+    {
+     "name": "sound",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "okSound",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "uploadImage",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    }
+   ]
+  },
+  "sensugo": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "url",
+     "secure": false,
+     "protected": true,
+     "required": true,
+     "kind": "url"
+    },
+    {
+     "name": "apikey",
+     "secure": true,
+     "protected": false,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "entity",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "check",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "handler",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "namespace",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    }
+   ]
+  },
+  "slack": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "recipient",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "token",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "url",
+     "secure": true,
+     "protected": true,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "endpointUrl",
+     "secure": false,
+     "protected": true,
+     "required": false,
+     "kind": "url"
+    },
+    {
+     "name": "username",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "icon_emoji",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "icon_url",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "url"
+    },
+    {
+     "name": "mentionUsers",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "mentionGroups",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "mentionChannel",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "here",
+      "channel"
+     ]
+    },
+    {
+     "name": "color",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "text",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "footer",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    }
+   ]
+  },
+  "sns": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "api_url",
+     "secure": false,
+     "protected": true,
+     "required": false,
+     "kind": "url"
+    },
+    {
+     "name": "topic_arn",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "phone_number",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "target_arn",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "subject",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "attributes",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "structured"
+    },
+    {
+     "name": "sigv4.region",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "pattern": "[a-z]{2}(?:-[a-z]+)+-[0-9]"
+    },
+    {
+     "name": "sigv4.access_key",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "sigv4.secret_key",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "sigv4.profile",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "sigv4.role_arn",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    }
+   ]
+  },
+  "teams": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "url",
+     "secure": false,
+     "protected": true,
+     "required": true,
+     "kind": "url"
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "sectiontitle",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    }
+   ]
+  },
+  "telegram": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "bottoken",
+     "secure": true,
+     "protected": false,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "chatid",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "api_url",
+     "secure": false,
+     "protected": true,
+     "required": false,
+     "kind": "url"
+    },
+    {
+     "name": "message_thread_id",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "parse_mode",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "Markdown",
+      "MarkdownV2",
+      "HTML",
+      "None"
+     ]
+    },
+    {
+     "name": "disable_web_page_preview",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    },
+    {
+     "name": "protect_content",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    },
+    {
+     "name": "disable_notifications",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    }
+   ]
+  },
+  "threema": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "gateway_id",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "recipient_id",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "api_secret",
+     "secure": true,
+     "protected": false,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "description",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    }
+   ]
+  },
+  "victorops": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "url",
+     "secure": true,
+     "protected": true,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "messageType",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "CRITICAL",
+      "WARNING",
+      "INFO"
+     ]
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "description",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    }
+   ]
+  },
+  "webex": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "room_id",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "bot_token",
+     "secure": true,
+     "protected": false,
+     "required": true,
+     "kind": "secret"
+    },
+    {
+     "name": "api_url",
+     "secure": false,
+     "protected": true,
+     "required": false,
+     "kind": "url"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    }
+   ]
+  },
+  "webhook": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "url",
+     "secure": false,
+     "protected": true,
+     "required": true,
+     "kind": "url"
+    },
+    {
+     "name": "httpMethod",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "POST",
+      "PUT"
+     ]
+    },
+    {
+     "name": "username",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "password",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "authorization_scheme",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "Bearer",
+      "Basic"
+     ]
+    },
+    {
+     "name": "authorization_credentials",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "headers",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "structured"
+    },
+    {
+     "name": "maxAlerts",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "int",
+     "min": 0,
+     "max": 1000000
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "payload.template",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "payload.vars",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "structured"
+    },
+    {
+     "name": "tlsConfig.insecureSkipVerify",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "type": "bool"
+    },
+    {
+     "name": "tlsConfig.caCertificate",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "tlsConfig.clientCertificate",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "tlsConfig.clientKey",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "hmacConfig.secret",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "hmacConfig.header",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    },
+    {
+     "name": "hmacConfig.timestampHeader",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    }
+   ]
+  },
+  "wecom": {
+   "v1": true,
+   "fields": [
+    {
+     "name": "url",
+     "secure": true,
+     "protected": true,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "endpointUrl",
+     "secure": false,
+     "protected": true,
+     "required": false,
+     "kind": "url"
+    },
+    {
+     "name": "agent_id",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "corp_id",
+     "secure": false,
+     "protected": false,
+     "required": true,
+     "kind": "ident"
+    },
+    {
+     "name": "secret",
+     "secure": true,
+     "protected": false,
+     "required": false,
+     "kind": "secret"
+    },
+    {
+     "name": "msgtype",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "option",
+     "values": [
+      "text",
+      "markdown"
+     ]
+    },
+    {
+     "name": "title",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "message",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "template"
+    },
+    {
+     "name": "touser",
+     "secure": false,
+     "protected": false,
+     "required": false,
+     "kind": "ident"
+    }
+   ]
+  },
+  "wechat": {
+   "v1": false,
+   "fields": []
+  }
+ }
+}

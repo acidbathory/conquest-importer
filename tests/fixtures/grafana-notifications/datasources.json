@@ -1,0 +1,7 @@
+[
+  {"type": "prometheus", "uid": "prom-main", "name": "HOSTILE-prom LEAK-name", "url": "https://u:LEAK-ds-pw@prom.example.com", "basicAuthUser": "LEAK-ds-user", "secureJsonData": {"basicAuthPassword": "LEAK-ds-secret"}},
+  {"type": "loki", "uid": "loki-main", "name": "HOSTILE-loki"},
+  {"type": "tempo", "uid": "tempo-main", "name": "HOSTILE-tempo"},
+  {"type": "grafana-azure-monitor-datasource", "uid": "azure", "name": "HOSTILE-azure"},
+  {"type": "prometheus", "uid": "../../LEAK-uid", "name": "HOSTILE-odd"}
+]
