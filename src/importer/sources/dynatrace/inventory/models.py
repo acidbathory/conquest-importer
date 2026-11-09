@@ -15,6 +15,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.json_depth import TooDeepError, check_depth
 from importer.core.text import printable
 from importer.sources.dynatrace.dashboards.models import depth_exceeds
 
@@ -84,8 +85,12 @@ def read_json(path: Path) -> Any:
     try:
         if path.stat().st_size > MAX_INPUT_BYTES:
             raise ValueError(f"{path.name} is larger than the planner accepts")
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (ValueError, RecursionError, OSError) as exc:
+        text = path.read_text(encoding="utf-8")
+        check_depth(text)
+        data = json.loads(text)
+    except (TooDeepError, RecursionError):
+        raise ValueError(f"{path.name} is nested more deeply than the planner accepts") from None
+    except (ValueError, OSError) as exc:
         if isinstance(exc, ValueError) and "larger than" in str(exc):
             raise
         raise ValueError(f"{path.name} is not readable JSON") from None

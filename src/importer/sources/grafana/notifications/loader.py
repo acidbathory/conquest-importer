@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.json_depth import TooDeepError, check_depth
 from importer.sources.grafana.notifications.contact_points import read_contact_points
 from importer.sources.grafana.notifications.models import (
     MAX_DATASOURCES,
@@ -50,8 +51,10 @@ def _read_json(path: Path) -> Any:
     if path.stat().st_size > MAX_INPUT_BYTES:
         raise NotificationError("larger than the importer accepts")
     try:
-        return json.loads(path.read_text())
-    except RecursionError:
+        text = path.read_text()
+        check_depth(text)
+        return json.loads(text)
+    except (TooDeepError, RecursionError):
         raise NotificationError("nested too deeply to read") from None
     except json.JSONDecodeError:
         raise NotificationError("not JSON") from None

@@ -19,6 +19,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.json_depth import TooDeepError, check_depth
 
 MAX_FILES = 10_000
 MAX_RULES = 50_000
@@ -339,8 +340,10 @@ def load_rules(path: Path) -> list[GrafanaRule]:
         if file.stat().st_size > MAX_INPUT_BYTES:
             raise ValueError(f"{file} is larger than {MAX_INPUT_BYTES // (1024 * 1024)} MB")
         try:
-            rules += _collect(json.loads(file.read_text()))
-        except RecursionError:
+            text = file.read_text()
+            check_depth(text)
+            rules += _collect(json.loads(text))
+        except (TooDeepError, RecursionError):
             raise ValueError(NESTING_ERROR) from None
         if len(rules) > MAX_RULES:
             raise ValueError(f"more than {MAX_RULES} alert rules; pass a smaller input")
