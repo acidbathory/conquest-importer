@@ -27,7 +27,7 @@ def assert_clean(report: str) -> None:
     for text in RAW:
         assert text not in report, text
     assert not any(
-        line.startswith("#") and "H" == line.lstrip("# ") for line in report.splitlines()
+        line.startswith("#") and line.lstrip("# ") == "H" for line in report.splitlines()
     )
 
 

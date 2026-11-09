@@ -79,9 +79,15 @@ def test_entity_objects_without_a_text_type_are_skipped(raw: Any) -> None:
     assert m.parse_entity(raw) is None
 
 
-def test_long_text_and_long_lists_are_cut() -> None:
+def test_long_lists_are_cut_and_values_that_are_not_product_names_are_dropped() -> None:
     entity = m.parse_entity(
-        {"type": "SERVICE", "properties": {"serviceTechnologyTypes": ["x" * 999] * 100}}
+        {
+            "type": "SERVICE",
+            "properties": {
+                "serviceTechnologyTypes": ["Java"] * 100 + ["x" * 999, "a|b", "<b>"],
+                "osType": "LINUX; DROP",
+            },
+        }
     )
     assert entity is not None
-    assert len(entity.technologies) == m.MAX_LIST_ITEMS and len(entity.technologies[0]) == 200
+    assert entity.technologies == ["Java"] * m.MAX_LIST_ITEMS and entity.os == ""

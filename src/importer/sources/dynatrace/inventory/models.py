@@ -7,6 +7,7 @@ the files `extract-dynatrace-inventory` writes (`synthetics/`, `entities/`) and 
 """
 
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -107,7 +108,7 @@ def _items(data: Any, key: str) -> tuple[list[Any], int | None]:
         total = data.get("totalCount")
         found = data.get(key)
         if isinstance(found, list):
-            return found, total if isinstance(total, int) else None
+            return found, total if is_count(total) else None
         return [data], None
     return (data if isinstance(data, list) else []), None
 
@@ -121,13 +122,29 @@ def _strings(value: object) -> list[str]:
     return [s[:200] for s in found[:MAX_LIST_ITEMS] if isinstance(s, str)]
 
 
-def _small(value: object) -> int | None:
-    """A whole number in a sane range (it goes into a plan field), else None."""
-    return (
-        value
-        if isinstance(value, int) and not isinstance(value, bool) and 0 < value < 10**7
-        else None
-    )
+LABEL = re.compile(r"[A-Za-z0-9_. +#-]{1,60}")
+
+
+def whole_number(value: object) -> int | None:
+    """A positive whole number in a sane range (it goes into a plan field), else None."""
+    if isinstance(value, int) and not isinstance(value, bool) and 0 < value < 10**7:
+        return value
+    return None
+
+
+def is_count(value: object) -> bool:
+    """A whole number that is not a bool (JSON true must not read as 1)."""
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def label(value: object) -> str:
+    """A product or system name, or '' when the text could be anything else."""
+    return value if isinstance(value, str) and LABEL.fullmatch(value) else ""
+
+
+def labels(value: object) -> list[str]:
+    found = (label(v) for v in (value[:MAX_LIST_ITEMS] if isinstance(value, list) else []))
+    return [x for x in found if x]
 
 
 def _first_threshold(thresholds: object) -> object:
@@ -146,19 +163,21 @@ def parse_monitor(ref: str, raw: object) -> Monitor | None:
     outage = outage if isinstance(outage, dict) else {}
     thresholds = anomaly.get("loadingTimeThresholds")
     policy = outage.get("globalOutagePolicy")
-    frequency = raw.get("frequencyMin")
+
     return Monitor(
         ref=ref,
         name=_text(raw.get("name")),
         type=printable(raw["type"], 40),
         enabled=raw.get("enabled") is not False,
-        frequency_min=frequency if isinstance(frequency, int) else None,
+        frequency_min=whole_number(raw.get("frequencyMin")),
         locations=_strings(raw.get("locations")),
         script=script if isinstance(script, dict) else {},
         outage_handling=bool(outage.get("globalOutage") or outage.get("localOutage")),
-        outage_runs=_small(policy.get("consecutiveRuns") if isinstance(policy, dict) else None),
+        outage_runs=whole_number(
+            policy.get("consecutiveRuns") if isinstance(policy, dict) else None
+        ),
         loading_thresholds=isinstance(thresholds, dict) and thresholds.get("enabled") is True,
-        loading_ms=_small(_first_threshold(thresholds)),
+        loading_ms=whole_number(_first_threshold(thresholds)),
     )
 
 
@@ -184,8 +203,8 @@ def parse_entity(raw: object) -> Entity | None:
     props = props if isinstance(props, dict) else {}
     return Entity(
         type=raw["type"][:80],
-        technologies=_strings(props.get("serviceTechnologyTypes") or raw.get("technologies")),
-        os=_text(props.get("osType") or raw.get("os"), 40),
+        technologies=labels(props.get("serviceTechnologyTypes") or raw.get("technologies")),
+        os=label(props.get("osType") or raw.get("os")),
     )
 
 

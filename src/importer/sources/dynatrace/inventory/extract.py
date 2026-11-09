@@ -6,24 +6,25 @@ first, so no text from a response becomes a host or an operation. The token come
 DYNATRACE_API_TOKEN, is sent as a bearer token and is never stored or printed. The shared
 safeguards in core/safe_http.py apply: no redirects, a status of 300 or more is an error, server
 text is scrubbed of the token, each response and the whole run have a byte cap, and the run has
-a deadline. Every list has a page cap and the run has a total page cap.
+a deadline. Every list has a page cap, a page key longer than MAX_PAGE_KEY is refused, and the run
+has a total page cap.
 
-What is written (review before sharing; free text is reduced, not proven clean):
-- dashboards/: one envelope per Platform dashboard document (name, app, content). The owner
-  (a user id) is dropped.
-- classic-dashboards/: classic dashboards, with the owner address dropped.
-- synthetics/: monitors with the script reduced to its structure (URLs lose user info, query
-  and fragment; request bodies, header and cookie values, scripts and typed text become
-  "<omitted>") and the locations.
-- entities/: for each entity only its type, technologies and operating system. No name, id or
-  address is kept.
+What is written is built from an allow-list (see sanitize.py), in files readable by the owner
+only (0600 in folders 0700):
+- dashboards/: one envelope per Platform dashboard (name, app id, and the tile fields the
+  planner reads). Titles, queries and markdown are stored as written: they can name internal
+  systems. Review before sharing.
+- classic-dashboards/: classic dashboards without owner and tags.
+- synthetics/: monitors reduced to structure (see sanitize.py) and public location names.
+- entities/: for each entity only its type, product names of its technologies and operating
+  system. No name, id or address.
 
 Endpoints and how sure we are (research note docs/research/dynatrace-dashboards-inventory-
 datapath.md):
 - documents list (`type in ('dashboard')`, `page-key`): DOCUMENTED (D4); the response keys
   `documents` and `nextPageKey` are UNVERIFIED.
 - document content, `.../documents/<id>/content`: UNVERIFIED path and response shape (the note
-  lists it as an open question). The response is stored as is, or its `content` object.
+  lists it as an open question). Its `content` object, or the body when that has `tiles`.
 - classic dashboards, `/api/config/v1/dashboards`: DOCUMENTED on the classic API (D5), but
   whether a platform token can call it on the `apps` host is UNVERIFIED.
 - synthetic monitors and locations, `/api/v1/synthetic/...`: DOCUMENTED on the classic API
@@ -44,21 +45,21 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 
 import httpx
 
 from importer.core.ids import MAX_INPUT_BYTES
-from importer.core.redact import safe_name, safe_path
+from importer.core.redact import safe_name
 from importer.core.safe_http import ReadBudget, get_json, is_plain_token
 from importer.sources.dynatrace.extract import DynatraceError
-from importer.sources.dynatrace.inventory.models import dicts
+from importer.sources.dynatrace.inventory import sanitize
+from importer.sources.dynatrace.inventory.models import dicts, is_count, label
 
 ENV_URL = re.compile(r"https://[a-z0-9]+\.apps\.dynatrace\.com")
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 MONITOR_ID = re.compile(r"[A-Z_]+-[0-9A-F]{16}")
 SERVICE = "Dynatrace"
-OMITTED = "<omitted>"
+OMITTED = sanitize.OMITTED
 
 # name -> path below the host; "{id}" is replaced by an id that matched ID_PATTERN
 READ_PATHS = {
@@ -81,6 +82,7 @@ ENTITY_TYPES = {  # type -> extra field to ask for
     "SERVICE": "+properties.serviceTechnologyTypes",
     "PROCESS_GROUP": "",
     "KUBERNETES_CLUSTER": "",
+    "CLOUD_APPLICATION": "",
     "APPLICATION": "",
     "MOBILE_APPLICATION": "",
     "AWS_LAMBDA_FUNCTION": "",
@@ -90,8 +92,7 @@ ENTITY_PAGE_SIZE = 500
 MAX_PAGES = 100
 MAX_TOTAL_PAGES = 400  # list pages across every area of one run
 MAX_DETAIL_FETCHES = 1000  # single-object reads per area
-MAX_LIST_ITEMS = 200  # items kept from a list inside a script
-MAX_SCRIPT_DEPTH = 20
+MAX_PAGE_KEY = 2000  # a longer page key is hostile, and would not fit in a URL anyway
 
 # (url, params) -> response body as plain JSON
 Getter = Callable[[str, dict[str, str]], dict[str, Any]]
@@ -118,7 +119,8 @@ def environment_url() -> str:
 
 
 def is_platform_host(url: str) -> bool:
-    return ENV_URL.fullmatch(url.removesuffix("/")) is not None
+    """True for exactly https://<tenant id>.apps.dynatrace.com (no path, port or slash)."""
+    return ENV_URL.fullmatch(url) is not None
 
 
 @contextmanager
@@ -137,7 +139,10 @@ def http_getter(token: str, transport: httpx.BaseTransport | None = None) -> Ite
     ) as client:
 
         def get(url: str, params: dict[str, str]) -> dict[str, Any]:
-            return get_json(client, url, params, token, DynatraceError, SERVICE, budget)
+            try:
+                return get_json(client, url, params, token, DynatraceError, SERVICE, budget)
+            except httpx.InvalidURL:  # not an HTTPError: a hostile page key can build one
+                raise DynatraceError("could not reach Dynatrace: InvalidURL") from None
 
         yield get
 
@@ -190,6 +195,8 @@ def _list_pages(
         nxt = page.get("nextPageKey")
         if not isinstance(nxt, str) or not nxt:
             return
+        if len(nxt) > MAX_PAGE_KEY:
+            raise DynatraceError(f"a page key of {label} was too long; stopped")
         params = {cursor: nxt}
     raise DynatraceError(f"more than {MAX_PAGES} pages of {label}; stopped")
 
@@ -202,66 +209,40 @@ class _Partial(DynatraceError):
         self.count = count
 
 
-def _clean_url(url: str) -> str:
-    """scheme://host[:port]/path without user info, query or fragment."""
-    try:
-        parts = urlsplit(url)
-        host = parts.hostname or ""
-        port = f":{parts.port}" if parts.port else ""
-    except ValueError:
-        return OMITTED
-    if not parts.scheme or not host:
-        return OMITTED
-    return f"{parts.scheme}://{host}{port}{safe_path(parts.path)}"
-
-
-OMIT_KEYS = frozenset(
-    {
-        "requestBody",
-        "preProcessingScript",
-        "postProcessingScript",
-        "javaScript",
-        "textValue",
-        "password",
-        "credentials",
-    }
-)
-MASKED_LISTS = frozenset({"requestHeaders", "cookies"})
-URL_KEYS = frozenset({"url", "uri"})
-
-
-def clean_script(key: str, value: Any, depth: int = 0) -> Any:
-    """The script's structure without bodies, header and cookie values, code or typed text."""
-    if depth > MAX_SCRIPT_DEPTH:
-        return OMITTED
-    if key in OMIT_KEYS and value not in (None, "", [], {}):
-        return OMITTED
-    if key in URL_KEYS and isinstance(value, str):
-        return _clean_url(value)
-    if key in MASKED_LISTS and isinstance(value, list):
-        return [
-            {**item, "value": OMITTED} if isinstance(item, dict) else OMITTED
-            for item in value[:MAX_LIST_ITEMS]
-        ]
-    if isinstance(value, dict):
-        return {str(k): clean_script(str(k), v, depth + 1) for k, v in value.items()}
-    if isinstance(value, list):
-        return [clean_script("", v, depth + 1) for v in value[:MAX_LIST_ITEMS]]
-    return value
+def _private_dir(path: Path) -> None:
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path.chmod(0o700)  # mkdir's mode is cut by the umask
 
 
 def _write(path: Path, data: object) -> None:
+    """Write JSON readable by the owner only (0600) in a folder only the owner can open."""
     text = json.dumps(data, indent=2) + "\n"
     if len(text) > MAX_INPUT_BYTES:
         raise DynatraceError(f"{path.name} is larger than the planner accepts")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    _private_dir(path.parent)
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write(text)
 
 
-def _ids(items: list[dict[str, Any]], key: str, pattern: re.Pattern[str]) -> tuple[list[str], int]:
-    """The ids that match `pattern` (up to the fetch cap), and how many entries were unusable."""
-    found = [i[key] for i in items if isinstance(i.get(key), str) and pattern.fullmatch(i[key])]
-    return found[:MAX_DETAIL_FETCHES], len(items) - len(found[:MAX_DETAIL_FETCHES])
+def _ids(
+    items: list[dict[str, Any]], key: str, pattern: re.Pattern[str]
+) -> tuple[list[dict[str, Any]], int]:
+    """Entries with a valid, not yet seen id (up to the fetch cap), and how many were left out
+    because the id was unusable or the cap was reached. A repeated id is read once, silently."""
+    seen: set[str] = set()
+    kept: list[dict[str, Any]] = []
+    valid = 0
+    for item in items:
+        ident = item.get(key)
+        if not isinstance(ident, str) or not pattern.fullmatch(ident):
+            continue
+        valid += 1
+        if ident not in seen:
+            seen.add(ident)
+            kept.append(item)
+    capped = kept[:MAX_DETAIL_FETCHES]
+    return capped, (len(items) - valid) + (len(kept) - len(capped))
 
 
 def _shown(item: dict[str, Any], fallback: str) -> str:
@@ -269,16 +250,11 @@ def _shown(item: dict[str, Any], fallback: str) -> str:
     return safe_name(name if isinstance(name, str) else "", fallback, 100)
 
 
-def _document_envelope(listed: dict[str, Any], body: dict[str, Any], number: int) -> dict[str, Any]:
+def _content(body: dict[str, Any]) -> dict[str, Any] | None:
+    """The dashboard in a content response: its `content` object, or the body if it has tiles."""
     inner = body.get("content")
-    return {
-        "id": listed.get("id", ""),
-        "name": _shown(listed, f"dashboard-{number}"),
-        "type": "dashboard",
-        "isPrivate": listed.get("isPrivate"),
-        "originAppId": listed.get("originAppId", ""),
-        "content": inner if isinstance(inner, dict) else body,
-    }
+    candidate = inner if isinstance(inner, dict) else body
+    return sanitize.dashboard_content(candidate)
 
 
 def read_dashboards(get: Getter, host: str, out: Path, budget: PageBudget) -> int:
@@ -288,19 +264,27 @@ def read_dashboards(get: Getter, host: str, out: Path, budget: PageBudget) -> in
         get, host + READ_PATHS["documents"], first, "documents", budget, "page-key"
     ):
         listed += dicts(page.get("documents"))
-    ids, unusable = _ids(listed, "id", UUID)
+    entries, unusable = _ids(listed, "id", UUID)
     count = 0
-    for number, ident in enumerate(ids, 1):
-        entry = next(i for i in listed if i.get("id") == ident)
-        body = get(_url(host, "document_content", ident), {})
-        _write(
-            out / "dashboards" / f"dashboard-{number:04d}.json",
-            _document_envelope(entry, body, number),
-        )
+    for number, entry in enumerate(entries, 1):
+        content = _content(get(_url(host, "document_content", entry["id"]), {}))
+        if content is None:
+            unusable += 1
+            continue
         count += 1
+        private = entry.get("isPrivate")
+        envelope = {
+            "id": entry["id"],
+            "name": _shown(entry, f"dashboard-{number}"),
+            "type": "dashboard",
+            "isPrivate": private if isinstance(private, bool) else None,
+            "originAppId": label(entry.get("originAppId")),
+            "content": content,
+        }
+        _write(out / "dashboards" / f"dashboard-{count:04d}.json", envelope)
     if unusable:
         raise _Partial(
-            count, f"{unusable} dashboards were not read: no usable id or over the limit"
+            count, f"{unusable} dashboards were not read: no usable id, no tiles or over the limit"
         )
     return count
 
@@ -311,63 +295,42 @@ def read_classic_dashboards(get: Getter, host: str, out: Path, budget: PageBudge
         get, host + READ_PATHS["classic_dashboards"], {}, "dashboards", budget, ""
     ):
         listed += dicts(page.get("dashboards"))
-    ids, unusable = _ids(listed, "id", UUID)
-    for number, ident in enumerate(ids, 1):
-        body = get(_url(host, "classic_dashboard", ident), {})
-        meta = body.get("dashboardMetadata")
-        if isinstance(meta, dict):
-            body = {**body, "dashboardMetadata": {**meta, "owner": ""}}
-        _write(out / "classic-dashboards" / f"classic-{number:04d}.json", body)
+    entries, unusable = _ids(listed, "id", UUID)
+    count = 0
+    for entry in entries:
+        body = get(_url(host, "classic_dashboard", entry["id"]), {})
+        classic = sanitize.classic_dashboard(body)
+        if classic is None:
+            unusable += 1
+            continue
+        count += 1
+        _write(out / "classic-dashboards" / f"classic-{count:04d}.json", classic)
     if unusable:
-        raise _Partial(len(ids), f"{unusable} classic dashboards were not read: no usable id")
-    return len(ids)
+        raise _Partial(count, f"{unusable} classic dashboards were not read: no usable id or tiles")
+    return count
 
 
 def read_monitors(get: Getter, host: str, out: Path, budget: PageBudget) -> int:
     listed: list[dict[str, Any]] = []
     for page in _list_pages(get, host + READ_PATHS["monitors"], {}, "monitors", budget, ""):
         listed += dicts(page.get("monitors"))
-    ids, unusable = _ids(listed, "entityId", MONITOR_ID)
-    monitors: list[dict[str, Any]] = []
-    for number, ident in enumerate(ids, 1):
-        detail = get(_url(host, "monitor", ident), {})
-        script = detail.get("script")
-        monitors.append(
-            {
-                "entityId": ident,
-                "name": _shown(detail, f"monitor-{number}"),
-                "type": detail.get("type", ""),
-                "enabled": detail.get("enabled", True),
-                "frequencyMin": detail.get("frequencyMin"),
-                "locations": detail.get("locations", []),
-                "script": clean_script("script", script) if isinstance(script, dict) else {},
-                "anomalyDetection": detail.get("anomalyDetection", {}),
-            }
-        )
+    entries, unusable = _ids(listed, "entityId", MONITOR_ID)
+    monitors = [
+        sanitize.monitor(entry["entityId"], get(_url(host, "monitor", entry["entityId"]), {}), n)
+        for n, entry in enumerate(entries, 1)
+    ]
     _write(out / "synthetics" / "monitors.json", {"monitors": monitors})
     if unusable:
-        raise _Partial(len(ids), f"{unusable} monitors were not read: no usable id")
-    return len(ids)
+        raise _Partial(len(monitors), f"{unusable} monitors were not read: no usable id")
+    return len(monitors)
 
 
 def read_locations(get: Getter, host: str, out: Path, budget: PageBudget) -> int:
-    keep = ("entityId", "name", "type", "cloudPlatform", "countryCode", "city")
     found: list[dict[str, Any]] = []
     for page in _list_pages(get, host + READ_PATHS["locations"], {}, "locations", budget, ""):
-        found += [{k: item[k] for k in keep if k in item} for item in dicts(page.get("locations"))]
+        found += [sanitize.location(item) for item in dicts(page.get("locations"))]
     _write(out / "synthetics" / "locations.json", {"locations": found})
     return len(found)
-
-
-def _entity(kind: str, raw: dict[str, Any]) -> dict[str, Any]:
-    props = raw.get("properties")
-    props = props if isinstance(props, dict) else {}
-    tech = props.get("serviceTechnologyTypes")
-    return {
-        "type": kind,
-        "technologies": [t for t in tech if isinstance(t, str)] if isinstance(tech, list) else [],
-        "os": props.get("osType") if isinstance(props.get("osType"), str) else "",
-    }
 
 
 def read_entities(get: Getter, host: str, out: Path, budget: PageBudget) -> int:
@@ -382,9 +345,10 @@ def read_entities(get: Getter, host: str, out: Path, budget: PageBudget) -> int:
         for page in _list_pages(
             get, host + READ_PATHS["entities"], first, kind, budget, "nextPageKey"
         ):
-            entities += [_entity(kind, e) for e in dicts(page.get("entities"))]
+            entities += [sanitize.entity(kind, e) for e in dicts(page.get("entities"))]
             count = page.get("totalCount")
-            reported = count if isinstance(count, int) else reported
+            if isinstance(count, int) and is_count(count):
+                reported = count
         if reported or entities:
             _write(
                 out / "entities" / f"entities-{kind}.json",
@@ -409,11 +373,12 @@ AREAS: dict[str, Callable[[Getter, str, Path, PageBudget], int]] = {
 
 def extract(get: Getter, env_url: str, out: Path) -> ExtractResult:
     """Write dashboards/, classic-dashboards/, synthetics/ and entities/ under a new `out`."""
-    host = env_url.removesuffix("/")
+    host = env_url.removesuffix("/")  # one trailing slash is fine; the host is then checked whole
     if not is_platform_host(host):
         raise ValueError("DYNATRACE_ENV_URL must look like https://<tenant id>.apps.dynatrace.com")
     if out.exists() and any(out.iterdir()):
         raise ValueError(f"{out} already has files; pass a new folder")
+    _private_dir(out)
     result = ExtractResult()
     budget = PageBudget()
     for area, read in AREAS.items():

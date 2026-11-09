@@ -139,7 +139,7 @@ def test_the_real_getter_reads_every_area_and_writes_the_folders(tmp_path: Path)
     out = tmp_path / "out"
     assert len(list((out / "dashboards").glob("*.json"))) == 3
     envelope = json.loads(next((out / "dashboards").glob("*.json")).read_text())
-    assert envelope["type"] == "dashboard" and envelope["content"] == BOARD
+    assert envelope["type"] == "dashboard" and envelope["content"]["tiles"]["1"]["content"] == "hi"
     assert (out / "classic-dashboards").is_dir() and (
         out / "synthetics" / "monitors.json"
     ).is_file()
@@ -285,9 +285,7 @@ def test_secrets_in_monitor_scripts_are_not_written(tmp_path: Path) -> None:
     assert request["url"] == "https://shop.example.invalid/a/b"
     assert request["method"] == "POST" and request["requestBody"] == ix.OMITTED
     assert request["preProcessingScript"] == ix.OMITTED
-    assert request["configuration"]["requestHeaders"] == [
-        {"name": "Authorization", "value": ix.OMITTED}
-    ]
+    assert "requestHeaders" not in request["configuration"] and request["hasHeaders"] is True
 
 
 def test_entities_are_written_without_names_or_addresses(tmp_path: Path) -> None:
