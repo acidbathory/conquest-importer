@@ -390,8 +390,7 @@ _FITS = {
 
 
 def _fits(cp_type: str, entry: MapEntry) -> bool:
-    if entry.skip:
-        return True
+    """Can the contact point type use the target the entry names? (`skip` is handled earlier.)"""
     return any(getattr(entry, key) is not None and cp_type in types for key, types in _FITS.items())
 
 

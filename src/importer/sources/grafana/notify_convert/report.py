@@ -45,7 +45,9 @@ def _summary(c: Conversion) -> list[str]:
     n = c.counts
     rows = [
         ("Contact points read", n.contact_points),
-        ("Destinations made (a channel each)", n.destinations),
+        ("Contact points converted to a destination", n.points_with_destination),
+        ("Contact point names no route uses", n.unused_points),
+        ("Destinations made, one per workflow (a channel each)", n.destinations),
         ("Contact points that need a person", n.manual_points),
         ("Contact points with no New Relic equivalent", n.no_equivalent_points),
         ("Contact points skipped by the destinations map", n.skipped_points),

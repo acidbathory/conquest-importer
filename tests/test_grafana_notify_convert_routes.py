@@ -36,6 +36,7 @@ from importer.sources.grafana.notifications.timings import parse_mute_timings
 from importer.sources.grafana.notify_convert import convert as cv
 from importer.sources.grafana.notify_convert import reasons as C
 from importer.sources.grafana.notify_convert.destmap import parse_map
+from importer.sources.grafana.notify_convert.report import render_report
 
 TODAY = date(2026, 11, 20)
 
@@ -447,3 +448,28 @@ def test_no_name_or_address_reaches_a_note_a_reason_or_a_step() -> None:
     c = run(export(cps, {"receiver": hostile}), [monitor("A", 1)])
     text = json.dumps([c.reasons, [p.notes for p in c.plans], [list(pt.steps) for pt in c.points]])
     assert "HOSTILE" not in text and "EMAILADDR" not in text
+
+
+def test_a_label_the_query_does_not_group_by_is_not_read_as_empty_without_the_rules() -> None:
+    """With a known label set and no rules, `severity` is unknown, not the empty string: reading
+    it as empty would send a critical rule to the root receiver in silence."""
+    policy = {
+        "receiver": "Ops",
+        "routes": [{"receiver": "Pager", "matchers": ['severity!="critical"']}],
+    }
+    ex = export([email("Ops"), email("Pager", "p@example.com")], policy)
+    c = run(ex, [monitor("A", 1, by=["service"])])
+    assert R.R_POLICY_UNDECIDABLE in {u.reason for u in c.undecidable}
+    assert c.plans == []
+    rule = GrafanaRule(title="A", uid="uid-1", folder="f", labels={"severity": "critical"})
+    known = run(ex, [monitor("A", 1, by=["service"])], rules=[rule])
+    assert known.undecidable == [] and len(known.plans) == 1
+
+
+def test_schedules_that_ended_and_rules_that_could_not_be_scoped_are_counted() -> None:
+    old = [{"name": "Old", "time_intervals": [{"years": ["2020"], "weekdays": ["monday"]}]}]
+    cps = [email("Ops"), email("Night", "n@example.com")]
+    c = run(export(cps, timed_policy(["Old"]), old), [monitor("A", 1)])
+    assert c.expired_schedules == 1 and c.muting_rules == []
+    assert all(w.muting_rules_handling == "" for w in workflows(c))
+    assert "ended before today" in render_report(c)

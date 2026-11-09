@@ -44,6 +44,8 @@ class Inputs:
 class Counts:
     contact_points: int = 0
     destinations: int = 0  # typed destinations created from contact points
+    points_with_destination: int = 0  # contact points that became a typed destination
+    unused_points: int = 0  # contact points no route names
     manual_points: int = 0
     no_equivalent_points: int = 0
     skipped_points: int = 0
@@ -150,6 +152,8 @@ def _counts(
     return Counts(
         contact_points=len(c.points),
         destinations=sum(len(p.typed_destinations) for p in c.plans),
+        points_with_destination=sum(p.destination is not None for p in c.points),
+        unused_points=len({p.cp.name for p in c.points} - {o.receiver for o in c.outcomes}),
         manual_points=sum(p.manual is not None for p in c.points),
         no_equivalent_points=sum(
             p.destination is None and p.manual is None and not p.skipped for p in c.points

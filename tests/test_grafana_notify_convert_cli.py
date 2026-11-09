@@ -103,6 +103,16 @@ def test_the_command_is_registered_and_prints_counts_only(
         in result.output
     )
     assert "1 muting rules" in result.output and "18 secrets must be supplied" in result.output
+    table = (tmp_path / "o" / "report.md").read_text()
+    for row in (
+        "| Contact points converted to a destination | 17 |",
+        "| Contact points that need a person | 6 |",
+        "| Contact points with no New Relic equivalent | 5 |",
+        "| Contact points skipped by the destinations map | 1 |",
+        "| Routes | 27 |",
+        "| Workflows planned (disabled) | 16 |",
+    ):
+        assert row in table
     for marker in (*NEVER, "EMAILADDR"):
         assert marker not in result.output
 
