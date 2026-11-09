@@ -527,6 +527,74 @@ Relic from them yet; wiring them into the notification plan is the next wave.
 - **Not verified on a live account:** destination behaviour, the metric names and attributes
   Prometheus data gets in New Relic, and the workflow predicate operators on list attributes.
 
+### Grafana notification conversion
+
+Status: `importer convert-grafana-notifications` plans New Relic destinations, workflows and
+muting rules from the folder `extract-grafana-notifications` wrote. It is offline: it reads no
+secret, sends nothing and creates nothing. Workflows and muting rules are planned disabled. No
+payload or object was tested against a live account or a live receiving service (UNVERIFIED).
+
+    importer extract-grafana-notifications --out out/gn
+    importer convert --source grafana --in <rules file or folder> --out out/ga
+    importer convert-grafana-notifications --in out/gn --alerts out/ga --rules <same rules> \
+        [--destinations-map map.json] --out out/gp
+
+- **What is written:** `notification-plans/topic-NNNN.json` (the folder layout that
+  `apply-notifications --in out/gp` reads), `muting-rules/rule-NNNN.json`, `notifications.tf`
+  (destinations, channels, workflows and muting rules), `secrets.tfvars.example` and `report.md`.
+  Files are readable by the owner only and are never overwritten. The plans and the Terraform hold
+  email addresses; the report never does.
+- **Secrets:** nothing secret is read or stored. A webhook URL path, a token, a header value or a
+  PagerDuty key is a name such as `GRAFANA_OPS_1A2B_URL`, and the Terraform declares a sensitive
+  variable `nr_secret_<name in lower case>` for each. Supply the values in the environment
+  (`export TF_VAR_nr_secret_grafana_ops_1a2b_url=...`) or in a `*.tfvars` file that stays out of
+  git; `secrets.tfvars.example` lists them all. `apply-notifications` does not take secrets yet and
+  cannot create a webhook with a secure URL, so these plans are applied through Terraform. A
+  header or basic credential is one Authorization header whose whole value is the secret (the
+  user name is not exported).
+- **Contact points:** `email` becomes an EMAIL destination from the exported addresses (checked
+  with the shared pattern, 150 at most, a note above 5 for a free account); `webhook` a WEBHOOK
+  with a secure URL, the Grafana credentials as references and a small JSON payload; the twelve
+  webhook-template services a WEBHOOK with a payload from `payload_templates.json` (Handlebars
+  that uses only real New Relic variables and prints values only through `json` or `escape`; each
+  template is rendered in the tests and must give valid JSON). Every vendor payload is marked
+  unverified, and the report lists what is uncertain for each. `pagerduty` becomes a
+  PAGERDUTY_SERVICE_INTEGRATION with the integration key as a reference. `slack` (OAuth),
+  `teams` (app install, security code, team and channel id), `jira`, `sns` (EventBridge and the
+  AWS side), `pushover`, and an email with no exported address stay manual entries with the steps
+  in the plan and the report. `threema`, `LINE`, `mqtt`, `wechat` and WeCom in app mode are listed
+  with the reason.
+- **Routes:** each converted rule is walked through the policy tree alone, and rules with the same
+  receiver, filter and mute set share a workflow. A label of the query's `by (...)` becomes an
+  `accumulations.tag.<label>` predicate next to the condition names. Labels of the rule need
+  `--rules` (the rules `convert` read); without it, a policy that matches on a rule label is
+  reported as undecidable, never guessed. A rule with simplified routing goes straight to its
+  contact point. A route splits when its condition names do not fit one 4,096 character filter
+  and when resolve messages are switched off for some of its destinations (the workflow then has
+  no `CLOSED` trigger). Each workflow has its own copy of the destinations, because a channel
+  serves one workflow. Group wait, group interval, repeat interval and the Grafana grouping are
+  lost; the report says so. `plan_violations` is run over all plans; a violation (more than 1,000
+  workflows, for example) is printed and the command exits with code 2.
+- **Mute timings:** the exact cases of the read side (times, weekdays, a time zone, plain days of
+  the month, a run of months in named years) become muting rules for the conditions of the route
+  that uses the timing (and its tag predicates), with the window end doing nothing. The
+  workflows of that route use `DONT_NOTIFY_FULLY_OR_PARTIALLY_MUTED_ISSUES`; the other workflows
+  keep `NOTIFY_ALL_ISSUES`. The first window starts on the day you run the command. Everything
+  else, active time intervals included, and a timing no route uses, is reported.
+- **Templates:** an empty or default title and message become the fixed Handlebars bodies
+  (`{{ issueTitle }}` as the email subject and the PagerDuty summary). A custom Go template is
+  reported and never translated.
+- **Destinations map:** `--destinations-map FILE` fills destinations that the export cannot.
+  `{"version": 1, "contact_points": {"<name or uid>": {...}}}` where each entry has exactly one of
+  `email` (a list of addresses), `webhook_url` (the NAME of a secret for the URL),
+  `pagerduty_key` (the NAME of a secret for the key) or `skip: true`. A URL, a key or anything
+  shaped like one in place of a name is refused without being echoed, as are unknown keys,
+  duplicate keys, a file over 1 MB and more than 10,000 entries.
+- **Not done:** an issue priority predicate (Grafana rules convert to one critical threshold, so
+  the static `severity` label is decided at conversion time instead), silences, inhibit rules,
+  imported Alertmanager configurations, the Slack, Teams, Jira and EventBridge destinations
+  themselves, and any live test.
+
 ### Dynatrace classic (metric events and Davis detectors)
 
 `importer extract-dynatrace-classic --out <folder>` reads Settings 2.0 objects from a Dynatrace
