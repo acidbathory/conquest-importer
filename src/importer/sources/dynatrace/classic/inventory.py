@@ -97,7 +97,7 @@ def _zone(value: dict[str, Any]) -> str:
 
 def _detection(_value: dict[str, Any]) -> str:
     return (
-        "built-in anomaly detection setting is not converted: Davis detects these problems "
+        "built-in detection setting is not converted: Davis detects these problems "
         "automatically, so there is no user condition to carry over; compare non-default "
         "values by hand"
     )

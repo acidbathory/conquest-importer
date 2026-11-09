@@ -1,14 +1,15 @@
 """Small helpers shared by the converters of the Dynatrace classic source."""
 
 import math
+import re
 
 from importer.core.emit.common import MAX_AGGREGATION_WINDOW_SECONDS, MAX_DURATION_SECONDS
 from importer.core.ids import source_id
 from importer.core.ir import Confidence, IRMonitor, Signal, SignalKind
-from importer.core.text import printable
 
 SOURCE = "dynatrace-classic"
-SHOWN_LIMIT = 60
+SHOWN_LIMIT = 80
+SAFE_NAME = re.compile(r"[A-Za-z0-9_.:/-]+")  # a plain name; no spaces, quotes or markup
 
 
 class Fail(Exception):
@@ -20,8 +21,14 @@ class Fail(Exception):
 
 
 def shown(text: str, limit: int = SHOWN_LIMIT) -> str:
-    """Untrusted text as a short quoted literal: control characters become '?', quotes escaped."""
-    return repr(printable(text, limit))
+    """Untrusted text as a short quoted name, or a placeholder when it is not a plain name.
+
+    Metric keys, dimension keys, schema ids and enum values are plain names. Anything else (a
+    quote, a control character, markup, a long run) is not repeated in a reason at all.
+    """
+    if len(text) > limit or SAFE_NAME.fullmatch(text) is None:
+        return "<a name with unusual characters>"
+    return repr(text)
 
 
 def finite(value: float, what: str) -> float:

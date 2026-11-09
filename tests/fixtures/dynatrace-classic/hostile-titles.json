@@ -1,0 +1,156 @@
+{
+  "items": [
+    {
+      "objectId": "HOSTILE-title-event",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [
+            {
+              "dimensionKey": "dt.entity.host",
+              "operator": "EQUALS",
+              "dimensionValue": "a'; DROP TABLE x; --"
+            }
+          ]
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      },
+      "summary": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+      "owner": "00000000-0000-0000-0000-000000000000",
+      "resourceContext": {
+        "operations": [
+          "read",
+          "write"
+        ]
+      },
+      "modified": 1700000000000
+    },
+    {
+      "objectId": "HOSTILE-title-detector",
+      "schemaId": "builtin:davis.anomaly-detectors",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "title": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+        "analyzer": {
+          "name": "dt.statistics.ui.anomaly_detection.StaticThresholdAnomalyDetectionAnalyzer",
+          "input": [
+            {
+              "key": "query",
+              "value": "timeseries avg(dt.host.cpu.usage), by:{dt.entity.host}"
+            },
+            {
+              "key": "threshold",
+              "value": "90"
+            },
+            {
+              "key": "alertCondition",
+              "value": "ABOVE"
+            },
+            {
+              "key": "alertOnMissingData",
+              "value": "true"
+            },
+            {
+              "key": "violatingSamples",
+              "value": "3"
+            },
+            {
+              "key": "slidingWindow",
+              "value": "5"
+            },
+            {
+              "key": "dealertingSamples",
+              "value": "5"
+            }
+          ]
+        },
+        "executionSettings": {
+          "actor": "00000000-0000-0000-0000-000000000000",
+          "queryOffset": 2
+        }
+      }
+    },
+    {
+      "objectId": "HOSTILE-title-profile",
+      "schemaId": "builtin:alerting.profile",
+      "scope": "environment",
+      "value": {
+        "name": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+        "severityRules": [],
+        "eventFilters": []
+      }
+    },
+    {
+      "objectId": "HOSTILE-title-notification",
+      "schemaId": "builtin:problem.notifications",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "type": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+        "displayName": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+        "alertingProfile": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+        "slackNotification": {
+          "url": "https://hooks.example.invalid/SECRET-IN-HOSTILE-FILE",
+          "channel": "#c"
+        }
+      }
+    },
+    {
+      "objectId": "HOSTILE-title-window",
+      "schemaId": "builtin:alerting.maintenance-window",
+      "scope": "environment",
+      "value": {
+        "generalProperties": {
+          "name": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+          "suppression": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮"
+        },
+        "schedule": {
+          "scheduleType": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮"
+        }
+      }
+    },
+    {
+      "objectId": "HOSTILE-title-zone",
+      "schemaId": "builtin:management-zones",
+      "scope": "environment",
+      "value": {
+        "name": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+        "rules": []
+      }
+    },
+    {
+      "objectId": "HOSTILE-title-schema",
+      "schemaId": "builtin:x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+      "scope": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x> ‮",
+      "value": {
+        "a": 1
+      }
+    }
+  ],
+  "totalCount": 7,
+  "pageSize": 500
+}

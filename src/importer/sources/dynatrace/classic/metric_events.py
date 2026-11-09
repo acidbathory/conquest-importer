@@ -77,7 +77,7 @@ ENTITY_NOTE = (
 CASE_NOTE = "a case-insensitive Dynatrace test becomes a LIKE filter, which may be case sensitive"
 BASELINE_NOTES = (
     "the Dynatrace model (a 99th percentile plus interquartile range over 7 days, or a seasonal "
-    "forecast over 14 days) differs from the New Relic baseline; both learn a normal range",
+    "band learned over 14 days) differs from the New Relic baseline; both learn a normal range",
     "sensitivity (signalFluctuation or tolerance) has no principled conversion; the band is "
     f"set to {BASELINE_DEVIATIONS:g} standard deviations, a chosen value to tune with the "
     "NrAiSignal histogram",
@@ -106,7 +106,7 @@ def _entity_filter(condition: EntityCondition, dimension: str | None) -> tuple[D
 
 def _filters(qd: QueryDefinition) -> tuple[list[DimFilter], list[str]]:
     if qd.managementZone:
-        raise Fail("the event is limited to a management zone, which has no New Relic equivalent")
+        raise Fail("the event is limited to a management zone, which New Relic does not offer")
     entity = qd.entityFilter
     pairs = [_entity_filter(c, entity.dimensionKey) for c in entity.conditions]
     found = [flt for flt, _ in pairs] + [_dimension_filter(i) for i in qd.dimensionFilter]

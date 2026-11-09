@@ -449,7 +449,7 @@ INVENTORY_CASES: list[tuple[str, dict[str, Any], str]] = [
     (
         "builtin:anomaly-detection.services",
         {"failureRate": {}},
-        "built-in anomaly detection setting is not converted",
+        "built-in detection setting is not converted",
     ),
     ("builtin:something.else", {"a": 1}, "settings schema is not converted"),
 ]
