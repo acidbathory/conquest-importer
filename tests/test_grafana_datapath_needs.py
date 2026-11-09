@@ -54,7 +54,7 @@ def test_a_tile_with_a_metric_gets_the_metrics_steps() -> None:
     cpu = next(j for n, j in by_name.items() if "node_cpu_seconds_total" in j.item.metrics)
     assert cpu.verdict is needs.Verdict.DATA_PATH_KNOWN
     assert cpu.steps == (needs.STEP_KEY, needs.STEP_METRICS)
-    assert "after step 2" in cpu.text()
+    assert "after step 1 and 2" in cpu.text()
 
 
 def test_placeholders_are_not_converted_and_log_tiles_need_the_log_step() -> None:
