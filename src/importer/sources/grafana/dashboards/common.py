@@ -90,9 +90,9 @@ KEY_HINTS: tuple[tuple[tuple[str, ...], str], ...] = (
 
 def target_hint(raw: dict[str, Any]) -> str:
     """The data source type a query's keys point to (used when the reference says nothing)."""
-    expr = raw.get("expr")
-    if isinstance(expr, str):
-        return "loki" if LOKI_HINT.search(expr[:2000]) else "prometheus"
+    if "expr" in raw:  # a query text that is not a string still came from a PromQL-style editor
+        expr = raw["expr"]
+        return "loki" if isinstance(expr, str) and LOKI_HINT.search(expr[:2000]) else "prometheus"
     for keys, hint in KEY_HINTS:
         if all(key in raw for key in keys):
             return hint

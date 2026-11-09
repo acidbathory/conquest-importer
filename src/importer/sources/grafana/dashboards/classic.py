@@ -49,6 +49,8 @@ LATEST_SCHEMA = 42
 MAX_REGEX = 300
 MAX_TRANSFORMATIONS = 20
 LEGACY_MAPPINGS = ("valueMaps", "rangeMaps")
+# old table panel `transform` values that reshape the result; the default needs nothing
+LEGACY_TABLE_TRANSFORMS = frozenset({"timeseries_to_rows", "timeseries_aggregations", "json"})
 _END = object()  # the end of a panel list (a JSON null in the list is not the end)
 
 
@@ -76,9 +78,17 @@ def read_targets(raw: object, warnings: list[str]) -> list[Target]:
     return [read_target(t) for t in items[:MAX_TARGETS]]
 
 
-def _transformations(raw: object) -> list[str]:
-    ids = (text(mapping(t).get("id") or mapping(t).get("kind"), 60) for t in sequence(raw))
-    return [i for i, _ in zip(ids, range(MAX_TRANSFORMATIONS), strict=False)]
+def _transformations(body: dict[str, Any]) -> list[str]:
+    """Transformation ids, plus the old table panel's `transform` when it reshapes the data."""
+    ids = (
+        text(mapping(t).get("id") or mapping(t).get("kind"), 60)
+        for t in sequence(body.get("transformations"))
+    )
+    found = [i for i, _ in zip(ids, range(MAX_TRANSFORMATIONS), strict=False)]
+    legacy = text(body.get("transform"), 40)
+    if legacy in LEGACY_TABLE_TRANSFORMS:
+        found.append(f"legacy-{legacy}")
+    return found
 
 
 def _counts(body: dict[str, Any]) -> tuple[int, int]:
@@ -112,7 +122,7 @@ def panel_from_body(body: dict[str, Any], library: Mapping[str, Any], warnings: 
         title=text(body.get("title")),
         ds=ds_ref(body.get("datasource")),
         targets=read_targets(body.get("targets"), warnings),
-        transformations=_transformations(body.get("transformations")),
+        transformations=_transformations(body),
         library_uid=lib_uid,
         library_found=found,
         repeat=text(body.get("repeat"), 100),

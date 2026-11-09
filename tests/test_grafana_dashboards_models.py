@@ -99,6 +99,8 @@ def test_the_legacy_rows_fixture_becomes_panels_with_sections_and_a_24_column_gr
         ("Per instance", "Collapsed extras", 24),
     ]
     assert d.panels[1].x == 6 and d.panels[2].repeat == ""
+    assert d.panels[2].transformations == ["legacy-timeseries_to_rows"]  # old table `transform`
+    assert d.row_repeats == 1
     assert d.annotations[0].ds_type == "" and d.annotations[0].name == "restarts"
 
 
