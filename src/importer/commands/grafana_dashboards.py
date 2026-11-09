@@ -14,6 +14,12 @@ from importer.sources.grafana.dashboards.report import build_report, plan_json
 from importer.sources.grafana.extract import GrafanaError, api_token, grafana_url, validate_host
 
 
+def _inside(out: Path, source: Path) -> bool:
+    """True when `out` is the input folder or sits below it (a plan would be read as input)."""
+    folder = source if source.is_dir() else source.parent
+    return folder.resolve() in (out.resolve(), *out.resolve().parents)
+
+
 def register(app: typer.Typer) -> None:
     @app.command("extract-grafana-dashboards")
     def extract_grafana_dashboards(
@@ -73,6 +79,8 @@ def register(app: typer.Typer) -> None:
         plan.json under --out. The tiers are described in docs/what-migrates.md.
         """
         try:
+            if _inside(out, source):
+                raise ValueError(f"--out {out} is inside --in {source}; choose a separate folder")
             plan = build_plan(load_estate(source))
             if not plan.dashboards:
                 raise ValueError(f"no Grafana dashboards found in {source}")

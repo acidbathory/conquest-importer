@@ -14,6 +14,7 @@ from importer.sources.grafana.dashboards.common import (
     Found,
     ds_ref,
     mapping,
+    note,
     schema_version,
     sequence,
     target_hint,
@@ -183,11 +184,6 @@ def _legacy_rows(root: dict[str, Any]) -> list[Any]:
     return rows
 
 
-def _warn(dash: Dashboard, message: str) -> None:
-    if message not in dash.warnings:
-        dash.warnings.append(message)
-
-
 def _row(frame: _Frame, body: dict[str, Any], walk: _Walk, stack: list[_Frame]) -> None:
     dash = walk.dash
     dash.rows += 1
@@ -199,7 +195,7 @@ def _row(frame: _Frame, body: dict[str, Any], walk: _Walk, stack: list[_Frame]) 
         frame.section = title  # an open row: the panels that follow in the list are its members
         return
     if frame.depth + 1 > MAX_DEPTH:
-        _warn(dash, W_DEEP)
+        note(dash, W_DEEP)
         return
     stack.append(_Frame(iter(members), title, frame.depth + 1))
 
@@ -218,7 +214,7 @@ def _walk_panels(root: dict[str, Any], walk: _Walk) -> None:
         elif body.get("type") == "row":
             _row(frame, body, walk, stack)
         elif len(dash.panels) >= MAX_PANELS:
-            _warn(dash, W_PANELS)
+            note(dash, W_PANELS)
             return
         else:
             panel = panel_from_body(body, walk.library, dash.warnings)
@@ -298,12 +294,22 @@ def read_header(root: dict[str, Any], found: Found) -> Dashboard:
     return dash
 
 
+def _element_models(elements: dict[str, Any]) -> dict[str, Any]:
+    """Library panel models from `__elements`: each entry is a wrapper {uid, name, kind, model}.
+
+    The wrapper shape is read from the Grafana code comment, not from a real export (unverified).
+    """
+    found: dict[str, Any] = {}
+    for key, value in elements.items():
+        if isinstance(value, dict):
+            found[key] = value["model"] if isinstance(value.get("model"), dict) else value
+    return found
+
+
 def read_classic(root: dict[str, Any], found: Found, library: dict[str, Any]) -> Dashboard:
     dash = read_header(root, found)
     elements = mapping(root.get("__elements"))
-    walk = _Walk(
-        dash, ChainMap({k: v for k, v in elements.items() if isinstance(v, dict)}, library)
-    )
+    walk = _Walk(dash, ChainMap(_element_models(elements), library))
     _walk_panels(root, walk)
     if walk.skipped:
         dash.warnings.append(W_NOT_OBJECTS.format(count=walk.skipped))

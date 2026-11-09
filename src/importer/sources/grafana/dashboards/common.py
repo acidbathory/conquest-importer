@@ -7,6 +7,7 @@ from typing import Any
 
 from importer.sources.grafana.dashboards.models import (
     MAX_TEXT,
+    Dashboard,
     DsRef,
 )
 
@@ -23,11 +24,18 @@ class Found:
     name: str = ""  # metadata.name of a resource envelope (the uid)
     folder_uid: str = ""
     folder_title: str = ""
+    both: bool = False  # the body has classic panels and v2 elements
 
 
 def text(value: object, limit: int = MAX_TEXT) -> str:
     """The value when it is a string, cut to `limit`; else an empty string."""
     return value[:limit] if isinstance(value, str) else ""
+
+
+def note(dash: Dashboard, message: str) -> None:
+    """Add a note to the dashboard once."""
+    if message not in dash.warnings:
+        dash.warnings.append(message)
 
 
 def mapping(value: object) -> dict[str, Any]:
@@ -54,8 +62,11 @@ def truthy(value: object) -> bool:
 
 def schema_version(value: object) -> int | None:
     """The schemaVersion as a number between 0 and 1000, else None."""
-    if isinstance(value, str) and value.strip().isdigit() and len(value.strip()) <= 4:
-        value = int(value.strip())
+    if isinstance(value, str):
+        digits = value.strip()
+        # ASCII only: str.isdigit() accepts superscripts that int() rejects
+        ok = digits.isascii() and digits.isdecimal() and len(digits) <= 4
+        value = int(digits) if ok else None
     if isinstance(value, bool) or not isinstance(value, int):
         return None
     return value if 0 <= value <= 1000 else None

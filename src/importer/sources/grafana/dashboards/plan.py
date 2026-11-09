@@ -17,6 +17,7 @@ from importer.sources.grafana.dashboards import reasons as r
 from importer.sources.grafana.dashboards.datasources import CONVERTIBLE, resolve_target
 from importer.sources.grafana.dashboards.models import (
     Dashboard,
+    PLAN_MARKER,
     Estate,
     Panel,
     Target,
@@ -110,6 +111,8 @@ class Totals(BaseModel):
 
 
 class Plan(BaseModel):
+    kind: str = PLAN_MARKER  # lets the loader recognise a plan file and skip it
+    warnings: list[str] = Field(default_factory=list)  # from reading the dashboards
     dashboards: list[DashboardPlan] = Field(default_factory=list)
     unreadable: list[Unreadable] = Field(default_factory=list)
     totals: Totals = Field(default_factory=Totals)
@@ -358,7 +361,7 @@ def _inventories(plan: Plan) -> None:
 
 def build_plan(estate: Estate) -> Plan:
     """The coverage plan for everything the loader read."""
-    plan = Plan(unreadable=estate.unreadable)
+    plan = Plan(unreadable=estate.unreadable, warnings=estate.warnings)
     plan.dashboards = [plan_dashboard(d) for d in estate.dashboards]
     plan.totals = _totals(plan)
     _inventories(plan)

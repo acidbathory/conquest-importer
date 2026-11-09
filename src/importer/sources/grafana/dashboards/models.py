@@ -6,7 +6,7 @@ read becomes an `Unreadable` item with a fixed reason, so one bad dashboard neve
 others.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 MAX_DASHBOARDS = 5000
 MAX_FILES = 10_000
@@ -28,6 +28,7 @@ U_TOO_BIG = "grafana dashboard file is larger than the importer accepts"
 U_NOT_OBJECT = "grafana dashboard entry is not a JSON object"
 U_UNKNOWN_SHAPE = "grafana dashboard entry has no panels, rows or layout, so it is not a dashboard"
 U_INVALID = "grafana dashboard could not be read (a field has an unexpected type or value)"
+U_ENCODING = "grafana dashboard file is not UTF-8 text (encoding)"
 
 # fixed notes about a dashboard that was read but not completely
 W_DEEP = f"nesting deeper than {MAX_DEPTH} levels was not read"
@@ -37,6 +38,17 @@ W_VARIABLES = f"more than {MAX_VARIABLES} variables; the rest were not read"
 W_NOT_OBJECTS = "{count} entries in the panel list are not objects and were skipped"
 W_UNPLACED = "{count} elements are not placed in the layout and were added at the end"
 W_SCHEMA_NEWER = "schemaVersion {version} is newer than 42; read with the field names of 42"
+W_BOTH_SHAPES = (
+    "the file has panels and also v2 elements and a layout; it was read as a classic dashboard"
+)
+W_PLACED_TWICE = (
+    "{count} elements are placed more than once in the layout; each placement is a panel"
+)
+W_DUPLICATE_UID = "{count} dashboards repeat the uid of an earlier one and were left out"
+W_TOO_MANY_DASHBOARDS = "more than {limit} dashboards; the rest were not read"
+W_TOO_MANY_FILES = "more than {limit} files; the rest were not read"
+W_PLAN_FILE = "{count} plan files written by plan-grafana-dashboards were skipped"
+PLAN_MARKER = "grafana-dashboards-plan"  # the `kind` of a plan.json
 W_ANNOTATIONS = f"more than {MAX_ANNOTATIONS} annotation queries; the rest were not read"
 
 
@@ -133,3 +145,20 @@ class Estate(BaseModel):
     unreadable: list[Unreadable] = Field(default_factory=list)
     library_panels: int = 0
     folders: dict[str, str] = Field(default_factory=dict)  # folder uid -> title
+    warnings: list[str] = Field(default_factory=list)
+    _seen: set[str] = PrivateAttr(default_factory=set)
+    _repeated: set[str] = PrivateAttr(default_factory=set)
+
+    def add(self, dashboard: Dashboard) -> bool:
+        """Keep the dashboard unless an earlier one has its uid; a uid is counted once."""
+        if dashboard.uid and dashboard.uid in self._seen:
+            self._repeated.add(dashboard.uid)
+            return False
+        self._seen.add(dashboard.uid)
+        self.dashboards.append(dashboard)
+        return True
+
+    def finish(self) -> None:
+        if self._repeated:
+            self.warnings.append(W_DUPLICATE_UID.format(count=len(self._repeated)))
+            self._repeated = set()

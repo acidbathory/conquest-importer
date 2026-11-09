@@ -163,7 +163,9 @@ def test_a_v1_envelope_around_a_classic_dashboard_is_read() -> None:
 
 
 def test_a_list_and_an_items_response_give_one_dashboard_each_and_bad_ones_are_unreadable() -> None:
-    estate = load_data([classic([]), "text", 5, {"hello": 1}, classic([stat()])], "list.json")
+    estate = load_data(
+        [classic([], uid="a"), "text", 5, {"hello": 1}, classic([stat()], uid="b")], "list.json"
+    )
     assert len(estate.dashboards) == 2
     assert [(u.position, u.reason) for u in estate.unreadable] == [
         (1, models.U_NOT_OBJECT),
@@ -178,7 +180,7 @@ def test_a_folder_loads_the_good_files_and_names_the_bad_ones(tmp_path: Path) ->
     (tmp_path / "a.json").write_text(json.dumps(classic([stat()])))
     (tmp_path / "b.json").write_text("{not json")
     (tmp_path / "sub").mkdir()
-    (tmp_path / "sub" / "c.json").write_text(json.dumps(classic([])))
+    (tmp_path / "sub" / "c.json").write_text(json.dumps(classic([], uid="c")))
     (tmp_path / "notes.txt").write_text("ignored")
     estate = load_estate(tmp_path)
     assert len(estate.dashboards) == 2
@@ -311,7 +313,14 @@ def test_library_panels_are_resolved_by_uid_from_the_export_and_from_elements(
             {"id": 2, "libraryPanel": {"uid": "L2", "name": "m"}},
             {"id": 3, "libraryPanel": {"uid": "L3"}},
         ],
-        __elements={"L3": {**model, "title": "From elements"}},
+        __elements={
+            "L3": {
+                "uid": "L3",
+                "name": "n",
+                "kind": 1,
+                "model": {**model, "title": "From elements"},
+            }
+        },
     )
     (tmp_path / "library-panels.json").write_text(json.dumps(lib))
     (tmp_path / "d.json").write_text(json.dumps(dash))

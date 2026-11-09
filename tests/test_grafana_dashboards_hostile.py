@@ -67,7 +67,7 @@ def test_the_v2_injection_file_places_what_it_can_and_notes_the_rest() -> None:
     assert d.shape == "v2" and d.tabs == 3
     titles = [p.title for p in d.panels]
     assert "fine" in titles and "<script>alert(1)</script>" in titles
-    assert m.W_UNPLACED.format(count=2) in d.warnings  # `unplaced` and `weird` is not a panel
+    assert m.W_UNPLACED.format(count=1) in d.warnings  # `unplaced` and `weird` is not a panel
     plan = build_plan(load_estate(FIXTURES / "hostile" / "injection-v2.json")).dashboards[0]
     by_title = {p.title: p for p in plan.panels}
     assert by_title["fine"].tier == 1

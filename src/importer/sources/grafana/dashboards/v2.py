@@ -19,6 +19,7 @@ from importer.sources.grafana.dashboards.common import (
     Found,
     ds_ref,
     mapping,
+    note,
     sequence,
     text,
     truthy,
@@ -36,6 +37,7 @@ from importer.sources.grafana.dashboards.models import (
     W_ANNOTATIONS,
     W_DEEP,
     W_PANELS,
+    W_PLACED_TWICE,
     W_TARGETS,
     W_UNPLACED,
     W_VARIABLES,
@@ -134,28 +136,31 @@ class _Placer:
         self.dash = dash
         self.elements = elements
         self.library = library
-        self.placed: set[str] = set()
+        self.placed: dict[str, int] = {}  # element name -> how many times placed
 
-    def place(self, ref: object, x: int, y: int, w: int, h: int, section: str, depth: int) -> None:
+    def place(
+        self, ref: object, x: int, y: int, w: int, h: int, section: str, depth: int
+    ) -> Panel | None:
         name = text(mapping(ref).get("name"), 200)
         element = self.elements.get(name)
         if not isinstance(element, dict):
-            return
+            return None
         if len(self.dash.panels) >= MAX_PANELS:
-            _note(self.dash, W_PANELS)
-            return
+            note(self.dash, W_PANELS)
+            return None
         panel = _element(element, self.library, self.dash.warnings)
         if panel is None:
-            return
-        self.placed.add(name)
+            return None
+        self.placed[name] = self.placed.get(name, 0) + 1
         panel.x, panel.y, panel.w, panel.h = x, y, w, h
         panel.section, panel.depth = section, depth
         self.dash.panels.append(panel)
+        return panel
 
     def grid(self, spec: dict[str, Any], section: str, depth: int) -> None:
         for item in sequence(spec.get("items")):
             s = mapping(mapping(item).get("spec"))
-            self.place(
+            panel = self.place(
                 s.get("element"),
                 whole(s.get("x"), 0, GRID_COLUMNS, 0),
                 whole(s.get("y"), 0, MAX_Y, 0),
@@ -165,8 +170,8 @@ class _Placer:
                 depth,
             )
             repeat = text(mapping(s.get("repeat")).get("value"), 100)
-            if repeat and self.dash.panels and self.dash.panels[-1].section == section:
-                self.dash.panels[-1].repeat = repeat
+            if repeat and panel is not None:
+                panel.repeat = repeat
 
     def auto_grid(self, spec: dict[str, Any], section: str, depth: int) -> None:
         columns = whole(spec.get("maxColumnCount"), 1, GRID_COLUMNS, 3)
@@ -185,11 +190,6 @@ class _Placer:
             )
 
 
-def _note(dash: Dashboard, message: str) -> None:
-    if message not in dash.warnings:
-        dash.warnings.append(message)
-
-
 def _join(section: str, title: str) -> str:
     return f"{section} / {title}"[:300] if section and title else (title or section)
 
@@ -199,7 +199,7 @@ def _walk_layout(root: dict[str, Any], dash: Dashboard, placer: _Placer) -> None
     while stack:
         node, depth, section = stack.pop()
         if depth > MAX_DEPTH:
-            _note(dash, W_DEEP)
+            note(dash, W_DEEP)
             continue
         kind, spec = node.get("kind"), mapping(node.get("spec"))
         if kind == "GridLayout":
@@ -277,7 +277,16 @@ def read_v2(root: dict[str, Any], found: Found, library: dict[str, Any]) -> Dash
     elements = mapping(root.get("elements"))
     placer = _Placer(dash, elements, library)
     _walk_layout(root, dash, placer)
-    left = [name for name in elements if name not in placer.placed]
+    twice = sum(count > 1 for count in placer.placed.values())
+    if twice:
+        dash.warnings.append(W_PLACED_TWICE.format(count=twice))
+    left = [
+        name
+        for name, item in elements.items()
+        if isinstance(item, dict)
+        and item.get("kind") in ("Panel", "LibraryPanel")
+        and name not in placer.placed
+    ]
     if left:
         dash.warnings.append(W_UNPLACED.format(count=len(left)))
         for name in left[: max(0, MAX_PANELS - len(dash.panels))]:
