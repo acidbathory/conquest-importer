@@ -153,8 +153,6 @@ def new_relic_unit(unit: str) -> tuple[str | None, list[str]]:
         return UNITS[unit], []
     if unit in NO_UNIT:
         return None, []
-    if unit == "percentunit":
-        return None, [r.N_PERCENTUNIT]
     return None, [r.N_UNIT]
 
 

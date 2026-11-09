@@ -21,18 +21,18 @@ FIXTURES = Path(__file__).parent / "fixtures"
 DIRS = ["grafana-dashboard-convert", "grafana-dashboards", "grafana-dashboard-exact"]
 
 
-def widgets(
-    names: NameMap | None = None,
-) -> list[tuple[str, str, Confidence, WidgetKind, list[str]]]:
-    found = []
+Row = tuple[str, str, Confidence, WidgetKind, list[str]]
+
+
+def widgets(names: NameMap | None = None) -> list[Row]:
+    found: list[Row] = []
     for name in DIRS:
         path = FIXTURES / name
         if not path.exists():
             continue
         dashboards, _ = convert_all(load_items(path), names)
         for dash in dashboards:
-            for w in dash.widgets:
-                found.append((name, w.source_type, w.confidence, w.kind, w.reasons))
+            found += [(name, w.source_type, w.confidence, w.kind, w.reasons) for w in dash.widgets]
     return found
 
 
