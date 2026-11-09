@@ -51,6 +51,9 @@ class TagFilter(BaseModel):
     key: str
     value: str = ""
     absent: bool = False  # match only rows where this attribute is not set
+    negate: bool = False  # != , NOT IN or NOT LIKE instead of = , IN or LIKE
+    values: list[str] = []  # when set, the match is IN (values) and `value` is ignored
+    wildcard: bool = False  # value contains * which becomes a LIKE match
 
 
 class NrTarget(BaseModel):

@@ -23,6 +23,7 @@ FIXTURES: dict[str, list[str]] = {
     "cloudwatch": ["tests/fixtures/cloudwatch", "tests/fixtures/cloudwatch-real"],
     "gcp": ["tests/fixtures/gcp"],
     "dynatrace": ["tests/fixtures/dynatrace"],
+    "grafana": ["tests/fixtures/grafana"],
 }
 TOP = 10
 

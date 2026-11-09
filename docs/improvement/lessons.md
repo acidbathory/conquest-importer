@@ -3,6 +3,14 @@
 One entry per defect class. Each says what happened and the check that stops it coming back.
 New entries go on top.
 
+## 2026-11-09: cycle `grafana-phase0`
+
+| Defect | How it hid | Check that catches the class |
+|---|---|---|
+| New source's reasons were answered by another source's loose rule (`reducer`, `over New Relic's limit`, `valid New Relic attribute name`) | Each reason still got some guidance, just the wrong text | `test_a_specific_rule_is_not_shadowed_by_a_broader_one` lists an example reason per Grafana rule. Next: one generic test over all sources |
+| A new rule could claim another source's reason | Only visible by reading the output | `test_the_grafana_rules_do_not_claim_reasons_of_other_sources` (uses a saved list of the other sources' reasons) |
+| New taxonomy wording could move other sources' categories | Categories only show in the measure | `test_the_categories_of_the_other_sources_are_unchanged` against `tests/fixtures/taxonomy_before_grafana.json` |
+
 ## 2026-11-09: cycle `gcp-absence`
 
 | Defect | How it hid | Check that catches the class |

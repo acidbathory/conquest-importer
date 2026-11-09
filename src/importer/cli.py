@@ -76,6 +76,11 @@ from importer.sources.gcp import data_check as gcp_data
 from importer.sources.gcp.extract import GcpError, access_token, http_getter
 from importer.sources.gcp.extract import extract as extract_gcp
 from importer.sources.gcp.link_terraform import link_terraform, services_for
+from importer.sources.grafana.extract import GrafanaError, grafana_url
+from importer.sources.grafana.extract import api_token as grafana_api_token
+from importer.sources.grafana.extract import extract as extract_grafana
+from importer.sources.grafana.extract import http_getter as grafana_getter
+from importer.sources.grafana.extract import validate_host as grafana_host
 
 app = typer.Typer(
     help="Convert observability alerts from other platforms to New Relic alert conditions.",
@@ -482,6 +487,44 @@ def extract_dynatrace_command(
     typer.echo("Next:")
     typer.echo(f"  importer convert --source dynatrace --in {out} --out {out / 'alerts'}")
     typer.echo(f"  importer report {out} --source dynatrace")
+
+
+@app.command("extract-grafana")
+def extract_grafana_command(
+    out: Annotated[Path, typer.Option(help="New folder for the export")] = Path("out/grafana"),
+    allow_host: Annotated[
+        str | None,
+        typer.Option(
+            "--allow-host",
+            help="Host name of a self-hosted Grafana (https only); must equal the host in "
+            "GRAFANA_URL. Without it only https://<stack>.grafana.net is accepted.",
+        ),
+    ] = None,
+) -> None:
+    """Read alert rules from a Grafana stack.
+
+    Read-only: GET calls only, on a fixed list of paths. Set GRAFANA_URL
+    (https://<stack>.grafana.net) and GRAFANA_SA_TOKEN (a service account token that can read
+    alert rules, contact points, notification policies and mute timings) in .env or the
+    environment; the token is never stored or printed. Contact points, policies and mute timings
+    are counted only: no name, address or secret is written. Behind a corporate proxy that
+    inspects TLS, set SSL_CERT_FILE to a file with the corporate root certificate.
+    """
+    try:
+        token = grafana_api_token()
+        base = grafana_host(grafana_url(), allow_host)
+        with grafana_getter(token, base) as get:
+            result = extract_grafana(get, base, out, allow_host)
+    except (GrafanaError, ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
+        raise typer.Exit(code=1) from None
+    contact = result.inventory.get("contact_points") or {}
+    typer.echo(f"Read {result.rules} alert rules and {contact.get('count', 0)} contact points.")
+    for warning in result.warnings:
+        typer.echo(f"  Warning: {printable(warning, 300)}", err=True)
+    typer.echo("Next:")
+    typer.echo(f"  importer convert --source grafana --in {out} --out {out / 'alerts'}")
+    typer.echo(f"  importer report {out} --source grafana")
 
 
 @app.command("extract-cloudwatch")
@@ -996,7 +1039,9 @@ def report_command(
     ] = "",
     nr_account_id: Annotated[int | None, typer.Option(help="Shown in the header")] = None,
     region: Annotated[str, typer.Option(help="Shown in the header")] = "",
-    source: Annotated[str, typer.Option(help="cloudwatch, gcp or dynatrace")] = "cloudwatch",
+    source: Annotated[
+        str, typer.Option(help="cloudwatch, gcp, dynatrace or grafana")
+    ] = "cloudwatch",
 ) -> None:
     """Write the post-migration HTML report: what migrated, what did not, and how to fix it.
 

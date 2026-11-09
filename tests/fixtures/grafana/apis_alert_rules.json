@@ -1,0 +1,58 @@
+{
+  "kind": "AlertRuleList",
+  "apiVersion": "rules.alerting.grafana.app/v1beta1",
+  "items": [
+    {
+      "metadata": {
+        "name": "hm-apis-1",
+        "namespace": "stacks-1",
+        "annotations": {"grafana.app/folder": "hand-made-folder"}
+      },
+      "spec": {
+        "title": "hm-apis-queue-depth",
+        "trigger": {"interval": "1m"},
+        "expressions": {
+          "A": {
+            "datasourceUID": "prom-main",
+            "queryType": "",
+            "relativeTimeRange": {"from": 600, "to": 0},
+            "model": {
+              "refId": "A",
+              "datasource": {"type": "prometheus", "uid": "prom-main"},
+              "expr": "max by (queue) (queue_depth{env=\"prod\"})",
+              "instant": true
+            }
+          },
+          "B": {
+            "datasourceUID": "__expr__",
+            "relativeTimeRange": {"from": 0, "to": 0},
+            "model": {"refId": "B", "type": "reduce", "expression": "A", "reducer": "max"}
+          },
+          "C": {
+            "datasourceUID": "__expr__",
+            "source": true,
+            "relativeTimeRange": {"from": 0, "to": 0},
+            "model": {
+              "refId": "C",
+              "type": "threshold",
+              "expression": "B",
+              "conditions": [
+                {
+                  "evaluator": {"type": "gte", "params": [500]},
+                  "unloadEvaluator": {"type": "lt", "params": [400]}
+                }
+              ]
+            }
+          }
+        },
+        "for": "3m",
+        "keepFiringFor": "0s",
+        "noDataState": "KeepLast",
+        "execErrState": "Alerting",
+        "paused": true,
+        "labels": {"severity": "page"},
+        "annotations": {"description": "Queue is deep"}
+      }
+    }
+  ]
+}

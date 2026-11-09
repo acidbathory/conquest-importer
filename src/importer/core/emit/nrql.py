@@ -98,7 +98,14 @@ def _tag_clause(f: TagFilter) -> str:
     attr = identifier(attribute_for(SignalKind.METRIC, f.key))
     if f.absent:
         return f"{attr} IS NULL"
-    return f"{attr} = {quote_string(f.value)}"
+    if f.values:
+        items = ", ".join(quote_string(v) for v in f.values)
+        return f"{attr} {'NOT IN' if f.negate else 'IN'} ({items})"
+    if f.wildcard:
+        return (
+            f"{attr} {'NOT LIKE' if f.negate else 'LIKE'} {quote_string(f.value.replace('*', '%'))}"
+        )
+    return f"{attr} {'!=' if f.negate else '='} {quote_string(f.value)}"
 
 
 def _metric_nrql(signal: MetricSignal, alias: str | None = None) -> str:

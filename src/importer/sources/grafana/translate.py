@@ -1,0 +1,730 @@
+"""Grafana alert rules to IR.
+
+One IR monitor per rule. Only the pipeline query, optional reduce, one threshold converts, and
+only when the query is a plain Prometheus selector with one optional aggregation, or a plain Loki
+`count_over_time`. Everything else is manual with a fixed reason. Reasons never contain text from
+the rule (titles, expressions, labels, data source types): they name fixed vocabulary and parsed
+numbers only. Text that reaches the NRQL does so through the IR and the shared escaping. `translate`
+never raises.
+
+Neither the New Relic metric names nor the label attribute names are confirmed against live data,
+so every conversion is approximate and says so.
+"""
+
+import math
+import re
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any
+
+from importer.core.emit.common import MAX_AGGREGATION_WINDOW_SECONDS, MAX_DURATION_SECONDS
+from importer.core.emit.nrql import identifier
+from importer.core.ids import source_id
+from importer.core.ir import (
+    Aggregation,
+    Confidence,
+    CountFilter,
+    CountSignal,
+    IRMonitor,
+    MetricSignal,
+    MetricTerm,
+    NoData,
+    Notification,
+    NrTarget,
+    Occurrences,
+    Operator,
+    Severity,
+    Signal,
+    SignalKind,
+    TagFilter,
+    Threshold,
+)
+from importer.sources.grafana.models import GfNode, GrafanaRule
+
+MIN_WINDOW_SECONDS = 60
+MAX_EXPRESSION = 10_000
+MAX_MATCHERS = 50
+MAX_ALTERNATIVES = 100
+EXPRESSION_UIDS = frozenset({"__expr__", "-100"})  # "-100" is the legacy spelling
+OPERATORS = {
+    "gt": Operator.ABOVE,
+    "gte": Operator.ABOVE_OR_EQUALS,
+    "lt": Operator.BELOW,
+    "lte": Operator.BELOW_OR_EQUALS,
+    "eq": Operator.EQUALS,
+    "ne": Operator.NOT_EQUALS,
+}
+EMPTY_SENSITIVE = (Operator.BELOW, Operator.BELOW_OR_EQUALS, Operator.EQUALS)
+RANGE_KINDS = frozenset(
+    {"within_range", "outside_range", "within_range_included", "outside_range_included"}
+)
+# Grafana reducer -> time aggregation; count and median have no New Relic aggregation
+REDUCERS = {
+    "last": Aggregation.AVG,
+    "mean": Aggregation.AVG,
+    "min": Aggregation.MIN,
+    "max": Aggregation.MAX,
+    "sum": Aggregation.SUM,
+}
+PROM_AGGREGATIONS = {
+    "avg": Aggregation.AVG,
+    "sum": Aggregation.SUM,
+    "min": Aggregation.MIN,
+    "max": Aggregation.MAX,
+}
+COUNTER_SUFFIXES = ("_total", "_count", "_sum", "_bucket")
+# data source types that are known and not converted -> the word shown in the reason
+OTHER_DATASOURCES = {
+    "cloudwatch": "cloudwatch",
+    "elasticsearch": "elasticsearch",
+    "grafana-azure-monitor-datasource": "azure monitor",
+    "mysql": "sql",
+    "postgres": "sql",
+    "grafana-postgresql-datasource": "sql",
+    "mssql": "sql",
+    "influxdb": "influxdb",
+    "graphite": "graphite",
+    "tempo": "tempo",
+    "jaeger": "jaeger",
+    "zipkin": "zipkin",
+    "stackdriver": "google cloud monitoring",
+    "testdata": "testdata",
+    "grafana-testdata-datasource": "testdata",
+    "grafana-pyroscope-datasource": "pyroscope",
+}
+UID_HINTS = (("loki", "loki"), ("logs", "loki"), ("prom", "prometheus"), ("mimir", "prometheus"))
+
+# manual reasons
+R_RECORD = "recording rule: it writes a metric and has no alert condition"
+R_DS_MANAGED = "data source-managed rule (Mimir or Loki ruler), not a Grafana-managed rule"
+R_NO_NODE = "grafana pipeline: the condition does not point at a node of the rule"
+R_SHAPE = "grafana pipeline is not one query, an optional reduce and one threshold"
+R_MATH = "grafana pipeline has a math expression"
+R_CLASSIC = "grafana pipeline has a classic condition"
+R_SQL = "grafana pipeline has an SQL expression"
+R_RESAMPLE = "grafana pipeline has a resample expression"
+R_MIXED = "grafana pipeline queries more than one data source"
+R_MULTI = "grafana pipeline has more than one query"
+R_RANGE = "grafana threshold range (within or outside) has no single New Relic threshold"
+R_OPERATOR = "grafana threshold operator is not supported"
+R_VALUE = "grafana threshold value is not one finite number"
+R_REDUCER = "grafana reduce function is not one of last, mean, min, max or sum"
+R_DATASOURCE = "data source type {label} is not supported; only prometheus and loki convert"
+R_AGG_WINDOW = (
+    "grafana aggregation window {seconds}s is longer than the {limit}s New Relic evaluates"
+)
+R_PENDING = "grafana pending period {seconds}s is longer than the {limit}s New Relic allows"
+PROM_NOT_SIMPLE = (
+    "promql expression is not a simple metric selector with one optional avg, sum, min or max"
+)
+PROM_MATCHER = (
+    "promql label matcher is not supported (only = and != with a string, and =~ or !~ with "
+    "plain words joined by |, or a plain word with .* before or after)"
+)
+PROM_COUNTER = "promql metric name looks like a counter (_total, _count, _sum or _bucket)"
+PROM_NAME = (
+    "promql metric or label name cannot be an NRQL attribute name (a character NRQL rejects)"
+)
+LOKI_NOT_SIMPLE = "logql expression is not a count_over_time of a stream selector with line filters"
+LOKI_MATCHER = (
+    "logql label matcher is not supported (only = and != with a string, and =~ or !~ with "
+    "plain words joined by |, or a plain word with .* before or after)"
+)
+LOKI_PARSER = "logql uses a parser stage or unwrap"
+LOKI_FUNCTION = "logql uses a function other than count_over_time"
+LOKI_REGEX = "logql uses a regular-expression line filter that is not a plain word"
+LOKI_WILDCARD = "logql line filter text contains a wildcard character (* or %)"
+
+# notes on a converted rule
+N_INFERRED = (
+    "the data source type is not in the rule and was inferred from its uid or the query; "
+    "this is not confirmed"
+)
+N_METRIC = (
+    "the metric must already reach New Relic (Prometheus remote write or OTLP); its New Relic "
+    "name and label attributes are not confirmed, so check them with a query before enabling"
+)
+N_LOGS = (
+    "the Loki logs must be forwarded to New Relic; the New Relic attribute names for Loki labels "
+    "and for the log line (message) are not confirmed"
+)
+N_PER_SERIES = (
+    "Grafana evaluates each series on its own; this query combines every series unless you "
+    "add a FACET on a label"
+)
+N_NEGATION = (
+    "a != or !~ matcher also matches series without that label in Prometheus; the New Relic "
+    "query may differ for rows without the attribute"
+)
+N_LAST = (
+    "Grafana takes the last sample of each series; New Relic averages the samples in each "
+    "window, which differs from it"
+)
+N_PENDING = (
+    "the pending period becomes the threshold duration; New Relic restarts the count when a "
+    "window has no data, so it may differ"
+)
+N_ROUNDED_FOR = (
+    "the pending period of {seconds}s is not a whole number of {window}s windows, so it is "
+    "rounded up to {duration}s and may differ"
+)
+N_INTERVAL_UNKNOWN = (
+    "the evaluation interval is not in this read of the rule, so the 60s window is a default "
+    "that may differ"
+)
+N_ROUNDED_WINDOW = (
+    "the window of {seconds}s is rounded up to a whole minute, {window}s, so it may differ"
+)
+N_LOKI_WINDOW = (
+    "Grafana counts the last {range}s at every evaluation; New Relic counts separate {window}s "
+    "windows, so it may differ"
+)
+N_COUNT_EMPTY = (
+    "a window with no logs is no row in New Relic, not a count of 0, so a below or equals "
+    "threshold may differ"
+)
+N_PAUSED = (
+    "the rule was paused in Grafana; the condition is created disabled and must be confirmed "
+    "before you enable it"
+)
+N_KEEP_FIRING = "keep firing for was ignored: New Relic has no hold after a breach ends"
+N_RECOVERY = (
+    "the recovery threshold was ignored: New Relic closes a violation when the value stops "
+    "breaching"
+)
+N_NODATA_ALERTING = (
+    "no data state Alerting becomes a loss-of-signal notification after {minutes} minutes "
+    "without data, which may differ"
+)
+N_NODATA_DEFAULT = (
+    "on no data Grafana raises a separate no-data alert; New Relic does not, so it may differ"
+)
+N_NODATA_KEEP = "on no data Grafana keeps the last state, which has no equivalent in New Relic"
+N_ERROR_STATE = (
+    "when the query fails Grafana sets the error state; New Relic has no query-error state, "
+    "so it may differ"
+)
+N_ROUTING = "notifications (contact points and notification policies) must be configured manually"
+
+
+class _Fail(Exception):
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+# --- label matchers (shared by PromQL and LogQL) ---
+
+LABEL = r"[A-Za-z_][A-Za-z0-9_]*"
+LABEL_LIST = rf"\(\s*{LABEL}(?:\s*,\s*{LABEL})*\s*,?\s*\)"
+QUOTED = r'"(?:[^"\\]|\\.)*"'
+BODY = rf'(?:[^{{}}"]|{QUOTED})*'
+MATCHER = re.compile(rf'\s*({LABEL})\s*(=~|!~|!=|=)\s*"((?:[^"\\]|\\.)*)"\s*(,|$)', re.DOTALL)
+STRICT_VALUE = re.compile(r'(?:[^"\\\x00-\x1f\x7f]|\\["\\])*')
+SAFE_WORD = r"[A-Za-z0-9_:/ -]+"
+WORD = re.compile(SAFE_WORD)
+PREFIX = re.compile(rf"({SAFE_WORD})\.\*")
+SUFFIX = re.compile(rf"\.\*({SAFE_WORD})")
+BOTH = re.compile(rf"\.\*({SAFE_WORD})\.\*")
+
+
+@dataclass(frozen=True)
+class _Match:
+    key: str
+    kind: str  # eq, in, like or absent
+    values: tuple[str, ...]
+    negate: bool = False
+
+
+def _unescape(value: str) -> str:
+    return re.sub(r'\\(["\\])', r"\1", value)
+
+
+def _regex(value: str, fail: str) -> tuple[str, tuple[str, ...]]:
+    """Kind and values of a regex that is plain words, a prefix or a suffix; else raise."""
+    if WORD.fullmatch(value):
+        return "eq", (value,)
+    parts = value.split("|")
+    if 1 < len(parts) <= MAX_ALTERNATIVES and all(WORD.fullmatch(p) for p in parts):
+        return "in", tuple(dict.fromkeys(parts))
+    for pattern, wrap in ((BOTH, "*{}*"), (PREFIX, "{}*"), (SUFFIX, "*{}")):
+        found = pattern.fullmatch(value)
+        if found:
+            return "like", (wrap.format(found[1]),)
+    raise _Fail(fail)
+
+
+def _match(key: str, op: str, value: str, fail: str, *, absent_ok: bool) -> _Match:
+    if key == "__name__":
+        raise _Fail(fail)
+    if op in ("=", "!="):
+        if value == "":
+            if op == "=" and absent_ok:
+                return _Match(key, "absent", ())
+            raise _Fail(fail)
+        return _Match(key, "eq", (value,), negate=op == "!=")
+    kind, values = _regex(value, fail)
+    return _Match(key, kind, values, negate=op == "!~")
+
+
+def _matchers(body: str, fail: str, not_simple: str, *, absent_ok: bool) -> list[_Match]:
+    found: list[_Match] = []
+    position = 0
+    while body[position:].strip():
+        item = MATCHER.match(body, position)
+        if item is None or len(found) >= MAX_MATCHERS:
+            raise _Fail(not_simple)
+        key, op, raw, _ = item.groups()
+        if not STRICT_VALUE.fullmatch(raw):
+            raise _Fail(fail)
+        found.append(_match(key, op, _unescape(raw), fail, absent_ok=absent_ok))
+        position = item.end()
+    return found
+
+
+def _tag_filter(m: _Match) -> TagFilter:
+    if m.kind == "absent":
+        return TagFilter(key=m.key, absent=True)
+    if m.kind == "in":
+        return TagFilter(key=m.key, values=list(m.values), negate=m.negate)
+    return TagFilter(key=m.key, value=m.values[0], negate=m.negate, wildcard=m.kind == "like")
+
+
+def _count_filter(m: _Match) -> CountFilter:
+    if m.kind == "in":
+        return CountFilter(key=m.key, value="", values=list(m.values), negate=m.negate)
+    return CountFilter(key=m.key, value=m.values[0], negate=m.negate, wildcard=m.kind == "like")
+
+
+# --- shared parsing helpers ---
+
+
+def _skeleton(expr: str) -> str:
+    """The expression without string contents and label bodies, for spotting features."""
+    text = re.sub(QUOTED, '""', expr)
+    text = re.sub(r"\{[^{}]*\}", "{}", text)
+    return re.sub(r"\bby\s*\([^)]*\)", "", text)
+
+
+def _first_feature(skeleton: str, table: list[tuple[re.Pattern[str], str]]) -> str | None:
+    return next((reason for pattern, reason in table if pattern.search(skeleton)), None)
+
+
+def _labels(text: str | None) -> list[str]:
+    return list(dict.fromkeys(re.findall(LABEL, text or "")))
+
+
+def _attribute(name: str) -> str:
+    try:
+        return identifier(name).strip("`")
+    except ValueError:
+        raise _Fail(PROM_NAME) from None
+
+
+def _outer(expr: str, aggregators: str) -> tuple[str | None, list[str], str]:
+    """Split `agg [by (..)] (inner) [by (..)]` into aggregator, group labels and inner text."""
+    wrapper = re.fullmatch(
+        rf"\s*({aggregators})\s*(?:by\s*({LABEL_LIST}))?\s*\((.*?)\)\s*(?:by\s*({LABEL_LIST}))?\s*",
+        expr,
+        re.DOTALL,
+    )
+    if wrapper is None:
+        return None, [], expr
+    agg, first, inner, second = wrapper.groups()
+    if first and second:
+        raise _Fail("")
+    return agg, _labels(first or second), inner
+
+
+# --- Prometheus ---
+
+PROM_FEATURES: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\boffset\b"), "promql uses offset"),
+    (re.compile(r"\[[^\]]*:[^\]]*\]"), "promql uses a subquery"),
+    (
+        re.compile(r"\bgroup_(?:left|right)\b|\b(?:on|ignoring)\s*\("),
+        "promql uses vector matching (on, ignoring, group_left or group_right)",
+    ),
+    (re.compile(r"\b(?:topk|bottomk|limitk|limit_ratio)\b"), "promql uses topk or bottomk"),
+    (re.compile(r"\bhistogram_\w+\s*\("), "promql uses histogram_quantile"),
+    (re.compile(r"\babsent(?:_over_time)?\s*\("), "promql uses absent()"),
+    (re.compile(r"\w+_over_time\s*\("), "promql uses an _over_time function"),
+    (
+        re.compile(
+            r"\b(?:rate|irate|increase|delta|idelta|deriv|predict_linear|changes|resets)\s*\("
+        ),
+        "promql uses rate, increase or another range function",
+    ),
+    (re.compile(r"\bwithout\b"), "promql uses without()"),
+    (
+        re.compile(r"==|!=|>=|<=|[<>+\-*/%^]|\b(?:and|or|unless|bool)\b"),
+        "promql uses a binary operator or comparison",
+    ),
+]
+PROM_SELECTOR = re.compile(rf"\s*([A-Za-z_:][A-Za-z0-9_:]*)\s*(?:\{{({BODY})\}})?\s*")
+
+
+@dataclass
+class _Built:
+    kind: SignalKind
+    window: int | None  # a window the query itself fixes (a Loki range); None = the interval
+    metric: MetricSignal | None = None
+    count: CountSignal | None = None
+    notes: list[str] = field(default_factory=list)
+
+
+def _prometheus(expr: str, reducer: str) -> _Built:
+    if len(expr) > MAX_EXPRESSION:
+        raise _Fail(PROM_NOT_SIMPLE)
+    feature = _first_feature(_skeleton(expr), PROM_FEATURES)
+    if feature:
+        raise _Fail(feature)
+    try:
+        aggregator, group_by, inner = _outer(expr, "avg|sum|min|max")
+    except _Fail:
+        raise _Fail(PROM_NOT_SIMPLE) from None
+    selector = PROM_SELECTOR.fullmatch(inner)
+    if selector is None:
+        raise _Fail(PROM_NOT_SIMPLE)
+    name, body = selector[1], selector[2] or ""
+    matches = _matchers(body, PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True)
+    if name.endswith(COUNTER_SUFFIXES):
+        raise _Fail(PROM_COUNTER)
+    attribute = _attribute(name)
+    notes = [N_METRIC]
+    if aggregator:
+        aggregation = PROM_AGGREGATIONS[aggregator]
+    else:
+        aggregation = REDUCERS[reducer]
+        notes.append(N_PER_SERIES)
+        if reducer == "last":
+            notes.append(N_LAST)
+    if any(m.negate for m in matches):
+        notes.append(N_NEGATION)
+    term = MetricTerm(
+        metric=attribute,
+        space_aggregation=aggregation,
+        nr_target=NrTarget(event="Metric", attribute=attribute),
+    )
+    metric = MetricSignal(
+        terms={"a": term},
+        aggregation=aggregation,
+        scope=[_tag_filter(m) for m in matches],
+        group_by=[_attribute(g) for g in group_by],
+    )
+    return _Built(SignalKind.METRIC, None, metric=metric, notes=notes)
+
+
+# --- Loki ---
+
+LOKI_FEATURES: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\|\s*[A-Za-z_]|\bunwrap\b"), LOKI_PARSER),
+    (
+        re.compile(
+            r"\b(?:rate|bytes_rate|bytes_over_time|rate_counter|quantile_over_time"
+            r"|sum_over_time|avg_over_time|min_over_time|max_over_time|stddev_over_time"
+            r"|stdvar_over_time|first_over_time|last_over_time|absent_over_time|topk|bottomk"
+            r"|vector|label_replace|avg|min|max|count|stddev|stdvar)\s*\("
+        ),
+        LOKI_FUNCTION,
+    ),
+]
+LOKI_COUNT = re.compile(
+    rf"\s*count_over_time\(\s*\{{({BODY})\}}\s*((?:(?:\|=|!=|\|~|!~)\s*{QUOTED}\s*)*)"
+    r"\[\s*(\d+)\s*([smh])\s*\]\s*\)\s*"
+)
+LOKI_FILTER = re.compile(r'(\|=|!=|\|~|!~)\s*"((?:[^"\\]|\\.)*)"')
+RANGE_SECONDS = {"s": 1, "m": 60, "h": 3600}
+
+
+def _line_filter(op: str, raw: str) -> CountFilter:
+    if not STRICT_VALUE.fullmatch(raw):
+        raise _Fail(LOKI_NOT_SIMPLE)
+    text = _unescape(raw)
+    if op in ("|~", "!~"):
+        if not WORD.fullmatch(text):
+            raise _Fail(LOKI_REGEX)
+    elif "%" in text or "*" in text:
+        raise _Fail(LOKI_WILDCARD)
+    if not text:
+        raise _Fail(LOKI_NOT_SIMPLE)
+    return CountFilter(key="message", value=f"*{text}*", negate=op in ("!=", "!~"), wildcard=True)
+
+
+def _loki(expr: str, reducer: str) -> _Built:  # noqa: ARG001 - an instant count has one point
+    if len(expr) > MAX_EXPRESSION:
+        raise _Fail(LOKI_NOT_SIMPLE)
+    feature = _first_feature(_skeleton(expr), LOKI_FEATURES)
+    if feature:
+        raise _Fail(feature)
+    try:
+        aggregator, group_by, inner = _outer(expr, "sum")
+    except _Fail:
+        raise _Fail(LOKI_NOT_SIMPLE) from None
+    count = LOKI_COUNT.fullmatch(inner)
+    if count is None or int(count[3]) == 0:
+        raise _Fail(LOKI_NOT_SIMPLE)
+    matches = _matchers(count[1], LOKI_MATCHER, LOKI_NOT_SIMPLE, absent_ok=False)
+    if not matches:
+        raise _Fail(LOKI_NOT_SIMPLE)
+    filters = [_count_filter(m) for m in matches]
+    filters += [_line_filter(op, raw) for op, raw in LOKI_FILTER.findall(count[2])]
+    notes = [N_LOGS]
+    if not aggregator:
+        notes.append(N_PER_SERIES)
+    if any(m.negate for m in matches):
+        notes.append(N_NEGATION)
+    seconds = int(count[3]) * RANGE_SECONDS[count[4]]
+    signal = CountSignal(filters=filters, group_by=[_attribute(g) for g in group_by])
+    return _Built(SignalKind.LOG, seconds, count=signal, notes=notes)
+
+
+# the data source type decides how the query is read
+HANDLERS: dict[str, Callable[[str, str], _Built]] = {
+    "prometheus": _prometheus,
+    "loki": _loki,
+}
+
+
+# --- pipeline ---
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _expression_type(node: GfNode) -> str:
+    """The expression type of a server-side node, or "" for a data source query."""
+    if (
+        node.datasourceUid in EXPRESSION_UIDS
+        or _mapping(node.model.get("datasource")).get("type") == "__expr__"
+    ):
+        return str(node.model.get("type") or "unknown")
+    return ""
+
+
+def _check_expressions(rule: GrafanaRule) -> list[GfNode]:
+    """The data source queries of the rule, after refusing expression types that do not convert."""
+    types = {_expression_type(n) for n in rule.data}
+    queries = [n for n in rule.data if not _expression_type(n)]
+    for kind, reason in (("sql", R_SQL), ("classic_conditions", R_CLASSIC)):
+        if kind in types:
+            raise _Fail(reason)
+    if len({q.datasourceUid for q in queries}) > 1:
+        raise _Fail(R_MIXED)
+    for kind, reason in (("math", R_MATH), ("resample", R_RESAMPLE)):
+        if kind in types:
+            raise _Fail(reason)
+    if len(queries) > 1:
+        raise _Fail(R_MULTI)
+    return queries
+
+
+def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, GfNode]:
+    """The query, its reducer and the threshold node of a query -> [reduce] -> threshold rule."""
+    _check_expressions(rule)
+    nodes = {n.refId: n for n in rule.data}
+    condition = nodes.get(rule.condition)
+    if condition is None:
+        raise _Fail(R_NO_NODE)
+    if _expression_type(condition) != "threshold" or len(nodes) != len(rule.data):
+        raise _Fail(R_SHAPE)
+    used = [condition]
+    step = nodes.get(str(condition.model.get("expression")))
+    reducer = "last"
+    if step is not None and _expression_type(step) == "reduce":
+        used.append(step)
+        reducer = str(step.model.get("reducer", "")).lower()
+        step = nodes.get(str(step.model.get("expression")))
+    if step is None or _expression_type(step):
+        raise _Fail(R_SHAPE)
+    used.append(step)
+    if len(used) != len(rule.data):
+        raise _Fail(R_SHAPE)
+    if reducer not in REDUCERS:
+        raise _Fail(R_REDUCER)
+    return step, reducer, condition
+
+
+def _threshold(node: GfNode) -> tuple[Threshold, bool]:
+    """The threshold, and whether the rule also had a recovery threshold."""
+    conditions = node.model.get("conditions")
+    if not isinstance(conditions, list) or len(conditions) != 1:
+        raise _Fail(R_SHAPE)
+    condition = _mapping(conditions[0])
+    evaluator = _mapping(condition.get("evaluator"))
+    kind = evaluator.get("type")
+    if kind in RANGE_KINDS:
+        raise _Fail(R_RANGE)
+    if not isinstance(kind, str) or kind not in OPERATORS:
+        raise _Fail(R_OPERATOR)
+    params = evaluator.get("params")
+    if not (
+        isinstance(params, list)
+        and len(params) == 1
+        and isinstance(params[0], int | float)
+        and not isinstance(params[0], bool)
+        and math.isfinite(params[0])
+    ):
+        raise _Fail(R_VALUE)
+    threshold = Threshold(
+        severity=Severity.CRITICAL, operator=OPERATORS[kind], value=float(params[0])
+    )
+    return threshold, bool(condition.get("unloadEvaluator"))
+
+
+def _datasource_type(node: GfNode) -> tuple[str, bool]:
+    """The data source type and whether it had to be inferred (it is not in every read)."""
+    declared = _mapping(node.model.get("datasource")).get("type")
+    if isinstance(declared, str) and declared:
+        return declared.lower(), False
+    uid = node.datasourceUid.lower()
+    for hint, kind in UID_HINTS:
+        if hint in uid:
+            return kind, True
+    flat = str(node.model.get("expr", "")).replace(" ", "")
+    return ("loki" if re.search(r"(?<![\w:])\{", flat) else "prometheus"), True
+
+
+def _built(query: GfNode, reducer: str) -> tuple[_Built, bool]:
+    kind, inferred = _datasource_type(query)
+    handler = HANDLERS.get(kind)
+    if handler is None:
+        raise _Fail(R_DATASOURCE.format(label=OTHER_DATASOURCES.get(kind, "unknown")))
+    return handler(str(query.model.get("expr", "")), reducer), inferred
+
+
+# --- windows and states ---
+
+
+def _whole_minutes(seconds: int) -> int:
+    return max(MIN_WINDOW_SECONDS, -(-seconds // 60) * 60)
+
+
+def _windows(rule: GrafanaRule, fixed: int | None) -> tuple[int, int, list[str]]:
+    """Aggregation window, threshold duration and notes. Both are whole numbers of windows."""
+    notes: list[str] = []
+    if fixed is not None:
+        base = fixed
+    elif rule.interval_seconds:
+        base = rule.interval_seconds
+    else:
+        base = MIN_WINDOW_SECONDS
+        notes.append(N_INTERVAL_UNKNOWN)
+    window = _whole_minutes(base)
+    if window > MAX_AGGREGATION_WINDOW_SECONDS:
+        raise _Fail(R_AGG_WINDOW.format(seconds=window, limit=MAX_AGGREGATION_WINDOW_SECONDS))
+    if window != base:
+        notes.append(N_ROUNDED_WINDOW.format(seconds=base, window=window))
+    if fixed is not None and rule.interval_seconds != fixed:
+        notes.append(N_LOKI_WINDOW.format(range=fixed, window=window))
+    duration = max(rule.for_seconds, window)
+    duration = -(-duration // window) * window
+    if duration > MAX_DURATION_SECONDS:
+        raise _Fail(R_PENDING.format(seconds=rule.for_seconds, limit=MAX_DURATION_SECONDS))
+    if rule.for_seconds:
+        notes.append(N_PENDING)
+        if duration != rule.for_seconds:
+            notes.append(
+                N_ROUNDED_FOR.format(seconds=rule.for_seconds, window=window, duration=duration)
+            )
+    return window, duration, notes
+
+
+def _states(rule: GrafanaRule, duration: int) -> tuple[NoData, list[str]]:
+    notes: list[str] = []
+    no_data = NoData()
+    if rule.no_data_state == "Alerting":
+        no_data = NoData(notify=True, timeout_minutes=max(1, duration // 60))
+        notes.append(N_NODATA_ALERTING.format(minutes=no_data.timeout_minutes))
+    elif rule.no_data_state == "NoData":
+        notes.append(N_NODATA_DEFAULT)
+    elif rule.no_data_state == "KeepLast":
+        notes.append(N_NODATA_KEEP)
+    if rule.exec_err_state in ("Error", "Alerting", "KeepLast"):
+        notes.append(N_ERROR_STATE)
+    return no_data, notes
+
+
+def _text(value: Any) -> str:
+    return value if isinstance(value, str) else ""
+
+
+# --- one rule ---
+
+
+def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
+    if rule.record is not None:
+        raise _Fail(R_RECORD)
+    if rule.datasource_managed:
+        raise _Fail(R_DS_MANAGED)
+    query, reducer, threshold_node = _pipeline(rule)
+    threshold, recovery = _threshold(threshold_node)
+    built, inferred = _built(query, reducer)
+    window, duration, window_notes = _windows(rule, built.window)
+    no_data, state_notes = _states(rule, duration)
+    notes = [N_INFERRED] if inferred else []
+    notes += built.notes
+    if built.kind is SignalKind.LOG and threshold.operator in EMPTY_SENSITIVE:
+        notes.append(N_COUNT_EMPTY)
+    notes += window_notes
+    if recovery:
+        notes.append(N_RECOVERY)
+    if rule.keep_firing_for_seconds:
+        notes.append(N_KEEP_FIRING)
+    notes += state_notes
+    if rule.is_paused:
+        notes.insert(0, N_PAUSED)
+    notes.append(N_ROUTING)
+    annotations = rule.annotations
+    message = _text(annotations.get("description")) or _text(annotations.get("summary"))
+    monitor = _monitor(rule, key, Confidence.APPROXIMATE, notes)
+    monitor.signal = Signal(
+        kind=built.kind,
+        raw_query=monitor.name,
+        window_seconds=duration,
+        aggregation_window_seconds=window,
+        occurrences=Occurrences.ALL,
+        metric=built.metric,
+        count=built.count,
+    )
+    monitor.thresholds = [threshold]
+    monitor.no_data = no_data
+    monitor.notification = Notification(message_template=message)
+    return monitor
+
+
+def _monitor(rule: GrafanaRule, key: str, confidence: Confidence, reasons: list[str]) -> IRMonitor:
+    name = rule.title or "(untitled rule)"
+    monitor = IRMonitor(
+        source_system="grafana",
+        source_id=source_id(key),
+        source_key=key,
+        source_type="alert rule",
+        name=name,
+        signal=Signal(kind=SignalKind.UNKNOWN, raw_query=name),
+        confidence=confidence,
+        reasons=reasons,
+    )
+    if rule.is_paused:
+        monitor.unmapped["enabled"] = False
+    return monitor
+
+
+def translate_rule(rule: GrafanaRule, key: str | None = None) -> IRMonitor:
+    key = key or rule.uid or f"{rule.folder}/{rule.group}/{rule.title}"
+    try:
+        return _convert(rule, key)
+    except _Fail as fail:
+        return _monitor(rule, key, Confidence.MANUAL, [fail.reason])
+
+
+def translate(rules: list[GrafanaRule]) -> list[IRMonitor]:
+    """One monitor per rule; a repeated key gets an index so ids stay distinct."""
+    seen: dict[str, int] = {}
+    monitors: list[IRMonitor] = []
+    for rule in rules:
+        base = rule.uid or f"{rule.folder}/{rule.group}/{rule.title}"
+        seen[base] = seen.get(base, 0) + 1
+        monitors.append(translate_rule(rule, base if seen[base] == 1 else f"{base}#{seen[base]}"))
+    return monitors
