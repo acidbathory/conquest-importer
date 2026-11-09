@@ -34,7 +34,8 @@ NEW_RELIC_ACCOUNT_ID=1234567             # the account to migrate into
 NEW_RELIC_ALLOWED_ACCOUNT_IDS=1234567    # the accounts the tool may write to
 ```
 
-You can run `importer doctor` to check Python, your AWS login and the New Relic key. It's optional,
+You can run `importer doctor` to check Python, your AWS login and the New Relic key (add
+`--source gcp` to check a Google login instead of the AWS one). It's optional,
 because `migrate` reports the same problems when it starts. If something fails, see
 [troubleshooting](troubleshooting.md).
 
@@ -156,5 +157,8 @@ Set `--since` to the time ingestion started. Each mismatch is listed with a like
 | `importer report out/migration-<date>-<time>` | Rebuilds `report.html` from an existing run |
 | `importer stats out/migration-<date>-<time>/alerts` | Prints a summary without names, safe to share |
 | `importer extract-cloudwatch`, `convert`, `convert-dashboards` and others | The individual steps behind `migrate` |
+
+For Google Cloud there are `importer extract-gcp`, `convert --source gcp`, `gcp-link-terraform`,
+`check-gcp-data` and `report --source gcp`; see [what migrates](what-migrates.md#other-platforms).
 
 Run `importer --help` for the full list.

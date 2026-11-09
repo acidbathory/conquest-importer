@@ -8,8 +8,9 @@ get a report of what moved, what didn't, why, and what to do about it.
 
 ![The migration report (preview: nothing created yet)](docs/img/sample-report.png)
 
-> Status: prototype. The CloudWatch path has been tested against a real AWS account. Check every
-> converted item before you enable it. Other platforms are on the [roadmap](#roadmap).
+> Status: prototype. The CloudWatch path has been tested against a real AWS account and the Google
+> Cloud path against a sandbox project. Check every converted item before you enable it. Other
+> platforms are on the [roadmap](#roadmap).
 
 ## What you need
 
@@ -102,13 +103,15 @@ customer results, and yours will differ.
 
 ## Roadmap
 
-AWS CloudWatch is supported today. These platforms are planned, in this order:
+AWS CloudWatch is the platform tested most. Google Cloud alert policies also convert (`extract-gcp`,
+`convert --source gcp`); that path has been tested in a sandbox project and not on customer data.
+Datadog support was built and then removed; it is paused until AWS, GCP and Azure are covered.
+Planned, in this order:
 
-1. Google Cloud (GCP)
-2. Microsoft Azure
-3. Datadog
-4. Grafana
-5. Dynatrace
+1. Microsoft Azure
+2. Datadog (paused)
+3. Grafana
+4. Dynatrace
 
 Want to help finish the project? Fork the repository, make your change on a branch and open a pull
 request. Contributions of any size are welcome, from a new platform to a fix to the docs; start with

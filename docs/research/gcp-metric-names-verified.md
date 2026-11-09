@@ -7,8 +7,9 @@ writes. The test resources were destroyed once the check was done.
 
 ## What was confirmed
 
-- **57 metric names arrived**, listed in `src/importer/sources/gcp/gcp_verified.json`.
-  First data appeared about 4 minutes after linking.
+- **60 metric names arrived** across the two runs, listed under `received` in
+  `src/importer/sources/gcp/gcp_verified.json` (the first run saw 57). Four documented names did not
+  arrive and are listed under `documented_not_received`. First data appeared about 4 minutes after linking.
 - **The naming rule holds:** `gcp.` plus the service and the metric path with dots. Examples:
   `gcp.compute.instance.disk.read_bytes_count`, `gcp.pubsub.topic.send_request_count`,
   `gcp.storage.api.request_count`.

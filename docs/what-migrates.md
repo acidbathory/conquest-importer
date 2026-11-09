@@ -10,9 +10,10 @@ counts the first two as migrated and the last two as not migrated.
 | Manual | Could not be converted automatically | Rebuild by hand, using the steps in the report |
 | Unsupported | No New Relic equivalent in this prototype | Use the workaround, or leave it in AWS |
 
-Right now most converted alarms show "Migrated, review" and not "Migrated". New Relic's metric
-names are only confirmed against real data for some AWS services (see below), so every conversion
-carries that caveat until you run `importer validate` on live data.
+Every converted alarm and condition currently shows "Migrated, review"; none is marked exact. New
+Relic's metric names are only confirmed against real data for some services (see below), and window
+and missing-data rules are approximated, so every conversion carries that caveat until you run
+`importer validate` on live data.
 
 If New Relic refuses to create something, the report counts it as not migrated and shows New
 Relic's reason, even though the conversion itself succeeded.
@@ -167,8 +168,8 @@ accepts the JSON of `gcloud alpha monitoring policies list --format=json`.
   Cloud, so a converted query would return nothing).
 - **Counters:** New Relic stores one change per 5 minute poll, so counter conditions use a window
   of at least 300 seconds and a rescaled threshold (the condition's notes say by how much).
-- **Log severity:** `severity>=ERROR` and the other ranges become a list of levels. The attribute
-  name for forwarded Google Cloud logs is not confirmed.
+- **Log severity:** `severity>=ERROR` and the other ranges become `severity IN (...)` with the list
+  of levels. The attribute name for forwarded Google Cloud logs is not confirmed.
 - **Link:** `importer gcp-link-terraform --project <id> --nr-account-id <n> --alerts <run>` writes
   the Terraform that links the project, with only the services the conditions use. You review it
   and run `terraform apply` yourself (it grants IAM roles).

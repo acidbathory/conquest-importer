@@ -1,0 +1,65 @@
+{
+  "measured": "2026-11-09 05:28:15Z",
+  "sources": {
+    "cloudwatch": {
+      "by_confidence": {
+        "approximate": 27,
+        "manual": 3,
+        "unsupported": 2
+      },
+      "converted": 27,
+      "rate": 0.8438,
+      "top_blockers": [
+        {
+          "category": "manual follow-up",
+          "count": 3,
+          "pattern": "alarm actions (such as SNS topics) must be configured manually"
+        },
+        {
+          "category": "unsupported feature or type",
+          "count": 2,
+          "pattern": "composite alarm combines {N} alarms ({LIST}); New Relic has no composite condition. Recreate as one NRQL condition or filter in a workflow"
+        },
+        {
+          "category": "unsupported query or expression",
+          "count": 1,
+          "pattern": "metric math uses syntax that is not supported yet"
+        },
+        {
+          "category": "unsupported feature or type",
+          "count": 1,
+          "pattern": "period {N}s (high-resolution) is not supported"
+        },
+        {
+          "category": "unsupported query or expression",
+          "count": 1,
+          "pattern": "metric or dimension name has characters that are not supported"
+        }
+      ],
+      "total": 32,
+      "unguided": []
+    },
+    "gcp": {
+      "by_confidence": {
+        "approximate": 2,
+        "manual": 2
+      },
+      "converted": 2,
+      "rate": 0.5,
+      "top_blockers": [
+        {
+          "category": "unsupported feature or type",
+          "count": 1,
+          "pattern": "MQL conditions are not converted"
+        },
+        {
+          "category": "unsupported feature or type",
+          "count": 1,
+          "pattern": "a metric-absence condition has no automatic conversion"
+        }
+      ],
+      "total": 4,
+      "unguided": []
+    }
+  }
+}

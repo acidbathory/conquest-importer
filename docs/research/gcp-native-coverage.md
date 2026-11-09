@@ -2,7 +2,9 @@
 
 Research for the GCP source. Evidence level is marked on each claim:
 **[docs]** read in the vendor's published documentation, **[unverified]** written from memory and
-not yet checked. Nothing here has been tested against a live GCP project yet.
+not yet checked. Live tests ran on 2026-11-05 and 2026-11-06; the results are in
+[gcp-metric-names-verified.md](gcp-metric-names-verified.md). Claims below not marked as corrected
+were written before those tests.
 
 ## How GCP data reaches New Relic
 
@@ -26,7 +28,7 @@ not yet checked. Nothing here has been tested against a live GCP project yet.
 
 Dimensional names follow `gcp.<service>.<resource>.<metric>` in snake_case, for example
 `compute.googleapis.com/instance/cpu/utilization` becomes `gcp.compute.instance.cpu.utilization`.
-No suffix is added (corrected after the live test: Google's own counter names already end in `_count`). The service segment does not always match
+No suffix is added (confirmed on live data: Google's own counter names already end in `_count`). The service segment does not always match
 Google's prefix (GKE is `gcp.kubernetes.io.*`, Cloud Run is `gcp.run.*`, Cloud Storage is
 `gcp.storage.*`), so the converter must use New Relic's mapping table, not a rule.
 
@@ -60,7 +62,7 @@ and a logging config viewer role cover reads **[unverified]**.
 
 ## Conversion gotchas to handle **[unverified]**
 
-- Cumulative and delta metrics need rate or delta aligners; New Relic exposes counters as `_count`.
+- Cumulative and delta metrics need rate or delta aligners; counters arrive as one change per 5 minute poll, and no suffix is added to the name.
 - Many GCP utilisation metrics are fractions (0 to 1), not percent, so thresholds must be rescaled.
 - Distribution metrics (latency) need percentile aligners; New Relic needs histogram data.
 - Alignment periods are 60 seconds or more; evaluation lag differs from New Relic's windows.
@@ -68,11 +70,14 @@ and a logging config viewer role cover reads **[unverified]**.
 
 ## Suggested order
 
-1. Read-only scanner: alert policies, channels, dashboards, uptime checks, log sinks and log-based
-   metrics, across projects in the metrics scope.
+1. Read-only scanner. Built: `extract-gcp` reads alert policies, notification channels and uptime
+   checks. Dashboards, log sinks and log-based metrics are not read yet.
 2. A verified metric-name table, checked against live New Relic data the way
-   [the AWS note](metric-names-verified.md) was.
-3. Translators, then the ingest Terraform, then live verification.
+   [the AWS note](metric-names-verified.md) was. Done for Compute Engine and Pub/Sub
+   (`gcp_verified.json`).
+3. Translators (built for threshold and log-match conditions), the link Terraform
+   (`gcp-link-terraform`, built) and live verification (partly done). Still open: other services,
+   dashboards, channels, uptime checks and SLOs.
 
 Sources read: New Relic docs-website (`infrastructure/google-cloud-platform-integrations/*`,
 `logs/forward-logs/google-cloud-platform-log-forwarding.mdx`), the New Relic Terraform provider

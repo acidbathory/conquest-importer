@@ -69,3 +69,14 @@ def test_a_specific_rule_is_not_shadowed_by_a_broader_one(reason: str, title: st
 )
 def test_emitter_limit_reasons_have_guidance(reason: str) -> None:
     assert steps_for([reason])
+
+
+def test_registering_the_same_rules_twice_adds_nothing() -> None:
+    import importlib
+
+    from importer.core import remediation
+    from importer.sources.gcp import remediation_rules
+
+    before = len(remediation._COMPILED)
+    importlib.reload(remediation_rules)
+    assert len(remediation._COMPILED) == before

@@ -11,6 +11,7 @@ from typing import Annotated, NoReturn
 
 import typer
 
+from importer.core import improve
 from importer.core.apply import (
     GuardError,
     NewRelicAPIError,
@@ -393,6 +394,33 @@ def check_gcp_data_command(
         raise typer.Exit(code=2)
 
 
+@app.command("improve-measure", hidden=True)
+def improve_measure_command(
+    root: Annotated[Path, typer.Option(help="Repository root")] = Path("."),
+    baseline: Annotated[
+        Path | None, typer.Option(help="Approved baseline; exit 2 if anything got worse")
+    ] = None,
+    record_to: Annotated[
+        Path | None, typer.Option("--record", help="Append the result to this history file")
+    ] = None,
+    out: Annotated[Path | None, typer.Option(help="Write the result JSON here")] = None,
+) -> None:
+    """Measure conversion on the repository fixtures, offline (used by the improvement loop)."""
+    result = improve.measure(root)
+    typer.echo(improve.render(result))
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    if record_to:
+        improve.record(record_to, result)
+    if baseline:
+        problems = improve.compare(json.loads(baseline.read_text()), result)
+        for problem in problems:
+            typer.echo(f"REGRESSION {printable(str(problem), 300)}", err=True)
+        if problems:
+            raise typer.Exit(code=2)
+
+
 @app.command("extract-gcp")
 def extract_gcp_command(
     project: Annotated[str, typer.Option(help="Google Cloud project id to read")],
@@ -406,7 +434,8 @@ def extract_gcp_command(
     ids and resource names: review it before sharing.
     """
     try:
-        result = extract_gcp(http_getter(access_token()), project, out)
+        with http_getter(access_token()) as get:
+            result = extract_gcp(get, project, out)
     except (GcpError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
         raise typer.Exit(code=1) from None

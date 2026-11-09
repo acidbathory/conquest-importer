@@ -24,7 +24,7 @@
 | T7 | Silently wrong conversion | Confidence label + reason on every monitor; `unmapped` fields preserved; gap report | Golden tests; report review |
 | T8 | Supply-chain compromise | Pinned lockfile (`uv.lock`); `pip-audit` in CI; few dependencies | CI |
 | T9 | Denial of service / API abuse | Timeouts, bounded retries with backoff, respect rate limits | Tests with mocked HTTP (week 2) |
-| T10 | Sensitive data in monitor messages (e.g. webhook URLs, tokens pasted into messages) | Scan messages for secret-like patterns and flag/redact in reports | Tests (week 6) |
+| T10 | Sensitive data in monitor messages (e.g. webhook URLs, tokens pasted into messages) | Planned, not implemented: scan messages for secret-like patterns and flag or redact them in reports. The code does not scan alarm or policy messages, so a token pasted into a message is copied into the output as written | None yet |
 
 ## Out of scope for the prototype
 Multi-user auth, hosted service deployment, migration of notification channel credentials (listed in the report as manual steps).

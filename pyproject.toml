@@ -1,7 +1,7 @@
 [project]
 name = "conquest-importer"
 version = "0.1.0"
-description = "Prototype: migrate AWS CloudWatch alarms and dashboards to New Relic"
+description = "Prototype: migrate AWS CloudWatch and Google Cloud alerts, and CloudWatch dashboards, to New Relic"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
@@ -70,6 +70,8 @@ plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# An unclosed file, socket or client is a leak: fail the test that caused it.
+filterwarnings = ["error::ResourceWarning", "error::pytest.PytestUnraisableExceptionWarning"]
 
 [[tool.mypy.overrides]]
 module = ["boto3", "botocore.*"]

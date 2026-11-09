@@ -15,10 +15,15 @@ _COMPILED: list[Rule] = []
 
 
 def register_rules(rules: list[Rule]) -> None:
-    """Called by each source on import. Rules match case-insensitively; first match wins."""
-    _COMPILED.extend(
-        (re.compile(p.pattern, re.IGNORECASE), title, steps) for p, title, steps in rules
-    )
+    """Called by each source on import. Rules match case-insensitively; first match wins.
+
+    Registering the same rule twice (a reloaded module) adds nothing, so the list cannot grow.
+    """
+    known = {(p.pattern, title) for p, title, _ in _COMPILED}
+    for pattern, title, steps in rules:
+        if (pattern.pattern, title) not in known:
+            _COMPILED.append((re.compile(pattern.pattern, re.IGNORECASE), title, steps))
+            known.add((pattern.pattern, title))
 
 
 # Incidental notes that sit beside a real blocker; they never decide which group an asset is in.

@@ -150,7 +150,16 @@ def test_terraform_file_has_no_secrets_and_valid_header() -> None:
 @pytest.mark.skipif(shutil.which("terraform") is None, reason="terraform not installed")
 def test_terraform_validate(tmp_path: Path) -> None:  # pragma: no cover
     (tmp_path / "main.tf").write_text(terraform_file([convert()]))
-    subprocess.run(["terraform", "init", "-backend=false"], cwd=tmp_path, check=True)  # noqa: S607
+    init = subprocess.run(
+        ["terraform", "init", "-backend=false"],  # noqa: S607
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if init.returncode and "provider" in init.stderr and "registry" in init.stderr:
+        pytest.skip("the Terraform provider could not be downloaded (outside network error)")
+    assert init.returncode == 0, init.stderr
     subprocess.run(["terraform", "validate"], cwd=tmp_path, check=True)  # noqa: S607
 
 

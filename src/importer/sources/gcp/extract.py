@@ -14,7 +14,8 @@ import os
 import re
 import shutil
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -67,26 +68,28 @@ def _gcloud_token() -> str:
     return done.stdout.strip()
 
 
-def http_getter(token: str) -> Getter:
-    client = httpx.Client(timeout=60, headers={"Authorization": f"Bearer {token}"})
+@contextmanager
+def http_getter(token: str) -> Iterator[Getter]:
+    """A Getter that reuses one connection pool and closes it when the block ends."""
+    with httpx.Client(timeout=60, headers={"Authorization": f"Bearer {token}"}) as client:
 
-    def get(url: str, params: dict[str, str]) -> dict[str, Any]:
-        try:
-            response = client.get(url, params=params)
-        except httpx.HTTPError as exc:
-            raise GcpError(f"could not reach Google Cloud: {type(exc).__name__}") from exc
-        if response.status_code >= 400:
+        def get(url: str, params: dict[str, str]) -> dict[str, Any]:
             try:
-                message = str(response.json().get("error", {}).get("message", ""))
-            except ValueError:
-                message = ""
-            raise GcpError(
-                f"Google Cloud returned {response.status_code}: {printable(message, 300)}"
-            )
-        body = response.json()
-        return body if isinstance(body, dict) else {}
+                response = client.get(url, params=params)
+            except httpx.HTTPError as exc:
+                raise GcpError(f"could not reach Google Cloud: {type(exc).__name__}") from exc
+            if response.status_code >= 400:
+                try:
+                    message = str(response.json().get("error", {}).get("message", ""))
+                except ValueError:
+                    message = ""
+                raise GcpError(
+                    f"Google Cloud returned {response.status_code}: {printable(message, 300)}"
+                )
+            body = response.json()
+            return body if isinstance(body, dict) else {}
 
-    return get
+        yield get
 
 
 def _list_all(get: Getter, project: str, key: str) -> list[dict[str, Any]]:

@@ -118,3 +118,11 @@ def test_cli_reports_a_clear_error_without_credentials(
     out = tmp_path / "o"
     result = CliRunner().invoke(app, ["extract-gcp", "--project", "my-project", "--out", str(out)])
     assert result.exit_code == 1 and "no Google credentials" in result.output
+
+
+def test_the_http_client_is_closed_when_the_block_ends() -> None:
+    with gx.http_getter("token") as get:
+        assert callable(get)
+    # a second use of the same context manager builds a fresh client and closes it too
+    with gx.http_getter("token"):
+        pass

@@ -15,6 +15,17 @@
 7. Prefer the standard library and existing dependencies: `functools.cache`, `itertools`,
    `dataclasses`, comprehensions / `list.extend` (Ruff `PERF` enforces the latter).
 
+8. Registries are filled once and registration is idempotent (`register_rules`, `REGISTRY`).
+9. Rules and mappings are tables (a list of tuples or a JSON file), not chains of `if`. A new
+   case is a new row plus a test row.
+10. A rule that is first-match must be specific. Add a test that the specific rule wins over the
+    broader one before adding the broad one.
+11. Before adding a helper, search for the thing it does: `grep -rn` the verbs in `core/`.
+    Cross-source duplicates belong in `core/`.
+
+See also `docs/dev/resource-and-style.md` for resource handling and formatting, and
+`docs/dev/improvement-loop.md` for the loop that finds duplication and defects.
+
 ## Candidate libraries (not yet adopted; add only when a real duplicate justifies it)
 
 | Library | Use it for |
