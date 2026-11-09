@@ -2,93 +2,132 @@
 
 `=` and `!=` compare exact strings. `=~` and `!~` match the whole value (the pattern is
 anchored at both ends, as `^(?:pattern)$`). A missing label is the empty string. Alertmanager
-uses RE2, which cannot backtrack badly; Python's `re` can, so a pattern is run only when it is
-in a safe subset (see `is_safe_pattern`). Anything else returns None, which callers report as
-undecidable instead of guessing.
+uses RE2, which cannot backtrack badly; Python's `re` can, and differs from RE2 in places. So a
+pattern is run only when the stdlib parser shows it is in a small safe subset (see
+`is_safe_pattern`). Anything else returns None, which callers report as undecidable instead of
+guessing. The gate is strict on purpose: it refuses some harmless patterns, such as an
+IPv4 address pattern with a counted group, because a repeated group that holds a repeat cannot
+be told apart from `(a?a?)*b` by a cheap rule. There is no wall-clock guard on a match (that needs a thread or a
+process); the gate and the length caps are the only protection.
+
+The parser is `re._parser`, a private module of CPython 3.11 and later. If it cannot be
+imported, every pattern is refused.
 """
 
 import re
+import warnings
 from functools import lru_cache
+from typing import Any
+
+try:
+    from re import _constants as _c
+    from re import _parser
+
+    PARSER_AVAILABLE = True
+except ImportError:  # pragma: no cover - a Python without the private modules
+    PARSER_AVAILABLE = False
 
 MAX_PATTERN = 256
-MAX_VALUE = 512  # longest label value a pattern is run against
-MAX_UNBOUNDED = 2  # `*`, `+` and `{n,}` in one pattern: more can be polynomial in the value
+MAX_VALUE = 256  # longest label value a pattern is run against
+MAX_VARIABLE = (
+    3  # repeats whose count is not fixed (`*`, `+`, `?`, `{n,m}`): polynomial in the value
+)
+MAX_BRANCHES = 3  # alternations in one pattern: sequential ones multiply the paths
 MAX_BOUND = 1000  # RE2's own limit on a repeat count
-_QUANTIFIERS = "*+{"
+ALLOWED_FLAGS = re.IGNORECASE | re.DOTALL | re.UNICODE
+_ATOMS = {"LITERAL", "NOT_LITERAL", "IN", "ANY", "CATEGORY", "AT"}
+_REPEATS = {"MAX_REPEAT", "MIN_REPEAT"}
 _META = set(".^$*+?{}[]|()\\")
-_BOUND = re.compile(r"\{(\d+)(?:,(\d*))?\}")
-_LOOKAROUND = ("(?=", "(?!", "(?<", "(?P=", "(?P>")
+# RE2 reads these differently or not at all; Python would accept some of them silently
+_DIFFERENT = ("[[:", "[:", "(?>", "*+", "++", "?+", "}+", "\\p", "\\P", "\\Q", "\\E", "\\z",
+              "\\A", "\\Z", "\\C", "\\X")  # fmt: skip
+_GROUP_OPENERS = re.compile(r"\(\?(?!:|P<)")
+
+
+class _Stats:
+    def __init__(self) -> None:
+        self.variable = 0
+        self.branches = 0
+
+
+def _plain(items: Any) -> bool:
+    """Only atoms and groups of atoms: nothing that repeats or branches."""
+    for op, av in items:
+        name = str(op)
+        if name in _ATOMS:
+            continue
+        if name == "SUBPATTERN" and not av[1] and not av[2] and _plain(av[3]):
+            continue
+        return False
+    return True
+
+
+def _walk(items: Any, stats: _Stats) -> bool:
+    for op, av in items:
+        name = str(op)
+        if name in _ATOMS:
+            continue
+        if name == "SUBPATTERN":
+            group, add_flags, del_flags, body = av
+            if add_flags or del_flags or not _walk(body, stats):
+                return False
+        elif name == "BRANCH":
+            stats.branches += 1
+            if not all(_walk(alternative, stats) for alternative in av[1]):
+                return False
+        elif name in _REPEATS:
+            low, high, body = av
+            unbounded = high == _c.MAXREPEAT
+            if low > MAX_BOUND or (not unbounded and high > MAX_BOUND):
+                return False
+            stats.variable += low != high
+            if not (_plain(body) and body.getwidth()[0] > 0):
+                return False  # a repeated group that holds a repeat, a branch, or can be empty
+        else:
+            return False  # backreference, lookaround, conditional, atomic or possessive form
+    return True
+
+
+def _raw_ok(pattern: str) -> bool:
+    """Checks on the text: forms the parser reads like Python but RE2 does not."""
+    if any(form in pattern for form in _DIFFERENT):
+        return False
+    if re.search(r"\\[0-9]", pattern):
+        return False
+    return not _GROUP_OPENERS.search(
+        pattern.replace("(?i)", "", 1)
+        .replace("(?s)", "", 1)
+        .replace("(?is)", "", 1)
+        .replace("(?si)", "", 1)
+    )
 
 
 @lru_cache(maxsize=2048)
 def is_safe_pattern(pattern: str) -> bool:
-    """True for a pattern that is valid, bounded and cannot backtrack exponentially.
+    """True for a pattern that is valid, bounded and cannot backtrack badly.
 
-    Refused: backreferences, lookaround, repeat counts over 1000, more than two unbounded
-    repeats, and a repeated group that holds a repeat or an alternation (`(a+)+`, `(a|b)*`).
+    Refused: backreferences, lookaround, conditionals, atomic and possessive forms, scoped
+    flags, flags other than i and s, `(?i)` with non-ASCII text, a repeated group that holds a
+    repeat of any kind or a branch or can match nothing, a repeat count over 1000, more than
+    three repeats with a variable count, more than three alternations, and the forms in
+    `_DIFFERENT`.
     """
-    if len(pattern) > MAX_PATTERN:
+    if not PARSER_AVAILABLE or len(pattern) > MAX_PATTERN or not _raw_ok(pattern):
         return False
     try:
-        re.compile(pattern, re.ASCII)
-    except (re.error, RecursionError, OverflowError):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            parsed = _parser.parse(pattern)
+            re.compile(pattern, re.ASCII)
+    except (re.error, RecursionError, OverflowError, Warning):
         return False
-    return _scan(pattern)
-
-
-def _mark(groups: list[bool]) -> None:
-    if groups:
-        groups[-1] = True
-
-
-def _count_ok(count: re.Match[str]) -> tuple[bool, bool]:
-    """(within the repeat limit, has no upper bound) for a `{n}`, `{n,}` or `{n,m}` repeat."""
-    low, high = count.group(1), count.group(2)
-    top = low if high is None and "," not in count.group(0) else high
-    within = int(low) <= MAX_BOUND and (not top or int(top) <= MAX_BOUND)
-    return within, not top
-
-
-def _scan(pattern: str) -> bool:
-    groups: list[bool] = []  # per open group: does it hold a repeat or an alternation?
-    unbounded = 0
-    in_class = False
-    i = 0
-    while i < len(pattern):
-        ch = pattern[i]
-        step = 1
-        if ch == "\\":
-            if pattern[i + 1 : i + 2] in tuple("123456789"):
-                return False  # backreference
-            step = 2
-        elif in_class:
-            in_class = ch != "]"
-        elif ch == "[":
-            in_class = True
-        elif ch == "(":
-            if pattern.startswith(_LOOKAROUND, i):
-                return False
-            groups.append(False)
-        elif ch == ")":
-            risky = groups.pop() if groups else False
-            if risky and pattern[i + 1 : i + 2] and pattern[i + 1] in _QUANTIFIERS:
-                return False  # a repeated group holding a repeat or an alternation
-            if risky:
-                _mark(groups)
-        elif ch == "|":
-            _mark(groups)
-        elif ch in "*+":
-            unbounded += 1
-            _mark(groups)
-        elif ch == "{" and (count := _BOUND.match(pattern, i)):
-            within, open_ended = _count_ok(count)
-            if not within:
-                return False
-            unbounded += open_ended
-            _mark(groups)
-            step = count.end() - i
-        i += step
-    return unbounded <= MAX_UNBOUNDED
+    flags = parsed.state.flags
+    if flags & ~ALLOWED_FLAGS or (flags & re.IGNORECASE and not pattern.isascii()):
+        return False
+    stats = _Stats()
+    return (
+        _walk(parsed, stats) and stats.variable <= MAX_VARIABLE and stats.branches <= MAX_BRANCHES
+    )
 
 
 @lru_cache(maxsize=2048)
@@ -99,7 +138,8 @@ def _compiled(pattern: str) -> re.Pattern[str]:
 def matches(op: str, value: str, label: str | None) -> bool | None:
     """Does the matcher hold for a label value (None means the label is missing)?
 
-    None when a pattern is outside the safe subset or the value is too long to test.
+    None when a pattern is outside the safe subset or the value is too long to test, or when a
+    case-insensitive pattern meets a non-ASCII value (RE2 folds case by Unicode rules).
     """
     actual = label or ""
     if op == "=":
@@ -107,6 +147,8 @@ def matches(op: str, value: str, label: str | None) -> bool | None:
     if op == "!=":
         return actual != value
     if not is_safe_pattern(value) or len(actual) > MAX_VALUE:
+        return None
+    if not actual.isascii() and "(?i" in value:
         return None
     found = _compiled(value).fullmatch(actual) is not None
     return found if op == "=~" else not found

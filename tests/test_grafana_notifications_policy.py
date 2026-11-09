@@ -92,7 +92,7 @@ def test_matcher_semantics(op: str, value: str, label: str | None, expected: boo
         "(a*)*",
         "(.*a){10}",
         "(a+)*b",
-        "a*a*a*b",
+        "a*a*a*a*b",
         r"(a)\1",
         "(?=a)a",
         "(?!a)a",
