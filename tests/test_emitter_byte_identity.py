@@ -46,20 +46,26 @@ def collect(work: Path) -> dict[str, dict[str, str]]:
         out[f"convert/{fixture}"] = _digests(target)
     aws = FIXTURES / "notifications-aws"
     _run(
-        ["convert-notifications", "--topics", str(aws / "topic-input.json")]
-        + ["--alerts", str(work / "cloudwatch"), "--out", str(work / "n-aws")]
+        [
+            *["convert-notifications", "--topics", str(aws / "topic-input.json")],
+            *["--alerts", str(work / "cloudwatch"), "--out", str(work / "n-aws")],
+        ]
     )
     out["notifications/aws"] = _digests(work / "n-aws")
     _run(
-        ["convert-notifications", "--source", "dynatrace", "--topics", str(FIXTURES / "dynatrace")]
-        + ["--out", str(work / "n-dt")]
+        [
+            *["convert-notifications", "--source", "dynatrace"],
+            *["--topics", str(FIXTURES / "dynatrace"), "--out", str(work / "n-dt")],
+        ]
     )
     out["notifications/dynatrace"] = _digests(work / "n-dt")
     gcp = FIXTURES / "gcp-notifications"
     _run(["convert", "--source", "gcp", "--in", str(gcp / "policies"), "--out", str(work / "g-a")])
     _run(
-        ["convert-gcp-notifications", "--channels", str(gcp / "channels")]
-        + ["--alerts", str(work / "g-a"), "--out", str(work / "n-gcp")]
+        [
+            *["convert-gcp-notifications", "--channels", str(gcp / "channels")],
+            *["--alerts", str(work / "g-a"), "--out", str(work / "n-gcp")],
+        ]
     )
     out["notifications/gcp"] = _digests(work / "n-gcp")
     return out

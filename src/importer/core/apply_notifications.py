@@ -5,13 +5,17 @@ already exists is skipped (nothing is updated), workflows are created DISABLED, 
 created is returned for the manifest even when a later step fails, so a partial run can be undone.
 """
 
+from collections.abc import Mapping
+
 from importer.core.apply import ApplyResult, NewRelicAPIError, NewRelicClient
+from importer.core.emit.common import CannotEmit
 from importer.core.emit.notifications import (
     CREATE_CHANNEL,
     CREATE_DESTINATION,
     CREATE_WORKFLOW,
-    channel_input,
-    destination_input,
+    all_destinations,
+    nr_channel_input,
+    nr_destination_input,
     workflow_input,
 )
 from importer.core.manifest import CreatedObject
@@ -34,9 +38,15 @@ def _error_text(error: object) -> str:
 
 
 def apply_notifications(
-    client: NewRelicClient, account_id: int, plans: list[NotificationPlan]
+    client: NewRelicClient,
+    account_id: int,
+    plans: list[NotificationPlan],
+    secrets: Mapping[str, str] | None = None,
 ) -> ApplyResult:
+    """Create every plan. `secrets` maps a secret name to its value; a destination that needs a
+    secret that is not in it is reported as failed before anything is created for its plan."""
     result = ApplyResult()
+    supplied = secrets or {}
     for plan in plans:
         wf = plan.workflow
         if wf is None:
@@ -44,12 +54,20 @@ def apply_notifications(
         if workflow_exists(client, account_id, wf.name):
             result.skipped_existing.append(wf.name)
             continue
+        dests = all_destinations(plan)
+        try:
+            inputs = [nr_destination_input(d, supplied) for d in dests]
+            for d in dests:
+                nr_channel_input(d, "0")  # the same checks, before the first write
+        except CannotEmit as exc:
+            result.failed.append((wf.name, str(exc)))
+            continue
         channel_ids: list[str] = []
         try:
-            for dest in plan.destinations:
+            for dest, destination in zip(dests, inputs, strict=True):
                 data = client.run(
                     CREATE_DESTINATION,
-                    {"accountId": account_id, "destination": destination_input(dest)},
+                    {"accountId": account_id, "destination": destination},
                     is_write=True,
                 )["aiNotificationsCreateDestination"]
                 if data.get("error") or not data.get("destination"):
@@ -60,7 +78,7 @@ def apply_notifications(
                 )
                 data = client.run(
                     CREATE_CHANNEL,
-                    {"accountId": account_id, "channel": channel_input(dest, destination_id)},
+                    {"accountId": account_id, "channel": nr_channel_input(dest, destination_id)},
                     is_write=True,
                 )["aiNotificationsCreateChannel"]
                 if data.get("error") or not data.get("channel"):
