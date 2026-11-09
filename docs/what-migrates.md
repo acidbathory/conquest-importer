@@ -251,4 +251,66 @@ the converter was built from scrubbed copies of three real objects and a few han
   out/dynatrace --source dynatrace` (the report reads `alerts/` inside the folder you give it).
 - **Behind a TLS-inspecting proxy:** set `SSL_CERT_FILE` to the corporate root certificate file.
 
+### Grafana (phase 0)
+
+`importer extract-grafana --out <folder>` reads Grafana-managed alert rules from a Grafana Cloud
+stack (read-only; `GRAFANA_URL` and `GRAFANA_SA_TOKEN` in `.env`), and `--source grafana` converts
+them. The loader also reads a rule file or folder in any of the four shapes Grafana returns
+(provisioning list, export, ruler, `/apis`). Nothing here has been run against New Relic. The
+provisioning and export shapes come from one sandbox stack (17 paused sample rules, Grafana 13.4);
+the ruler and `/apis` shapes are hand-made from the documentation.
+
+- **Converts (approximate):** a rule whose pipeline is exactly query, optional reduce, one
+  threshold (above, at least, below, at most, equal, not equal), on one of:
+  - a Prometheus selector with an optional single `avg`, `sum`, `min` or `max` and `by (...)`:
+    `avg by (instance) (cpu{job="node",env!="dev"})` becomes `SELECT average(cpu) FROM Metric
+    WHERE job = 'node' AND env != 'dev' FACET instance`. Matchers `=`, `!=`, `=~` and `!~` convert
+    when the regex is plain words joined by `|` (IN), or a plain word with `.*` before or after
+    (LIKE). Names ending `_total`, `_count`, `_sum` or `_bucket` look like counters and stay manual.
+  - a Loki `count_over_time({k="v"} |= "text" [5m])`, optionally in `sum (by ...)`. It becomes a
+    count of `Log` events with the labels and `message LIKE` filters. The range is the window.
+- **Aggregation layers:** Grafana aggregates across series (the PromQL `avg`, `sum`, `min`,
+  `max`) and then reduces over time (the reduce node). One New Relic aggregation does both only
+  when they are the same operation, so these convert: `avg` with reducer last or mean, `max` with
+  reducer max, `min` with reducer min, and a bare selector with any of last, mean, min, max, sum.
+  Any other pair (for example `sum(x)` with any reducer, or `max(x)` with mean) stays manual, with
+  steps; a plain `sum` would add every sample of every series in the window.
+- **Window:** a reducer that looks back (mean, min, max, sum, on a range query) uses the query's
+  `relativeTimeRange.from` as the aggregation window, in whole minutes from 60 seconds to one hour;
+  a missing, zero or longer range is manual. Reducer last, and any instant query, ignore the range
+  and use the group's evaluation interval (60 seconds when the read has none); the rule says which
+  happened. A Loki count takes its window from the `[5m]` range, and only reducer last (or an
+  instant query) converts. Windows are rounded up to whole minutes.
+- **Pending period:** the pending period (`for`) becomes the threshold duration, rounded up to
+  whole windows and at most 24 hours; New Relic restarts the count when a window has no data, so it
+  may differ. Reduce mode `dropNN` is noted; `replaceNN` and unknown modes stay manual.
+- **Reading problems:** a rule with a malformed field (a duration that is not like `5m`, a query
+  node that is not an object) is kept as a manual item with a fixed reason and the other rules
+  load. `isPaused` is read as a boolean ("true" and "false" are accepted); any other value is
+  treated as paused and noted. Identical copies of a rule are merged; two rules with one uid and
+  different content both stay, with distinct keys and a note. A file nested too deeply is refused
+  with a message.
+- **Notes on a converted rule:** the metric must already reach New Relic (Prometheus remote write
+  or OTLP) and its New Relic name and label attributes are not confirmed. A rule without a data
+  source type in its query has the type inferred from the data source uid or the query shape, and
+  says so. Paused rules are created disabled. `keep_firing_for` and a recovery threshold are
+  ignored. No-data state `Alerting` becomes loss of signal; `NoData` and `KeepLast`, and any
+  query-error state, have no equivalent. Contact points and notification policies are not
+  converted.
+- **Manual, with steps:** expression chains, math across queries, classic conditions, SQL
+  expressions, resample, mixed data sources or several queries, recording rules, rules run by the
+  Mimir or Loki ruler, range thresholds (`within_range`, `outside_range`), reducers `count` and
+  `median`, other data source types (CloudWatch, Azure Monitor, Elasticsearch, SQL and so on),
+  PromQL with `offset`, subqueries, `group_left`, `topk`, `histogram_quantile`, `rate` and other
+  range functions, `absent()`, binary operators or comparisons, and LogQL with parser stages,
+  `unwrap`, other functions or regular-expression line filters.
+- **Not done:** contact points, policies, mute timings and templates (the extractor counts them
+  only), dashboards, a check that the metric exists in New Relic, and any live test.
+- **Host rule:** the extractor accepts only `https://<stack>.grafana.net`. Another https host needs
+  `--allow-host <host>` and must equal the host in `GRAFANA_URL`.
+- **Sequence:** `importer extract-grafana --out out/grafana`, then `importer convert --source
+  grafana --in out/grafana --out out/grafana/alerts`, then `importer report out/grafana --source
+  grafana` (the report reads `alerts/` inside the folder you give it).
+- **Behind a TLS-inspecting proxy:** set `SSL_CERT_FILE` to the corporate root certificate file.
+
 Azure and other platforms are planned; see the [roadmap](../README.md#roadmap).

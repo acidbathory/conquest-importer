@@ -110,12 +110,18 @@ are listed with manual steps (`extract-dynatrace`, `convert --source dynatrace`)
 against a tenant that has workflows yet. Sequence: `extract-dynatrace --out out/dynatrace`,
 `convert --source dynatrace --in out/dynatrace --out out/dynatrace/alerts`,
 `report out/dynatrace --source dynatrace`.
+Grafana is in phase 0: Grafana-managed alert rules on a plain Prometheus selector or a Loki
+`count_over_time` convert; expressions, math, other data sources and most PromQL and LogQL stay
+manual with steps (`extract-grafana`, `convert --source grafana`); nothing has run against New
+Relic yet. Sequence: `extract-grafana --out out/grafana`,
+`convert --source grafana --in out/grafana --out out/grafana/alerts`,
+`report out/grafana --source grafana`.
 Datadog support was built and then removed; it is paused until AWS, GCP and Azure are covered.
 Planned, in this order:
 
 1. Microsoft Azure
 2. Datadog (paused)
-3. Grafana
+3. Grafana (phase 0 started)
 4. Dynatrace
 
 Want to help finish the project? Fork the repository, make your change on a branch and open a pull

@@ -13,7 +13,7 @@ Source JSON -> source models -> [translate] -> IRMonitor -> [emit] -> NerdGraph 
 |---|---|
 | `source_system`, `source_id`, `source_type` | Where it came from. Lets another source reuse the emitters |
 | `name`, `tags` | Copied through. **Untrusted text**: only emitters' escaping functions may place it in output |
-| `signal` | `kind` (metric, log, apm, heartbeat, composite, unknown), `raw_query`, `window_seconds`, and exactly one structured body: `metric` (terms + arithmetic expression tree + scope + group-by), `count` (log/APM filters + group-by) or `heartbeat` |
+| `signal` | `kind` (metric, log, apm, heartbeat, composite, unknown), `raw_query`, `window_seconds`, and exactly one structured body: `metric` (terms + arithmetic expression tree + scope + group-by; a scope filter is equals, not equals, IN, NOT IN, LIKE, NOT LIKE or is-null), `count` (log/APM filters + group-by) or `heartbeat` |
 | `thresholds` | critical/warning with operator and value, **already in New Relic units** (metric scale applied) |
 | `no_data` | notify flag and timeout minutes |
 | `notification` | message template and `@handles`. Channels are never migrated, only listed |

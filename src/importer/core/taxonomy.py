@@ -34,6 +34,10 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
             r"|uptime check|davis problem notification workflow|workflow trigger is a"
             r"|workflow tasks are not|workflow tasks run on|slo is not converted automatically"
             r"|longer than one hour, the longest count window"
+            r"|^(?:recording rule:|data source-managed rule|grafana pipeline|grafana threshold"
+            r"|grafana reduce function|data source type|promql uses|logql uses"
+            r"|grafana aggregation window|grafana pending period|grafana rule could not be read"
+            r"|grafana query time range|promql aggregation|logql range query|grafana reduce mode)"
         ),
     ),
     # Before the approximation rule: the Metric Streams note says "assumed".
@@ -59,6 +63,7 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
             r"formula|metric math|query|expression|scope|search syntax|rollup|service check"
             r"|unit conversion|statistic|characters|has no metric|dimension|filter|aligner|reducer"
             r"|second-stage|alignment period"
+            r"|^(?:promql|logql) (?:label matcher|metric)|^logql line filter text"
         ),
     ),
     (

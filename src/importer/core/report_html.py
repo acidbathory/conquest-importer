@@ -96,6 +96,17 @@ DYNATRACE_CHECKLIST = (
     "SLOs are not converted yet. Rebuild each as a New Relic service level.",
     "Review each condition, then enable them one at a time.",
 )
+GRAFANA_CHECKLIST = (
+    "Send the metrics and logs to New Relic first (Prometheus remote write, OTLP or a log "
+    "forwarder); converted conditions return nothing until the data arrives. The New Relic "
+    "metric and attribute names are not confirmed: check each in the data explorer.",
+    "Recreate each contact point as a destination and channel, and attach them to a workflow. "
+    "Contact point secrets are not read; enter them again.",
+    "Rules marked manual use expressions, math, other data sources or PromQL and LogQL "
+    "features that have no alert condition equivalent. Each lists its steps.",
+    "Review each condition, then enable them one at a time. Nothing has been tried against a "
+    "live New Relic account.",
+)
 PROFILES: dict[str, Profile] = {
     "cloudwatch": Profile(
         account_label="AWS account",
@@ -134,6 +145,19 @@ PROFILES: dict[str, Profile] = {
         names_word="workflow",
         create_command=_apply_create,
         checklist=DYNATRACE_CHECKLIST,
+    ),
+    "grafana": Profile(
+        account_label="Grafana stack",
+        read_phrase="Your Grafana alert rules were read and converted.",
+        source_phrase="your Grafana stack",
+        alarm_title=("Alert rules", "alert rules"),
+        share_label="Share of alert rules converted",
+        unit_sentence="One Grafana-managed alert rule is one asset. Contact points, "
+        "notification policies, mute timings and dashboards are not converted, so they are not "
+        "counted.",
+        names_word="rule",
+        create_command=_apply_create,
+        checklist=GRAFANA_CHECKLIST,
     ),
 }
 

@@ -1,0 +1,1363 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "folder": "ckg-sandbox",
+      "interval": "1m",
+      "name": "ckg-sandbox",
+      "rules": [
+        {
+          "annotations": {
+            "summary": "ckg-expr-flatten"
+          },
+          "condition": "F",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "sum(errors_total)",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "sum(requests_total)",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "B"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "mean",
+                "refId": "C",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "mean",
+                "refId": "D",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "D",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "$C / $D * 100",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "E",
+                "type": "math"
+              },
+              "refId": "E",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        5
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "E",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "F",
+                "type": "threshold"
+              },
+              "refId": "F",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-expr-flatten",
+          "uid": "ckg-rule-01"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-expr-keeplast-nodata"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "avg(queue_depth)",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        100
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "KeepLast",
+          "for": "5m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "KeepLast",
+          "title": "ckg-expr-keeplast-nodata",
+          "uid": "ckg-rule-02"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-expr-multi-ds-manual"
+          },
+          "condition": "D",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "sum(rate(errors_total[5m]))",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "grafanacloud-logs",
+              "model": {
+                "expr": "sum(rate({app=\"api\"} |= \"error\" [5m]))",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "B"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "$A + $B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "math"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        10
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "C",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "D",
+                "type": "threshold"
+              },
+              "refId": "D",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-expr-multi-ds-manual",
+          "uid": "ckg-rule-03"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-expr-within-range"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "avg(temperature_celsius)",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        20,
+                        30
+                      ],
+                      "type": "within_range"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "OK",
+          "title": "ckg-expr-within-range",
+          "uid": "ckg-rule-04"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-loki-errors"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-logs",
+              "model": {
+                "expr": "sum by (app) (count_over_time({env=\"prod\",app=~\"api.*\"} |= \"error\" != \"healthcheck\" [5m]))",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        50
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-loki-errors",
+          "uid": "ckg-rule-05"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-loki-latency"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-logs",
+              "model": {
+                "expr": "quantile_over_time(0.99, {app=\"api\"} | json | status >= 500 | unwrap duration_ms [5m]) by (route)",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        3000
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-loki-latency",
+          "uid": "ckg-rule-06"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-prom-5xx-rate"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "sum by (service) (rate(http_requests_total{code=~\"5..\"}[5m]))",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        2
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "10m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-prom-5xx-rate",
+          "uid": "ckg-rule-07"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-prom-absent"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "absent(up{job=\"payments\"})",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        0
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "Alerting",
+          "title": "ckg-prom-absent",
+          "uid": "ckg-rule-08"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-prom-cpu-gauge"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "avg by (instance) (node_cpu_busy{job=\"node\",env!=\"dev\"})",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        80
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-prom-cpu-gauge",
+          "uid": "ckg-rule-09"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-prom-disk-fill"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "predict_linear(node_filesystem_avail_bytes[1h], 4*3600)",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        0
+                      ],
+                      "type": "lt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "15m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-prom-disk-fill",
+          "uid": "ckg-rule-10"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-prom-join-manual"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "sum by (pod) (rate(cpu_seconds[5m])) * on(pod) group_left(team) kube_pod_labels",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        1
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-prom-join-manual",
+          "uid": "ckg-rule-11"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-prom-mem-ratio"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "max_over_time(mem_used[10m]) / max_over_time(mem_total[10m]) * 100",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        90
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-prom-mem-ratio",
+          "uid": "ckg-rule-12"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-prom-offset-manual"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "rate(req_total[5m]) / rate(req_total[5m] offset 1d)",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        2
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-prom-offset-manual",
+          "uid": "ckg-rule-13"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-prom-p95"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "histogram_quantile(0.95, sum by (le, route) (rate(req_duration_seconds_bucket[5m])))",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        1.5
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-prom-p95",
+          "uid": "ckg-rule-14"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-prom-regex-unagg"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "queue_depth{queue=~\"orders|billing\"}",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        1000
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "2m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-prom-regex-unagg",
+          "uid": "ckg-rule-15"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-prom-topk-manual"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "topk(3, sum by (pod) (rate(cpu_seconds[5m])))",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        1
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "5m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "NoData",
+          "title": "ckg-prom-topk-manual",
+          "uid": "ckg-rule-16"
+        },
+        {
+          "annotations": {
+            "summary": "ckg-prom-up-zero"
+          },
+          "condition": "C",
+          "data": [
+            {
+              "datasourceUid": "grafanacloud-prom",
+              "model": {
+                "expr": "up{job=\"payments\"} == 0",
+                "instant": true,
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "A"
+              },
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 600,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "expression": "A",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "reducer": "last",
+                "refId": "B",
+                "settings": {
+                  "mode": "dropNN"
+                },
+                "type": "reduce"
+              },
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            },
+            {
+              "datasourceUid": "__expr__",
+              "model": {
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "params": [
+                        0
+                      ],
+                      "type": "gt"
+                    }
+                  }
+                ],
+                "expression": "B",
+                "intervalMs": 1000,
+                "maxDataPoints": 43200,
+                "refId": "C",
+                "type": "threshold"
+              },
+              "refId": "C",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              }
+            }
+          ],
+          "execErrState": "Error",
+          "for": "1m",
+          "isPaused": true,
+          "labels": {
+            "origin": "ckg-sandbox"
+          },
+          "noDataState": "Alerting",
+          "title": "ckg-prom-up-zero",
+          "uid": "ckg-rule-17"
+        }
+      ]
+    }
+  ]
+}

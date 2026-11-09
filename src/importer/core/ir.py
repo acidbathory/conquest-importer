@@ -7,7 +7,7 @@ Threshold values in the IR are already in New Relic units (metric scale applied)
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_serializer
 
 
 class Confidence(StrEnum):
@@ -47,10 +47,28 @@ class Aggregation(StrEnum):
     SUM = "sum"
 
 
-class TagFilter(BaseModel):
+class FilterBase(BaseModel):
+    """What a scope or log filter matches: one attribute against a value, a list or a pattern."""
+
     key: str
+    value: str
+    negate: bool = False  # != , NOT IN or NOT LIKE instead of = , IN or LIKE
+    wildcard: bool = False  # value contains * which becomes a LIKE match
+    values: list[str] = []  # when set, the match is IN (values) and `value` is ignored
+
+
+class TagFilter(FilterBase):
     value: str = ""
     absent: bool = False  # match only rows where this attribute is not set
+
+    @model_serializer(mode="wrap")
+    def _omit_defaults(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        """Saved IR keeps its old shape: the match fields appear only when they are used."""
+        data: dict[str, Any] = handler(self)
+        for name, default in (("negate", False), ("wildcard", False), ("values", [])):
+            if data.get(name) == default:
+                data.pop(name, None)
+        return data
 
 
 class NrTarget(BaseModel):
@@ -105,12 +123,8 @@ class MetricSignal(BaseModel):
     group_by: list[str] = []
 
 
-class CountFilter(BaseModel):
-    key: str
-    value: str
-    negate: bool = False
-    wildcard: bool = False  # value contains * which becomes a LIKE match
-    values: list[str] = []  # when set, the match is IN (values) and `value` is ignored
+class CountFilter(FilterBase):
+    pass
 
 
 class CountSignal(BaseModel):

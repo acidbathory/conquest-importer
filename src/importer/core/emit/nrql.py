@@ -13,6 +13,7 @@ from importer.core.ir import (
     CountFilter,
     CountSignal,
     Expr,
+    FilterBase,
     HeartbeatSignal,
     IRMonitor,
     MetricSignal,
@@ -94,11 +95,24 @@ def _expr_sql(expr: Expr, signal: MetricSignal, func: str, parent_prec: int = 0)
     return f"({text})" if prec < parent_prec else text
 
 
+def _match_clause(attr: str, f: FilterBase) -> str:
+    """One WHERE term for a filter; `attr` is already a validated identifier."""
+    if f.values:
+        items = ", ".join(quote_string(v) for v in f.values)
+        return f"{attr} {'NOT IN' if f.negate else 'IN'} ({items})"
+    if f.wildcard:
+        if "%" in f.value:  # a literal percent sign would act as a wildcard in LIKE
+            raise ValueError("a % in a LIKE pattern cannot be escaped, so it cannot be emitted")
+        op = "NOT LIKE" if f.negate else "LIKE"
+        return f"{attr} {op} {quote_string(f.value.replace('*', '%'))}"
+    return f"{attr} {'!=' if f.negate else '='} {quote_string(f.value)}"
+
+
 def _tag_clause(f: TagFilter) -> str:
     attr = identifier(attribute_for(SignalKind.METRIC, f.key))
     if f.absent:
-        return f"{attr} IS NULL"
-    return f"{attr} = {quote_string(f.value)}"
+        return f"{attr} IS NOT NULL" if f.negate else f"{attr} IS NULL"
+    return _match_clause(attr, f)
 
 
 def _metric_nrql(signal: MetricSignal, alias: str | None = None) -> str:
@@ -131,14 +145,7 @@ def widget_nrql(series: Series, timeseries: bool) -> str:
 
 
 def _filter_clause(kind: SignalKind, f: CountFilter) -> str:
-    attr = identifier(attribute_for(kind, f.key))
-    if f.values:
-        items = ", ".join(quote_string(v) for v in f.values)
-        return f"{attr} {'NOT IN' if f.negate else 'IN'} ({items})"
-    if f.wildcard:
-        op = "NOT LIKE" if f.negate else "LIKE"
-        return f"{attr} {op} {quote_string(f.value.replace('*', '%'))}"
-    return f"{attr} {'!=' if f.negate else '='} {quote_string(f.value)}"
+    return _match_clause(identifier(attribute_for(kind, f.key)), f)
 
 
 def _count_nrql(kind: SignalKind, signal: CountSignal) -> str:
