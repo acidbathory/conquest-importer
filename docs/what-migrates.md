@@ -339,4 +339,56 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   grafana` (the report reads `alerts/` inside the folder you give it).
 - **Behind a TLS-inspecting proxy:** set `SSL_CERT_FILE` to the corporate root certificate file.
 
+### Dynatrace classic (metric events and Davis detectors)
+
+`importer extract-dynatrace-classic --out <folder>` reads Settings 2.0 objects from a Dynatrace
+tenant (read-only GET requests for a fixed list of schema ids; `DYNATRACE_ENV_URL` and
+`DYNATRACE_API_TOKEN` in `.env`), and `--source dynatrace-classic` converts them. A Platform host
+(`https://<tenant>.apps.dynatrace.com`, bearer token) is read through the classic Environment API
+proxy first and through the Platform settings service when the proxy answers 404 for a schema; a
+classic SaaS host (`https://<tenant>.live.dynatrace.com`, API token) uses `/api/v2/settings`.
+Nothing here has been run against a tenant that holds these objects: the converter was built from
+the schema tables in the Dynatrace documentation (21 docs-derived fixtures) and hand-made objects.
+Every row of the metric map is unverified. Notification objects are reduced at read time (type,
+name, enabled flag, profile id), so no secret, webhook URL or recipient is exported.
+
+- **Converts (approximate):**
+  - A metric event (`builtin:anomaly-detection.metric-events`) with a static threshold, on a metric
+    key or on a selector, whose metric is in the metric map. `violatingSamples` out of `samples`
+    one-minute samples becomes a breach that lasts `violatingSamples` minutes in every window;
+    when `violatingSamples` is below `samples` this is stricter than Dynatrace and a note says so.
+    `queryOffset` moves the aggregation delay only. `alertOnNoData` becomes loss of signal.
+    `dealertingSamples` has no equivalent and is noted. A disabled event is converted (all
+    conditions are created disabled) with a note.
+  - `AUTO_ADAPTIVE_THRESHOLD` and `SEASONAL_BASELINE` become a baseline condition in the direction
+    of `alertCondition`. The sensitivity (`signalFluctuation`, `tolerance`) has no principled
+    conversion: the band is fixed at 3 standard deviations and a note says to tune it.
+  - A selector with one or more metrics, `:avg :min :max :sum :count :median :percentile(n)
+    :value :last`, `:splitBy` (FACET), `:filter` with `eq ne prefix suffix contains existsKey and
+    or not` (WHERE), `+ - * /` between metrics of the same New Relic event, `:rate(1m)` (as a
+    sum), and `:default`, `:sort`, `:limit`, `:names`, `:parents`, `:setUnit`, `:smooth` (noted,
+    not applied). The parser is strict and linear-time; anything else makes the event manual.
+  - Dimension and entity-name filters, when the dimension is in the metric map for the metric.
+  - A Davis detector (`builtin:davis.anomaly-detectors`) with a static threshold over
+    `timeseries avg|min|max|sum(metric)` and an optional `by:{...}`.
+- **Data prerequisite:** a converted condition watches a New Relic signal that exists only when an
+  agent, integration or exporter sends it. Each conversion says which one (the infrastructure
+  agent for host metrics, an APM agent for service metrics, a cloud integration, or the same
+  metric through OpenTelemetry). A metric with no row in the map, or a row with status `none`, is
+  manual and gives that message.
+- **Manual, with steps:** a management zone, tag, entity-id or regular-expression filter; a
+  metric with no map row; `:fold`, `:delta`, `:rollup`, `:timeshift`, `:partition`, `:histogram`,
+  `:merge`, `:toUnit`, an entity selector or a series filter; several metrics in one selector;
+  baseline and records-mode detectors; any other DQL; `OUTSIDE` on a static threshold.
+- **Listed, not converted:** alerting profiles, problem notifications, maintenance windows,
+  management zones and the built-in anomaly detection settings are manual items, one per object,
+  with the steps for each. Their conversion (workflows, destinations, muting rules) comes later.
+- **Checks:** `importer check-dynatrace-metrics --alerts <out>/alerts --nr-account-id <id>` asks
+  New Relic (read-only count queries) whether the signal behind each converted condition has data.
+  Exit 2 means at least one has none, so the condition could never fire.
+- **Sequence:** `importer extract-dynatrace-classic --out out/dynatrace-classic`, then `importer
+  convert --source dynatrace-classic --in out/dynatrace-classic --out out/dynatrace-classic/alerts`,
+  then read `out/dynatrace-classic/alerts/report.md`. The HTML report (`importer report`) has no
+  profile for this source yet.
+
 Azure and other platforms are planned; see the [roadmap](../README.md#roadmap).
