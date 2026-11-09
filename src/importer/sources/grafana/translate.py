@@ -318,7 +318,7 @@ N_RESAMPLE = (
 N_ROUTING = "notifications (contact points and notification policies) must be configured manually"
 
 
-class _Fail(Exception):
+class Fail(Exception):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
@@ -340,7 +340,7 @@ BOTH = re.compile(rf"\.\*({SAFE_WORD})\.\*")
 
 
 @dataclass(frozen=True)
-class _Match:
+class Match:
     key: str
     kind: str  # eq, in, like or absent
     values: tuple[str, ...]
@@ -362,38 +362,38 @@ def _regex(value: str, fail: str) -> tuple[str, tuple[str, ...]]:
         found = pattern.fullmatch(value)
         if found:
             return "like", (wrap.format(found[1]),)
-    raise _Fail(fail)
+    raise Fail(fail)
 
 
-def _match(key: str, op: str, value: str, fail: str, *, absent_ok: bool) -> _Match:
+def _match(key: str, op: str, value: str, fail: str, *, absent_ok: bool) -> Match:
     if key == "__name__":
-        raise _Fail(fail)
+        raise Fail(fail)
     if op in ("=", "!="):
         if value == "":
             if op == "=" and absent_ok:
-                return _Match(key, "absent", ())
-            raise _Fail(fail)
-        return _Match(key, "eq", (value,), negate=op == "!=")
+                return Match(key, "absent", ())
+            raise Fail(fail)
+        return Match(key, "eq", (value,), negate=op == "!=")
     kind, values = _regex(value, fail)
-    return _Match(key, kind, values, negate=op == "!~")
+    return Match(key, kind, values, negate=op == "!~")
 
 
-def _matchers(body: str, fail: str, not_simple: str, *, absent_ok: bool) -> list[_Match]:
-    found: list[_Match] = []
+def parse_matchers(body: str, fail: str, not_simple: str, *, absent_ok: bool) -> list[Match]:
+    found: list[Match] = []
     position = 0
     while body[position:].strip():
         item = MATCHER.match(body, position)
         if item is None or len(found) >= MAX_MATCHERS:
-            raise _Fail(not_simple)
+            raise Fail(not_simple)
         key, op, raw, _ = item.groups()
         if not STRICT_VALUE.fullmatch(raw):
-            raise _Fail(fail)
+            raise Fail(fail)
         found.append(_match(key, op, _unescape(raw), fail, absent_ok=absent_ok))
         position = item.end()
     return found
 
 
-def _tag_filter(m: _Match) -> TagFilter:
+def tag_filter(m: Match) -> TagFilter:
     if m.kind == "absent":
         return TagFilter(key=m.key, absent=True)
     if m.kind == "in":
@@ -401,7 +401,7 @@ def _tag_filter(m: _Match) -> TagFilter:
     return TagFilter(key=m.key, value=m.values[0], negate=m.negate, wildcard=m.kind == "like")
 
 
-def _count_filter(m: _Match) -> CountFilter:
+def _count_filter(m: Match) -> CountFilter:
     if m.kind == "in":
         return CountFilter(key=m.key, value="", values=list(m.values), negate=m.negate)
     return CountFilter(key=m.key, value=m.values[0], negate=m.negate, wildcard=m.kind == "like")
@@ -425,14 +425,14 @@ def _labels(text: str | None) -> list[str]:
     return list(dict.fromkeys(re.findall(LABEL, text or "")))
 
 
-def _attribute(name: str) -> str:
+def nrql_attribute(name: str) -> str:
     try:
         return identifier(name).strip("`")
     except ValueError:
-        raise _Fail(PROM_NAME) from None
+        raise Fail(PROM_NAME) from None
 
 
-def _outer(expr: str, aggregators: str) -> tuple[str | None, list[str], str]:
+def split_outer(expr: str, aggregators: str) -> tuple[str | None, list[str], str]:
     """Split `agg [by (..)] (inner) [by (..)]` into aggregator, group labels and inner text."""
     wrapper = re.fullmatch(
         rf"\s*({aggregators})\s*(?:by\s*({LABEL_LIST}))?\s*\((.*?)\)\s*(?:by\s*({LABEL_LIST}))?\s*",
@@ -443,7 +443,7 @@ def _outer(expr: str, aggregators: str) -> tuple[str | None, list[str], str]:
         return None, [], expr
     agg, first, inner, second = wrapper.groups()
     if first and second:
-        raise _Fail("")
+        raise Fail("")
     return agg, _labels(first or second), inner
 
 
@@ -476,7 +476,7 @@ PROM_SELECTOR = re.compile(rf"\s*([A-Za-z_:][A-Za-z0-9_:]*)\s*(?:\{{({BODY})\}})
 
 
 @dataclass(frozen=True)
-class _Ctx:
+class Ctx:
     """What the data source handlers need to know about the rule around the query."""
 
     reducer: str  # the Grafana reducer (last when the rule has none)
@@ -486,12 +486,17 @@ class _Ctx:
     node: bool = True  # the rule has a threshold node (a Grafana rule); a rule-file rule has none
 
 
+# the dashboard planner imports these under their old names
+_Ctx = Ctx
+_Fail = Fail
+
+
 # an across-series aggregate and a reducer that one New Relic aggregation expresses exactly
 EXACT_AGGREGATES = frozenset({("avg", "last"), ("avg", "mean"), ("max", "max"), ("min", "min")})
 
 
 @dataclass
-class _Built:
+class Built:
     kind: SignalKind
     window: int | None  # a window the query itself fixes (a Loki range); None = the interval
     metric: MetricSignal | None = None
@@ -502,7 +507,7 @@ class _Built:
     minimum_duration: int = 0  # seconds the query itself asks the condition to last
 
 
-def _looked_back(ctx: _Ctx) -> str:
+def looked_back(ctx: Ctx) -> str:
     """The reducer that really applies: an instant query has one point, so it is `last`."""
     return "last" if ctx.instant else ctx.reducer
 
@@ -510,7 +515,7 @@ def _looked_back(ctx: _Ctx) -> str:
 # Query forms beyond the plain selector (counters, ratios, absent). Each returns None when the
 # expression is not its form, so the checks below still give their usual reason. Filled by
 # `importer.sources.grafana.rules2`; registering twice adds nothing.
-PromForm = Callable[[str, "_Ctx"], "_Built | None"]
+PromForm = Callable[[str, "Ctx"], "Built | None"]
 PROM_FORMS: list[PromForm] = []
 
 
@@ -519,53 +524,53 @@ def register_prom_form(form: PromForm) -> None:
         PROM_FORMS.append(form)
 
 
-def _time_window(ctx: _Ctx, reducer: str) -> tuple[int | None, list[str]]:
+def time_window(ctx: Ctx, reducer: str) -> tuple[int | None, list[str]]:
     """The window a gauge query fixes (None: the interval) and the notes about the reducer."""
     if reducer == "last":
         return None, [N_RANGE_IGNORED]
     if ctx.range_seconds is None:
-        raise _Fail(R_RANGE_MISSING)
+        raise Fail(R_RANGE_MISSING)
     return ctx.range_seconds, [N_RANGE_USED]
 
 
-def _prometheus(expr: str, ctx: _Ctx) -> _Built:
+def _prometheus(expr: str, ctx: Ctx) -> Built:
     if len(expr) > MAX_EXPRESSION:
-        raise _Fail(PROM_NOT_SIMPLE)
+        raise Fail(PROM_NOT_SIMPLE)
     for form in PROM_FORMS:
         built = form(expr, ctx)
         if built is not None:
             return built
     if ctx.node and split_comparison(expr) is not None:
-        raise _Fail(R_COMPARE_AND_NODE)
+        raise Fail(R_COMPARE_AND_NODE)
     feature = _first_feature(_skeleton(expr), PROM_FEATURES)
     if feature:
-        raise _Fail(feature)
+        raise Fail(feature)
     try:
-        aggregator, group_by, inner = _outer(expr, "avg|sum|min|max")
-    except _Fail:
-        raise _Fail(PROM_NOT_SIMPLE) from None
+        aggregator, group_by, inner = split_outer(expr, "avg|sum|min|max")
+    except Fail:
+        raise Fail(PROM_NOT_SIMPLE) from None
     selector = PROM_SELECTOR.fullmatch(inner)
     if selector is None:
-        raise _Fail(PROM_NOT_SIMPLE)
+        raise Fail(PROM_NOT_SIMPLE)
     name, body = selector[1], selector[2] or ""
-    matches = _matchers(body, PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True)
+    matches = parse_matchers(body, PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True)
     if name.endswith(COUNTER_SUFFIXES):
-        raise _Fail(PROM_COUNTER)
-    attribute = _attribute(name)
+        raise Fail(PROM_COUNTER)
+    attribute = nrql_attribute(name)
     notes = [N_METRIC]
-    reducer = _looked_back(ctx)
+    reducer = looked_back(ctx)
     if aggregator:
         # an aggregate across series, then a reduce over time, is two layers; one NRQL
         # aggregation covers both only when the two are the same operation
         if (aggregator, reducer) not in EXACT_AGGREGATES:
-            raise _Fail(R_AGG_MIX.format(agg=aggregator, reducer=reducer))
+            raise Fail(R_AGG_MIX.format(agg=aggregator, reducer=reducer))
         aggregation = PROM_AGGREGATIONS[aggregator]
     else:
         aggregation = REDUCERS[reducer]
         notes.append(N_PER_SERIES)
         if reducer == "last":
             notes.append(N_LAST)
-    fixed, window_notes = _time_window(ctx, reducer)
+    fixed, window_notes = time_window(ctx, reducer)
     notes += window_notes
     if any(m.negate for m in matches):
         notes.append(N_NEGATION)
@@ -577,10 +582,10 @@ def _prometheus(expr: str, ctx: _Ctx) -> _Built:
     metric = MetricSignal(
         terms={"a": term},
         aggregation=aggregation,
-        scope=[_tag_filter(m) for m in matches],
-        group_by=[_attribute(g) for g in group_by],
+        scope=[tag_filter(m) for m in matches],
+        group_by=[nrql_attribute(g) for g in group_by],
     )
-    return _Built(SignalKind.METRIC, fixed, metric=metric, notes=notes)
+    return Built(SignalKind.METRIC, fixed, metric=metric, notes=notes)
 
 
 # --- Loki ---
@@ -607,37 +612,37 @@ RANGE_SECONDS = {"s": 1, "m": 60, "h": 3600}
 
 def _line_filter(op: str, raw: str) -> CountFilter:
     if not STRICT_VALUE.fullmatch(raw):
-        raise _Fail(LOKI_NOT_SIMPLE)
+        raise Fail(LOKI_NOT_SIMPLE)
     text = _unescape(raw)
     if op in ("|~", "!~"):
         if not WORD.fullmatch(text):
-            raise _Fail(LOKI_REGEX)
+            raise Fail(LOKI_REGEX)
     elif "%" in text or "*" in text:
-        raise _Fail(LOKI_WILDCARD)
+        raise Fail(LOKI_WILDCARD)
     if not text:
-        raise _Fail(LOKI_NOT_SIMPLE)
+        raise Fail(LOKI_NOT_SIMPLE)
     return CountFilter(key="message", value=f"*{text}*", negate=op in ("!=", "!~"), wildcard=True)
 
 
-def _loki(expr: str, ctx: _Ctx) -> _Built:
+def _loki(expr: str, ctx: Ctx) -> Built:
     if ctx.reducer != "last" and not ctx.instant:
         # a range query returns a series of counts; min, max, mean or sum of them is not a count
-        raise _Fail(R_LOKI_REDUCER)
+        raise Fail(R_LOKI_REDUCER)
     if len(expr) > MAX_EXPRESSION:
-        raise _Fail(LOKI_NOT_SIMPLE)
+        raise Fail(LOKI_NOT_SIMPLE)
     feature = _first_feature(_skeleton(expr), LOKI_FEATURES)
     if feature:
-        raise _Fail(feature)
+        raise Fail(feature)
     try:
-        aggregator, group_by, inner = _outer(expr, "sum")
-    except _Fail:
-        raise _Fail(LOKI_NOT_SIMPLE) from None
+        aggregator, group_by, inner = split_outer(expr, "sum")
+    except Fail:
+        raise Fail(LOKI_NOT_SIMPLE) from None
     count = LOKI_COUNT.fullmatch(inner)
     if count is None or int(count[3]) == 0:
-        raise _Fail(LOKI_NOT_SIMPLE)
-    matches = _matchers(count[1], LOKI_MATCHER, LOKI_NOT_SIMPLE, absent_ok=False)
+        raise Fail(LOKI_NOT_SIMPLE)
+    matches = parse_matchers(count[1], LOKI_MATCHER, LOKI_NOT_SIMPLE, absent_ok=False)
     if not matches:
-        raise _Fail(LOKI_NOT_SIMPLE)
+        raise Fail(LOKI_NOT_SIMPLE)
     filters = [_count_filter(m) for m in matches]
     filters += [_line_filter(op, raw) for op, raw in LOKI_FILTER.findall(count[2])]
     notes = [N_LOGS]
@@ -646,12 +651,12 @@ def _loki(expr: str, ctx: _Ctx) -> _Built:
     if any(m.negate for m in matches):
         notes.append(N_NEGATION)
     seconds = int(count[3]) * RANGE_SECONDS[count[4]]
-    signal = CountSignal(filters=filters, group_by=[_attribute(g) for g in group_by])
-    return _Built(SignalKind.LOG, seconds, count=signal, notes=notes)
+    signal = CountSignal(filters=filters, group_by=[nrql_attribute(g) for g in group_by])
+    return Built(SignalKind.LOG, seconds, count=signal, notes=notes)
 
 
 # the data source type decides how the query is read
-HANDLERS: dict[str, Callable[[str, _Ctx], _Built]] = {
+HANDLERS: dict[str, Callable[[str, Ctx], Built]] = {
     "prometheus": _prometheus,
     "loki": _loki,
 }
@@ -700,15 +705,15 @@ def _check_expressions(rule: GrafanaRule) -> list[GfNode]:
     types = {_expression_type(n) for n in rule.data}
     queries = [n for n in rule.data if not _expression_type(n)]
     if "sql" in types:
-        raise _Fail(R_SQL)
+        raise Fail(R_SQL)
     if "classic_conditions" in types and not _lone_classic(rule, types):
-        raise _Fail(R_CLASSIC)
+        raise Fail(R_CLASSIC)
     if len({q.datasourceUid for q in queries}) > 1:
-        raise _Fail(R_MIXED)
+        raise Fail(R_MIXED)
     if "math" in types:
-        raise _Fail(_math_reason(rule))
+        raise Fail(_math_reason(rule))
     if len(queries) > 1:
-        raise _Fail(R_MULTI)
+        raise Fail(R_MULTI)
     return queries
 
 
@@ -724,7 +729,7 @@ def _reduce_step(
     if mode == "dropnn":
         notes.append(N_DROPNN)
     elif mode not in ("", "strict"):
-        raise _Fail(R_REDUCE_MODE)
+        raise Fail(R_REDUCE_MODE)
     return (
         nodes.get(str(step.model.get("expression"))),
         str(step.model.get("reducer", "")).lower(),
@@ -738,16 +743,16 @@ def _classic(
     """Query, reducer, threshold and notes of a classic condition with one test."""
     tests = condition.model.get("conditions")
     if not isinstance(tests, list) or len(tests) != 1:
-        raise _Fail(R_CLASSIC)
+        raise Fail(R_CLASSIC)
     test = _mapping(tests[0])
     params = _mapping(test.get("query")).get("params")
     query = nodes.get(str(params[0])) if isinstance(params, list) and len(params) == 1 else None
     if query is None or _expression_type(query):
-        raise _Fail(R_SHAPE)
+        raise Fail(R_SHAPE)
     reducer = str(_mapping(test.get("reducer")).get("type", "")).lower()
     reducer = "mean" if reducer == "avg" else reducer
     if reducer not in REDUCERS:
-        raise _Fail(R_REDUCER)
+        raise Fail(R_REDUCER)
     evaluator = _mapping(test.get("evaluator"))
     threshold = _make_threshold(evaluator.get("type"), evaluator.get("params"))
     return query, reducer, threshold, [N_CLASSIC]
@@ -759,12 +764,12 @@ def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, Threshold, bool, list[str
     nodes = {n.refId: n for n in rule.data}
     condition = nodes.get(rule.condition)
     if condition is None:
-        raise _Fail(R_NO_NODE)
+        raise Fail(R_NO_NODE)
     if _expression_type(condition) == "classic_conditions":
         query, reducer, threshold, notes = _classic(nodes, condition)
         return query, reducer, threshold, False, notes
     if _expression_type(condition) != "threshold" or len(nodes) != len(rule.data):
-        raise _Fail(R_SHAPE)
+        raise Fail(R_SHAPE)
     used = [condition]
     step, reducer, notes = _reduce_step(
         nodes, nodes.get(str(condition.model.get("expression"))), used
@@ -774,13 +779,13 @@ def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, Threshold, bool, list[str
         notes.append(N_RESAMPLE)
         step = nodes.get(str(step.model.get("expression")))
     if step is None or _expression_type(step):
-        raise _Fail(R_SHAPE)
+        raise Fail(R_SHAPE)
     used.append(step)
     if len(used) != len(rule.data):
         stray = any(_expression_type(n) == "resample" and n not in used for n in rule.data)
-        raise _Fail(R_RESAMPLE if stray else R_SHAPE)
+        raise Fail(R_RESAMPLE if stray else R_SHAPE)
     if reducer not in REDUCERS:
-        raise _Fail(R_REDUCER)
+        raise Fail(R_REDUCER)
     threshold, recovery = _threshold(condition)
     return step, reducer, threshold, recovery, notes
 
@@ -788,9 +793,9 @@ def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, Threshold, bool, list[str
 def _make_threshold(kind: object, params: object) -> Threshold:
     """The critical threshold for an evaluator type and its parameters."""
     if kind in RANGE_KINDS:
-        raise _Fail(R_RANGE)
+        raise Fail(R_RANGE)
     if not isinstance(kind, str) or kind not in OPERATORS:
-        raise _Fail(R_OPERATOR)
+        raise Fail(R_OPERATOR)
     if not (
         isinstance(params, list)
         and len(params) == 1
@@ -798,7 +803,7 @@ def _make_threshold(kind: object, params: object) -> Threshold:
         and not isinstance(params[0], bool)
         and math.isfinite(params[0])
     ):
-        raise _Fail(R_VALUE)
+        raise Fail(R_VALUE)
     return Threshold(severity=Severity.CRITICAL, operator=OPERATORS[kind], value=float(params[0]))
 
 
@@ -806,7 +811,7 @@ def _threshold(node: GfNode) -> tuple[Threshold, bool]:
     """The threshold, and whether the rule also had a recovery threshold."""
     conditions = node.model.get("conditions")
     if not isinstance(conditions, list) or len(conditions) != 1:
-        raise _Fail(R_SHAPE)
+        raise Fail(R_SHAPE)
     condition = _mapping(conditions[0])
     evaluator = _mapping(condition.get("evaluator"))
     threshold = _make_threshold(evaluator.get("type"), evaluator.get("params"))
@@ -846,7 +851,7 @@ class _Plan:
     kind: str  # the data source type
     inferred: bool
     expr: str
-    ctx: _Ctx
+    ctx: Ctx
     threshold: Threshold | None  # None: the query itself must fix it (absent)
     recovery: bool = False
     notes: list[str] = field(default_factory=list)
@@ -855,7 +860,7 @@ class _Plan:
 def _grafana_plan(rule: GrafanaRule) -> _Plan:
     query, reducer, threshold, recovery, notes = _pipeline(rule)
     kind, inferred = _datasource_type(query)
-    ctx = _Ctx(reducer, _instant(query), _range_seconds(query), threshold)
+    ctx = Ctx(reducer, _instant(query), _range_seconds(query), threshold)
     return _Plan(kind, inferred, str(query.model.get("expr", "")), ctx, threshold, recovery, notes)
 
 
@@ -865,13 +870,13 @@ def _rule_file_plan(rule: GrafanaRule) -> _Plan:
     expr = comparison.query if comparison else rule.expr
     threshold = _make_threshold(comparison.operator, [comparison.value]) if comparison else None
     kind, inferred = _kind_of(None, "", expr)
-    return _Plan(kind, inferred, expr, _Ctx("last", True, None, threshold, node=False), threshold)
+    return _Plan(kind, inferred, expr, Ctx("last", True, None, threshold, node=False), threshold)
 
 
-def _built(plan: _Plan) -> _Built:
+def _built(plan: _Plan) -> Built:
     handler = HANDLERS.get(plan.kind)
     if handler is None:
-        raise _Fail(R_DATASOURCE.format(label=OTHER_DATASOURCES.get(plan.kind, "unknown")))
+        raise Fail(R_DATASOURCE.format(label=OTHER_DATASOURCES.get(plan.kind, "unknown")))
     return handler(plan.expr, plan.ctx)
 
 
@@ -894,7 +899,7 @@ def _windows(rule: GrafanaRule, fixed: int | None, minimum: int = 0) -> tuple[in
         notes.append(N_INTERVAL_UNKNOWN)
     window = _whole_minutes(base)
     if window > MAX_AGGREGATION_WINDOW_SECONDS:
-        raise _Fail(R_AGG_WINDOW.format(seconds=window, limit=MAX_AGGREGATION_WINDOW_SECONDS))
+        raise Fail(R_AGG_WINDOW.format(seconds=window, limit=MAX_AGGREGATION_WINDOW_SECONDS))
     if window != base:
         notes.append(N_ROUNDED_WINDOW.format(seconds=base, window=window))
     if fixed is not None and rule.interval_seconds != fixed:
@@ -902,7 +907,7 @@ def _windows(rule: GrafanaRule, fixed: int | None, minimum: int = 0) -> tuple[in
     duration = max(rule.for_seconds, window, minimum)
     duration = -(-duration // window) * window
     if duration > MAX_DURATION_SECONDS:
-        raise _Fail(R_PENDING.format(seconds=rule.for_seconds, limit=MAX_DURATION_SECONDS))
+        raise Fail(R_PENDING.format(seconds=rule.for_seconds, limit=MAX_DURATION_SECONDS))
     if rule.for_seconds:
         notes.append(N_PENDING)
         if duration != rule.for_seconds:
@@ -943,7 +948,7 @@ def _text(value: Any) -> str:
 def _plan(rule: GrafanaRule) -> _Plan:
     if rule.datasource_managed:
         if not rule.expr:
-            raise _Fail(R_DS_MANAGED)
+            raise Fail(R_DS_MANAGED)
         return _rule_file_plan(rule)
     return _grafana_plan(rule)
 
@@ -973,14 +978,14 @@ def _tail_notes(rule: GrafanaRule, runbook_refused: bool) -> list[str]:
 
 def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
     if rule.unreadable:
-        raise _Fail(R_UNREADABLE)
+        raise Fail(R_UNREADABLE)
     if rule.record is not None:
-        raise _Fail(R_RECORD)
+        raise Fail(R_RECORD)
     plan = _plan(rule)
     built = _built(plan)
     threshold = built.threshold or plan.threshold
     if threshold is None:
-        raise _Fail(R_NO_COMPARISON)
+        raise Fail(R_NO_COMPARISON)
     window, duration, window_notes = _windows(rule, built.window, built.minimum_duration)
     no_data, state_notes = _states(rule, duration, built.kind is SignalKind.HEARTBEAT)
     notes = _rule_notes(rule, plan) + built.notes + plan.notes
@@ -1038,7 +1043,7 @@ def translate_rule(rule: GrafanaRule, key: str | None = None) -> IRMonitor:
     key = key or rule.uid or f"{rule.folder}/{rule.group}/{rule.title}"
     try:
         return _convert(rule, key)
-    except _Fail as fail:
+    except Fail as fail:
         return _monitor(rule, key, Confidence.MANUAL, [fail.reason])
 
 

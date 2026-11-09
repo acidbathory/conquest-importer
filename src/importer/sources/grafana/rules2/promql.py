@@ -2,7 +2,7 @@
 
 Each form is registered with `register_prom_form` and returns None when the expression is not
 its shape, so the older checks still give their reason. Nothing here reads text from the rule
-except through the shared matcher parsing and `_attribute`, which validate names.
+except through the shared matcher parsing and `nrql_attribute`, which validate names.
 
 What the evidence allows (docs/research/newrelic-notifications-and-nrql-reference.md, 2.3):
 `sum()` and arithmetic over aggregates are usable in alert conditions; `rate()`, `derivative()`
@@ -51,17 +51,17 @@ from importer.sources.grafana.translate import (
     R_RATIO_AGG,
     R_RATIO_SHAPE,
     RANGE_SECONDS,
-    _attribute,
-    _Built,
-    _Ctx,
-    _Fail,
-    _looked_back,
-    _Match,
-    _matchers,
-    _outer,
-    _tag_filter,
-    _time_window,
+    Built,
+    Ctx,
+    Fail,
+    Match,
+    looked_back,
+    nrql_attribute,
+    parse_matchers,
     register_prom_form,
+    split_outer,
+    tag_filter,
+    time_window,
 )
 
 COUNTER_SUFFIXES = ("_total", "_count", "_bucket")  # what New Relic stores as a delta count
@@ -82,7 +82,7 @@ class _Operand:
     aggregator: str | None
     group_by: tuple[str, ...]
     name: str
-    matches: tuple[_Match, ...]
+    matches: tuple[Match, ...]
     function: str | None = None
     seconds: int | None = None
 
@@ -90,8 +90,8 @@ class _Operand:
 def _operand(text: str) -> _Operand | None:
     """The operand, or None when the text is not this shape (so older checks answer)."""
     try:
-        aggregator, group_by, inner = _outer(text, "avg|sum|min|max")
-    except _Fail:
+        aggregator, group_by, inner = split_outer(text, "avg|sum|min|max")
+    except Fail:
         return None
     call = COUNTER_CALL.fullmatch(inner)
     if call:
@@ -103,7 +103,7 @@ def _operand(text: str) -> _Operand | None:
             return None
         function, seconds = None, None
         name, body = selector[1], selector[2]
-    matches = _matchers(body or "", PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True)
+    matches = parse_matchers(body or "", PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True)
     return _Operand(aggregator, tuple(group_by), name, tuple(matches), function, seconds)
 
 
@@ -139,23 +139,23 @@ def _in_name(masked: str, index: int) -> bool:
 # --- counters ---
 
 
-def _check_counter(operand: _Operand, ctx: _Ctx) -> int:
+def _check_counter(operand: _Operand, ctx: Ctx) -> int:
     """The range in seconds of a counter operand that converts; else raise the reason."""
     if operand.aggregator not in (None, "sum"):
-        raise _Fail(R_COUNTER_AGG.format(agg=operand.aggregator))
+        raise Fail(R_COUNTER_AGG.format(agg=operand.aggregator))
     if not operand.name.endswith(COUNTER_SUFFIXES):
-        raise _Fail(R_COUNTER_NAME)
-    reducer = _looked_back(ctx)
+        raise Fail(R_COUNTER_NAME)
+    reducer = looked_back(ctx)
     if reducer != "last":
-        raise _Fail(R_COUNTER_REDUCER.format(reducer=reducer))
+        raise Fail(R_COUNTER_REDUCER.format(reducer=reducer))
     seconds = operand.seconds or 0
     if seconds < MIN_RANGE or seconds % 60:
-        raise _Fail(R_COUNTER_RANGE.format(seconds=seconds))
+        raise Fail(R_COUNTER_RANGE.format(seconds=seconds))
     return seconds
 
 
 def _term(name: str) -> MetricTerm:
-    attribute = _attribute(name)
+    attribute = nrql_attribute(name)
     return MetricTerm(
         metric=attribute,
         space_aggregation=Aggregation.SUM,
@@ -163,7 +163,7 @@ def _term(name: str) -> MetricTerm:
     )
 
 
-def _counter_form(expr: str, ctx: _Ctx) -> _Built | None:
+def _counter_form(expr: str, ctx: Ctx) -> Built | None:
     if "rate" not in expr and "increase" not in expr:
         return None
     parts = _pieces(expr)
@@ -185,10 +185,10 @@ def _counter_form(expr: str, ctx: _Ctx) -> _Built | None:
         terms={"a": term},
         expression=division,
         aggregation=Aggregation.SUM,
-        scope=[_tag_filter(m) for m in operand.matches],
-        group_by=[_attribute(g) for g in operand.group_by],
+        scope=[tag_filter(m) for m in operand.matches],
+        group_by=[nrql_attribute(g) for g in operand.group_by],
     )
-    return _Built(SignalKind.METRIC, seconds, metric=metric, notes=notes)
+    return Built(SignalKind.METRIC, seconds, metric=metric, notes=notes)
 
 
 # --- ratios ---
@@ -220,20 +220,20 @@ def _same_shape(left: _Operand, right: _Operand) -> bool:
     ) == (right.aggregator, right.group_by, right.matches, right.function, right.seconds)
 
 
-def _ratio_window(left: _Operand, ctx: _Ctx) -> tuple[Aggregation, int | None, list[str]]:
+def _ratio_window(left: _Operand, ctx: Ctx) -> tuple[Aggregation, int | None, list[str]]:
     """Aggregation, fixed window and notes of the shared side of a ratio."""
     if left.function:
         return Aggregation.SUM, _check_counter(left, ctx), [N_COUNTER]
     if left.aggregator in ("min", "max"):
-        raise _Fail(R_RATIO_AGG.format(agg=left.aggregator))
-    reducer = _looked_back(ctx)
+        raise Fail(R_RATIO_AGG.format(agg=left.aggregator))
+    reducer = looked_back(ctx)
     if (left.aggregator, reducer) not in EXACT_AGGREGATES:
-        raise _Fail(R_AGG_MIX.format(agg=left.aggregator, reducer=reducer))
-    fixed, notes = _time_window(ctx, reducer)
+        raise Fail(R_AGG_MIX.format(agg=left.aggregator, reducer=reducer))
+    fixed, notes = time_window(ctx, reducer)
     return Aggregation.AVG, fixed, notes
 
 
-def _ratio_form(expr: str, ctx: _Ctx) -> _Built | None:
+def _ratio_form(expr: str, ctx: Ctx) -> Built | None:
     parts = _ratio_parts(expr)
     if parts is None:
         return None
@@ -241,7 +241,7 @@ def _ratio_form(expr: str, ctx: _Ctx) -> _Built | None:
     if left is None or right is None:
         return None
     if not _same_shape(left, right):
-        raise _Fail(R_RATIO_SHAPE)
+        raise Fail(R_RATIO_SHAPE)
     aggregation, fixed, notes = _ratio_window(left, ctx)
     ratio: Expr = BinOp(op="/", left=Ref(name="a"), right=Ref(name="b"))
     if parts[2] != 1.0:
@@ -253,13 +253,13 @@ def _ratio_form(expr: str, ctx: _Ctx) -> _Built | None:
         terms=terms,
         expression=ratio,
         aggregation=aggregation,
-        scope=[_tag_filter(m) for m in left.matches],
-        group_by=[_attribute(g) for g in left.group_by],
+        scope=[tag_filter(m) for m in left.matches],
+        group_by=[nrql_attribute(g) for g in left.group_by],
     )
     notes = [N_METRIC, *notes, N_RATIO_ZERO]
     if any(m.negate for m in left.matches):
         notes.append(N_NEGATION)
-    return _Built(SignalKind.METRIC, fixed, metric=metric, notes=notes)
+    return Built(SignalKind.METRIC, fixed, metric=metric, notes=notes)
 
 
 # --- absence ---
@@ -278,7 +278,7 @@ def _fires_on_one(threshold: Threshold) -> bool:
     return tests[threshold.operator]
 
 
-def _absent_form(expr: str, ctx: _Ctx) -> _Built | None:
+def _absent_form(expr: str, ctx: Ctx) -> Built | None:
     over_time = ABSENT_OVER_TIME.fullmatch(expr)
     found = over_time or ABSENT.fullmatch(expr)
     if found is None:
@@ -286,18 +286,18 @@ def _absent_form(expr: str, ctx: _Ctx) -> _Built | None:
     name, body = found[1], found[2]
     seconds = int(found[3]) * RANGE_SECONDS[found[4]] if over_time else 0
     if ctx.threshold is not None and not _fires_on_one(ctx.threshold):
-        raise _Fail(R_ABSENT_THRESHOLD)
-    matches = _matchers(body or "", PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True)
-    attribute = _attribute(name)
+        raise Fail(R_ABSENT_THRESHOLD)
+    matches = parse_matchers(body or "", PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True)
+    attribute = nrql_attribute(name)
     heartbeat = HeartbeatSignal(
         check=attribute,
-        scope=[_tag_filter(m) for m in matches],
+        scope=[tag_filter(m) for m in matches],
         nr_target=NrTarget(event="Metric", attribute=attribute),
     )
     notes = [N_METRIC, N_ABSENT]
     if any(m.negate for m in matches):
         notes.append(N_NEGATION)
-    return _Built(
+    return Built(
         SignalKind.HEARTBEAT,
         None,
         notes=notes,
