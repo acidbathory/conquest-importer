@@ -10,12 +10,17 @@ with what is known about the rule's labels:
 - ABSENT: not static, and the query has a known label set. The value is the empty string.
 - UNKNOWN: not static, and the label set is unknown (a bare selector), or the rule label is a
   template. Not decidable.
+- INJECTED: labels that Grafana adds to every alert instance (see `INJECTED_LABELS`). Decided only
+  when the value is known from the rule being routed; otherwise not decidable, and never the empty
+  string. That Grafana adds exactly these labels, with these names, is UNVERIFIED (from memory
+  of the alerting code, not read from a source file).
 
 Undecidable cases are listed, never guessed, and the routes that were decided are still
 returned. See docs/research/grafana-notifications-datapath.md section 2.3.
 """
 
 import re
+import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Literal
@@ -26,7 +31,14 @@ from importer.sources.grafana.notifications import matchers as mt
 from importer.sources.grafana.notifications import reasons as R
 from importer.sources.grafana.notifications.models import Matcher, PolicyNode, PolicyTree
 
-MAX_WORK = 5_000_000  # node evaluations in one call
+MAX_WORK = 100_000  # node evaluations for one rule (a full tree has at most 10,000 nodes)
+MAX_SECONDS = 120  # wall clock for one call; the rules after it are reported as limited
+CLOCK_EVERY = 1024  # node evaluations between two looks at the clock
+_clock = time.monotonic  # replaced in tests
+# Labels Grafana puts on alert instances. UNVERIFIED: names taken from memory.
+INJECTED_LABELS = frozenset(
+    {"__alert_rule_uid__", "__alert_rule_namespace_uid__", "datasource_uid", "ref_id"}
+)
 MAX_LEAVES = 1000  # routes one rule may reach
 MAX_RESIDUALS = 20  # predicates on one route (the muting rule limit is 20 conditions)
 MAX_FILTER_CHARS = 4096
@@ -43,6 +55,8 @@ NOTE_SPLIT = (
     "the condition names were split over several workflows to keep each filter under the size limit"
 )
 NOTE_GROUP_BY = "rules merged into this route have different group_by settings; the first is shown"
+NOTE_TIMINGS = "rules merged into this route have different timings; the first is shown"
+NOTE_PREFERENCE = "rules merged into this route map to different incident preferences"
 
 Status = Literal["true", "false", "preds", "undecided"]
 
@@ -56,6 +70,8 @@ class RuleLabels:
     folder: str = ""
     by_labels: frozenset[str] | None = None  # labels of the query's by(...); None when unknown
     receiver: str | None = None  # simplified routing: skips the tree
+    uid: str = ""  # the rule uid, the value of __alert_rule_uid__ (empty when not carried)
+    namespace_uid: str = ""  # the folder uid, the value of __alert_rule_namespace_uid__
 
 
 class Predicate(BaseModel):
@@ -141,24 +157,30 @@ def _negate(preds: tuple[_P, ...]) -> tuple[_P, ...] | None:
 class _Walk:
     """The walk for one rule."""
 
-    def __init__(self, rule: RuleLabels, counter: list[int]) -> None:
+    def __init__(self, rule: RuleLabels, deadline: float) -> None:
         self.rule = rule
-        self.counter = counter
+        self.deadline = deadline
+        self.work = 0
         self.leaves: list[_Leaf] = []
-        self.undecided: list[Undecided] = []
-        self.static = {
-            **{k: v for k, v in rule.labels.items() if isinstance(v, str)},
-            "alertname": rule.name,
-            "grafana_folder": rule.folder,
-        }
+        self.undecided: dict[tuple[str, str], Undecided] = {}
+        own = {k: v for k, v in rule.labels.items() if isinstance(v, str)}
+        self.static = {k: v for k, v in own.items() if k not in INJECTED_LABELS}
+        self.static["alertname"] = rule.name
+        self.static["grafana_folder"] = rule.folder
+        if rule.uid:
+            self.static["__alert_rule_uid__"] = rule.uid
+        if rule.namespace_uid:
+            self.static["__alert_rule_namespace_uid__"] = rule.namespace_uid
         self.templated = {k for k, v in rule.labels.items() if not isinstance(v, str) or "{{" in v}
+        # injected labels with no known value are never the empty string
+        self.unknown = (INJECTED_LABELS - set(self.static)) | self.templated
 
     # -- one matcher --
 
     def _undecided(self, path: str, reason: str) -> None:
-        item = Undecided(rule=self.rule.name, path=path, reason=reason)
-        if item not in self.undecided:
-            self.undecided.append(item)
+        key = (path, reason)
+        if key not in self.undecided:
+            self.undecided[key] = Undecided(rule=self.rule.name, path=path, reason=reason)
 
     def _dynamic(self, m: Matcher) -> tuple[Status, tuple[_P, ...], str]:
         if not LABEL_NAME.fullmatch(m.name):
@@ -189,7 +211,7 @@ class _Walk:
 
     def _matcher(self, m: Matcher) -> tuple[Status, tuple[_P, ...], str]:
         by = self.rule.by_labels
-        if m.name in self.templated:
+        if m.name in self.unknown:
             return "undecided", (), R.R_POLICY_UNDECIDABLE
         if m.name in self.static:
             value: str | None = self.static[m.name]
@@ -206,8 +228,8 @@ class _Walk:
 
     def _own(self, node: PolicyNode, path: str) -> tuple[Status, tuple[_P, ...]]:
         """Do the node's own matchers hold? A false matcher beats an undecidable one."""
-        self.counter[0] += 1
-        if self.counter[0] > MAX_WORK:
+        self.work += 1
+        if self.work > MAX_WORK or (self.work % CLOCK_EVERY == 0 and _clock() > self.deadline):
             raise _Limit
         preds: list[_P] = []
         reason = R.R_POLICY_BAD_MATCHER if node.unparsed_matchers else ""
@@ -326,11 +348,10 @@ def _preference(group_by: tuple[str, ...] | None) -> str:
 def _entry(leaves: list[_Leaf], names: list[str]) -> RoutingEntry:
     first = leaves[0]
     preds = sorted(first.preds, key=lambda p: (p.attribute, p.operator, p.values))
-    preference = _preference(first.group_by)
-    group_bys = {leaf.group_by for leaf in leaves}
+    preferences = {_preference(leaf.group_by) for leaf in leaves}
     reasons: list[str] = []
     notes: list[str] = []
-    if any(t is not None for leaf in leaves for t in leaf.timings) or not preference:
+    if any(t is not None for leaf in leaves for t in leaf.timings) or "" in preferences:
         reasons.append(R.R_POLICY_TIMING)
     if first.active:
         reasons.append(R.R_MUTE_ACTIVE)
@@ -338,8 +359,12 @@ def _entry(leaves: list[_Leaf], names: list[str]) -> RoutingEntry:
         notes.append(NOTE_ISSUE)
     if any(p.operator in ("STARTS_WITH", "ENDS_WITH") for p in preds):
         notes.append(NOTE_PREFIX)
-    if len(group_bys) > 1:
+    if len({leaf.group_by for leaf in leaves}) > 1:
         notes.append(NOTE_GROUP_BY)
+    if len({leaf.timings for leaf in leaves}) > 1:
+        notes.append(NOTE_TIMINGS)
+    if len(preferences) > 1:
+        notes.append(NOTE_PREFERENCE)
     return RoutingEntry(
         receiver=first.receiver,
         condition_names=names,
@@ -350,7 +375,7 @@ def _entry(leaves: list[_Leaf], names: list[str]) -> RoutingEntry:
         mute_time_intervals=list(first.mute),
         active_time_intervals=list(first.active),
         group_by=list(first.group_by) if first.group_by is not None else None,
-        incident_preference=preference,
+        incident_preference=_preference(first.group_by),
         reasons=reasons,
         notes=notes,
     )
@@ -403,19 +428,21 @@ def flatten_policy_tree(tree: PolicyTree, rules: Sequence[RuleLabels]) -> Routin
         tuple(root.group_by) if root.group_by is not None else None,
         (root.group_wait_seconds, root.group_interval_seconds, root.repeat_interval_seconds),
     )
-    counter = [0]
+    deadline = _clock() + MAX_SECONDS
     leaves: list[_Leaf] = []
     for rule in rules:
         if rule.receiver:  # simplified routing names its receiver and skips the tree
             leaves.append(_Leaf(rule.name, rule.receiver, (), (), (), None, (None, None, None)))
             continue
-        walk = _Walk(rule, counter)
+        walk = _Walk(rule, deadline)
         try:
+            if _clock() > deadline:
+                raise _Limit
             walk.visit(root, "", root_eff, ())
         except _Limit:
             plan.undecidable.append(Undecided(rule=rule.name, path="", reason=R.R_POLICY_LIMIT))
             continue
-        plan.undecidable.extend(walk.undecided)
+        plan.undecidable.extend(walk.undecided.values())
         leaves.extend(walk.leaves)
     plan.unrouted = sorted({leaf.rule for leaf in leaves if not leaf.receiver})
     if plan.unrouted:
