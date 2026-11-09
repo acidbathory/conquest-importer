@@ -14,12 +14,14 @@ from importer.core.text import printable
 from importer.sources.dynatrace.dashboards.models import load_documents
 from importer.sources.dynatrace.dashboards.plan import plan_documents, write_plan
 from importer.sources.dynatrace.extract import DynatraceError
+from importer.sources.dynatrace.inventory import reinstrument, synthetics
 from importer.sources.dynatrace.inventory.extract import (
     environment_url,
     http_getter,
     inventory_token,
 )
 from importer.sources.dynatrace.inventory.extract import extract as extract_inventory
+from importer.sources.dynatrace.inventory.models import load_entities, load_locations, load_monitors
 
 OutOption = Annotated[Path, typer.Option(help="New folder for the result")]
 
@@ -99,4 +101,65 @@ def register(app: typer.Typer) -> None:
             f"({t.variables_exact} exact, {t.variables_draft} draft, {t.variables_manual} manual)."
         )
         typer.echo(f"{t.no_data_source} tiles read data New Relic does not have.")
+        typer.echo(f"Wrote {out / 'report.md'} and {out / 'plan.json'}")
+
+    @app.command("plan-dynatrace-reinstrumentation")
+    def plan_reinstrumentation_command(
+        source: Annotated[
+            Path,
+            typer.Option("--in", help="Folder written by extract-dynatrace-inventory (entities/)"),
+        ],
+        out: Annotated[Path, typer.Option(help="New folder for report.md and plan.json")],
+    ) -> None:
+        """Count what Dynatrace monitors and name the New Relic agent or integration for each.
+
+        Offline. Counts per entity type, per technology and per target, the table rows that are
+        not confirmed, and what has no migration path (OneAgent deep monitoring, PurePath,
+        Davis). Nothing is installed.
+        """
+        try:
+            loaded = load_entities(source)
+            if not loaded.items:
+                raise ValueError(f"no entities found in {source}")
+            plan = reinstrument.plan_reinstrumentation(loaded)
+            reinstrument.write_plan(plan, out)
+        except (ValueError, OSError) as exc:
+            raise _fail(exc) from None
+        typer.echo(
+            f"Planned {plan.entities_read} entities in {len(plan.types)} types; "
+            f"{len(plan.targets)} New Relic targets."
+        )
+        typer.echo(f"Wrote {out / 'report.md'} and {out / 'plan.json'}")
+
+    @app.command("plan-dynatrace-synthetics")
+    def plan_synthetics_command(
+        source: Annotated[
+            Path,
+            typer.Option(
+                "--in", help="Folder written by extract-dynatrace-inventory (synthetics/)"
+            ),
+        ],
+        out: Annotated[Path, typer.Option(help="New folder for report.md and plan.json")],
+    ) -> None:
+        """Map each synthetic monitor to a New Relic monitor type and its locations.
+
+        Offline. Says which monitors could be created from the JSON alone (simple, simple
+        browser, certificate check) and which need a script a person writes. Nothing is
+        created.
+        """
+        try:
+            monitors = load_monitors(source)
+            if not monitors.items:
+                raise ValueError(f"no synthetic monitors found in {source}")
+            plan = synthetics.plan_synthetics(
+                monitors.items, load_locations(source).items, monitors.skipped
+            )
+            synthetics.write_plan(plan, out)
+        except (ValueError, OSError) as exc:
+            raise _fail(exc) from None
+        creatable = sum(m.creatable_from_json for m in plan.monitors)
+        typer.echo(
+            f"Planned {len(plan.monitors)} monitors; {creatable} could be created from the "
+            "JSON alone."
+        )
         typer.echo(f"Wrote {out / 'report.md'} and {out / 'plan.json'}")

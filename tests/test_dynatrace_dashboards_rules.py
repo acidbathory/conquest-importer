@@ -11,6 +11,7 @@ from importer.core.remediation import remedies_for, steps_for
 from importer.core.taxonomy import Category, classify
 from importer.sources import REGISTRY
 from importer.sources.dynatrace.dashboards import reasons, remediation_rules
+from importer.sources.dynatrace.inventory import reasons as inventory_reasons
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CATEGORY_BY_PREFIX = [
@@ -40,6 +41,7 @@ def other_reasons() -> list[str]:
     for source, folder in OTHER_FIXTURES:
         found += [r for m in REGISTRY[source].convert(FIXTURES / folder) for r in m.reasons]
     found += json.loads((FIXTURES / "taxonomy_before_grafana.json").read_text())
+    found += inventory_reasons.ALL
     return sorted(set(found))
 
 

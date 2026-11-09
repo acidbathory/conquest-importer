@@ -33,7 +33,9 @@ class Monitor(BaseModel):
     locations: list[str] = []
     script: dict[str, Any] = {}
     outage_handling: bool = False  # global or local outage handling is on
+    outage_runs: int | None = None  # consecutive failed runs that open a global outage
     loading_thresholds: bool = False
+    loading_ms: int | None = None  # the first loading-time threshold
 
 
 class Location(BaseModel):
@@ -123,6 +125,21 @@ def _strings(value: object) -> list[str]:
     return [s[:200] for s in found[:MAX_LIST_ITEMS] if isinstance(s, str)]
 
 
+def _small(value: object) -> int | None:
+    """A whole number in a sane range (it goes into a plan field), else None."""
+    return (
+        value
+        if isinstance(value, int) and not isinstance(value, bool) and 0 < value < 10**7
+        else None
+    )
+
+
+def _first_threshold(thresholds: object) -> object:
+    items = thresholds.get("thresholds") if isinstance(thresholds, dict) else None
+    first = items[0] if isinstance(items, list) and items else None
+    return first.get("valueMs") if isinstance(first, dict) else None
+
+
 def parse_monitor(ref: str, raw: object) -> Monitor | None:
     if not isinstance(raw, dict) or not isinstance(raw.get("type"), str):
         return None
@@ -132,6 +149,7 @@ def parse_monitor(ref: str, raw: object) -> Monitor | None:
     outage = anomaly.get("outageHandling")
     outage = outage if isinstance(outage, dict) else {}
     thresholds = anomaly.get("loadingTimeThresholds")
+    policy = outage.get("globalOutagePolicy")
     frequency = raw.get("frequencyMin")
     return Monitor(
         ref=ref,
@@ -142,7 +160,9 @@ def parse_monitor(ref: str, raw: object) -> Monitor | None:
         locations=_strings(raw.get("locations")),
         script=script if isinstance(script, dict) else {},
         outage_handling=bool(outage.get("globalOutage") or outage.get("localOutage")),
+        outage_runs=_small(policy.get("consecutiveRuns") if isinstance(policy, dict) else None),
         loading_thresholds=isinstance(thresholds, dict) and thresholds.get("enabled") is True,
+        loading_ms=_small(_first_threshold(thresholds)),
     )
 
 
