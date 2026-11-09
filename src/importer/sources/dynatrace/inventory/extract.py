@@ -48,14 +48,16 @@ from typing import Any
 
 import httpx
 
+from importer.core.dynatrace_env import PLATFORM_HOST, TokenProblem, env_token
+from importer.core.dynatrace_env import environment_url as environment_url
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.redact import safe_name
-from importer.core.safe_http import ReadBudget, get_json, is_plain_token
+from importer.core.safe_http import ReadBudget, get_json
 from importer.sources.dynatrace.extract import DynatraceError
 from importer.sources.dynatrace.inventory import sanitize
 from importer.sources.dynatrace.inventory.models import dicts, is_count, label
 
-ENV_URL = re.compile(r"https://[a-z0-9]+\.apps\.dynatrace\.com")
+ENV_URL = PLATFORM_HOST
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 MONITOR_ID = re.compile(r"[A-Z_]+-[0-9A-F]{16}")
 SERVICE = "Dynatrace"
@@ -99,23 +101,13 @@ Getter = Callable[[str, dict[str, str]], dict[str, Any]]
 
 
 def inventory_token() -> str:
-    token = os.environ.get("DYNATRACE_API_TOKEN", "").strip()
-    if not token:
-        raise DynatraceError(
-            "DYNATRACE_API_TOKEN is not set. Create a token that can read documents "
-            "(document:documents:read), synthetic monitors, classic dashboards (ReadConfig) "
-            "and entities (entities.read), and put it in .env"
+    try:
+        return env_token(
+            "Create a token that can read documents (document:documents:read), synthetic "
+            "monitors, classic dashboards (ReadConfig) and entities (entities.read)"
         )
-    if not is_plain_token(token):
-        raise DynatraceError(
-            "DYNATRACE_API_TOKEN must be plain ASCII text with no spaces; check that it was "
-            "pasted without a smart quote, a dash or a line break"
-        )
-    return token
-
-
-def environment_url() -> str:
-    return os.environ.get("DYNATRACE_ENV_URL", "").strip()
+    except TokenProblem as exc:
+        raise DynatraceError(str(exc)) from None
 
 
 def is_platform_host(url: str) -> bool:

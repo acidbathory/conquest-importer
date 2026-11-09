@@ -15,8 +15,6 @@ anything is written, so the export holds no secret, URL or address.
 """
 
 import json
-import os
-import re
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -25,14 +23,19 @@ from typing import Any
 
 import httpx
 
+from importer.core.dynatrace_env import (
+    CLASSIC_HOST,
+    PLATFORM_HOST,
+    TokenProblem,
+    env_token,
+)
+from importer.core.dynatrace_env import environment_url as environment_url
 from importer.core.ids import MAX_INPUT_BYTES
-from importer.core.safe_http import ReadBudget, decode_json, is_plain_token
+from importer.core.safe_http import ReadBudget, decode_json
 from importer.sources.dynatrace.classic import models
 
-PLATFORM_HOST = re.compile(r"https://[a-z0-9]+\.apps\.dynatrace\.com")
 # Classic SaaS tenants (and hybrid ones) keep the same Settings objects behind the Environment
 # API on their own host, with an API token. The pattern is as strict as the Platform one.
-CLASSIC_HOST = re.compile(r"https://[a-z0-9]+\.live\.dynatrace\.com")
 PRIMARY_PATH = "/platform/classic/environment-api/v2/settings/objects"
 FALLBACK_PATH = "/platform/settings/v1/objects"
 CLASSIC_PATH = "/api/v2/settings/objects"
@@ -79,23 +82,13 @@ def is_env_url(url: str) -> bool:
 
 
 def api_token() -> str:
-    token = os.environ.get("DYNATRACE_API_TOKEN", "").strip()
-    if not token:
-        raise ClassicError(
-            "DYNATRACE_API_TOKEN is not set. Create a platform token with the scopes "
-            "settings:objects:read and settings:schemas:read (or an API token with settings.read "
-            "for a classic host) and put it in .env"
+    try:
+        return env_token(
+            "Create a platform token with the scopes settings:objects:read and "
+            "settings:schemas:read (or an API token with settings.read for a classic host)"
         )
-    if not is_plain_token(token):
-        raise ClassicError(
-            "DYNATRACE_API_TOKEN must be plain ASCII text with no spaces; check that it was "
-            "pasted without a smart quote, a dash or a line break"
-        )
-    return token
-
-
-def environment_url() -> str:
-    return os.environ.get("DYNATRACE_ENV_URL", "").strip()
+    except TokenProblem as exc:
+        raise ClassicError(str(exc)) from None
 
 
 def _check_url(env_url: str) -> tuple[str, str]:

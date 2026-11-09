@@ -13,7 +13,6 @@ tried against a tenant that has workflows or SLOs (the tenant used so far had no
 """
 
 import json
-import os
 import re
 import time
 from collections.abc import Callable, Iterator
@@ -24,10 +23,18 @@ from typing import Any
 
 import httpx
 
+from importer.core.dynatrace_env import (
+    PLATFORM_HOST,
+    TokenProblem,
+    env_token,
+    is_platform_url,
+)
+from importer.core.dynatrace_env import environment_url as environment_url
+from importer.core.dynatrace_env import is_plain_token as is_plain_token
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.text import printable
 
-ENV_URL = re.compile(r"https://[a-z0-9]+\.apps\.dynatrace\.com")
+ENV_URL = PLATFORM_HOST
 WORKFLOW_ID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 BEARER = re.compile(r"Bearer\s+\S+", re.IGNORECASE)
 TOKEN_LIKE = re.compile(r"dt0[a-z][0-9]{2}\.[A-Za-z0-9._-]+")
@@ -49,33 +56,16 @@ class DynatraceError(Exception):
     """Reading from Dynatrace failed; the message is safe to show."""
 
 
-def is_plain_token(token: str) -> bool:
-    """True for non-empty ASCII text with no spaces or control characters."""
-    return bool(token) and token.isascii() and token.isprintable() and " " not in token
-
-
-def is_env_url(url: str) -> bool:
-    """True for https://<tenant id>.apps.dynatrace.com, with or without a trailing slash."""
-    return ENV_URL.fullmatch(url.removesuffix("/")) is not None
+is_env_url = is_platform_url
 
 
 def api_token() -> str:
-    token = os.environ.get("DYNATRACE_API_TOKEN", "").strip()
-    if not token:
-        raise DynatraceError(
-            "DYNATRACE_API_TOKEN is not set. Create a platform token with the scopes "
-            "automation:workflows:read and slo:slos:read and put it in .env"
+    try:
+        return env_token(
+            "Create a platform token with the scopes automation:workflows:read and slo:slos:read"
         )
-    if not is_plain_token(token):
-        raise DynatraceError(
-            "DYNATRACE_API_TOKEN must be plain ASCII text with no spaces; check that it was "
-            "pasted without a smart quote, a dash or a line break"
-        )
-    return token
-
-
-def environment_url() -> str:
-    return os.environ.get("DYNATRACE_ENV_URL", "").strip()
+    except TokenProblem as exc:
+        raise DynatraceError(str(exc)) from None
 
 
 def scrub(text: str, token: str) -> str:
