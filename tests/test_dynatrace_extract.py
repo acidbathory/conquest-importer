@@ -1,7 +1,7 @@
 """The Dynatrace extractor reads only allow-listed lists, checks the host, and bounds its paging."""
 
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -191,6 +191,5 @@ def test_cli_reads_the_tenant_and_prints_next_steps(
     assert (out / "workflows").is_dir()
 
 
-def test_cli_help_mentions_the_certificate_variable() -> None:
-    result = CliRunner().invoke(app, ["extract-dynatrace", "--help"])
-    assert "SSL_CERT_FILE" in " ".join(result.output.split())
+def test_cli_help_mentions_the_certificate_variable(help_text: Callable[..., str]) -> None:
+    assert "SSL_CERT_FILE" in help_text("extract-dynatrace", "--help")

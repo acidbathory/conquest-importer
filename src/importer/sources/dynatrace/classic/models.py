@@ -14,6 +14,7 @@ from typing import Annotated, Any
 from pydantic import BaseModel, BeforeValidator, ConfigDict, FiniteFloat, ValidationError
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.json_depth import TooDeepError, check_depth
 from importer.core.text import printable
 
 MAX_FILES = 10_000
@@ -301,8 +302,10 @@ def _read(file: Path) -> Any:
     if file.stat().st_size > MAX_INPUT_BYTES:
         raise ValueError(f"{file.name} is larger than {MAX_INPUT_BYTES // (1024 * 1024)} MB")
     try:
-        return json.loads(file.read_text())
-    except RecursionError:
+        text = file.read_text()
+        check_depth(text)
+        return json.loads(text)
+    except (TooDeepError, RecursionError):
         raise ValueError(f"{file.name} is nested too deeply to read") from None
     except json.JSONDecodeError as exc:
         raise ValueError(

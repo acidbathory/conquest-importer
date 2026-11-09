@@ -1,13 +1,15 @@
 """Commands for the Dynatrace classic source: extract-dynatrace-classic."""
 
+from functools import partial
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from importer.core.apply import NewRelicAPIError, NewRelicClient
+from importer.core.apply import NewRelicClient
+from importer.core.data_check import run_data_check
 from importer.core.ir import Confidence, IRMonitor
-from importer.core.secrets import MissingSecretError, require_env
+from importer.core.secrets import require_env
 from importer.core.text import printable
 from importer.sources.dynatrace.classic import data_check
 from importer.sources.dynatrace.classic.extract import (
@@ -71,25 +73,23 @@ def check_command(
     fires; the data prerequisite in each conversion says what to install. Exits with code 2 if
     any converted condition has no data.
     """
-    if not nr_account_id or not 1 <= hours <= MAX_HOURS:
-        typer.echo("Error: --nr-account-id is required and --hours must be 1 to 168", err=True)
-        raise typer.Exit(code=1)
-    try:
-        monitors = [
-            IRMonitor.model_validate_json(p.read_text())
-            for p in sorted((alerts / "ir").glob("*.json"))
-        ]
-        with NewRelicClient(require_env("NEW_RELIC_API_KEY"), nr_region) as client:
-            checks = data_check.check_all(client, nr_account_id, monitors, hours)
-    except (NewRelicAPIError, MissingSecretError, ValueError, OSError) as exc:
-        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
-        raise typer.Exit(code=1) from None
-    text = data_check.render_report(checks, hours)
-    typer.echo(text)
-    if out:
-        out.write_text(text)
-    if data_check.has_blind_conditions(checks):
-        raise typer.Exit(code=2)
+    code = run_data_check(
+        alerts,
+        nr_account_id,
+        nr_region,
+        hours,
+        out,
+        data_check,
+        typer.echo,
+        partial(typer.echo, err=True),
+        open_client=_open_new_relic,
+    )
+    if code:
+        raise typer.Exit(code=code)
+
+
+def _open_new_relic(region: str) -> NewRelicClient:
+    return NewRelicClient(require_env("NEW_RELIC_API_KEY"), region)
 
 
 def validate_map_command(

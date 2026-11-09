@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.json_depth import TooDeepError, check_depth
 from importer.core.redact import looks_sensitive
 from importer.core.text import printable
 from importer.sources.grafana.models import parse_duration
@@ -149,8 +150,10 @@ def load_rule_file(path: Path, kind: str = "prometheus") -> list[PromRuleGroup]:
     if path.stat().st_size > MAX_INPUT_BYTES:
         raise ValueError(f"{path.name} is larger than the importer accepts")
     try:
-        return load_rule_groups(json.loads(path.read_text()), kind)
-    except RecursionError:
+        text = path.read_text()
+        check_depth(text)
+        return load_rule_groups(json.loads(text), kind)
+    except (TooDeepError, RecursionError):
         raise ValueError("a rule file is nested too deeply to read") from None
     except json.JSONDecodeError:
         raise ValueError(f"{path.name} is not JSON. {RULE_FILE_FORMAT_HELP}") from None

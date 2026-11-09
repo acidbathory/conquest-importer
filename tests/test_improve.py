@@ -8,8 +8,10 @@ from typer.testing import CliRunner
 
 from importer.cli import app
 from importer.core import improve
+from importer.sources import REGISTRY
 
 ROOT = Path(__file__).parent.parent
+CORE = {"cloudwatch", "gcp"}  # always measured; other sources appear as they register fixtures
 
 
 def result(total: int, converted: int, unguided: list[str] | None = None) -> dict[str, Any]:
@@ -29,7 +31,7 @@ def result(total: int, converted: int, unguided: list[str] | None = None) -> dic
 
 def test_measure_covers_every_source_with_sane_numbers() -> None:
     sources = improve.measure(ROOT)["sources"]
-    assert set(sources) == {"cloudwatch", "gcp", "dynatrace", "dynatrace-classic", "grafana"}
+    assert CORE <= set(sources) <= set(REGISTRY)
     for s in sources.values():
         assert 0 < s["converted"] <= s["total"] and 0 <= s["rate"] <= 1
 

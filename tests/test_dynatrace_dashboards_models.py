@@ -102,7 +102,7 @@ def test_more_tiles_than_the_cap_are_counted_not_read(tmp_path: Path) -> None:
     ("text", "code"),
     [
         ("{not json", m.NOT_JSON),
-        ("[" * 100_000, m.NOT_JSON),  # the JSON parser's own recursion limit
+        ("[" * 100_000, m.TOO_DEEP),  # refused by our depth check, whatever the interpreter does
         ('{"a":' * 80 + "1" + "}" * 80, m.TOO_DEEP),
     ],
 )

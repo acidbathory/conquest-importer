@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.json_depth import check_depth
 from importer.sources.grafana.dashboards.classic import read_classic
 from importer.sources.grafana.dashboards.common import Found, mapping, note, sequence, text
 from importer.sources.grafana.dashboards.models import (
@@ -161,7 +162,9 @@ def _read_json(path: Path) -> tuple[Any, str]:
         if path.stat().st_size > MAX_INPUT_BYTES:
             return None, U_TOO_BIG
         # utf-8-sig drops a byte order mark that editors on Windows add
-        return json.loads(path.read_bytes().decode("utf-8-sig")), ""
+        text = path.read_bytes().decode("utf-8-sig")
+        check_depth(text)
+        return json.loads(text), ""
     except UnicodeDecodeError:
         return None, U_ENCODING
     except (ValueError, RecursionError, OSError):  # bad JSON or nesting deeper than the parser

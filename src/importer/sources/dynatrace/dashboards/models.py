@@ -19,6 +19,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.json_depth import TooDeepError, check_depth
 from importer.core.text import printable
 
 MAX_FILES = 5000
@@ -371,8 +372,12 @@ def read_file(path: Path) -> list[Document]:
     try:
         if path.stat().st_size > MAX_INPUT_BYTES:
             return [_fail(ref, TOO_LARGE)]
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (ValueError, RecursionError, OSError):
+        text = path.read_text(encoding="utf-8")
+        check_depth(text)
+        data = json.loads(text)
+    except (TooDeepError, RecursionError):
+        return [_fail(ref, TOO_DEEP)]
+    except (ValueError, OSError):
         return [_fail(ref, NOT_JSON)]
     if depth_exceeds(data, MAX_DEPTH):
         return [_fail(ref, TOO_DEEP)]

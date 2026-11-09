@@ -7,6 +7,21 @@ permissions:
   contents: read
 
 jobs:
+  python-versions:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --locked
+      - run: uv run mypy src tests
+      - run: uv run pytest
+
   check:
     runs-on: ubuntu-latest
     steps:

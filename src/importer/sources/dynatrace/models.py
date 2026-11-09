@@ -11,6 +11,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.json_depth import check_depth
 
 MAX_FILES = 10_000
 WORKFLOW_KEYS = ("tasks", "trigger")
@@ -96,7 +97,9 @@ def load_exports(path: Path) -> list[DtItem]:
     for file in _files(path):
         if file.stat().st_size > MAX_INPUT_BYTES:
             raise ValueError(f"{file} is larger than {MAX_INPUT_BYTES // (1024 * 1024)} MB")
-        items += [_item(raw) for raw in _items(json.loads(file.read_text()))]
+        text = file.read_text()
+        check_depth(text)
+        items += [_item(raw) for raw in _items(json.loads(text))]
     return items
 
 

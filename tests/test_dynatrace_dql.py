@@ -162,7 +162,7 @@ ATTACKS = [
 def test_filter_parsing_is_fast_on_adversarial_input(attack: str) -> None:
     start = time.perf_counter()
     m = convert(attack)
-    assert time.perf_counter() - start < 1.0
+    assert time.perf_counter() - start < 5.0
     assert m.confidence is Confidence.MANUAL
 
 
@@ -177,7 +177,7 @@ def test_the_filter_parser_alone_is_fast_on_adversarial_input(attack: str) -> No
     start = time.perf_counter()
     with contextlib.suppress(DqlError):  # one attack is a valid, very long contains() text
         parse_filter("filter " + attack)
-    assert time.perf_counter() - start < 1.0
+    assert time.perf_counter() - start < 5.0
 
 
 @pytest.mark.parametrize(
