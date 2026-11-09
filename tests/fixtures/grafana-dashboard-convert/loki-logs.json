@@ -1,0 +1,215 @@
+{
+  "uid": "loki-logs",
+  "title": "Loki logs",
+  "schemaVersion": 39,
+  "tags": [
+    "fixture"
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "value": "prom-main"
+        }
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "name": "Annotations & Alerts",
+        "enable": true
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Errors per level",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (level) (count_over_time({app=\"checkout\", env=\"prod\"} |= \"error\" [$__interval]))",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-main"
+          },
+          "legendFormat": "{{level}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Log rate",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate({app=\"checkout\"}[$__rate_interval]))",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-main"
+          },
+          "legendFormat": "all lines"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Errors in range",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({app=\"checkout\"} |= \"error\" != \"healthcheck\" [$__range]))",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-main"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 100,
+                "color": "orange"
+              },
+              {
+                "value": 1000,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "Checkout logs",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 10
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{app=\"checkout\", env=~\"prod|staging\"} |= \"timeout\"",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-main"
+          }
+        }
+      ],
+      "options": {
+        "showTime": true
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Latency from logs",
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg_over_time({app=\"checkout\"} | json | unwrap duration [5m])",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-main"
+          },
+          "legendFormat": "latency"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "logs",
+      "title": "Parsed logs",
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{app=\"checkout\"} | logfmt | level=\"error\"",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-main"
+          }
+        }
+      ]
+    }
+  ]
+}

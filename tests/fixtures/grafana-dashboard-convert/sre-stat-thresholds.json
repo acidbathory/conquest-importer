@@ -1,0 +1,414 @@
+{
+  "uid": "sre-stat",
+  "title": "SRE stat and thresholds",
+  "schemaVersion": 39,
+  "tags": [
+    "fixture"
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "value": "prom-main"
+        }
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "name": "Annotations & Alerts",
+        "enable": true
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Availability",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_requests_total{job=\"api\", code!~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"api\"}[5m])) * 100",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2,
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 99,
+                "color": "yellow"
+              },
+              {
+                "value": 99.9,
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Error rate",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_requests_total{job=\"api\", code=~\"5..\"}[5m]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "yellow"
+              },
+              {
+                "value": 5,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "p95 latency",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"api\"}[5m])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 0.5,
+                "color": "orange"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background"
+      }
+    },
+    {
+      "id": 4,
+      "type": "gauge",
+      "title": "Saturation",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg(node_load1{job=\"api\"})",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "max": 16,
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 4,
+                "color": "#EAB839"
+              },
+              {
+                "value": 8,
+                "color": "#E02F44"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Request rate",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (code) (rate(http_requests_total{job=\"api\"}[$__rate_interval]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "legendFormat": "{{code}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "min": 0,
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Error budget burn",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(http_requests_total{job=\"api\", code=~\"5..\"}[1h])) / sum(increase(http_requests_total{job=\"api\"}[1h]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "legendFormat": "burn 1h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "singlestat",
+      "title": "Legacy uptime",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg(up{job=\"api\"}) * 100",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "instant": true
+        }
+      ],
+      "format": "percent",
+      "thresholds": "90,99",
+      "colors": [
+        "#d44a3a",
+        "#e5ac0e",
+        "#299c46"
+      ],
+      "valueName": "current"
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "SLO targets",
+      "gridPos": {
+        "x": 6,
+        "y": 12,
+        "w": 18,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg by (service) (slo_target{job=\"api\"})",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "format": "table",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Weekly delta",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_requests_total[5m])) offset 1w",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          }
+        }
+      ]
+    }
+  ]
+}

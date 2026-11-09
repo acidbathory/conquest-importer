@@ -1,0 +1,322 @@
+{
+  "uid": "hostile-convert",
+  "title": "\"; resource \"null_resource\" \"x\" {} # \u202e'; DROP TABLE Metric; -- \" ` ${jndi:ldap://x} {{secret}} \u202e\u2066 \\",
+  "schemaVersion": 39,
+  "tags": [
+    "fixture"
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "value": "prom-main"
+        }
+      },
+      {
+        "name": "search",
+        "type": "textbox",
+        "query": "'; DROP TABLE Metric; -- \" ` ${jndi:ldap://x} {{secret}} \u202e\u2066 \\",
+        "current": {
+          "value": "'; DROP TABLE Metric; -- \" ` ${jndi:ldap://x} {{secret}} \u202e\u2066 \\"
+        }
+      },
+      {
+        "name": "bad name!",
+        "type": "custom",
+        "query": "a,b"
+      },
+      {
+        "name": "dup",
+        "type": "custom",
+        "query": "a,b"
+      },
+      {
+        "name": "dup",
+        "type": "custom",
+        "query": "c,d"
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "name": "Annotations & Alerts",
+        "enable": true
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "'; DROP TABLE Metric; -- \" ` ${jndi:ldap://x} {{secret}} \u202e\u2066 \\",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"a'b\\\\c\", env=~\"x|y\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "legendFormat": "'; DROP TABLE Metric; -- \" ` ${jndi:ldap://x} {{secret}} \u202e\u2066 \\"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 1e+300,
+          "max": -1e+300,
+          "unit": "'; DROP TABLE Metric",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 1e+300,
+                "color": "red"
+              },
+              {
+                "value": 5,
+                "color": "blue"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "{{stolen}} $__interval",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (rate(http_requests_total{instance=~\"$search\"}[$__rate_interval]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "legendFormat": "{{instance}}'}}{{{x}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "text",
+      "title": "html <script>alert(1)</script>",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "options": {
+        "mode": "html",
+        "content": "<img src=x onerror=alert(1)> {{var}} <b>bold</b> &amp; text"
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Long query",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up + up)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "legendFormat": "long"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "No such function",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(up, \"a\", \"$1\", \"b\", \"(.*)\")",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Metric with quote",
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up'}) or vector(1) #",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "legendFormat": "x"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Legend flood",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "legendFormat": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 52,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 9,
+          "type": "timeseries",
+          "title": "inside",
+          "gridPos": {
+            "x": 0,
+            "y": 53,
+            "w": 24,
+            "h": 8
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "up{job=\"$search\"}",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prom-main"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Huge grid",
+      "gridPos": {
+        "x": -5,
+        "y": -3,
+        "w": 99,
+        "h": 99999
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          }
+        }
+      ]
+    }
+  ]
+}

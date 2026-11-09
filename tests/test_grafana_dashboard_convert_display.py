@@ -17,7 +17,7 @@ from importer.sources.grafana.dashboard_convert.display import (
 S = ThresholdSeverity
 
 
-def stat(steps: list[dict[str, Any]], **defaults: Any) -> dict[str, Any]:
+def stat(steps: list[Any], **defaults: Any) -> dict[str, Any]:
     return {
         "type": "stat",
         "fieldConfig": {

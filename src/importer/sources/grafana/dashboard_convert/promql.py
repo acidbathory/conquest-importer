@@ -224,6 +224,7 @@ class _Parse:
         self.metrics: list[str] = []
         self.numeric: list[str] = []
         self.limit: int | None = None
+        self.var_labels: dict[str, list[str]] = {}  # variable -> labels it filters
         self.mapped = False
 
     def note(self, text: str) -> None:
@@ -408,7 +409,13 @@ class _Parse:
     def where(self, body: str) -> tuple[str, ...]:
         if "VARB" in body:
             raise Unconvertible(r.C_BUILTIN)
-        return tuple(cond_sql(c, self.names) for c in prom_conditions(body, r.C_SHAPE))
+        conds = prom_conditions(body, r.C_SHAPE)
+        for cond in conds:
+            for value in cond.values:
+                for token in VAR_TOKEN.findall(value):
+                    labels = self.var_labels.setdefault(self.names[int(token)], [])
+                    labels.append(cond.key)
+        return tuple(cond_sql(c, self.names) for c in conds)
 
     def facet(self, labels: list[str]) -> tuple[str, ...]:
         if any(VAR_TOKEN.search(label) for label in labels):
@@ -472,7 +479,7 @@ def convert_query(
     family: str,
     opts: QueryOptions,
     legend: Legend | None = None,
-    repeat: list[str] | None = None,
+    repeat_var: str | None = None,
 ) -> Converted:
     """NRQL for one Grafana query, or `Unconvertible`. `family` is prometheus or loki."""
     legend = legend or Legend(None, (), False)
@@ -485,7 +492,10 @@ def convert_query(
     _check_shape(found)
     notes = parse.notes
     common = hoisted(found)
-    labels = _facet_list(found, legend, repeat or [], notes)
+    repeat = list(dict.fromkeys(parse.var_labels.get(repeat_var or "", [])))
+    if repeat_var:
+        notes.append(r.N_REPEAT if repeat else r.N_REPEAT_FLAT)
+    labels = _facet_list(found, legend, repeat, notes)
     first = found[0]
     if first.kept and not labels:
         notes.append(r.N_MERGED)
@@ -526,3 +536,23 @@ def _statement(
         seconds = parse.opts.bucket_seconds
         query += f" TIMESERIES {seconds} SECONDS" if seconds else " TIMESERIES AUTO"
     return query
+
+
+LOG_LINES = 200
+
+
+def convert_log_lines(expr: str, opts: QueryOptions) -> Converted:
+    """A raw LogQL stream (`{app="x"} |= "error"`) as the lines of a log table."""
+    text, names = tokenize(" ".join(expr.split()), opts)
+    if not text.startswith("{") or len(text) > MAX_EXPRESSION:
+        raise Unconvertible(r.C_SHAPE)
+    query = loki_query(f"count_over_time({text} [5m])", r.C_SHAPE)
+    where = [cond_sql(c, names) for c in query.conditions]
+    nrql = f"SELECT timestamp, message FROM {LOG_EVENT}"  # noqa: S608
+    nrql += (" WHERE " + " AND ".join(where) if where else "") + f" LIMIT {LOG_LINES}"
+    try:
+        check_raw_nrql(nrql)
+    except ValueError:
+        raise Unconvertible(r.C_NRQL) from None
+    used = [n for n in names if "{{" + n + "}}" in nrql]
+    return Converted(nrql, [r.N_LOGS], [], used)
