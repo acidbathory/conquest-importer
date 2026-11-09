@@ -9,7 +9,23 @@ import pytest
 from importer.sources.grafana.datapath import guide, needs
 from importer.sources.grafana.datapath import plan as dp
 from importer.sources.grafana.notifications.models import DataSource
-from tests.test_grafana_datapath_needs import rules, tiles
+from importer.core.dashboard_ir import IRDashboard
+from importer.core.ir import IRMonitor
+from importer.sources import REGISTRY
+from importer.sources.grafana.dashboard_convert.name_map import NameMap
+from importer.sources.grafana.dashboard_convert.translate import convert_all, load_items
+
+FIX = Path(__file__).parent / "fixtures"
+
+
+
+def rules() -> list[IRMonitor]:
+    return REGISTRY["grafana"].convert(FIX / "grafana")
+
+
+def tiles() -> list[IRDashboard]:
+    return convert_all(load_items(FIX / "grafana-dashboard-convert"), NameMap())[0]
+
 
 REAL_KEY = "0123456789abcdef0123456789abcdef01234567NRAL"
 
@@ -63,7 +79,6 @@ def test_a_datasource_without_a_path_is_listed_as_manual() -> None:
     sources = [DataSource(type="prometheus", uid="a"), DataSource(type="mysql", uid="b")]
     text = files(sources=sources)["datapath-plan.md"]
     assert "mysql" in text and "no New Relic data path" in text
-    assert "uid" not in text.lower() or "a" != ""
     many = [DataSource(type="prometheus", uid="a"), DataSource(type="prometheus", uid="b")]
     assert "distinct prometheus_server" in files(sources=many)["datapath-plan.md"]
 
@@ -77,6 +92,5 @@ def test_hostile_names_never_reach_the_plan_unescaped() -> None:
 def test_the_remote_write_and_alloy_snippets_keep_only_the_used_metrics() -> None:
     built = dp.build_files("us", metrics=["up", "job:lat:mean5m"])
     yml = built["prometheus-remote-write.yml"]
-    assert "#     regex: (up|job:lat:mean5m)" in yml.replace("\n", "\n") or "up|job:lat" in yml
+    assert '#     regex: "up|job:lat:mean5m"' in yml
     assert "metric_name" in yml and "metricName" in yml
-    assert all(line.startswith("#") or not line.strip() or True for line in yml.splitlines())
