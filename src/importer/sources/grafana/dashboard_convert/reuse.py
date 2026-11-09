@@ -21,6 +21,7 @@ from importer.sources.grafana.translate import (
     _Fail,
     _matchers,
     _outer,
+    _regex,
 )
 
 NAME = r"[A-Za-z_:][A-Za-z0-9_:]*"
@@ -36,6 +37,7 @@ __all__ = [
     "loki_query",
     "outer",
     "prom_conditions",
+    "regex_cond",
     "selector",
 ]
 
@@ -81,6 +83,15 @@ def prom_conditions(body: str, fail: str) -> list[Cond]:
     except _Fail:
         raise Unconvertible(fail) from None
     return [Cond(m.key, m.kind, m.values, m.negate) for m in found]
+
+
+def regex_cond(key: str, regex: str, fail: str) -> Cond:
+    """A condition from a regex made of plain words, a prefix or a suffix (the planner's forms)."""
+    try:
+        kind, values = _regex(regex, fail)
+    except _Fail:
+        raise Unconvertible(fail) from None
+    return Cond(key, kind, values)
 
 
 @dataclass(frozen=True)

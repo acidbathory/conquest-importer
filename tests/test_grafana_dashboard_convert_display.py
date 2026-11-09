@@ -20,7 +20,9 @@ S = ThresholdSeverity
 def stat(steps: list[dict[str, Any]], **defaults: Any) -> dict[str, Any]:
     return {
         "type": "stat",
-        "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": steps}, **defaults}},
+        "fieldConfig": {
+            "defaults": {"thresholds": {"mode": "absolute", "steps": steps}, **defaults}
+        },
     }
 
 

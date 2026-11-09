@@ -89,6 +89,7 @@ class QueryOptions:
     name_map: NameMap
     timeseries: bool  # the widget draws over time (line, area)
     bucket_seconds: int | None = None  # a fixed bucket the query or panel asked for
+    intervals: frozenset[str] = frozenset()  # interval variables: a window the bucket replaces
 
 
 @dataclass
@@ -116,6 +117,8 @@ def tokenize(expr: str, opts: QueryOptions) -> tuple[str, list[str]]:
             return BUILTINS[name]
         if name.startswith("__"):
             return "VARBOTHER"
+        if name in opts.intervals:
+            return BUILTINS["__interval"]
         if name not in opts.variables:
             return match[0]
         value = opts.variables[name]
