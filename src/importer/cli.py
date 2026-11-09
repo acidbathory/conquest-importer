@@ -74,6 +74,7 @@ from importer.sources.dynatrace.extract import extract as extract_dynatrace
 from importer.sources.dynatrace.extract import http_getter as dynatrace_getter
 from importer.sources.gcp import data_check as gcp_data
 from importer.sources.gcp import notifications as gcp_notifications
+from importer.sources.gcp import uptime as gcp_uptime
 from importer.sources.gcp.extract import GcpError, access_token, http_getter
 from importer.sources.gcp.extract import extract as extract_gcp
 from importer.sources.gcp.link_terraform import link_terraform, services_for
@@ -707,6 +708,26 @@ def convert_gcp_notifications(
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
         raise typer.Exit(code=1) from None
     typer.echo(f"Read {len(known)} channels, {count} channel sets. See {out / 'report.md'}")
+
+
+@app.command("convert-gcp-uptime")
+def convert_gcp_uptime(
+    checks: Annotated[
+        Path, typer.Option("--checks", help="Folder with uptime-checks.json (extract-gcp)")
+    ] = Path("out/gcp/uptime-checks"),
+    out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/gcp-uptime"),
+) -> None:
+    """List Google uptime checks with the New Relic monitor to create for each. Offline.
+
+    One report row per check (path, period, run frequency) and the manual steps. The host is not
+    exported, so nothing is created automatically.
+    """
+    try:
+        plans = gcp_uptime.write_outputs(gcp_uptime.load_checks(checks), out)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"Read {len(plans)} uptime checks. See {out / 'report.md'}")
 
 
 @app.command("apply-notifications")

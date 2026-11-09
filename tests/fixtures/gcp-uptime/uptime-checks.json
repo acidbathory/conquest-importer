@@ -1,0 +1,42 @@
+[
+  {
+    "name": "projects/demo-project-123/uptimeCheckConfigs/site-health",
+    "displayName": "Site health",
+    "period": "60s",
+    "kind": "http",
+    "path": "/health",
+    "monitoredResource": "uptime_url"
+  },
+  {
+    "name": "projects/demo-project-123/uptimeCheckConfigs/site-home",
+    "displayName": "Home | page",
+    "period": "300s",
+    "kind": "http",
+    "path": "",
+    "monitoredResource": "uptime_url"
+  },
+  {
+    "name": "projects/demo-project-123/uptimeCheckConfigs/db-port",
+    "displayName": "Database port",
+    "period": "600s",
+    "kind": "tcp",
+    "path": "",
+    "monitoredResource": "uptime_url"
+  },
+  {
+    "name": "projects/demo-project-123/uptimeCheckConfigs/odd",
+    "displayName": "Odd period",
+    "period": "120s",
+    "kind": "http",
+    "path": "/x",
+    "monitoredResource": "gce_instance"
+  },
+  {
+    "name": "projects/demo-project-123/uptimeCheckConfigs/other",
+    "displayName": "Group check",
+    "period": "900s",
+    "kind": "other",
+    "path": "",
+    "monitoredResource": ""
+  }
+]

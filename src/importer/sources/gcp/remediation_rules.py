@@ -64,9 +64,39 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"uptime check inventory \(http\)"),
+        "Uptime check (HTTP)",
+        [
+            "Create a Synthetics ping monitor for the check's URL (the host is in the Google "
+            "check, not in the export) with the run frequency in the report. Use a scripted API "
+            "monitor instead if the Google check had content matchers or a required status.",
+        ],
+    ),
+    (
+        re.compile(r"uptime check inventory \(tcp\)"),
+        "Uptime check (TCP)",
+        [
+            "New Relic Synthetics has no TCP-only monitor that this tool knows of (not "
+            "confirmed). If the service has an HTTP health endpoint, make a ping monitor on it. "
+            "Otherwise keep the TCP check in Google, or watch the service with an infrastructure "
+            "or network check.",
+        ],
+    ),
+    (
+        re.compile(r"uptime check inventory \(other\)"),
+        "Uptime check (other kind)",
+        [
+            "This check is not a plain HTTP or TCP check (for example a group check). Look at "
+            "what it watches in Google and create a ping or scripted monitor per target, or "
+            "one monitor per member of the group.",
+        ],
+    ),
+    (
         re.compile(r"uptime check"),
         "Uptime check alert",
         [
+            "`importer convert-gcp-uptime` lists every uptime check with its path, period and "
+            "the monitor to create; do that first.",
             "The alert watches an uptime check, and uptime checks are not migrated. Recreate the "
             "check as a New Relic Synthetics monitor (a ping monitor for a URL, a scripted API "
             "monitor for a request with assertions), choosing the same locations.",
