@@ -1,0 +1,1 @@
+Synthetic dashboard built from patterns in docs/research/grafana-complex-dashboards-repos.md and grafana-advanced-features-to-newrelic.md. It is not a customer dashboard. It exercises regex matchers, presence matchers, percent units and the exact rule.

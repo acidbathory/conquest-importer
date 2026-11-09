@@ -75,3 +75,19 @@ def test_a_chart_draft_cannot_carry_exact() -> None:
     )
     with pytest.raises(ValueError, match="exact"):
         draft.widget(Layout(column=1, row=1, width=4, height=3))
+
+
+def test_the_synthetic_dashboard_converts_as_designed() -> None:
+    dashboards, _ = convert_all(load_items(FIXTURES / "grafana-dashboard-exact"))
+    by_title = {w.title: w for w in dashboards[0].widgets}
+    queries = {t: [s.nrql for s in w.raw_series] for t, w in by_title.items()}
+    assert queries["5xx rate by code"][0].endswith(
+        "FROM Metric WHERE code RLIKE '5..' FACET code LIMIT MAX TIMESERIES AUTO"
+    )
+    assert "device NOT RLIKE 'lo|veth.*'" in queries["Traffic without loopback"][0]
+    assert "container IS NOT NULL" in queries["Pods with a container"][0]
+    assert by_title["Matches everything (stays manual)"].confidence == Confidence.MANUAL
+    assert by_title["Memory used percent"].options.unit is None  # 0 to 100 must not be PERCENTAGE
+    assert by_title["Hit ratio"].options.unit == "PERCENTAGE"
+    exact = {t for t, w in by_title.items() if w.confidence == Confidence.EXACT}
+    assert exact == {"Static content", "Notes"}
