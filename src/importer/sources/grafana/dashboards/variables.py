@@ -12,7 +12,11 @@ from pydantic import BaseModel
 from importer.sources.grafana.dashboards import reasons as r
 from importer.sources.grafana.dashboards.datasources import resolve
 from importer.sources.grafana.dashboards.models import MAX_TEXT, Dashboard, Variable
-from importer.sources.grafana.dashboards.query_tier import RE2_UNSUPPORTED, variables_in
+from importer.sources.grafana.dashboards.query_tier import (
+    RE2_UNSUPPORTED,
+    plain_regex,
+    variables_in,
+)
 
 NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}")
 LABEL_VALUES = re.compile(r"label_values\( ?(?:(.+?) ?, ?)?[A-Za-z_]\w* ?\)")
@@ -36,12 +40,26 @@ class VariablePlan(BaseModel):
     target: str = ""
 
 
+def _plain_variable_regex(regex: str) -> bool:
+    """A Grafana variable regex (`/.../flags`) the converter can carry: plain words only.
+
+    Anything else, including a capture group (Grafana keeps only the group), needs RLIKE
+    verification and stays manual.
+    """
+    body = regex.strip()
+    if body.startswith("/"):
+        body = body[1:].rsplit("/", 1)[0]
+    if RE2_UNSUPPORTED.search(body):
+        return False
+    return plain_regex(body)
+
+
 def _query_variable(variable: Variable, dash: Dashboard, known: set[str]) -> tuple[str, str]:
     """(reason, target) for a query variable: label_values on Prometheus becomes `uniques()`."""
     family = resolve(variable.ds, "", dash)
     if family not in ("", "prometheus"):
         return r.V_QUERY_DS, ""
-    if variable.regex and RE2_UNSUPPORTED.search(variable.regex):
+    if variable.regex and not _plain_variable_regex(variable.regex):
         return r.V_QUERY_REGEX, ""
     query = " ".join(variable.query.split())
     if (variables_in(query) & known) - {variable.name}:

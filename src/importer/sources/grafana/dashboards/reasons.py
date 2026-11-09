@@ -27,6 +27,22 @@ P_DS_UNRESOLVED = (
     "known value, or no reference)"
 )
 
+P_VARIABLE = "dashboard panel uses a variable that stays manual, so its filter cannot be written"
+P_TIME_OVERRIDE = "dashboard panel overrides the time range (timeFrom or timeShift)"
+P_OPTIONS = (
+    "dashboard panel has options that change what it shows (value mappings, overrides, "
+    "a unit conversion or a calculation other than the latest value), and its query is already "
+    "at the highest tier"
+)
+
+# notes on a panel that converts; they are not reasons
+N_INSTANT = (
+    "note: an instant query or table format gives one value per series, not a chart over time"
+)
+N_INTERVAL = "note: the query sets its own interval; New Relic uses an automatic bucket"
+N_LEGEND = "note: legend text around {{labels}} is lost; the facet value is the legend"
+N_DOWNGRADED = "note: value mappings, overrides, a unit or a reducer change what it shows, so the tier is one lower"
+
 # --- queries (PromQL) ---
 Q_TOO_LONG = "dashboard query is longer than the importer reads"
 Q_VAR_FORMAT = "dashboard query uses a variable format such as ${name:csv}"
@@ -44,6 +60,9 @@ Q_LABEL_FN = "dashboard query rewrites labels with label_replace or label_join"
 Q_FUNCTION = "dashboard query uses a function with no New Relic counterpart in the converter"
 Q_NESTED = "dashboard query aggregates an aggregation"
 Q_COUNTER = "dashboard query reads a counter metric (_total, _count, _sum or _bucket) without rate"
+Q_REGEX = "dashboard query has a regex matcher that needs RLIKE verification"
+Q_BINARY_LABELS = "dashboard query combines series that are grouped by different labels"
+Q_GROUP_VARIABLE = "dashboard query groups by a variable"
 Q_MATCHER = "dashboard query has a label matcher the converter does not read"
 Q_NAME = "dashboard query has a metric or label name that is not valid in NRQL"
 Q_HISTOGRAM = "dashboard query uses histogram_quantile in a shape the converter does not read"
@@ -59,7 +78,10 @@ QL_MATCHER = "dashboard logql query has a label matcher the converter does not r
 QL_NOT_SIMPLE = "dashboard logql query is not a count of a stream selector with line filters"
 
 # --- variables ---
-V_QUERY_REGEX = "dashboard variable regex uses lookahead, lookbehind or a backreference"
+V_QUERY_REGEX = (
+    "dashboard variable regex uses a pattern the converter cannot verify (lookahead, "
+    "a backreference, a capture group or any regex beyond plain words)"
+)
 V_QUERY_SHAPE = "dashboard variable query is not label_values(), so it has no uniques() form"
 V_QUERY_DS = "dashboard variable query runs on a data source other than prometheus"
 V_NESTED = "dashboard variable query depends on another variable"

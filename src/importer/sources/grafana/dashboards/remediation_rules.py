@@ -39,6 +39,36 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^dashboard panel uses a variable that stays manual"),
+        "Dashboard panel using a variable that stays manual",
+        [
+            "A variable the panel's query depends on cannot be converted (see the variable's own "
+            "reason in the report). Until it is rebuilt as a New Relic variable, or its values "
+            "are written into the query, the filter in this panel cannot be written.",
+        ],
+    ),
+    (
+        re.compile(r"^dashboard panel overrides the time range"),
+        "Dashboard panel time override",
+        [
+            "`timeShift` and `timeFrom` change the range of one panel, like `offset`. In NRQL use "
+            "`COMPARE WITH`, or `SINCE` and `UNTIL` with the widget set to ignore the dashboard "
+            "time range. How the two interact in a widget is not confirmed: check the result "
+            "against Grafana.",
+        ],
+    ),
+    (
+        re.compile(r"^dashboard panel has options that change"),
+        "Dashboard panel options",
+        [
+            "Value mappings, field overrides, a unit that rescales the value, or a reducer "
+            "other than the latest value change what the panel shows, and the query is already "
+            "at the highest tier. Rebuild the options by hand (thresholds for colours, `if()` "
+            "or FACET CASES for mappings, the unit setting of the widget) and compare the "
+            "result.",
+        ],
+    ),
+    (
         re.compile(r"^dashboard panel has transformations"),
         "Dashboard panel with transformations",
         [
@@ -181,13 +211,23 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"^dashboard query has a (?:label matcher|metric or label name)"),
+        re.compile(r"^dashboard query has a (?:label matcher|metric or label name|regex matcher)"),
         "Dashboard query label matcher or name",
         [
             "A matcher on `__name__`, a regex with lookahead or a backreference (RE2, which "
             "`RLIKE` uses, has neither), or a name that is not valid in NRQL cannot be written "
             "as is. Rewrite the matcher with plain alternatives, or use WHERE with `RLIKE` on "
             "the attribute.",
+        ],
+    ),
+    (
+        re.compile(r"^dashboard query (?:combines series|groups by a variable)"),
+        "Dashboard query grouping",
+        [
+            "Series grouped by different labels do not match one to one, and a variable as a "
+            "group-by label cannot be used after FACET in every position. Group both sides by the "
+            "same labels, or use a subquery. A group-by variable can become a `string` variable "
+            "with the identifier strategy; check it in the sandbox.",
         ],
     ),
     (
@@ -248,8 +288,8 @@ RULES: list[Rule] = [
         re.compile(r"^dashboard variable regex uses"),
         "Dashboard variable regex",
         [
-            "The variable's regex uses lookahead, lookbehind or a backreference. `RLIKE` (RE2) "
-            "has none. Filter in the variable's NRQL with WHERE conditions, or list the values "
+            "The variable's regex is more than plain words: lookahead, a backreference, a capture "
+            "group, anchors or a pattern that needs `RLIKE`, which is not verified. Filter in the variable's NRQL with WHERE conditions, or list the values "
             "to keep in an `enum` variable.",
         ],
     ),
@@ -312,7 +352,10 @@ RULES: list[Rule] = [
 # category of each family of reasons, by the same anchored start the rules use
 TAXONOMY: list[tuple[Category, str]] = [
     (C.UNSUPPORTED_FEATURE, r"^dashboard panel type \S+ (?:has no|maps to a)"),
-    (C.UNSUPPORTED_FEATURE, r"^dashboard panel has transformations"),
+    (
+        C.UNSUPPORTED_FEATURE,
+        r"^dashboard panel (?:has transformations|uses a variable|overrides the time|has options)",
+    ),
     (C.UNSUPPORTED_FEATURE, r"^dashboard data source"),
     (C.UNSUPPORTED_FEATURE, r"^dashboard variable"),
     (C.UNSUPPORTED_QUERY, r"^dashboard (?:logql )?query"),

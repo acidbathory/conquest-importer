@@ -21,8 +21,18 @@ PROM_TIERS = [
     ('node_memory_MemTotal_bytes{instance=~"$node:$port"}', 1),
     ('min by (a, b) (go_goroutines{job=~"api|web"})', 1),
     ('go_goroutines{job=~"api.*"}', 1),
-    ('node_filesystem_size_bytes{fstype=~"ext.*|xfs", device!~"^(tmpfs|rootfs)$"}', 1),
-    ('node_cpu_info{job=~".+"}', 1),
+    ('up{job=~".*api"}', 1),
+    ('up{job=~".*api.*"}', 1),
+    ('up{job!~"a.*"}', 1),
+    ('count{a="b"}', 1),  # a metric called count is not the aggregator
+    ('up{job="rate(x_total[5m])"}', 1),  # text inside a string is not a call
+    ("up * .5", 3),
+    ("up * 1e3", 3),
+    ("up * 1e-3", 3),
+    ("up * 2.", 3),
+    ("rate(x_total[1h30m])", 2),
+    ("sum by (a, b) (x) / sum by (b, a) (y)", 3),
+    ("node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes", 3),
     # T2: rate, increase, histogram_quantile and topk
     ('rate(node_network_receive_bytes_total{device!="lo"}[5m])', 2),
     ('sum by (instance) (irate(node_cpu_seconds_total{mode="idle"}[$__rate_interval]))', 2),
@@ -55,6 +65,22 @@ PROM_TIERS = [
 ]
 
 PROM_MANUAL = [
+    ('up{job=~".*"}', r.Q_REGEX),
+    ('up{job=~".+"}', r.Q_REGEX),
+    ('up{job=~"a|"}', r.Q_REGEX),
+    ('up{job=~"(?i)abc"}', r.Q_REGEX),
+    ('node_filesystem_size_bytes{fstype=~"ext.*|xfs"}', r.Q_REGEX),
+    ('node_filesystem_size_bytes{device!~"^(tmpfs|rootfs)$"}', r.Q_REGEX),
+    ("sum by ($group) (up)", r.Q_GROUP_VARIABLE),
+    ("sum(up) by ($group)", r.Q_GROUP_VARIABLE),
+    ("sum by (a) (x) / sum by (b) (y)", r.Q_BINARY_LABELS),
+    ("sum(x) / y", r.Q_BINARY_LABELS),
+    ("sum by (a) (rate(x_total[5m])) - 3 * sum by (b) (y)", r.Q_BINARY_LABELS),
+    (
+        'histogram_quantile(0.9, sum by (le) (rate(x_total{a="y_bucket"}[5m])))',
+        r.Q_HISTOGRAM,
+    ),
+    ("a" * 250, r.Q_NOT_SIMPLE),
     ("node_network_receive_bytes_total", r.Q_COUNTER),
     ("up == 1", r.Q_COMPARE),
     ("up > 0", r.Q_COMPARE),
@@ -103,7 +129,7 @@ def test_a_promql_shape_reaches_its_tier(expr: str, tier: int) -> None:
 
 @pytest.mark.parametrize(("expr", "reason"), PROM_MANUAL)
 def test_a_promql_shape_that_stays_manual_gives_one_specific_reason(expr: str, reason: str) -> None:
-    verdict = classify_query(expr, "prometheus", known=frozenset({"n", "x"}))
+    verdict = classify_query(expr, "prometheus", known=frozenset({"n", "x", "group"}))
     assert verdict.tier is None and verdict.reason == reason
 
 

@@ -7,19 +7,25 @@ Tiers follow docs/research/grafana-dashboards.md section 8.2:
 - 3: tier 2 plus arithmetic between convertible terms and numbers, and count.
 
 Parsing is not redone here. The expression is first rewritten to a form the alert translator's
-own PromQL and LogQL handlers read (rate calls removed, regex matchers softened, variables
-replaced by a plain word), and those handlers decide whether the rest is a convertible shape.
+own PromQL and LogQL handlers read (rate calls removed, variables replaced by a plain word),
+and those handlers decide whether the rest is a convertible shape. A regex matcher is T1 only in
+the forms the alert translator accepts (plain words, a prefix or suffix, alternatives of words);
+any other regex needs RLIKE verification and stays manual.
 `alert_reach` is the one place that touches the translator's private context and failure types;
 the proposal asks for a public function there. The real conversion in the next wave replaces this
-module. Every regex here is linear: whitespace is collapsed first and optional spaces are single.
+module. Whitespace is collapsed first and optional spaces are single, the input is capped at
+10,000 characters, and no pattern has a nested quantifier; a long run of word characters is
+refused before the translator's own patterns see it.
 """
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from importer.sources.grafana.dashboards import reasons as r
 from importer.sources.grafana.translate import (
     BODY,
+    BOTH,
     COUNTER_SUFFIXES,
     HANDLERS,
     LOKI_MATCHER,
@@ -27,13 +33,17 @@ from importer.sources.grafana.translate import (
     LOKI_PARSER,
     LOKI_REGEX,
     LOKI_WILDCARD,
+    MAX_ALTERNATIVES,
     MAX_EXPRESSION,
+    PREFIX,
     PROM_COUNTER,
     PROM_MATCHER,
     PROM_NAME,
     PROM_NOT_SIMPLE,
     QUOTED,
     R_AGG_MIX,
+    SUFFIX,
+    WORD,
     _Ctx,
     _Fail,
 )
@@ -42,14 +52,14 @@ from importer.sources.grafana.translate import LOKI_FUNCTION as LOKI_FUNCTION_RE
 MAX_OPERANDS = 50
 MAX_NESTING = 20  # parentheses around or inside arithmetic
 PLACEHOLDER = "VARV"  # stands for a dashboard variable in the rewritten text
-REGEX_PLACEHOLDER = "RE2X"
+LONG_WORD = re.compile(r"\w{201}")  # no metric name is this long; keeps later patterns fast
 AGG_MIX_PREFIX = R_AGG_MIX.split("{", 1)[0]  # the alert-only complaint about aggregate + reducer
 LANGUAGES = ("prometheus", "loki")
 
 NAME = r"[A-Za-z_:][A-Za-z0-9_:]*"
-NUMBER = re.compile(rf"\d+(?:\.\d+)?|{PLACEHOLDER}")
+NUMBER = re.compile(rf"(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|{PLACEHOLDER}")
 VARIABLE = re.compile(r"\$\{(\w+)(:[^}]*)?\}|\$(\w+)|\[\[(\w+)(?::\w+)?\]\]")
-RANGE = re.compile(r"\[ ?(?:\d+[smhdwy]|\$\{\w+\}|\$\w+|\[\[\w+\]\]) ?\]")
+RANGE = re.compile(r"\[ ?(?:(?:\d+[smhdwy])+|\$\{\w+\}|\$\w+|\[\[\w+\]\]) ?\]")
 RANGE_NORMAL = "[5m]"
 RATE_CALL = re.compile(rf"\b(?:rate|irate|increase) ?\( ?({NAME}) ?(\{{{BODY}\}})? ?\[5m\] ?\)")
 RATE_LEFT = re.compile(r"\b(?:rate|irate|increase) ?\(")
@@ -60,7 +70,12 @@ RE2_UNSUPPORTED = re.compile(r"\(\?[!=<]|\\[1-9]|\(\?P=|[\x00-\x1f\x7f]")
 TOPK = re.compile(r"topk ?\( ?([^,]*?) ?, ?(.*)\)")
 HISTOGRAM = re.compile(r"histogram_quantile ?\( ?(?:0?\.\d+|[01](?:\.\d+)?) ?, ?(.*)\)")
 SUM_BY = re.compile(r"sum ?(?:by ?\(([^()]*)\) ?)?\((.*?)\)(?: ?by ?\(([^()]*)\))?")
-COUNT_AGG = re.compile(r"count\b")
+COUNT_AGG = re.compile(r"count ?(?:by ?\([^()]*\) ?)?\(")
+BUCKET_NAME = re.compile(r"[A-Za-z0-9_:]+_bucket\b")
+GROUP_VARIABLE = re.compile(rf"\bby ?\([^()]*{PLACEHOLDER}")
+AGG_START = re.compile(r"(?:sum|avg|min|max) ?(?:by ?\(([^()]*)\) ?)?\(")
+TRAIL_BY = re.compile(r" ?by ?\(([^()]*)\) ?$")
+ALL_LABELS = frozenset({"*"})  # an unaggregated selector keeps every label
 AGGREGATOR_CALL = re.compile(r"\b(?:sum|avg|min|max|count) ?(?:by ?\([^()]*\) ?)?\(")
 COMPARISON = re.compile(r"==|!=|>=|<=|[<>%^]|\b(?:and|or|unless|bool)\b")
 SKELETON_BRACES = re.compile(r"\{[^{}]*\}")
@@ -68,11 +83,11 @@ SKELETON_BRACES = re.compile(r"\{[^{}]*\}")
 # checked in order on the whole expression; a hit gives that reason
 PROM_CHECKS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\boffset\b"), r.Q_OFFSET),
-    (re.compile(r"\[[^\]]*:[^\]]*\]"), r.Q_SUBQUERY),
+    (re.compile(r"\[[^\]\[]*:[^\]\[]*\]"), r.Q_SUBQUERY),
     (re.compile(r"\bgroup_(?:left|right)\b|\b(?:on|ignoring) ?\("), r.Q_VECTOR),
     (re.compile(r"\b(?:bottomk|limitk|limit_ratio)\b"), r.Q_BOTTOMK),
     (re.compile(r"\babsent(?:_over_time)? ?\("), r.Q_ABSENT),
-    (re.compile(r"\w+_over_time ?\("), r.Q_OVER_TIME),
+    (re.compile(r"(?<=\w)_over_time ?\("), r.Q_OVER_TIME),
     (re.compile(r"\b(?:delta|idelta|deriv|predict_linear|changes|resets) ?\("), r.Q_RANGE_FN),
     (re.compile(r"\bwithout\b"), r.Q_WITHOUT),
     (re.compile(r"\blabel_(?:replace|join) ?\("), r.Q_LABEL_FN),
@@ -113,6 +128,7 @@ class Verdict:
 class _Result:
     tier: int  # 0 for a plain number
     reason: str = ""
+    group: frozenset[str] | None = None  # labels the result is grouped by; None for a number
 
 
 def _fail(reason: str) -> _Result:
@@ -181,21 +197,46 @@ def _substitute(text: str, known: frozenset[str] | None) -> tuple[str, set[str],
     return VARIABLE.sub(note, RANGE.sub(ranged, text)), used, formatted
 
 
-def _soften(text: str) -> str | None:
-    """Regex matchers become one plain word (RLIKE takes any RE2 pattern); None if not RE2."""
-    ok = True
+def plain_regex(value: str) -> bool:
+    """True for the regex forms the alert translator accepts as a matcher."""
+    if WORD.fullmatch(value):
+        return True
+    parts = value.split("|")
+    if 1 < len(parts) <= MAX_ALTERNATIVES and all(WORD.fullmatch(p) for p in parts):
+        return True
+    return any(p.fullmatch(value) for p in (BOTH, PREFIX, SUFFIX))
 
-    def one(match: re.Match[str]) -> str:
-        nonlocal ok
-        if RE2_UNSUPPORTED.search(match[2]):
-            ok = False
-        return f'{match[1]}"{REGEX_PLACEHOLDER}"'
 
-    def group(match: re.Match[str]) -> str:
-        return "{" + REGEX_MATCHER.sub(one, match[1]) + "}"
+def _regex_reason(text: str, language: str) -> str:
+    """The reason a regex matcher cannot be carried over, or "" when every one is plain."""
+    for group in SELECTOR_GROUP.finditer(text):
+        for found in REGEX_MATCHER.finditer(group[1]):
+            if RE2_UNSUPPORTED.search(found[2]):
+                return r.QL_MATCHER if language == "loki" else r.Q_MATCHER
+            if not plain_regex(found[2]):
+                return r.Q_REGEX
+    return ""
 
-    softened = SELECTOR_GROUP.sub(group, text)
-    return softened if ok else None
+
+def _sub_outside_strings(
+    pattern: re.Pattern[str], replace: Callable[[re.Match[str]], str], text: str
+) -> str:
+    """`pattern.sub`, but a match that starts inside a quoted string is left alone."""
+    spans = [m.span() for m in re.finditer(QUOTED, text)]
+    out: list[str] = []
+    last = 0
+    for found in pattern.finditer(text):
+        if any(a <= found.start() < b for a, b in spans):
+            continue
+        out += [text[last : found.start()], replace(found)]
+        last = found.end()
+    return "".join([*out, text[last:]])
+
+
+def _has_outside_strings(pattern: re.Pattern[str], text: str) -> bool:
+    """True when `pattern` matches somewhere that is not inside a quoted string."""
+    spans = [m.span() for m in re.finditer(QUOTED, text)]
+    return any(not any(a <= f.start() < b for a, b in spans) for f in pattern.finditer(text))
 
 
 def _unrate(text: str) -> str:
@@ -209,7 +250,7 @@ def _unrate(text: str) -> str:
                 break
         return name + (match[2] or "")
 
-    return RATE_CALL.sub(one, text)
+    return _sub_outside_strings(RATE_CALL, one, text)
 
 
 # --- structure of the expression ---
@@ -250,12 +291,22 @@ def _split(text: str, masked: str) -> list[str] | str:
     start, previous = 0, ""
     for i, ch in enumerate(masked):
         if ch in "+-*/" and previous and (previous.isalnum() or previous in "_)]}"):
+            if ch in "+-" and previous in "eE" and _exponent(masked, i):
+                continue
             parts.append(text[start:i])
             start = i + 1
         if not ch.isspace():
             previous = ch
     parts.append(text[start:])
     return parts
+
+
+def _exponent(masked: str, sign: int) -> bool:
+    """True when the sign at `sign` belongs to a number such as 1e-3, not to a subtraction."""
+    start = sign - 1
+    while start > 0 and (masked[start - 1].isalnum() or masked[start - 1] in "_."):
+        start -= 1
+    return NUMBER.fullmatch(masked[start:sign] + "0") is not None
 
 
 def _enclosed(masked: str) -> bool:
@@ -283,18 +334,26 @@ def _expr(text: str, language: str, depth: int) -> _Result:
         return _arithmetic(parts, language, depth)
     if text[0] in "+-":  # a sign in front is arithmetic too
         inner = _expr(text[1:], language, depth + 1)
-        return inner if inner.reason or inner.tier == 0 else _Result(max(3, inner.tier))
+        if inner.reason or inner.tier == 0:
+            return inner
+        return _Result(max(3, inner.tier), group=inner.group)
     return _atom(text, language, depth)
 
 
 def _arithmetic(parts: list[str], language: str, depth: int) -> _Result:
-    tiers = []
+    tiers: list[int] = []
+    groups: set[frozenset[str]] = set()
     for part in parts:
         found = _expr(part, language, depth + 1)
         if found.reason:
             return found
         tiers.append(found.tier)
-    return _Result(max(3, *tiers) if any(tiers) else 0)
+        if found.group is not None:
+            groups.add(found.group)
+    if len(groups) > 1:  # the series would not match one to one
+        return _fail(r.Q_BINARY_LABELS)
+    group = next(iter(groups), None)
+    return _Result(max(3, *tiers) if any(tiers) else 0, group=group)
 
 
 def _atom(text: str, language: str, depth: int) -> _Result:
@@ -306,15 +365,25 @@ def _atom(text: str, language: str, depth: int) -> _Result:
     return found or _selector_query(text, floor=1)
 
 
+def _group_of(plain: str) -> frozenset[str]:
+    """The labels a plain selector query is grouped by (everything when it is not aggregated)."""
+    start = AGG_START.match(plain)
+    if start is None:
+        return ALL_LABELS
+    trailing = TRAIL_BY.search(plain)
+    labels = start[1] if start[1] is not None else (trailing[1] if trailing else "")
+    return frozenset(x.strip() for x in labels.split(",") if x.strip())
+
+
 def _selector_query(text: str, floor: int) -> _Result:
     """A selector, optionally aggregated, possibly with rate calls inside; tier 2 if it had any."""
     plain = _unrate(text)
-    if RATE_LEFT.search(plain):
+    if _has_outside_strings(RATE_LEFT, plain):
         return _fail(r.Q_RATE_SHAPE)
     reason = _handler_failure(plain, "prometheus")
     if reason:
         return _fail(reason)
-    return _Result(max(floor, 2 if plain != text else 1))
+    return _Result(max(floor, 2 if plain != text else 1), group=_group_of(plain))
 
 
 def _topk(text: str, depth: int) -> _Result | None:
@@ -326,7 +395,9 @@ def _topk(text: str, depth: int) -> _Result | None:
     inner = _expr(found[2], "prometheus", depth + 1)
     if inner.reason:
         return inner
-    return _Result(max(2, inner.tier)) if inner.tier else _fail(r.Q_NOT_SIMPLE)
+    if not inner.tier:
+        return _fail(r.Q_NOT_SIMPLE)
+    return _Result(max(2, inner.tier), group=inner.group)
 
 
 def _histogram(text: str) -> _Result | None:
@@ -334,7 +405,7 @@ def _histogram(text: str) -> _Result | None:
     if found is None:
         return None
     inner = found[1]
-    if "_bucket" not in inner:
+    if BUCKET_NAME.search(_skeleton(inner)) is None:
         return _fail(r.Q_HISTOGRAM)
     grouped = SUM_BY.fullmatch(_unrate(inner))
     if grouped is None:
@@ -345,22 +416,22 @@ def _histogram(text: str) -> _Result | None:
     rest = ", ".join(label for label in labels if label != "le")
     plain = f"sum by ({rest}) ({grouped[2]})" if rest else grouped[2]
     result = _selector_query(plain, 2)
-    return result if result.reason else _Result(2)
+    return result if result.reason else _Result(2, group=result.group)
 
 
 def _count(text: str) -> _Result | None:
     if not COUNT_AGG.match(text):
         return None
     result = _selector_query("sum" + text[len("count") :], 1)
-    return result if result.reason else _Result(max(3, result.tier))
+    return result if result.reason else _Result(max(3, result.tier), group=result.group)
 
 
 def _loki_atom(text: str) -> _Result:
-    plain = LOKI_RATE.sub("count_over_time(", text)
+    plain = _sub_outside_strings(LOKI_RATE, lambda _m: "count_over_time(", text)
     reason = _handler_failure(plain, "loki")
     if reason:
         return _fail(reason)
-    return _Result(2 if plain != text else 1)
+    return _Result(2 if plain != text else 1, group=ALL_LABELS)
 
 
 # --- public ---
@@ -377,15 +448,16 @@ def _prepare(expr: str, language: str, known: frozenset[str] | None) -> tuple[st
     text, used, formatted = _substitute(" ".join(expr.split()), known)
     if formatted:
         return text, used, r.Q_VAR_FORMAT
+    if LONG_WORD.search(text):
+        return text, used, r.Q_NOT_SIMPLE
     if language == "prometheus":
         skeleton = _skeleton(text)
         for pattern, reason in PROM_CHECKS:
             if pattern.search(skeleton):
                 return text, used, reason
-    softened = _soften(text)
-    if softened is None:
-        return text, used, r.QL_MATCHER if language == "loki" else r.Q_MATCHER
-    return softened, used, ""
+    if GROUP_VARIABLE.search(_skeleton(text)):
+        return text, used, r.Q_GROUP_VARIABLE
+    return text, used, _regex_reason(text, language)
 
 
 def classify_query(expr: str, language: str, known: frozenset[str] | None = None) -> Verdict:

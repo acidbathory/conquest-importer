@@ -49,22 +49,22 @@ def test_the_hard_fixture_fails_each_panel_for_its_own_reason() -> None:
     d = plan_of("hard-service-mixed.json")
     panels = by_title(d)
     expected = {
-        "Request rate": [r.Q_LABEL_FN],
-        "Latency p95 / p99": [],
+        "Request rate": [r.P_VARIABLE, r.Q_LABEL_FN],  # $service stays manual
+        "Latency p95 / p99": [r.P_VARIABLE],
         "Error ratio": [r.P_EXPRESSION],
         "Slow endpoints": [r.P_TRANSFORM],
-        "Errors": [r.P_WIDGET_GAP.format(label="logs"), r.QL_PARSER],
+        "Errors": [r.P_WIDGET_GAP.format(label="logs"), r.P_VARIABLE, r.QL_PARSER],
         "Queue depth (CloudWatch)": [r.P_DS_UNSUPPORTED.format(label="cloudwatch")],
         "CPU by pod (library)": [r.P_LIBRARY],
         "Pod phase": [r.P_NO_WIDGET.format(label="state-timeline")],
-        "Retries": [],
+        "Retries": [r.P_VARIABLE],
         "Firing alerts": [r.P_NO_WIDGET.format(label="alertlist")],
     }
     assert {t: panels[t].reasons for t in expected} == expected
-    assert counts(d) == (10, 0, 2, 2, 2)
-    assert panels["Latency p95 / p99"].tier == 2 and panels["Retries"].tier == 2
-    # at the level of single queries the request rate query A does convert, as the note says
-    assert d.queries == 7 and d.query_t1 + d.query_t2 + d.query_t3 == 5
+    assert counts(d) == (10, 0, 0, 0, 0)  # the `service` variable has a lookahead regex
+    # single queries still reach their tier: request rate A, latency p95 and p99, slow
+    # endpoints, retries
+    assert (d.queries, d.query_t2, d.query_manual) == (9, 5, 4)
     assert d.rows == 2 and d.collapsed_rows == 1 and d.row_repeats == 1
 
 
@@ -85,7 +85,7 @@ def test_the_hard_fixture_variables_are_classified_one_by_one() -> None:
 
 def test_the_legacy_fixture_reads_rows_and_marks_the_old_table_transform() -> None:
     d = plan_of("legacy-rows-v12.json")
-    assert counts(d) == (3, 1, 2, 2, 2)
+    assert counts(d) == (3, 0, 2, 2, 2)  # the singlestat has value maps: one tier lower
     assert by_title(d)["Per instance"].reasons == [r.P_TRANSFORM]
     assert by_title(d)["Instances up"].datasources == ["prometheus"]  # through __inputs
 
@@ -509,7 +509,12 @@ def test_a_dashboard_of_ten_thousand_panels_is_planned_quickly_and_in_bounded_me
         }
         for i in range(m.MAX_PANELS)
     ]
-    body = {"uid": "u", "title": "big", "panels": panels}
+    body = {
+        "uid": "u",
+        "title": "big",
+        "panels": panels,
+        "templating": {"list": [{"name": "job", "type": "custom", "query": "a,b"}]},
+    }
     estate = load_data(body, "big")
     del panels, body
     tracemalloc.start()

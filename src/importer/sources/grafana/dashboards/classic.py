@@ -65,6 +65,7 @@ def read_target(raw: dict[str, Any]) -> Target:
         legend=text(raw.get("legendFormat") or raw.get("alias")),
         fmt=text(raw.get("format"), 40),
         instant=raw.get("instant") is True,
+        interval=text(raw.get("interval"), 20),
         malformed="expr" in raw and raw["expr"] is not None and not isinstance(expr, str),
         panel_id=whole(raw.get("panelId"), 0, 2**31, -1) if "panelId" in raw else None,
         hint=target_hint(raw),
@@ -101,6 +102,14 @@ def _counts(body: dict[str, Any]) -> tuple[int, int]:
     return mappings, overrides
 
 
+def _calcs(body: dict[str, Any], options: dict[str, Any]) -> list[str]:
+    """How a stat reduces the series: reduceOptions.calcs, or the old singlestat valueName."""
+    found = sequence(mapping(options.get("reduceOptions")).get("calcs"))
+    names = [text(c, 40) for c in found[:5] if isinstance(c, str)]
+    legacy = text(body.get("valueName"), 20)
+    return names or ([legacy] if legacy else [])
+
+
 def panel_from_body(body: dict[str, Any], library: Mapping[str, Any], warnings: list[str]) -> Panel:
     """One panel; a library panel stub is completed from its model when the model is known."""
     lib_uid, found = "", False
@@ -116,6 +125,7 @@ def panel_from_body(body: dict[str, Any], library: Mapping[str, Any], warnings: 
             body = {**model, **kept}
     mappings, overrides = _counts(body)
     options = mapping(body.get("options"))
+    defaults = mapping(mapping(body.get("fieldConfig")).get("defaults"))
     content = options.get("content", body.get("content"))
     return Panel(
         id=whole(body.get("id"), -(2**31), 2**31, 0) if "id" in body else None,
@@ -132,6 +142,10 @@ def panel_from_body(body: dict[str, Any], library: Mapping[str, Any], warnings: 
         links=len(sequence(body.get("links"))),
         text_mode=text(options.get("mode", body.get("mode")), 20),
         text_chars=len(content) if isinstance(content, str) else 0,
+        time_shift=text(body.get("timeShift"), 40),
+        time_from=text(body.get("timeFrom"), 40),
+        calcs=_calcs(body, options),
+        unit=text(defaults.get("unit") or body.get("format"), 40),
     )
 
 

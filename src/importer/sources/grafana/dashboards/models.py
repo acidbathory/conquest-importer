@@ -67,6 +67,7 @@ class Target(BaseModel):
     legend: str = ""
     fmt: str = ""
     instant: bool = False
+    interval: str = ""  # a minimum interval set on the query
     malformed: bool = False  # the query text was present but not a string
     panel_id: int | None = None  # `-- Dashboard --` reuse: the panel whose result is used
     hint: str = ""  # data source family guessed from the keys, when the reference says nothing
@@ -94,6 +95,10 @@ class Panel(BaseModel):
     links: int = 0
     text_mode: str = ""
     text_chars: int = 0
+    time_shift: str = ""  # panel time override: same meaning as offset
+    time_from: str = ""
+    calcs: list[str] = Field(default_factory=list)  # how a stat reduces the series
+    unit: str = ""
 
 
 class Variable(BaseModel):

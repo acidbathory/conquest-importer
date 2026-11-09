@@ -100,6 +100,8 @@ def _panel_body(spec: dict[str, Any]) -> tuple[dict[str, Any], list[Target]]:
         "options": viz_spec.get("options"),
         "fieldConfig": viz_spec.get("fieldConfig"),
         "transformations": group.get("transformations"),
+        "timeShift": mapping(group.get("queryOptions")).get("timeShift"),
+        "timeFrom": mapping(group.get("queryOptions")).get("timeFrom"),
     }
     queries = [mapping(q) for q in sequence(group.get("queries")) if isinstance(q, dict)]
     return body, [_target(q) for q in queries[:MAX_TARGETS]]
