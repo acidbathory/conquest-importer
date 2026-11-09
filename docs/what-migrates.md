@@ -211,6 +211,67 @@ reading and the plan are described here; the conversion comes next.
 - **Sequence:** `importer extract-grafana-dashboards --out out/gd`, then `importer
   plan-grafana-dashboards --in out/gd --out out/gd-plan`.
 
+## Grafana dashboard conversion
+
+`importer convert-grafana-dashboards --in <folder> --out <folder>` (or `importer
+convert-dashboards --source grafana`) turns the folder written by `extract-grafana-dashboards`
+into New Relic dashboards: the IR, NerdGraph payloads, `dashboards.tf` and `report.md`. It is
+offline. The dashboards are created **private** by the existing `apply-dashboards`. None of this
+has been run against a New Relic account; the output names (widget options, units, variable
+fields) are unverified until one dashboard is read back in a sandbox.
+
+- **Data first.** Converted queries use the Prometheus metric name as it is, because Prometheus
+  remote write keeps it. The data has to reach New Relic by remote write, OTLP or Alloy under
+  those names, and the labels have to arrive as attributes. Every dashboard in the report starts
+  with this note; the closing section of `report.md` lists the metric names used. If a metric
+  arrives under another name or on another event, give `--name-map` a JSON file
+  (`{"metrics": {"node_load1": {"event": "Metric", "attribute": "node.load.1m"}}}`, or set
+  `IMPORTER_GRAFANA_NAME_MAP`); it is read as strictly as the Dynatrace metric map. Run the data
+  check before trusting a widget.
+- **What becomes a widget.** Exactly the panels that the plan (`plan-grafana-dashboards`) puts at
+  T1 to T3, plus gauge, bar gauge, bar chart and logs panels whose queries convert (the plan
+  counts these separately because the IR could not create them). Time series become line charts
+  (area when stacked), stat and gauge become billboards, bar gauge and bar chart become bar
+  charts, pie charts become pie, tables become tables, a logs panel becomes a table of the newest
+  200 lines, and a text panel becomes markdown (html is reduced to text).
+- **Queries.** A selector with `avg`, `sum`, `min`, `max` becomes `average`, `sum`, `min`, `max`
+  with `FACET` for the `by` labels (`LIMIT MAX`, at most 5 labels). `rate`, `irate` become
+  `rate(sum(x), 1 second)` with `TIMESERIES AUTO`; `increase` over a literal window becomes
+  `rate(sum(x), <window>)`, over `$__range` or a variable window `sum(x)`. `histogram_quantile`
+  becomes `bucketPercentile(x_bucket, <100 q>)`. `topk(n, ...)` becomes `FACET ... LIMIT n`.
+  Arithmetic between terms and numbers is written as one `SELECT` with `filter()` around a term
+  that has an extra filter; `count()` counts samples, not series. LogQL `count_over_time` is
+  `count(*) FROM Log`, `rate` is `rate(count(*), 1 second)`, line filters become `LIKE` on
+  `message`. A regex matcher is written only in the forms the plan accepts (`IN`, `LIKE`).
+  `$__interval`, `$__rate_interval` and `$interval` mean the automatic bucket; a fixed
+  per-query `interval` such as `1m` is kept as the bucket.
+- **Series names.** Static legend text becomes `AS 'text'`; a single `{{label}}` becomes a `FACET`
+  on that label; text around labels keeps the facet and loses the text, with a note.
+- **Options.** `unit` to the New Relic unit (a short table: percent, bytes, bytes per second,
+  bits, ms, s, requests per second, hertz; others are left out with a note), `min` and `max` to
+  the axis, the legend switch, stacking, decimals (kept in the IR, not written). Thresholds map
+  by colour family (green success, yellow and orange warning, red critical): a billboard takes
+  one warning and one critical from-value, a line chart takes bands only when Grafana draws them.
+  Thresholds that go from bad to good, percentage thresholds and other colours are left out with
+  a note. Table thresholds are not written (they need a column name).
+- **Variables.** `label_values(metric, label)` becomes an `nrql` variable over `uniques()`
+  (a plain regex filter becomes `IN` or `LIKE`); a custom list an `enum`; a text box a `string`;
+  multi-value and include-all make a multi-select variable that defaults to all; a constant is
+  written into the queries; interval and data source variables are dropped. Queries use
+  `IN ({{name}})`. A variable inside a metric or label name, or mixed with text in a matcher, stays
+  manual.
+- **Layout.** 24 columns become 12 by halving the edges; rows and tabs become full-width markdown
+  headings, collapsed rows are shown open, and a section starts under the one before; widgets that
+  would overlap are moved down. A widget taller than 12 is clamped by the IR and says so. A
+  repeated panel is one widget with a `FACET` on the label the repeat variable filters.
+- **Not migrated, but visible.** Every other panel is a markdown widget reading "Not migrated"
+  with the reason and the first 100 characters of the original query (the report has the full
+  reasons). Annotations, dashboard links, the original time range and refresh are listed in the
+  dashboard's reasons, not carried over.
+- **Approximations.** A stat shows the value over the whole time range, Grafana showed the latest
+  point; the rate window becomes the bucket; `topk` ranks over the whole range; a gauge sum adds
+  every sample in a bucket. Every widget is marked approximate.
+
 ## Not handled at all
 
 Forwarding logs in general (only the groups behind converted conditions get Terraform), X-Ray traces and CloudTrail. It also handles one AWS region and one

@@ -1,0 +1,213 @@
+{
+  "uid": "repeat",
+  "title": "Repeated panels",
+  "schemaVersion": 39,
+  "tags": [
+    "fixture"
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "value": "prom-main"
+        }
+      },
+      {
+        "name": "instance",
+        "type": "custom",
+        "query": "a:9100,b:9100,c:9100",
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prom-main"
+        },
+        "query": {
+          "query": "label_values(http_requests_total, service)",
+          "refId": "v"
+        },
+        "definition": "label_values(http_requests_total, service)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "current": {},
+        "regex": ""
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "name": "Annotations & Alerts",
+        "enable": true
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "CPU of $instance",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(node_cpu_seconds_total{instance=~\"$instance\", mode=\"user\"}[$__rate_interval])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "legendFormat": "{{instance}} user"
+        }
+      ],
+      "repeat": "instance",
+      "maxPerRow": 2,
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Up for $instance",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"x\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "instant": true
+        }
+      ],
+      "repeat": "instance"
+    },
+    {
+      "id": 3,
+      "type": "row",
+      "title": "Services - $service",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [],
+      "repeat": "service"
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Requests of $service",
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_requests_total{service=\"$service\"}[$__rate_interval]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "legendFormat": "$service"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Shared library panel",
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "libraryPanel": {
+        "uid": "lib-missing",
+        "name": "shared"
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Repeats with no label",
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "legendFormat": "all"
+        }
+      ],
+      "repeat": "instance"
+    }
+  ]
+}
