@@ -18,7 +18,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 K = Category
 
 REASONS = [
-    (C.R_SECRET, "Grafana contact point needs a secret at apply time", K.MANUAL_FOLLOWUP),
+    (C.R_SECRET, "Grafana converted destination needs a secret at apply time", K.MANUAL_FOLLOWUP),
     (C.R_NO_ADDRESS, "Grafana email contact point without an address", K.MANUAL_FOLLOWUP),
     (
         C.R_UNKNOWN_RECEIVER,
@@ -37,8 +37,8 @@ REASONS = [
     ),
     (C.R_MAP_MISMATCH, "Grafana destinations map entry does not fit", K.MANUAL_FOLLOWUP),
     (C.R_VENDOR_UNVERIFIED, "Grafana vendor webhook payload not tested", K.APPROXIMATION),
-    (C.R_MUTE_SCOPE, "Grafana mute timing as a muting rule", K.APPROXIMATION),
-    (C.R_ORPHAN_MUTE, "Grafana mute timing no route uses", K.MANUAL_FOLLOWUP),
+    (C.R_MUTE_SCOPE, "Grafana muting rule from a mute timing", K.APPROXIMATION),
+    (C.R_ORPHAN_MUTE, "Grafana unused mute timing", K.MANUAL_FOLLOWUP),
 ]
 OURS = {v for k, v in vars(C).items() if k.startswith("R_") and isinstance(v, str)}
 READ_SIDE = {v for k, v in vars(R).items() if k.startswith("R_") and isinstance(v, str)}
@@ -113,3 +113,43 @@ def test_the_steps_carry_no_secret_shaped_text() -> None:
 
     for _, _, steps in rules_module.RULES:
         assert not any(looks_like_secret(s, strict=False) for s in steps)
+
+
+def test_no_string_of_this_feature_is_claimed_by_the_read_side_patterns(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The read side's own test removes its rules and compares the answers for every string of
+    the code base outside its folders; this feature's strings (titles, steps, reasons) are among
+    them, so none may start with a phrase the read side's anchored patterns claim."""
+    import ast
+
+    from importer.core import taxonomy
+    from importer.sources.grafana.notifications import remediation_rules as read_rules
+
+    src = Path(__file__).parent.parent / "src" / "importer"
+    files = [*(src / "sources/grafana/notify_convert").glob("*.py")]
+    files.append(src / "commands" / "grafana_notify_convert.py")
+    strings = sorted(
+        {
+            n.value.strip()
+            for f in files
+            for n in ast.walk(ast.parse(f.read_text()))
+            if isinstance(n, ast.Constant) and isinstance(n.value, str) and 8 <= len(n.value) <= 400
+        }
+    )
+
+    def answers() -> list[tuple[str, tuple[str, ...]]]:
+        return [(classify(s).value, tuple(r.title for r in remedies_for([s]))) for s in strings]
+
+    with_all = answers()
+    theirs = {t for _, t, _ in read_rules.RULES}
+    their_taxonomy = {(c, p) for c, p in read_rules.TAXONOMY}
+    monkeypatch.setattr(
+        remediation, "_COMPILED", [r for r in remediation._COMPILED if r[1] not in theirs]
+    )
+    monkeypatch.setattr(
+        taxonomy,
+        "_EXTRA",
+        [e for e in taxonomy._EXTRA if (e[0], e[1].pattern) not in their_taxonomy],
+    )
+    assert answers() == with_all

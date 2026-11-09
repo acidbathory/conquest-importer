@@ -4,8 +4,8 @@ no text from the export (names, addresses and URLs never appear in a reason), an
 with a phrase that a read-side taxonomy pattern already claims.
 """
 
-R_SECRET = "grafana contact point needs a secret supplied at apply time"  # noqa: S105 - a sentence
-R_NO_ADDRESS = "grafana contact point needs an email address"
+R_SECRET = "grafana converted destination needs a secret supplied at apply time"  # noqa: S105 - a sentence
+R_NO_ADDRESS = "grafana converted email destination needs an address"
 R_UNKNOWN_RECEIVER = "grafana notification policy receiver is not in the export"
 R_UNKNOWN_TIMING = "grafana notification policy names a mute timing that is not in the export"
 R_NO_DESTINATION = "grafana notification route has no destination that can be created"

@@ -14,7 +14,7 @@ from importer.sources.grafana.notify_convert import reasons as C
 RULES: list[Rule] = [
     (
         re.compile("^" + re.escape(C.R_SECRET)),
-        "Grafana contact point needs a secret at apply time",
+        "Grafana converted destination needs a secret at apply time",
         [
             "The converted destination refers to a secret by name; no value is stored. For "
             "Terraform, set the sensitive variable named in the report (nr_secret_<name in lower "
@@ -81,7 +81,7 @@ RULES: list[Rule] = [
     ),
     (
         re.compile("^" + re.escape(C.R_MUTE_SCOPE)),
-        "Grafana mute timing as a muting rule",
+        "Grafana muting rule from a mute timing",
         [
             "A New Relic muting rule matches conditions, not routes: it mutes the converted "
             "conditions of the route in every workflow that honours muting. Only the workflows "
@@ -92,7 +92,7 @@ RULES: list[Rule] = [
     ),
     (
         re.compile("^" + re.escape(C.R_ORPHAN_MUTE)),
-        "Grafana mute timing no route uses",
+        "Grafana unused mute timing",
         [
             "No route that carries a converted rule uses this mute timing, so no muting rule "
             "was made from it. If it is meant for rules that were not converted, create the "
@@ -103,6 +103,7 @@ RULES: list[Rule] = [
 
 # (category, anchored pattern): registered before the built-in rules
 TAXONOMY: list[tuple[Category, str]] = [
+    (Category.MANUAL_FOLLOWUP, r"^grafana converted (?:email )?destination needs"),
     (Category.MANUAL_FOLLOWUP, r"^grafana notification policy (?:receiver|names a mute timing)"),
     (Category.MANUAL_FOLLOWUP, r"^grafana notification route has no destination"),
     (Category.MANUAL_FOLLOWUP, r"^grafana destinations map entry"),
