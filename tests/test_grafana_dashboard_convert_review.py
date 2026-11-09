@@ -6,7 +6,8 @@ from typing import Any
 
 import pytest
 
-from importer.core.dashboard_ir import IRDashboard
+from importer.core.dashboard_ir import IRDashboard, WidgetKind
+from importer.core.ir import Confidence
 from importer.sources import DASHBOARD_REGISTRY
 from importer.sources.grafana.dashboard_convert import reasons as r
 from importer.sources.grafana.dashboard_convert.layout import Placed, lay_out
@@ -14,10 +15,11 @@ from importer.sources.grafana.dashboard_convert.name_map import NameMap
 from importer.sources.grafana.dashboard_convert.panels import Draft
 from importer.sources.grafana.dashboard_convert.promql import QueryOptions, convert_query
 from importer.sources.grafana.dashboard_convert.reuse import Unconvertible
-from importer.sources.grafana.dashboard_convert.variables import RawVar
-from importer.core.dashboard_ir import WidgetKind
-from importer.core.ir import Confidence
-from importer.sources.grafana.dashboard_convert.variables import Variables, convert_variables
+from importer.sources.grafana.dashboard_convert.variables import (
+    RawVar,
+    Variables,
+    convert_variables,
+)
 from importer.sources.grafana.dashboards.models import Dashboard, Variable
 from importer.sources.grafana.dashboards.plan import plan_dashboard
 
