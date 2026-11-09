@@ -117,6 +117,38 @@ otelcol.exporter.otlphttp "newrelic" {{
 }}
 """
 
+
+def _keep_block(metrics: list[str], alloy: bool) -> str:
+    """Commented relabel rules: keep only the used metrics, and rename a `metricName` label."""
+    names = "|".join(m for m in metrics if METRIC_NAME.fullmatch(m))
+    lead = "    // " if alloy else "    # "
+    head = (
+        "Optional (UNVERIFIED against a live account): keep only the metrics the converted\n"
+        "rules and tiles read, and rename a label called metricName, which collides with the\n"
+        "New Relic attribute that holds the metric name (the converted NRQL must then use\n"
+        "metric_name if it filtered on that label). "
+    )
+    head += "Add inside the endpoint block:" if alloy else "Add under this remote_write entry:"
+    out = [lead + line for line in head.split("\n")]
+    if alloy:
+        blocks = [
+            ("__name__", f'regex = "{names}"', 'action = "keep"') if names else None,
+            ("metricName", 'target_label = "metric_name"', 'action = "replace"'),
+            ("metricName", 'regex = "metricName"', 'action = "labeldrop"'),
+        ]
+        for b in (x for x in blocks if x):
+            out += [f"{lead}write_relabel_config {{", f'{lead}  source_labels = ["{b[0]}"]']
+            out += [f"{lead}  {b[1]}", f"{lead}  {b[2]}", f"{lead}}}"]
+    else:
+        out.append(lead + "write_relabel_configs:")
+        if names:
+            out += [f"{lead}  - source_labels: [__name__]", f'{lead}    regex: "{names}"']
+            out.append(f"{lead}    action: keep")
+        out += [f"{lead}  - source_labels: [metricName]", f"{lead}    target_label: metric_name"]
+        out += [f"{lead}  - regex: metricName", f"{lead}    action: labeldrop"]
+    return "\n".join(out) + "\n"
+
+
 DATA_PATHS = {
     "prometheus": "Prometheus remote write or Alloy dual write (prometheus-remote-write.yml, "
     "alloy-dual-write.alloy), or OTLP metrics",
@@ -283,8 +315,11 @@ def build_files(
         "placeholder": KEY_PLACEHOLDER,
     }
     return {
-        "prometheus-remote-write.yml": PROMETHEUS_YML.format(**fill),
-        "alloy-dual-write.alloy": ALLOY_DUAL.format(**fill),
+        "prometheus-remote-write.yml": PROMETHEUS_YML.format(**fill)
+        + _keep_block(metrics or [], alloy=False),
+        "alloy-dual-write.alloy": ALLOY_DUAL.format(**fill).replace(
+            "  }\n}\n", _keep_block(metrics or [], alloy=True) + "  }\n}\n"
+        ),
         "alloy-otlp.alloy": ALLOY_OTLP.format(**fill),
         "naming-consequences.md": NAMING + _sources_section(datasources or []),
         "check-queries.md": _queries_text(

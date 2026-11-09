@@ -20,6 +20,7 @@ FILES = {
     "naming-consequences.md",
     "check-queries.md",
 }
+PLAN_FILES = {"datapath-plan.md", "datapath-plan.json", "otel-collector.yml"}
 REAL_KEY = "0123456789abcdef0123456789abcdef01234567NRAL"  # looks like a license key
 SECRET = "SECRET-VALUE-9f3a"  # noqa: S105 - a made-up marker for leak tests
 
@@ -177,7 +178,7 @@ def test_the_command_writes_the_files_and_prints_no_key(
     monkeypatch.setenv("NEW_RELIC_LICENSE_KEY", REAL_KEY)
     result = run(tmp_path, "--region", "eu")
     assert result.exit_code == 0, result.output
-    assert {p.name for p in (tmp_path / "o").iterdir()} == FILES
+    assert {p.name for p in (tmp_path / "o").iterdir()} == FILES | PLAN_FILES
     written = "".join(p.read_text() for p in (tmp_path / "o").iterdir())
     assert REAL_KEY not in written + result.output
     assert "metric-api.eu.newrelic.com" in written
