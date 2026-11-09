@@ -23,7 +23,7 @@ from typing import Any
 import httpx
 
 from importer.core.ids import MAX_INPUT_BYTES
-from importer.core.text import printable
+from importer.core.safe_http import get_json, is_plain_token
 
 PROJECT_ID = re.compile(r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$")
 API = "https://monitoring.googleapis.com"
@@ -38,6 +38,8 @@ READ_PATHS = {
     "dashboards": "dashboards",
 }
 MAX_PAGES = 100
+MAX_TOTAL_PAGES = 200  # across every list in one run
+SERVICE = "Google Cloud"
 
 # (url, params) -> response body as plain JSON
 Getter = Callable[[str, dict[str, str]], dict[str, Any]]
@@ -48,8 +50,13 @@ class GcpError(Exception):
 
 
 def access_token() -> str:
-    token = os.environ.get("GOOGLE_OAUTH_ACCESS_TOKEN", "").strip()
-    return token or _gcloud_token()
+    token = os.environ.get("GOOGLE_OAUTH_ACCESS_TOKEN", "").strip() or _gcloud_token()
+    if not is_plain_token(token):
+        raise GcpError(
+            "the Google access token must be plain ASCII text with no spaces; check that it was "
+            "pasted without a smart quote, a dash or a line break"
+        )
+    return token
 
 
 def _gcloud_token() -> str:
@@ -73,35 +80,40 @@ def _gcloud_token() -> str:
 
 
 @contextmanager
-def http_getter(token: str) -> Iterator[Getter]:
-    """A Getter that reuses one connection pool and closes it when the block ends."""
-    with httpx.Client(timeout=60, headers={"Authorization": f"Bearer {token}"}) as client:
+def http_getter(token: str, transport: httpx.BaseTransport | None = None) -> Iterator[Getter]:
+    """A Getter that reuses one connection pool and closes it when the block ends.
+
+    Redirects are not followed, a status of 300 or more is an error, and server text is scrubbed
+    (see core/safe_http.py). `transport` is for tests.
+    """
+    headers = {"Authorization": f"Bearer {token}"}
+    with httpx.Client(timeout=60, headers=headers, transport=transport) as client:
 
         def get(url: str, params: dict[str, str]) -> dict[str, Any]:
-            try:
-                response = client.get(url, params=params)
-            except httpx.HTTPError as exc:
-                raise GcpError(f"could not reach Google Cloud: {type(exc).__name__}") from exc
-            if response.status_code >= 400:
-                try:
-                    message = str(response.json().get("error", {}).get("message", ""))
-                except ValueError:
-                    message = ""
-                raise GcpError(
-                    f"Google Cloud returned {response.status_code}: {printable(message, 300)}"
-                )
-            body = response.json()
-            return body if isinstance(body, dict) else {}
+            return get_json(client, url, params, token, GcpError, SERVICE)
 
         yield get
 
 
-def _list_all(get: Getter, project: str, key: str) -> list[dict[str, Any]]:
+class PageBudget:
+    """Pages left for the whole run, shared by every list so the total is bounded."""
+
+    def __init__(self, pages: int) -> None:
+        self.left = pages
+
+    def spend(self) -> None:
+        if self.left <= 0:
+            raise GcpError(f"more than {MAX_TOTAL_PAGES} pages in total; stopped")
+        self.left -= 1
+
+
+def _list_all(get: Getter, project: str, key: str, budget: PageBudget) -> list[dict[str, Any]]:
     version = API_VERSIONS.get(key, DEFAULT_VERSION)
     url = f"{API}/{version}/projects/{project}/{READ_PATHS[key]}"
     items: list[dict[str, Any]] = []
     params: dict[str, str] = {"pageSize": "100"}
     for _ in range(MAX_PAGES):
+        budget.spend()
         page = get(url, params)
         found = page.get(key, [])
         if isinstance(found, list):
@@ -155,7 +167,8 @@ def extract(get: Getter, project: str, out: Path) -> ExtractResult:
     if out.exists() and any(out.iterdir()):
         raise ValueError(f"{out} already has files; pass a new folder")
     result = ExtractResult(project)
-    policies = _list_all(get, project, "alertPolicies")
+    budget = PageBudget(MAX_TOTAL_PAGES)
+    policies = _list_all(get, project, "alertPolicies", budget)
     result.policies = len(policies)
     result.conditions = sum(len(p.get("conditions", [])) for p in policies)
     optional: dict[str, list[dict[str, Any]]] = {}
@@ -165,7 +178,7 @@ def extract(get: Getter, project: str, out: Path) -> ExtractResult:
         ("dashboards", dict),  # layout and queries only, no secrets: kept whole
     ):
         try:
-            optional[key] = [summarise(i) for i in _list_all(get, project, key)]
+            optional[key] = [summarise(i) for i in _list_all(get, project, key, budget)]
         except GcpError as exc:
             result.warnings.append(f"{key}: {exc}")
             optional[key] = []
