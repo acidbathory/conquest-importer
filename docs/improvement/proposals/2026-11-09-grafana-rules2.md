@@ -119,4 +119,4 @@ with the new fixtures 19 of 42 (45%). The other sources are unchanged (cloudwatc
 
 ## Gate
 
-See the report of this run. Pending until the final gate below is recorded.
+`rm -rf .mypy_cache; sh scripts/improve/gate.sh` prints GATE PASSED (ruff, format, mypy --strict on src and tests, vulture, 4833 tests passed and 24 skipped, measure against the baseline, golden untouched).
