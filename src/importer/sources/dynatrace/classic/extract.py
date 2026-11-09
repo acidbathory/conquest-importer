@@ -23,12 +23,9 @@ from typing import Any
 
 import httpx
 
-from importer.core.dynatrace_env import (
-    CLASSIC_HOST,
-    PLATFORM_HOST,
-    TokenProblem,
-    env_token,
-)
+from importer.core.dynatrace_env import CLASSIC_HOST as CLASSIC_HOST
+from importer.core.dynatrace_env import PLATFORM_HOST as PLATFORM_HOST
+from importer.core.dynatrace_env import TokenProblem, env_token
 from importer.core.dynatrace_env import environment_url as environment_url
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.safe_http import ReadBudget, decode_json
