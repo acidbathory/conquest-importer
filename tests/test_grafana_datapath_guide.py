@@ -6,17 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from importer.sources.grafana.datapath import guide, needs
-from importer.sources.grafana.datapath import plan as dp
-from importer.sources.grafana.notifications.models import DataSource
 from importer.core.dashboard_ir import IRDashboard
 from importer.core.ir import IRMonitor
 from importer.sources import REGISTRY
 from importer.sources.grafana.dashboard_convert.name_map import NameMap
 from importer.sources.grafana.dashboard_convert.translate import convert_all, load_items
+from importer.sources.grafana.datapath import guide, needs
+from importer.sources.grafana.datapath import plan as dp
+from importer.sources.grafana.notifications.models import DataSource
 
 FIX = Path(__file__).parent / "fixtures"
-
 
 
 def rules() -> list[IRMonitor]:
@@ -32,7 +31,9 @@ REAL_KEY = "0123456789abcdef0123456789abcdef01234567NRAL"
 
 def files(region: str = "us", sources: list[DataSource] | None = None) -> dict[str, str]:
     items = needs.rule_items(rules()) + needs.tile_items(tiles())
-    return guide.plan_files(region, "prom-1", items, needs.judge(items, sources or []), sources or [])
+    return guide.plan_files(
+        region, "prom-1", items, needs.judge(items, sources or []), sources or []
+    )
 
 
 def test_the_plan_adds_three_files() -> None:
