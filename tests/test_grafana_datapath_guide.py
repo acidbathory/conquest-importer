@@ -5,8 +5,9 @@ import re
 from pathlib import Path
 
 import pytest
-from click.testing import Result
+from typer.testing import CliRunner, Result
 
+from importer.cli import app
 from importer.core.dashboard_ir import IRDashboard
 from importer.core.ir import IRMonitor
 from importer.sources import REGISTRY
@@ -102,8 +103,6 @@ def test_the_remote_write_and_alloy_snippets_keep_only_the_used_metrics() -> Non
 
 
 def _stage(tmp_path: Path) -> tuple[Path, Path]:
-    from typer.testing import CliRunner  # noqa: F401
-
     alerts, dash = tmp_path / "alerts", tmp_path / "dash"
     (alerts / "ir").mkdir(parents=True)
     (dash / "dashboard-ir").mkdir(parents=True)
@@ -117,10 +116,6 @@ def _stage(tmp_path: Path) -> tuple[Path, Path]:
 
 
 def _run(tmp_path: Path, *extra: str) -> Result:
-    from typer.testing import CliRunner
-
-    from importer.cli import app
-
     return CliRunner().invoke(app, ["plan-grafana-datapath", "--out", str(tmp_path / "o"), *extra])
 
 
@@ -148,7 +143,7 @@ def test_update_report_adds_one_coverage_section_to_each_report(tmp_path: Path) 
 
 
 def test_update_report_without_a_report_is_a_clean_error(tmp_path: Path) -> None:
-    alerts, dash = _stage(tmp_path)
+    _, dash = _stage(tmp_path)
     (dash / "report.md").unlink()
     result = _run(tmp_path, "--dashboards", str(dash), "--update-report")
     assert result.exit_code == 1 and "report.md" in result.output

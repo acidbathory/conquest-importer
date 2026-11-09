@@ -16,12 +16,14 @@ from typing import Annotated
 import typer
 
 from importer.core.apply import NewRelicClient
+from importer.core.dashboard_ir import IRDashboard
 from importer.core.data_check import run_data_check
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.ir import IRMonitor
 from importer.core.secrets import require_env
 from importer.core.text import printable
 from importer.sources.grafana.datapath import check as data_check
+from importer.sources.grafana.datapath import guide, needs
 from importer.sources.grafana.datapath import plan as datapath
 from importer.sources.grafana.extract import GrafanaError, grafana_url
 from importer.sources.grafana.extract import api_token as grafana_api_token
@@ -92,6 +94,21 @@ def _read_ir(alerts: Path) -> list[IRMonitor]:
     return [IRMonitor.model_validate_json(f.read_text()) for f in files]
 
 
+def _read_dashboards(folder: Path) -> list[IRDashboard]:
+    """The saved dashboard IR of `convert-grafana-dashboards`, with the same caps."""
+    files = sorted((folder / "dashboard-ir").glob("*.json"))[:MAX_IR_FILES]
+    if any(f.stat().st_size > MAX_INPUT_BYTES for f in files):
+        raise ValueError("a dashboard IR file is larger than the importer accepts")
+    return [IRDashboard.model_validate_json(f.read_text()) for f in files]
+
+
+def _update_report(folder: Path, section: str) -> None:
+    report = folder / "report.md"
+    if not report.is_file() or report.stat().st_size > MAX_INPUT_BYTES:
+        raise ValueError(f"{folder.name}/report.md is missing or too large to update")
+    report.write_text(needs.replace_section(report.read_text(), section))
+
+
 def _plan(
     region: Annotated[str, typer.Option(help="us, eu or jp: the New Relic data region")] = "us",
     out: Annotated[Path, typer.Option(help="New folder for the guide")] = Path(
@@ -107,18 +124,36 @@ def _plan(
         Path | None, typer.Option(help="Output folder of `convert` (has ir/), to fill the queries")
     ] = None,
     hours: Annotated[int, typer.Option(help="Window in the listed queries (1 to 168)")] = 24,
+    dashboards: Annotated[
+        Path | None,
+        typer.Option(help="Output folder of `convert-grafana-dashboards` (has dashboard-ir/)"),
+    ] = None,
+    update_report: Annotated[
+        bool,
+        typer.Option(
+            "--update-report",
+            help="Add a 'Data path coverage' section to report.md in --alerts and --dashboards",
+        ),
+    ] = False,
 ) -> None:
     """Write guidance for sending Prometheus and Loki data to New Relic. Sends nothing.
 
     Writes a Prometheus remote_write block, Grafana Alloy snippets, the naming consequences
     and the queries a data check would run. The license key is a placeholder or an environment
-    variable name in every file: this command never reads or writes a key.
+    variable name in every file: this command never reads or writes a key. With --alerts and
+    --dashboards it also writes datapath-plan.md: the steps, the metric families and how they
+    arrive in New Relic, and for each converted rule and tile the step after which it has data.
     """
     try:
         sources = load_export(export).datasources if export else []
         metrics, attributes = (
             data_check.targets_from_monitors(_read_ir(alerts)) if alerts else ([], [])
         )
+        rule_list = needs.rule_items(_read_ir(alerts)) if alerts else []
+        tile_list = needs.tile_items(_read_dashboards(dashboards)) if dashboards else []
+        items = rule_list + tile_list
+        metrics = sorted({*metrics, *(f.name for f in needs.families(items))})
+        judged = needs.judge(items, sources)
         files = datapath.build_files(
             region,
             prometheus_server=prometheus_server,
@@ -127,11 +162,27 @@ def _plan(
             datasources=sources,
             hours=hours,
         )
+        files |= guide.plan_files(region, prometheus_server, items, judged, sources)
+        coverage = {
+            noun: needs.coverage([j for j in judged if j.item.kind == kind])
+            for noun, kind in (("rules", "rule"), ("tiles", "tile"))
+        }
+        if update_report:
+            if alerts:
+                _update_report(alerts, needs.coverage_section({"rules": coverage["rules"]}))
+            if dashboards:
+                _update_report(dashboards, needs.coverage_section({"tiles": coverage["tiles"]}))
         datapath.write_files(files, out)
     except (ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
         raise typer.Exit(code=1) from None
     typer.echo(f"Wrote {len(files)} files to {printable(str(out), 200)}. No data was sent.")
+    for noun, cov in coverage.items():
+        if cov.total:
+            typer.echo(
+                f"{noun.capitalize()}: {cov.known} of {cov.converted} converted with a known "
+                f"data path ({cov.total} read)."
+            )
     typer.echo("Put the New Relic ingest license key where the files say; they hold a placeholder.")
 
 
