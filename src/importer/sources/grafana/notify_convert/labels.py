@@ -12,6 +12,7 @@ from collections.abc import Sequence
 from importer.core.ir import IRMonitor
 from importer.sources.grafana.models import GrafanaRule
 from importer.sources.grafana.notifications.models import PolicyNode, PolicyTree
+from importer.sources.grafana.notifications.policies import parse_node
 from importer.sources.grafana.notifications.policy import RuleLabels
 
 UNKNOWN = "{{unknown}}"  # a value the policy walk treats as a template: not decidable
@@ -55,6 +56,25 @@ def query_labels(monitor: IRMonitor) -> frozenset[str] | None:
     return frozenset(grouped) if grouped else None
 
 
+def _own_route(settings: object) -> PolicyNode | None:
+    """The rule's simplified routing as a policy node, read like a policy route (so a receiver
+    that looks like an address gets the same stable reference as in the policy). Grafana spells
+    the timing lists `mute_time_intervals` and `active_time_intervals`; the provisioning API of
+    some versions says `mute_timings` and `active_timings`."""
+    if not isinstance(settings, dict):
+        return None
+    raw = dict(settings)
+    for old, new in (
+        ("mute_timings", "mute_time_intervals"),
+        ("active_timings", "active_time_intervals"),
+    ):
+        if old in raw and new not in raw:
+            raw[new] = raw[old]
+    if not isinstance(raw.get("receiver"), str) or not raw["receiver"]:
+        return None
+    return parse_node(raw)
+
+
 def rule_labels(monitor: IRMonitor, rule: GrafanaRule | None, wanted: set[str]) -> RuleLabels:
     by = query_labels(monitor)
     if rule is None:
@@ -65,13 +85,15 @@ def rule_labels(monitor: IRMonitor, rule: GrafanaRule | None, wanted: set[str]) 
     if not titled:
         labels["grafana_folder"] = UNKNOWN
     settings = rule.notification_settings
-    receiver = settings.get("receiver") if isinstance(settings, dict) else None
+    own = _own_route(settings)
+    receiver = own.receiver if own is not None else None
     return RuleLabels(
         name=monitor.name,
         labels=labels,
         folder=rule.folder if titled else "",
         by_labels=by,
-        receiver=receiver if isinstance(receiver, str) and receiver else None,
+        receiver=receiver or None,
+        settings=own,
         uid=rule.uid,
         namespace_uid="" if titled else rule.folder,
     )

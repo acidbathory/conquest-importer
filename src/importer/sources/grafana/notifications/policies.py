@@ -153,6 +153,11 @@ def _node(raw: dict[str, Any]) -> PolicyNode:
     )
 
 
+def parse_node(raw: dict[str, Any]) -> PolicyNode:
+    """One node from a raw route object (also the notification settings of a rule)."""
+    return _node(raw)
+
+
 def _children(raw: dict[str, Any], depth: int, budget: _Budget) -> list[PolicyNode]:
     routes = as_list(raw.get("routes"))
     if not routes:

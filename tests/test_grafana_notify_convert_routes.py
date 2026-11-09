@@ -473,3 +473,30 @@ def test_schedules_that_ended_and_rules_that_could_not_be_scoped_are_counted() -
     assert c.expired_schedules == 1 and c.muting_rules == []
     assert all(w.muting_rules_handling == "" for w in workflows(c))
     assert "ended before today" in render_report(c)
+
+
+def test_simplified_routing_keeps_its_mute_timings_and_active_windows() -> None:
+    nights = {
+        "name": "Nights",
+        "time_intervals": [{"times": [{"start_time": "22:00", "end_time": "23:00"}]}],
+    }
+    settings = {
+        "receiver": "Other",
+        "mute_time_intervals": ["Nights"],
+        "active_time_intervals": ["Days"],
+    }
+    rule = GrafanaRule(title="A", uid="uid-1", notification_settings=settings)
+    ex = export([email("Ops"), email("Other", "o@example.com")], {"receiver": "Ops"}, [nights])
+    c = run(ex, [monitor("A", 1)], rules=[rule])
+    assert c.muting_rules, "the mute timing of the rule was dropped"
+    assert workflows(c)[0].muting_rules_handling == "DONT_NOTIFY_FULLY_OR_PARTIALLY_MUTED_ISSUES"
+    assert R.R_MUTE_ACTIVE in c.reasons
+
+
+def test_simplified_routing_receiver_is_screened_like_the_policy_receivers() -> None:
+    rule = GrafanaRule(
+        title="A", uid="uid-1", notification_settings={"receiver": "ops@example.com"}
+    )
+    ex = export([email("ops@example.com", "o@example.com")], {"receiver": "Ops"})
+    c = run(ex, [monitor("A", 1)], rules=[rule])
+    assert len(workflows(c)) == 1 and C.R_UNKNOWN_RECEIVER not in c.reasons
