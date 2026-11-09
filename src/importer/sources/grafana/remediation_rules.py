@@ -112,6 +112,16 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^promql expression `.*can never fire"),
+        "Grafana rule that cannot fire",
+        [
+            "The query keeps only series equal to one number, and the threshold node then asks "
+            "for a different value, so this rule never fires in Grafana either. It is probably "
+            "a mistake. Decide what it should detect, then put that comparison in the threshold "
+            "(for `up == 0`, query `up` and fire when it is below 1).",
+        ],
+    ),
+    (
         re.compile(r"^data source-managed rule: the query has no comparison"),
         "Rule-file rule without a comparison",
         [

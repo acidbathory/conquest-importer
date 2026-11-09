@@ -68,6 +68,10 @@ MANUAL_REASONS = [
     ("promql uses histogram_quantile", "PromQL feature with no alert-condition equivalent"),
     ("promql uses without()", "PromQL feature with no alert-condition equivalent"),
     ("promql uses a binary operator or comparison", "PromQL operator or comparison"),
+    (
+        t.R_COMPARE_NEVER.format(query="up", value=0.0),
+        "Grafana rule that cannot fire",
+    ),
     (t.PROM_MATCHER, "PromQL label matcher not converted"),
     (t.PROM_COUNTER, "PromQL counter metric"),
     (t.PROM_NAME, "PromQL name not valid in NRQL"),
@@ -116,6 +120,7 @@ EXPECTED_CATEGORY = {
     t.R_RATIO_AGG.format(agg="max"): C.UNSUPPORTED_QUERY,
     t.R_ABSENT_THRESHOLD: C.UNSUPPORTED_QUERY,
     t.R_COMPARE_AND_NODE: C.UNSUPPORTED_QUERY,
+    t.R_COMPARE_NEVER.format(query="up", value=0.0): C.UNSUPPORTED_QUERY,
     fields.N_ORIGIN.format(where="folder ops", labels=""): C.MANUAL_FOLLOWUP,
     fields.N_RUNBOOK_IGNORED: C.APPROXIMATION,
     t.N_NODATA_OK: C.APPROXIMATION,
