@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 import pytest
+from click.testing import Result
 
 from importer.core.dashboard_ir import IRDashboard
 from importer.core.ir import IRMonitor
@@ -95,3 +96,59 @@ def test_the_remote_write_and_alloy_snippets_keep_only_the_used_metrics() -> Non
     yml = built["prometheus-remote-write.yml"]
     assert '#     regex: "up|job:lat:mean5m"' in yml
     assert "metric_name" in yml and "metricName" in yml
+
+
+# --- the command ---
+
+
+def _stage(tmp_path: Path) -> tuple[Path, Path]:
+    from typer.testing import CliRunner  # noqa: F401
+
+    alerts, dash = tmp_path / "alerts", tmp_path / "dash"
+    (alerts / "ir").mkdir(parents=True)
+    (dash / "dashboard-ir").mkdir(parents=True)
+    for i, m in enumerate(rules()):
+        (alerts / "ir" / f"{i}.json").write_text(m.model_dump_json())
+    for i, d in enumerate(tiles()):
+        (dash / "dashboard-ir" / f"{i}.json").write_text(d.model_dump_json())
+    (alerts / "report.md").write_text("# alerts\n")
+    (dash / "report.md").write_text("# dash\n\n## Grafana data prerequisites\n\nx\n")
+    return alerts, dash
+
+
+def _run(tmp_path: Path, *extra: str) -> Result:
+    from typer.testing import CliRunner
+
+    from importer.cli import app
+
+    return CliRunner().invoke(app, ["plan-grafana-datapath", "--out", str(tmp_path / "o"), *extra])
+
+
+def test_the_command_writes_the_plan_and_the_snippets_hold_the_used_metrics(
+    tmp_path: Path,
+) -> None:
+    alerts, dash = _stage(tmp_path)
+    result = _run(tmp_path, "--alerts", str(alerts), "--dashboards", str(dash))
+    assert result.exit_code == 0, result.output
+    out = tmp_path / "o"
+    assert (out / "datapath-plan.md").exists() and (out / "otel-collector.yml").exists()
+    assert "node_cpu_seconds_total" in (out / "prometheus-remote-write.yml").read_text()
+    assert "converted with a known data path" in result.output
+
+
+def test_update_report_adds_one_coverage_section_to_each_report(tmp_path: Path) -> None:
+    alerts, dash = _stage(tmp_path)
+    args = ("--alerts", str(alerts), "--dashboards", str(dash), "--update-report")
+    result = _run(tmp_path, *args)
+    assert result.exit_code == 0, result.output
+    a, d = (alerts / "report.md").read_text(), (dash / "report.md").read_text()
+    assert a.count(needs.SECTION_HEADING) == 1 and "Rules:" in a
+    assert d.count(needs.SECTION_HEADING) == 1 and "Tiles:" in d
+    assert d.index("## Grafana data prerequisites") < d.index(needs.SECTION_HEADING)
+
+
+def test_update_report_without_a_report_is_a_clean_error(tmp_path: Path) -> None:
+    alerts, dash = _stage(tmp_path)
+    (dash / "report.md").unlink()
+    result = _run(tmp_path, "--dashboards", str(dash), "--update-report")
+    assert result.exit_code == 1 and "report.md" in result.output
