@@ -78,9 +78,26 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
 ]
 
 
+_EXTRA: list[tuple[Category, re.Pattern[str]]] = []
+
+
+def register_taxonomy(category: Category, pattern: str) -> None:
+    """Add a rule for a source's own reasons without editing the shared lists above.
+
+    Registered rules are tried BEFORE the built-in ones, so the pattern must be anchored with `^`
+    (it can then only match the start of a reason and cannot capture older wording). Registering
+    the same rule twice adds nothing.
+    """
+    if not pattern.startswith("^"):
+        raise ValueError(f"taxonomy pattern must start with ^: {pattern!r}")
+    entry = (category, re.compile(pattern))
+    if entry not in _EXTRA:
+        _EXTRA.append(entry)
+
+
 def classify(reason: str) -> Category:
     text = reason.lower()
-    for category, rule in _RULES:
+    for category, rule in (*_EXTRA, *_RULES):
         if rule.search(text):
             return category
     return Category.OTHER

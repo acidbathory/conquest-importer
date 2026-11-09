@@ -51,3 +51,14 @@ DASHBOARD_REGISTRY: dict[str, DashboardSource[Any]] = {}
 
 def register_dashboards(source: DashboardSource[Any]) -> None:
     DASHBOARD_REGISTRY[source.name] = source
+
+
+# Extra fixture folders per source for the improvement loop's offline measure. A source (or a
+# parallel branch) registers its own folders here instead of editing core/improve.py.
+EXTRA_FIXTURES: dict[str, list[str]] = {}
+
+
+def register_fixtures(source: str, *folders: str) -> None:
+    """Add fixture folders (relative to the repository root) for a source; idempotent."""
+    known = EXTRA_FIXTURES.setdefault(source, [])
+    known.extend(f for f in folders if f not in known)

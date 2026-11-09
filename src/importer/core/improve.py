@@ -17,6 +17,7 @@ from importer.core.remediation import steps_for
 from importer.core.stats import Run, SourceStats, build_stats, reason_pattern
 from importer.core.taxonomy import classify
 from importer.sources import REGISTRY
+from importer.sources.base import EXTRA_FIXTURES
 
 # source name -> fixture folders below the repository root
 FIXTURES: dict[str, list[str]] = {
@@ -40,6 +41,10 @@ class Regression:
 def _monitors(root: Path, extra: dict[str, list[Path]] | None) -> dict[str, list[IRMonitor]]:
     found: dict[str, list[IRMonitor]] = {}
     folders = {k: [root / p for p in v] for k, v in FIXTURES.items()}
+    for name, more_folders in EXTRA_FIXTURES.items():
+        folders.setdefault(name, []).extend(
+            root / p for p in more_folders if root / p not in folders.get(name, [])
+        )
     for name, more in (extra or {}).items():
         folders.setdefault(name, []).extend(more)
     for name, paths in folders.items():

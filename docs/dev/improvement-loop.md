@@ -50,6 +50,12 @@ The loop also improves itself, with the same approval rule.
   other and are reviewed by the `reviewer` subagent first.
 - The baseline moves forward only when the owner approves a proposal. It never moves backward.
 
+## Parallel branches
+
+Several loops can run at once. Read `docs/dev/parallel-work.md` first: file ownership, the
+extension points for commands, taxonomy and fixtures, and the frozen shared files. Write lessons
+to `docs/improvement/lessons.d/<date>-<cycle>.md`.
+
 ## Evidence
 
 Fixtures show whether conversion logic is right on known shapes. They do not show whether a

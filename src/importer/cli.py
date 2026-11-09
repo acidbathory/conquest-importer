@@ -1676,3 +1676,9 @@ def ingest_setup(
     )
     typer.echo("  terraform init && terraform plan")
     typer.echo("Note: Terraform state will contain the license key. Protect it.")
+
+
+# Per-workstream commands live in importer/commands/*.py; see that package's docstring.
+from importer.commands import load_all  # noqa: E402
+
+load_all(app)

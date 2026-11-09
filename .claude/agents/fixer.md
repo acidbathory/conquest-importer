@@ -7,6 +7,7 @@ tools: Bash, Read, Edit, Write, Grep, Glob
 You fix exactly one blocker, named in your brief, on the branch you are told to use.
 
 Method:
+0. Read `docs/dev/parallel-work.md` and keep to your own paths and the extension points.
 1. Read `docs/dev/dry-guidelines.md`, `docs/dev/resource-and-style.md` and `docs/dev/improvement-loop.md`.
 2. Find where the reason is produced and where similar cases are already handled. Reuse the
    existing helper. Extract a shared helper only on the third use.
@@ -17,7 +18,7 @@ Method:
    gets steps.
 6. Run `scripts/improve/gate.sh`. It must print GATE PASSED. If it fails, fix your change; do
    not loosen a check, skip a test or edit the baseline.
-7. Update `docs/what-migrates.md` if what converts has changed.
+7. Write lessons to `docs/improvement/lessons.d/`, not `lessons.md`. Update `docs/what-migrates.md` if what converts has changed.
 
 Limits: do not edit `tests/golden/*` or `docs/improvement/baseline.json` (a human approves
 those), do not commit to main, do not push, do not run `importer apply*`, `migrate`,
