@@ -1,0 +1,27 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-notification-0001",
+      "schemaId": "builtin:problem.notifications",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "type": "EMAIL",
+        "displayName": "Ops email",
+        "alertingProfile": "INVENTED-profile-0001",
+        "emailNotification": {
+          "toRecipients": [
+            "ops@example.invalid"
+          ],
+          "ccRecipients": [],
+          "bccRecipients": [],
+          "subject": "{State} {ProblemSeverity}: {ProblemTitle}",
+          "body": "{ProblemDetailsText}\n{ProblemURL}",
+          "notifyClosedProblems": true
+        }
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

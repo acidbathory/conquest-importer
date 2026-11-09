@@ -1,0 +1,27 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-slo-0001",
+      "schemaId": "builtin:monitoring.slo",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "name": "Checkout availability",
+        "customDescription": "Terraform Test",
+        "metricName": "checkout_availability",
+        "metricExpression": "100*(builtin:service.requestCount.server:splitBy())/(builtin:service.requestCount.server:splitBy())",
+        "evaluationType": "AGGREGATE",
+        "filter": "type(SERVICE),serviceType(WEB_SERVICE,WEB_REQUEST_SERVICE)",
+        "evaluationWindow": "-1w",
+        "targetSuccess": 95,
+        "targetWarning": 98,
+        "errorBudgetBurnRate": {
+          "burnRateVisualizationEnabled": false,
+          "fastBurnThreshold": 10
+        }
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

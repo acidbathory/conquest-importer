@@ -1,0 +1,65 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-profile-0002",
+      "schemaId": "builtin:alerting.profile",
+      "scope": "environment",
+      "value": {
+        "name": "Prod platform team",
+        "managementZone": "-189204438944455158",
+        "severityRules": [
+          {
+            "severityLevel": "RESOURCE_CONTENTION",
+            "delayInMinutes": 15,
+            "tagFilterIncludeMode": "INCLUDE_ALL",
+            "tagFilter": [
+              "EnvironmentA:production",
+              "Team:platform"
+            ]
+          },
+          {
+            "severityLevel": "CUSTOM_ALERT",
+            "delayInMinutes": 0,
+            "tagFilterIncludeMode": "INCLUDE_ANY",
+            "tagFilter": [
+              "Team:platform",
+              "Team:sre"
+            ]
+          }
+        ],
+        "eventFilters": [
+          {
+            "source": "PREDEFINED",
+            "predefinedFilter": {
+              "eventType": "OSI_HIGH_CPU",
+              "negate": true
+            }
+          },
+          {
+            "source": "CUSTOM",
+            "customFilter": {
+              "titleFilter": {
+                "operator": "REGEX_MATCHES",
+                "value": "^(db|cache)-.*",
+                "negate": false,
+                "enabled": true,
+                "caseSensitive": false
+              },
+              "metadataFilter": {
+                "metadataFilterItems": [
+                  {
+                    "metadataKey": "dt.owner",
+                    "metadataValue": "platform",
+                    "negate": false
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

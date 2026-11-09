@@ -1,0 +1,77 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-detector-0002",
+      "schemaId": "builtin:davis.anomaly-detectors",
+      "scope": "environment",
+      "value": {
+        "title": "Abnormal latency increase, JourneyService",
+        "description": "",
+        "enabled": true,
+        "source": "Davis Anomaly Detection",
+        "analyzer": {
+          "name": "dt.statistics.ui.anomaly_detection.AutoAdaptiveAnomalyDetectionAnalyzer",
+          "input": [
+            {
+              "key": "query.expression",
+              "value": "timeseries avg_latency = avg(dt.service.request.response_time), by: {dt.smartscape.service} | filter dt.smartscape.service == toSmartscapeId(\"SERVICE-18AA85290DF3D5D2\")"
+            },
+            {
+              "key": "numberOfSignalFluctuations",
+              "value": "1"
+            },
+            {
+              "key": "alertCondition",
+              "value": "ABOVE"
+            },
+            {
+              "key": "alertOnMissingData",
+              "value": "false"
+            },
+            {
+              "key": "violatingSamples",
+              "value": "3"
+            },
+            {
+              "key": "slidingWindow",
+              "value": "5"
+            },
+            {
+              "key": "dealertingSamples",
+              "value": "5"
+            }
+          ]
+        },
+        "eventTemplate": {
+          "properties": [
+            {
+              "key": "dt.source_entity",
+              "value": "{dims:dt.smartscape.service}"
+            },
+            {
+              "key": "event.type",
+              "value": "PERFORMANCE_EVENT"
+            },
+            {
+              "key": "event.name",
+              "value": "Abnormal latency increase on JourneyService"
+            },
+            {
+              "key": "event.description",
+              "value": "Detected {violating_samples} violation samples within the evaluation window."
+            },
+            {
+              "key": "dt.alert_group",
+              "value": "my-routing-group"
+            }
+          ]
+        },
+        "executionSettings": {
+          "actor": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

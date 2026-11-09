@@ -1,0 +1,49 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-detector-0003",
+      "schemaId": "builtin:davis.anomaly-detectors",
+      "scope": "environment",
+      "value": {
+        "title": "High CPU usage, per host (records mode)",
+        "description": "",
+        "enabled": true,
+        "source": "Davis Anomaly Detection",
+        "analyzer": {
+          "name": "dt.statistics.anomaly_detection.RecordAnomalyDetectionAnalyzer",
+          "input": [
+            {
+              "key": "query.expression",
+              "value": "timeseries cpu=avg(dt.host.cpu.usage), by: { dt.smartscape.host }\n| fieldsAdd max_cpu = arrayMax(cpu)\n| fieldsRemove cpu\n| filter max_cpu > 80"
+            },
+            {
+              "key": "alertIdentityFields[0]",
+              "value": "dt.smartscape.host"
+            }
+          ]
+        },
+        "eventTemplate": {
+          "properties": [
+            {
+              "key": "dt.source_entity",
+              "value": "{dims:dt.smartscape.host}"
+            },
+            {
+              "key": "event.type",
+              "value": "RESOURCE_CONTENTION_EVENT"
+            },
+            {
+              "key": "event.name",
+              "value": "High CPU usage on {dims:dt.smartscape.host}: {max_cpu}%"
+            }
+          ]
+        },
+        "executionSettings": {
+          "actor": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

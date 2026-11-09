@@ -1,0 +1,117 @@
+{
+  "items": [
+    {
+      "objectId": "HOSTILE-dup",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "first",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "first",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "HOSTILE-dup",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "second",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "second",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "HOSTILE-dup",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "third",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "third",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "schemaId": "builtin:alerting.profile",
+      "value": {
+        "name": "no id one"
+      }
+    },
+    {
+      "schemaId": "builtin:alerting.profile",
+      "value": {
+        "name": "no id two"
+      }
+    }
+  ],
+  "totalCount": 5,
+  "pageSize": 500
+}

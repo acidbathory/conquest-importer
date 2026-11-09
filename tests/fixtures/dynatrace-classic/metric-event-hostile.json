@@ -1,0 +1,53 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-metric-event-0003",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "x' OR 1=1 --\n\"quoted\" ${var.secret} %{ if true } | col | `code` [link](http://x) <img src=x>",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "custom.\"5xx_errors\"",
+          "aggregation": "PERCENTILE90",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": [
+              {
+                "type": "NAME",
+                "operator": "CONTAINS_CASE_INSENSITIVE",
+                "value": "a'; DROP TABLE x; --"
+              }
+            ]
+          },
+          "dimensionFilter": [
+            {
+              "dimensionKey": "tilde~key",
+              "operator": "STARTS_WITH",
+              "dimensionValue": "100%_done\\\""
+            }
+          ]
+        },
+        "modelProperties": {
+          "type": "SEASONAL_BASELINE",
+          "tolerance": 4,
+          "alertCondition": "OUTSIDE",
+          "alertOnNoData": false,
+          "violatingSamples": 60,
+          "samples": 60,
+          "dealertingSamples": 60
+        },
+        "eventTemplate": {
+          "title": "{dims:dt.entity.host} } { unbalanced",
+          "description": "line1\r\nline2\u0000",
+          "eventType": "CUSTOM_ALERT",
+          "davisMerge": true,
+          "metadata": []
+        }
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

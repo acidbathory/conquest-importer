@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-maint-0003",
+      "schemaId": "builtin:maintenance-windows",
+      "scope": "environment",
+      "value": {
+        "name": "Nightly batch",
+        "enabled": true,
+        "filter": "matchesValue(k8s.namespace.name, \"batch\") or in(dt.entity.host, \"HOST-1\")",
+        "autoDelete": false,
+        "schedule": {
+          "trigger": {
+            "type": "time",
+            "recurring": {
+              "time": "01:00:00",
+              "earliestStart": "2026-01-01",
+              "until": "2026-12-31",
+              "rule": "FREQ=DAILY"
+            }
+          },
+          "timezone": "UTC",
+          "duration": 120
+        },
+        "objectScopes": {
+          "syntheticMonitors": {
+            "disableSyntheticMonitors": false
+          },
+          "suppressProblems": true
+        }
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

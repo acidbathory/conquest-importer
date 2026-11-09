@@ -1,0 +1,799 @@
+{
+  "items": [
+    {
+      "objectId": "SYNTH-ev-cpu",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU above 90 on one host",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [
+            {
+              "dimensionKey": "dt.entity.host",
+              "operator": "EQUALS",
+              "dimensionValue": "web-1"
+            }
+          ]
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "CPU above 90 on one host",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-ev-mem-nodata",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "Memory high, alert on no data",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.mem.usage",
+          "aggregation": "MAX",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 85,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": true,
+          "violatingSamples": 5,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "Memory high, alert on no data",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-ev-disk-below",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "Disk used below 5 (odd)",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.disk.usedPct",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 5,
+          "alertCondition": "BELOW",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "Disk used below 5 (odd)",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-ev-response",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "Response time over 2 seconds",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:service.response.time",
+          "aggregation": "PERCENTILE90",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "queryOffset": 3
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 2000000,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 5,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "Response time over 2 seconds",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-ev-disabled",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": false,
+        "summary": "Old CPU event, disabled",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "Old CPU event, disabled",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-ev-entity-name",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU on hosts named gke",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": [
+              {
+                "type": "NAME",
+                "operator": "STARTS_WITH",
+                "value": "gke-"
+              }
+            ]
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "CPU on hosts named gke",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-ev-zone",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU in a management zone",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "managementZone": "-1892"
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "CPU in a management zone",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-ev-tag",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU on tagged hosts",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": [
+              {
+                "type": "TAG",
+                "operator": "EQUALS",
+                "value": "env:prod"
+              }
+            ]
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "CPU on tagged hosts",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-ev-nomap",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "Free disk space",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.disk.avail",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "Free disk space",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-ev-custom",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "Queue depth",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "custom.queue.depth",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "Queue depth",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-ev-outside-static",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "OUTSIDE on a static threshold",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "OUTSIDE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "OUTSIDE on a static threshold",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-split",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU max per host",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "builtin:host.cpu.usage:splitBy(\"dt.entity.host\"):max"
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "CPU max per host",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-filter",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU on web hosts",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "builtin:host.cpu.usage:filter(prefix(\"dt.entity.host\",\"web\")):splitBy():avg"
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "CPU on web hosts",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-percentile",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU 95th percentile",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "builtin:host.cpu.usage:splitBy():percentile(95)"
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "CPU 95th percentile",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-ratio",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "Checkout error ratio",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "(builtin:service.errors.total.count:splitBy(\"dt.entity.service\"):value) / (builtin:service.requestCount.server:splitBy(\"dt.entity.service\"):value) * 100"
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 5,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "Checkout error ratio",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-notes",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU with details that are not applied",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "builtin:host.cpu.usage:splitBy():avg:default(0):sort(value(avg,descending)):limit(5):names:setUnit(Percent)"
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "CPU with details that are not applied",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-rate",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "Requests per minute",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "builtin:service.requestCount.server:splitBy():rate(1m)"
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "Requests per minute",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-seasonal",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU outside its seasonal band",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "builtin:host.cpu.usage:splitBy():avg"
+        },
+        "modelProperties": {
+          "type": "SEASONAL_BASELINE",
+          "threshold": null,
+          "alertCondition": "OUTSIDE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5,
+          "tolerance": 4
+        },
+        "eventTemplate": {
+          "title": "CPU outside its seasonal band",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-adaptive",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU above its learned range",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "builtin:host.cpu.usage:splitBy():avg"
+        },
+        "modelProperties": {
+          "type": "AUTO_ADAPTIVE_THRESHOLD",
+          "threshold": null,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5,
+          "signalFluctuation": 1
+        },
+        "eventTemplate": {
+          "title": "CPU above its learned range",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-fold",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU folded",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "builtin:host.cpu.usage:fold(avg)"
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "CPU folded",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-several",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "Two metrics",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "builtin:host.cpu.usage:avg,builtin:host.mem.usage:avg"
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "Two metrics",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-entity-selector",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU of selected entities",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "builtin:host.cpu.usage:filter(in(\"dt.entity.host\",entitySelector(\"type(HOST),tag(prod)\"))):avg"
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "CPU of selected entities",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    },
+    {
+      "objectId": "SYNTH-sel-timeshift",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "CPU against yesterday",
+        "queryDefinition": {
+          "type": "METRIC_SELECTOR",
+          "metricKey": "builtin:host.cpu.usage",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": [],
+          "metricSelector": "builtin:host.cpu.usage:timeshift(-1d):avg"
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "CPU against yesterday",
+          "description": "",
+          "eventType": "RESOURCE"
+        }
+      }
+    }
+  ],
+  "totalCount": 23,
+  "pageSize": 500
+}
