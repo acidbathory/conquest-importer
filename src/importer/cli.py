@@ -7,7 +7,7 @@ import webbrowser
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated, NoReturn
+from typing import Annotated, Any, NoReturn
 
 import typer
 
@@ -67,6 +67,7 @@ from importer.sources.cloudwatch.models import load_alarms
 from importer.sources.cloudwatch.notifications import load_topics, routing, translate_topic
 from importer.sources.cloudwatch.streaming import streaming_inputs
 from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
+from importer.sources.dynatrace import data_check as dynatrace_data
 from importer.sources.dynatrace.extract import DynatraceError
 from importer.sources.dynatrace.extract import api_token as dynatrace_api_token
 from importer.sources.dynatrace.extract import environment_url as dynatrace_env_url
@@ -166,13 +167,13 @@ def convert(
 def doctor(
     region: Annotated[str, typer.Option(help="AWS region to check")] = "us-east-1",
     profile: Annotated[str | None, typer.Option(help="AWS profile name")] = None,
-    source: Annotated[str, typer.Option(help="cloudwatch or gcp: which sign-in to check")] = (
-        "cloudwatch"
-    ),
+    source: Annotated[
+        str, typer.Option(help="cloudwatch, gcp or dynatrace: which sign-in to check")
+    ] = "cloudwatch",
 ) -> None:
     """Check that the tools and sign-in a run needs are in place. Read-only."""
-    if source not in ("cloudwatch", "gcp"):
-        typer.echo("Error: --source must be cloudwatch or gcp", err=True)
+    if source not in ("cloudwatch", "gcp", "dynatrace"):
+        typer.echo("Error: --source must be cloudwatch, gcp or dynatrace", err=True)
         raise typer.Exit(code=1)
     try:
         checks = run_checks(region, profile, source=source)
@@ -369,6 +370,38 @@ def gcp_link_terraform_command(
     typer.echo("Next: review it, set NEW_RELIC_API_KEY, then `terraform init && terraform apply`.")
 
 
+def _run_data_check(
+    alerts: Path,
+    nr_account_id: int,
+    nr_region: str,
+    hours: int,
+    out: Path | None,
+    check_all: Callable[[Any, int, list[IRMonitor], int], list[Any]],
+    render_report: Callable[[list[Any], int], str],
+    has_blind: Callable[[list[Any]], bool],
+) -> None:
+    """Shared body of the data checks: read the IR, ask New Relic, report, exit 2 if blind."""
+    if not nr_account_id or not 1 <= hours <= 168:
+        typer.echo("Error: --nr-account-id is required and --hours must be 1 to 168", err=True)
+        raise typer.Exit(code=1)
+    try:
+        monitors = [
+            IRMonitor.model_validate_json(p.read_text())
+            for p in sorted((alerts / "ir").glob("*.json"))
+        ]
+        with NewRelicClient(require_env("NEW_RELIC_API_KEY"), nr_region) as client:
+            checks = check_all(client, nr_account_id, monitors, hours)
+    except (NewRelicAPIError, ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    text = render_report(checks, hours)
+    typer.echo(text)
+    if out:
+        out.write_text(text)
+    if has_blind(checks):
+        raise typer.Exit(code=2)
+
+
 @app.command("check-gcp-data")
 def check_gcp_data_command(
     alerts: Annotated[Path, typer.Option(help="Output folder of `convert` (has ir/)")] = Path(
@@ -384,25 +417,43 @@ def check_gcp_data_command(
     A condition on a metric that never arrives would look healthy and never fire. Exits with
     code 2 if any converted condition has no data.
     """
-    if not nr_account_id or not 1 <= hours <= 168:
-        typer.echo("Error: --nr-account-id is required and --hours must be 1 to 168", err=True)
-        raise typer.Exit(code=1)
-    try:
-        monitors = [
-            IRMonitor.model_validate_json(p.read_text())
-            for p in sorted((alerts / "ir").glob("*.json"))
-        ]
-        with NewRelicClient(require_env("NEW_RELIC_API_KEY"), nr_region) as client:
-            checks = gcp_data.check_all(client, nr_account_id, monitors, hours)
-    except (NewRelicAPIError, ValueError, OSError) as exc:
-        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
-        raise typer.Exit(code=1) from None
-    text = gcp_data.render(checks, hours)
-    typer.echo(text)
-    if out:
-        out.write_text(text)
-    if gcp_data.has_blind_conditions(checks):
-        raise typer.Exit(code=2)
+    _run_data_check(
+        alerts,
+        nr_account_id,
+        nr_region,
+        hours,
+        out,
+        gcp_data.check_all,
+        gcp_data.render,
+        gcp_data.has_blind_conditions,
+    )
+
+
+@app.command("check-dynatrace-data")
+def check_dynatrace_data_command(
+    alerts: Annotated[Path, typer.Option(help="Output folder of `convert` (has ir/)")] = Path(
+        "out/dynatrace/alerts"
+    ),
+    nr_account_id: Annotated[int, typer.Option(help="New Relic account id to query")] = 0,
+    nr_region: Annotated[str, typer.Option(help="us or eu")] = "us",
+    hours: Annotated[int, typer.Option(help="How far back to look (1 to 168)")] = 24,
+    out: Annotated[Path | None, typer.Option(help="Also write the markdown report here")] = None,
+) -> None:
+    """Check that log events matching each converted Dynatrace condition reach New Relic.
+
+    Read-only. A log-count condition with no matching events cannot fire. Exits with code 2 if
+    any converted condition has no matching events.
+    """
+    _run_data_check(
+        alerts,
+        nr_account_id,
+        nr_region,
+        hours,
+        out,
+        dynatrace_data.check_all,
+        dynatrace_data.render_report,
+        dynatrace_data.has_blind_conditions,
+    )
 
 
 @app.command("improve-measure", hidden=True)

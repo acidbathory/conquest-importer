@@ -1,7 +1,8 @@
 """Preflight checks, so a new user meets setup problems before a real run. Read-only.
 
 Requirements are only: Python, credentials that can read the source (AWS keys for CloudWatch, a
-Google login for Google Cloud), and a New Relic API key (the last only for creating things).
+Google login for Google Cloud, a token and tenant address for Dynatrace), and a New
+Relic API key (the last only for creating things).
 Terraform is optional, for the data-ingestion and project-link steps.
 """
 
@@ -10,8 +11,10 @@ import shutil
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from importer.sources.cloudwatch.extract import AwsError, Reader, caller_account
+from importer.sources.dynatrace.extract import ENV_URL as DYNATRACE_ENV_URL
 from importer.sources.gcp.extract import GcpError, access_token
 
 
@@ -41,6 +44,41 @@ def _google_login(token_factory: Callable[[], str]) -> Check:
     return Check("google login", True, "an access token is available (it is not shown)")
 
 
+def _dynatrace_checks(env: dict[str, str]) -> list[Check]:
+    """Settings for the Dynatrace source, checked without any network call."""
+    token = env.get("DYNATRACE_API_TOKEN", "").strip()
+    token_ok = bool(token) and token.isascii() and token.isprintable() and " " not in token
+    if not token:
+        auth_note = "DYNATRACE_API_TOKEN is not set (a platform token, see .env.example)"
+    elif not token_ok:
+        auth_note = (
+            "DYNATRACE_API_TOKEN is not plain ASCII text without spaces; check for a smart "
+            "quote, a dash or a line break from pasting"
+        )
+    else:
+        auth_note = "DYNATRACE_API_TOKEN is set and plain text (it is not shown)"
+    url = env.get("DYNATRACE_ENV_URL", "").strip().removesuffix("/")
+    url_ok = DYNATRACE_ENV_URL.fullmatch(url) is not None
+    url_detail = (
+        "DYNATRACE_ENV_URL looks right"
+        if url_ok
+        else "DYNATRACE_ENV_URL must look like https://<tenant id>.apps.dynatrace.com"
+    )
+    cert = env.get("SSL_CERT_FILE", "")
+    cert_ok = bool(cert) and Path(cert).is_file()
+    cert_detail = (
+        "SSL_CERT_FILE points to a file (it is used for the Dynatrace connection)"
+        if cert_ok
+        else "SSL_CERT_FILE is not set to a file; behind a network that inspects TLS, set it "
+        "to a certificate bundle that includes the company root"
+    )
+    return [
+        Check("dynatrace token", token_ok, auth_note),
+        Check("dynatrace url", url_ok, url_detail),
+        Check("tls certificates", cert_ok, cert_detail, required=False),
+    ]
+
+
 def run_checks(
     region: str,
     profile: str | None,
@@ -60,6 +98,8 @@ def run_checks(
     ]
     if source == "gcp":
         checks.append(_google_login(token_factory))
+    elif source == "dynatrace":
+        checks += _dynatrace_checks(env)
     else:
         checks.append(_aws_login(region, profile, reader_factory))
     has_key = bool(env.get("NEW_RELIC_API_KEY"))
