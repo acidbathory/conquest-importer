@@ -145,6 +145,10 @@ R_ABSENT_THRESHOLD = (
     "promql absent() returns 1 when the series is missing, and the grafana threshold does not "
     "fire on 1"
 )
+R_MATH_QUERIES = (
+    "grafana pipeline has a math expression that combines {count} queries, and a New Relic "
+    "condition reads one query"
+)
 R_NO_NODE = "grafana pipeline: the condition does not point at a node of the rule"
 R_SHAPE = "grafana pipeline is not one query, an optional reduce and one threshold"
 R_MATH = "grafana pipeline has a math expression"
@@ -293,6 +297,14 @@ N_ABSENT = (
     "no data points for the metric for the duration, and it only works once the metric has "
     "arrived at least once; like absent() it fires only when no matching series reports at all, so "
     "one missing series among several does not alert, which may differ from the rule's intent"
+)
+N_CLASSIC = (
+    "the classic condition was read as a reduce and a threshold on its one query; a classic "
+    "condition drops labels, so it may differ when the query returns several series"
+)
+N_RESAMPLE = (
+    "a resample step was ignored: New Relic sets the step with the aggregation window, so the "
+    "values may differ"
 )
 N_ROUTING = "notifications (contact points and notification policies) must be configured manually"
 
@@ -653,53 +665,115 @@ def _expression_type(node: GfNode) -> str:
     return ""
 
 
+def _lone_classic(rule: GrafanaRule, types: set[str]) -> bool:
+    """One classic condition on one query and nothing else: the one classic shape that converts."""
+    classic = [n for n in rule.data if _expression_type(n) == "classic_conditions"]
+    return (
+        types - {""} == {"classic_conditions"}
+        and len(classic) == 1
+        and classic[0].refId == rule.condition
+    )
+
+
+def _math_reason(rule: GrafanaRule) -> str:
+    """R_MATH, with the number of queries it combines when that is more than one."""
+    refs = {
+        ref
+        for n in rule.data
+        if _expression_type(n) == "math"
+        for ref in re.findall(r"\$\{?(\w+)\}?", str(n.model.get("expression", "")))
+    }
+    return R_MATH_QUERIES.format(count=len(refs)) if len(refs) > 1 else R_MATH
+
+
 def _check_expressions(rule: GrafanaRule) -> list[GfNode]:
     """The data source queries of the rule, after refusing expression types that do not convert."""
     types = {_expression_type(n) for n in rule.data}
     queries = [n for n in rule.data if not _expression_type(n)]
-    for kind, reason in (("sql", R_SQL), ("classic_conditions", R_CLASSIC)):
-        if kind in types:
-            raise _Fail(reason)
+    if "sql" in types:
+        raise _Fail(R_SQL)
+    if "classic_conditions" in types and not _lone_classic(rule, types):
+        raise _Fail(R_CLASSIC)
     if len({q.datasourceUid for q in queries}) > 1:
         raise _Fail(R_MIXED)
-    for kind, reason in (("math", R_MATH), ("resample", R_RESAMPLE)):
-        if kind in types:
-            raise _Fail(reason)
+    if "math" in types:
+        raise _Fail(_math_reason(rule))
     if len(queries) > 1:
         raise _Fail(R_MULTI)
     return queries
 
 
-def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, GfNode, list[str]]:
-    """Query, reducer, threshold node and notes of a query -> [reduce] -> threshold rule."""
+def _reduce_step(
+    nodes: dict[str, GfNode], step: GfNode | None, used: list[GfNode]
+) -> tuple[GfNode | None, str, list[str]]:
+    """Take an optional reduce node off the chain: the next node, the reducer and the notes."""
+    if step is None or _expression_type(step) != "reduce":
+        return step, "last", []
+    used.append(step)
+    notes: list[str] = []
+    mode = str(_mapping(step.model.get("settings")).get("mode") or "").lower()
+    if mode == "dropnn":
+        notes.append(N_DROPNN)
+    elif mode not in ("", "strict"):
+        raise _Fail(R_REDUCE_MODE)
+    return (
+        nodes.get(str(step.model.get("expression"))),
+        str(step.model.get("reducer", "")).lower(),
+        notes,
+    )
+
+
+def _classic(
+    nodes: dict[str, GfNode], condition: GfNode
+) -> tuple[GfNode, str, Threshold, list[str]]:
+    """Query, reducer, threshold and notes of a classic condition with one test."""
+    tests = condition.model.get("conditions")
+    if not isinstance(tests, list) or len(tests) != 1:
+        raise _Fail(R_CLASSIC)
+    test = _mapping(tests[0])
+    params = _mapping(test.get("query")).get("params")
+    query = nodes.get(str(params[0])) if isinstance(params, list) and len(params) == 1 else None
+    if query is None or _expression_type(query):
+        raise _Fail(R_SHAPE)
+    reducer = str(_mapping(test.get("reducer")).get("type", "")).lower()
+    reducer = "mean" if reducer == "avg" else reducer
+    if reducer not in REDUCERS:
+        raise _Fail(R_REDUCER)
+    evaluator = _mapping(test.get("evaluator"))
+    threshold = _make_threshold(evaluator.get("type"), evaluator.get("params"))
+    return query, reducer, threshold, [N_CLASSIC]
+
+
+def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, Threshold, bool, list[str]]:
+    """Query, reducer, threshold, recovery flag and notes of the rule's pipeline."""
     _check_expressions(rule)
     nodes = {n.refId: n for n in rule.data}
     condition = nodes.get(rule.condition)
     if condition is None:
         raise _Fail(R_NO_NODE)
+    if _expression_type(condition) == "classic_conditions":
+        query, reducer, threshold, notes = _classic(nodes, condition)
+        return query, reducer, threshold, False, notes
     if _expression_type(condition) != "threshold" or len(nodes) != len(rule.data):
         raise _Fail(R_SHAPE)
     used = [condition]
-    step = nodes.get(str(condition.model.get("expression")))
-    reducer = "last"
-    notes: list[str] = []
-    if step is not None and _expression_type(step) == "reduce":
+    step, reducer, notes = _reduce_step(
+        nodes, nodes.get(str(condition.model.get("expression"))), used
+    )
+    if step is not None and _expression_type(step) == "resample":
         used.append(step)
-        reducer = str(step.model.get("reducer", "")).lower()
-        mode = str(_mapping(step.model.get("settings")).get("mode") or "").lower()
-        if mode == "dropnn":
-            notes.append(N_DROPNN)
-        elif mode not in ("", "strict"):
-            raise _Fail(R_REDUCE_MODE)
+        notes.append(N_RESAMPLE)
         step = nodes.get(str(step.model.get("expression")))
     if step is None or _expression_type(step):
         raise _Fail(R_SHAPE)
     used.append(step)
     if len(used) != len(rule.data):
-        raise _Fail(R_SHAPE)
+        stray = any(_expression_type(n) == "resample" and n not in used for n in rule.data)
+        raise _Fail(R_RESAMPLE if stray else R_SHAPE)
     if reducer not in REDUCERS:
         raise _Fail(R_REDUCER)
-    return step, reducer, condition, notes
+    threshold, recovery = _threshold(condition)
+    return step, reducer, threshold, recovery, notes
 
 
 def _make_threshold(kind: object, params: object) -> Threshold:
@@ -770,8 +844,7 @@ class _Plan:
 
 
 def _grafana_plan(rule: GrafanaRule) -> _Plan:
-    query, reducer, threshold_node, notes = _pipeline(rule)
-    threshold, recovery = _threshold(threshold_node)
+    query, reducer, threshold, recovery, notes = _pipeline(rule)
     kind, inferred = _datasource_type(query)
     ctx = _Ctx(reducer, _instant(query), _range_seconds(query), threshold)
     return _Plan(kind, inferred, str(query.model.get("expr", "")), ctx, threshold, recovery, notes)
