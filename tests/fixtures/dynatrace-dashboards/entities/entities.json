@@ -1,0 +1,30 @@
+{
+  "totalCount": 24,
+  "pageSize": 50,
+  "entities": [
+    {"entityId": "HOST-0000000000000001", "type": "HOST", "displayName": "app-01", "properties": {"osType": "LINUX"}},
+    {"entityId": "HOST-0000000000000002", "type": "HOST", "displayName": "app-02", "properties": {"osType": "LINUX"}},
+    {"entityId": "HOST-0000000000000003", "type": "HOST", "displayName": "db-01", "properties": {"osType": "LINUX"}},
+    {"entityId": "HOST-0000000000000004", "type": "HOST", "displayName": "win-01", "properties": {"osType": "WINDOWS"}},
+    {"entityId": "HOST-0000000000000005", "type": "HOST", "displayName": "aix-01", "properties": {"osType": "AIX"}},
+    {"entityId": "SERVICE-0000000000000001", "type": "SERVICE", "displayName": "checkout", "properties": {"serviceTechnologyTypes": ["Java"]}},
+    {"entityId": "SERVICE-0000000000000002", "type": "SERVICE", "displayName": "cart", "properties": {"serviceTechnologyTypes": ["Java", "Spring"]}},
+    {"entityId": "SERVICE-0000000000000003", "type": "SERVICE", "displayName": "billing", "properties": {"serviceTechnologyTypes": ["IIS app pool", "ASP.NET", "DotNet"]}},
+    {"entityId": "SERVICE-0000000000000004", "type": "SERVICE", "displayName": "web", "properties": {"serviceTechnologyTypes": ["Node.js"]}},
+    {"entityId": "SERVICE-0000000000000005", "type": "SERVICE", "displayName": "ml", "properties": {"serviceTechnologyTypes": ["Python"]}},
+    {"entityId": "SERVICE-0000000000000006", "type": "SERVICE", "displayName": "cms", "properties": {"serviceTechnologyTypes": ["PHP"]}},
+    {"entityId": "SERVICE-0000000000000007", "type": "SERVICE", "displayName": "edge", "properties": {"serviceTechnologyTypes": ["Go"]}},
+    {"entityId": "SERVICE-0000000000000008", "type": "SERVICE", "displayName": "proxy", "properties": {"serviceTechnologyTypes": ["NGINX"]}},
+    {"entityId": "SERVICE-0000000000000009", "type": "SERVICE", "displayName": "legacy", "properties": {"serviceTechnologyTypes": ["COBOL runtime"]}},
+    {"entityId": "SERVICE-000000000000000A", "type": "SERVICE", "displayName": "no tech", "properties": {}},
+    {"entityId": "KUBERNETES_CLUSTER-0000000000000001", "type": "KUBERNETES_CLUSTER", "displayName": "prod"},
+    {"entityId": "KUBERNETES_CLUSTER-0000000000000002", "type": "KUBERNETES_CLUSTER", "displayName": "stage"},
+    {"entityId": "PROCESS_GROUP_INSTANCE-0000000000000001", "type": "PROCESS_GROUP_INSTANCE", "displayName": "p1"},
+    {"entityId": "APPLICATION-0000000000000001", "type": "APPLICATION", "displayName": "web ui"},
+    {"entityId": "MOBILE_APPLICATION-0000000000000001", "type": "MOBILE_APPLICATION", "displayName": "app"},
+    {"entityId": "AWS_LAMBDA_FUNCTION-0000000000000001", "type": "AWS_LAMBDA_FUNCTION", "displayName": "fn"},
+    {"entityId": "CLOUD_APPLICATION-0000000000000001", "type": "CLOUD_APPLICATION", "displayName": "deploy"},
+    {"entityId": "WEIRD-0000000000000001", "type": "WEIRD_TYPE", "displayName": "w"},
+    "not an entity"
+  ]
+}

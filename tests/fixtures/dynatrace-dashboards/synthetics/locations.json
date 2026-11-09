@@ -1,0 +1,14 @@
+{
+  "locations": [
+    {"entityId": "GEOLOCATION-0000000000000001", "name": "Amazon US East (N. Virginia)", "type": "PUBLIC",
+     "cloudPlatform": "AMAZON_EC2", "countryCode": "US", "city": "Ashburn"},
+    {"entityId": "GEOLOCATION-0000000000000002", "name": "Amazon EU (Frankfurt)", "type": "PUBLIC",
+     "cloudPlatform": "AMAZON_EC2", "countryCode": "DE", "city": "Frankfurt"},
+    {"entityId": "GEOLOCATION-0000000000000003", "name": "Azure Australia East", "type": "PUBLIC",
+     "cloudPlatform": "AZURE", "countryCode": "AU", "city": "Sydney"},
+    {"entityId": "GEOLOCATION-0000000000000004", "name": "Somewhere remote", "type": "PUBLIC",
+     "cloudPlatform": "OTHER", "countryCode": "XX", "city": "Nowhere"},
+    {"entityId": "SYNTHETIC_LOCATION-0000000000000009", "name": "Head office", "type": "PRIVATE",
+     "cloudPlatform": "OTHER", "countryCode": "DE", "city": "Berlin"}
+  ]
+}

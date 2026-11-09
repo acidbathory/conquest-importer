@@ -1,0 +1,822 @@
+{
+ "version": 21,
+ "variables": [
+  {
+   "version": 2,
+   "key": "Cluster",
+   "type": "query",
+   "visible": true,
+   "editable": true,
+   "input": "// filter timeseries by the selected cluster\ntimeseries count(`dt.kubernetes.nodes`), by: {name=k8s.cluster.name}\n| fields name\n| sort name asc\n// if no clusters, add * placeholder to avoid errors\n| summarize entries = collectDistinct(name)\n| fields records = if (arraySize(entries) > 0, entries, else: { \"*\" })\n| expand records",
+   "multiple": true,
+   "defaultValue": [
+    "00000000-0000-0000-0000-000000000000*"
+   ]
+  },
+  {
+   "version": 2,
+   "key": "ActiveGateId",
+   "type": "query",
+   "visible": true,
+   "editable": true,
+   "input": "// filter timeseries by the selected ActiveGate\ntimeseries sum(dt.sfm.active_gate.kubernetes.api.query_duration), by:{dt.active_gate.id, k8s.cluster.name}\n| fields dt.active_gate.id, k8s.cluster.name\n| filter matchesValue(k8s.cluster.name, $Cluster )\n// if no activeGates, add * placeholder to avoid errors\n| summarize entries = collectArray(dt.active_gate.id)\n| fields records = if(arraySize(entries) > 0, entries, else: { \"no-activegates\" })\n| expand records",
+   "multiple": true,
+   "defaultValue": [
+    "00000000-0000-0000-0000-000000000000*"
+   ]
+  }
+ ],
+ "tiles": {
+  "0": {
+   "type": "markdown",
+   "content": "## Access type \n- **ApiServer:** This access type indicates that a call used the Kubernetes API server. This could be a normal API resource request but also a call via kube-proxy.\n- **DirectIp:** The internal IP address of the requested resource was used for the call. This can either be a pod or a node. This access type can only be applied if you run a containerized ActiveGate inside the Kubernetes cluster."
+  },
+  "1": {
+   "title": "Top endpoints average queries per minute",
+   "description": "List the top number of average API requests per minute to endpoints of monitored Kubernetes clusters.",
+   "type": "data",
+   "subType": "dql-builder-metrics",
+   "query": "timeseries { sum(dt.sfm.active_gate.kubernetes.api.query_count, rate: 1m), value.A = avg(dt.sfm.active_gate.kubernetes.api.query_count, rate: 1m, scalar: true) }, by: { path, k8s.cluster.name }, filter: { matchesValue(dt.active_gate.id, $ActiveGateId) AND matchesValue(k8s.cluster.name, $Cluster) }\n| sort value.A desc\n| limit 10",
+   "visualization": "categoricalBarChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "legend": {
+      "hidden": true
+     },
+     "categoricalBarChartSettings": {
+      "categoryAxisLabel": "k8s.cluster.name,path",
+      "isCategoryLabelVisible": false,
+      "categoryAxis": [
+       "path",
+       "k8s.cluster.name"
+      ],
+      "valueAxis": [
+       "value.A"
+      ],
+      "valueAxisLabel": "Number of queries"
+     }
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "sum(dt.sfm.active_gate.kubernetes.api.query_count, rate:1m)",
+      "unitCategory": "unspecified",
+      "baseUnit": "count",
+      "displayUnit": null,
+      "decimals": 2,
+      "suffix": "",
+      "delimiter": false,
+      "cascade": null,
+      "added": 1743680791056
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 10,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "queryConfig": {
+    "version": 20,
+    "subQueries": [
+     {
+      "id": "A",
+      "isEnabled": true,
+      "datatype": "metrics",
+      "metric": {
+       "key": "dt.sfm.active_gate.kubernetes.api.query_count",
+       "aggregation": "sum"
+      },
+      "by": [
+       "path",
+       "k8s.cluster.name"
+      ],
+      "rate": "1m",
+      "convertToValue": "Avg",
+      "filter": "dt.active_gate.id = $ActiveGateId AND k8s.cluster.name = $Cluster "
+     }
+    ],
+    "globalCommands": {
+     "limit": 10,
+     "sort": {
+      "field": "value.A",
+      "direction": "desc"
+     }
+    }
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "4": {
+   "title": "Failing queries per minute",
+   "description": "Shows the number of failed API requests per minute to endpoints of monitored Kubernetes clusters.",
+   "type": "data",
+   "subType": "dql-builder-metrics",
+   "query": "timeseries { sum(dt.sfm.active_gate.kubernetes.api.query_count, rate: 1m), value.A = avg(dt.sfm.active_gate.kubernetes.api.query_count, rate: 1m, scalar: true) }, by: { k8s.cluster.name }, filter: { NOT matchesValue(status_code, \"2*\") AND ( matchesValue(k8s.cluster.name, $Cluster) AND matchesValue(dt.active_gate.id, $ActiveGateId) ) }",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "truncationMode": "middle",
+     "leftYAxisSettings": {
+      "label": "ActiveGate Kubernetes API query count",
+      "isLabelVisible": true
+     },
+     "xAxisLabel": "timeframe",
+     "xAxisScaling": "analyzedTimeframe",
+     "fieldMapping": {
+      "leftAxisValues": [
+       "sum(dt.sfm.active_gate.kubernetes.api.query_count, rate:1m)"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "dataMapping": {
+     "displayedFields": [
+      "k8s.cluster.name"
+     ]
+    },
+    "autoSelectVisualization": true
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "queryConfig": {
+    "version": 20,
+    "subQueries": [
+     {
+      "id": "A",
+      "isEnabled": true,
+      "datatype": "metrics",
+      "metric": {
+       "key": "dt.sfm.active_gate.kubernetes.api.query_count",
+       "aggregation": "sum"
+      },
+      "by": [
+       "k8s.cluster.name"
+      ],
+      "rate": "1m",
+      "convertToValue": "Avg",
+      "filter": "status_code != 2* AND k8s.cluster.name = $Cluster AND dt.active_gate.id = $ActiveGateId "
+     }
+    ],
+    "globalCommands": {}
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   },
+   "timeframe": {
+    "tileTimeframe": {
+     "from": "now()-2h",
+     "to": "now()"
+    },
+    "tileTimeframeEnabled": false
+   }
+  },
+  "5": {
+   "title": "Successful queries per minute",
+   "description": "Shows the number of successful API requests per minute to endpoints of monitored Kubernetes clusters in the last 2 hours.",
+   "type": "data",
+   "subType": "dql-builder-metrics",
+   "query": "timeseries { sum(dt.sfm.active_gate.kubernetes.api.query_count, rate: 1m), value.A = avg(dt.sfm.active_gate.kubernetes.api.query_count, rate: 1m, scalar: true) }, by: { k8s.cluster.name }, filter: { matchesValue(status_code, \"2*\") AND matchesValue(k8s.cluster.name, $Cluster) AND matchesValue(dt.active_gate.id, $ActiveGateId) }",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "truncationMode": "middle",
+     "leftYAxisSettings": {
+      "label": "ActiveGate Kubernetes API query count",
+      "isLabelVisible": true
+     },
+     "xAxisLabel": "timeframe",
+     "xAxisScaling": "analyzedTimeframe",
+     "fieldMapping": {
+      "leftAxisValues": [
+       "sum(dt.sfm.active_gate.kubernetes.api.query_count, rate:1m)"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "dataMapping": {
+     "displayedFields": [
+      "k8s.cluster.name"
+     ]
+    },
+    "autoSelectVisualization": true
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "queryConfig": {
+    "version": 20,
+    "subQueries": [
+     {
+      "id": "A",
+      "isEnabled": true,
+      "datatype": "metrics",
+      "metric": {
+       "key": "dt.sfm.active_gate.kubernetes.api.query_count",
+       "aggregation": "sum"
+      },
+      "by": [
+       "k8s.cluster.name"
+      ],
+      "rate": "1m",
+      "convertToValue": "Avg",
+      "filter": "status_code = 2* AND k8s.cluster.name = $Cluster AND dt.active_gate.id = $ActiveGateId "
+     }
+    ],
+    "globalCommands": {}
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   },
+   "timeframe": {
+    "tileTimeframe": {
+     "from": "now()-2h",
+     "to": "now()"
+    },
+    "tileTimeframeEnabled": false
+   }
+  },
+  "6": {
+   "title": "Average latency successful queries",
+   "description": "Shows the average latency of successful API requests to endpoints of monitored Kubernetes clusters.",
+   "type": "data",
+   "subType": "dql-builder-metrics",
+   "query": "timeseries { avg(dt.sfm.active_gate.kubernetes.api.query_duration, rate: 1m), value.A = avg(dt.sfm.active_gate.kubernetes.api.query_duration, rate: 1m, scalar: true) }, by: { k8s.cluster.name }, filter: { matchesValue(status_code, \"2*\") AND matchesValue(k8s.cluster.name, $Cluster) AND matchesValue(dt.active_gate.id, $ActiveGateId) }",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "truncationMode": "middle",
+     "leftYAxisSettings": {
+      "label": "ActiveGate Kubernetes API query duration",
+      "isLabelVisible": true
+     },
+     "xAxisLabel": "timeframe",
+     "xAxisScaling": "analyzedTimeframe",
+     "fieldMapping": {
+      "leftAxisValues": [
+       "avg(dt.sfm.active_gate.kubernetes.api.query_duration, rate:1m)"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "dataMapping": {
+     "displayedFields": [
+      "k8s.cluster.name"
+     ]
+    },
+    "autoSelectVisualization": true
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "queryConfig": {
+    "version": 20,
+    "subQueries": [
+     {
+      "id": "A",
+      "isEnabled": true,
+      "datatype": "metrics",
+      "metric": {
+       "key": "dt.sfm.active_gate.kubernetes.api.query_duration",
+       "aggregation": "avg"
+      },
+      "by": [
+       "k8s.cluster.name"
+      ],
+      "rate": "1m",
+      "convertToValue": "Avg",
+      "filter": "status_code = 2* AND k8s.cluster.name = $Cluster AND dt.active_gate.id = $ActiveGateId "
+     }
+    ],
+    "globalCommands": {}
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "8": {
+   "title": "Failing queries",
+   "description": "List the top number of failed API requests to endpoints of monitored Kubernetes clusters.",
+   "type": "data",
+   "query": "timeseries\n  // Query the self-monitoring metric for API requests to endpoints of monitored Kubernetes clusters\n  queries = sum(dt.sfm.active_gate.kubernetes.api.query_count, scalar: true),\n  // Apply desired grouping\n  by: { k8s.cluster.name, dt.active_gate.id, path, status_code, status_reason, access_type },\n  // Filter out successful requests - status code 200\n  filter: { matchesValue(k8s.cluster.name, $Cluster ) AND NOT matchesValue(status_code, \"2*\") AND (matchesValue(dt.active_gate.id, $ActiveGateId)) }\n// Sort by the number of failed requests\n| sort queries desc\n// Add ActiveGateUrl as intent link to the ActiveGate details in Fleet Management\n| fieldsAdd activeGateURL = concat(\"/ui/intent/dynatrace.fleet.management/view-entity-dt.smartscape.activegate#%7B%22dt.active_gate.id%22%3A%22\", dt.active_gate.id, \"%22%7D\")\n| fieldsAdd activeGateLink = concat(\"[\",dt.active_gate.id,\"](\",activeGateURL,\")\")\n// Rename fields for better visualization\n| fieldsRename `Top failing queries in total` = queries, `Cluster name` = k8s.cluster.name, `ActiveGate ID` = activeGateLink, `Path` = path, `Status code` = status_code, `Status reason` = status_reason, `Access type` = access_type",
+   "visualization": "table",
+   "visualizationSettings": {
+    "table": {
+     "hiddenColumns": [
+      [
+       "timeframe"
+      ],
+      [
+       "interval"
+      ],
+      [
+       "dt.active_gate.id"
+      ],
+      [
+       "activeGateURL"
+      ]
+     ],
+     "sortBy": [
+      {
+       "columnId": "[\"Top failing queries in total\"]",
+       "direction": "descending"
+      }
+     ],
+     "columnWidths": {
+      "[\"dt.active_gate.id\"]": 119
+     },
+     "columnTypeOverrides": [
+      {
+       "fields": [
+        "Top failing queries in total"
+       ],
+       "value": "number",
+       "id": 1744360978129
+      },
+      {
+       "id": 16378.699999988079,
+       "fields": [
+        "ActiveGate ID"
+       ],
+       "value": "markdown"
+      }
+     ],
+     "columnOrder": [
+      "[\"timeframe\",\"start\"]",
+      "[\"timeframe\",\"end\"]",
+      "[\"interval\"]",
+      "[\"Cluster name\"]",
+      "[\"dt.active_gate.id\"]",
+      "[\"Top failing queries in total\"]",
+      "[\"activeGateURL\"]",
+      "[\"ActiveGate ID\"]",
+      "[\"Path\"]",
+      "[\"Status code\"]",
+      "[\"Status reason\"]",
+      "[\"Access type\"]"
+     ]
+    },
+    "autoSelectVisualization": false
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "10": {
+   "title": "Cluster Monitoring Availability",
+   "description": "Displays the availability of Cluster Monitoring",
+   "type": "data",
+   "query": "timeseries\n  data = min(dt.kubernetes.cluster.readyz),\n  by: {k8s.cluster.name},\n  interval: 1m,\n  shift: -2m\n| filter in(k8s.cluster.name, $Cluster)\n| fieldsAdd sumDataPoints = arraySum(data), numDataPoints = arraySize(data)\n| fields `Kubernetes cluster` = k8s.cluster.name, `Availability (%)` = (sumDataPoints / numDataPoints) * 100",
+   "visualization": "table",
+   "visualizationSettings": {
+    "table": {
+     "hiddenColumns": [
+      [
+       "dt.entity.kubernetes_cluster.activeGateId"
+      ],
+      [
+       "activeGateURL"
+      ]
+     ],
+     "linewrapEnabled": true,
+     "sortBy": [
+      {
+       "columnId": "[\"Availability (%)\"]",
+       "direction": "ascending"
+      }
+     ],
+     "columnWidths": {
+      "[\"Availability (%)\"]": 153.7
+     },
+     "columnTypeOverrides": [
+      {
+       "id": 180809.5,
+       "fields": [
+        "ActiveGate ID"
+       ],
+       "value": "markdown"
+      }
+     ],
+     "columnOrder": [
+      "[\"Kubernetes cluster\"]",
+      "[\"Availability (%)\"]"
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "Availability (%)",
+      "unitCategory": "percentage",
+      "baseUnit": "percent",
+      "displayUnit": null,
+      "decimals": 1,
+      "suffix": "",
+      "delimiter": false,
+      "cascade": null,
+      "added": 1746776718230
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "11": {
+   "type": "markdown",
+   "content": "## Status codes\nThe following list gives you some hints for investigation based on the most common status codes.\n\n* **-1: General error.** Dynatrace could not access the endpoint. See \\\"Status reasons\\\" for more details. **Prometheus:** The [pod annotations](https://dt-url.net/y942vsf#annotate-prometheus-exporter-pods) might be incorrect.\n\n* **401: Unauthorized.** If you connect via URL and token, please double-check that the values are correct.\n\n- **403: Forbidden.** The service account might lack [required permissions](https://dt-url.net/un02v1h).\n\n* **404: Not Found.** The resource does not exist. This can happen when resources were deleted. **Prometheus:** It is likely that the [`metrics.dynatrace.com/path`](https://dt-url.net/y942vsf#path-to-metrics-endpoint) annotation points to a non-existent endpoint.\n\n* **503: Service Unavailable.** The Kubernetes API experiences an outage. **Prometheus:** The [`metrics.dynatrace.com/port`](https://dt-url.net/y942vsf#metrics-port) annotation might contain a wrong value. Another common reason for this status code are wrong TLS settings.\n"
+  },
+  "12": {
+   "type": "markdown",
+   "content": "# Troubleshoot Dynatrace Kubernetes platform monitoring and Prometheus integration\n\nGet detailed insights and investigate Dynatrace and the Kubernetes API server interactions.\nIf you don't see data, [start monitoring your cluster](/ui/apps/dynatrace.kubernetes/onboarding) or [explore this dashboard in our playground](https://tenant1.apps.dynatrace.com/ui/document/dynatrace.kubernetes.kubernetes-monitoring-statistics)."
+  },
+  "13": {
+   "type": "markdown",
+   "content": "## Further resources\n1. [General overview about HTTP status codes: RFC7231](https://dt-url.net/pp62vxa)\n2. [Monitor Prometheus metrics](https://dt-url.net/y942vsf)\"  "
+  },
+  "14": {
+   "type": "markdown",
+   "content": "## Status reasons\nThe following list gives you some hints for investigation based on the most common status codes.\n\n\n- **HttpStatus:** The status code represents an HTTP status code. See \\\"Status codes\\\" for more details.\n\n- **ConnectionError:** Signals that an error occurred while attempting to connect a socket to a remote address and port. Typically, the connection was refused remotely (e.g., no process is listening on the remote address/port).\n\n- **NoRouteToHost:** Signals that an error occurred while attempting to connect a socket to a remote address and port. Typically, the remote host cannot be reached because of an intervening firewall, or if an intermediate router is down.\n\n- **SocketTimeout:** Signals that a timeout has occurred on a socket read or accept.\n\n- **ConnectionTimeout:** A timeout occurred while connecting to an HTTP server.\n\n- **SslError:** Indicates an error detected by an SSL subsystem. This class is the general class of exceptions produced by failed SSL-related operations.\n\n- **InvalidContentType:** The response content type does not match the expected content type. Please check the logs for more info."
+  },
+  "15": {
+   "title": "Clusters with unhealthy ActiveGates",
+   "description": "**Query Explanation:**  \nThis query identifies Kubernetes clusters with API monitoring enabled and linked to specific ActiveGates. It evaluates ActiveGate health metrics (CPU usage, memory usage, and garbage collection time) over the last 30 minutes. Based on thresholds, it flags unhealthy ActiveGates and lists the conditions causing the issues (e.g., high CPU or memory usage).  \n\n**Why this visualization is useful:**  \nThe table provides a clear overview of clusters and their associated ActiveGates, highlighting problematic conditions. This helps quickly identify clusters impacted by resource constraints or performance issues, enabling targeted troubleshooting.",
+   "type": "data",
+   "query": "// Fetch Kubernetes clusters filtered by selected cluster name or ActiveGate ID\nsmartscapeNodes \"K8S_CLUSTER\"\n| fieldsAdd activeGateId = dt.metadata[activegate_id], activeGateVersion = dt.metadata[activegate_version]\n| filter in(activeGateId, $ActiveGateId)\n| filter matchesValue(name, $Cluster)\n| filter isNotNull(activeGateId)\n// Fetch the ActiveGate's JVM self-monitoing metrics for\n// - CPU usage [%]\n// - Memory available and used [bytes]\n// - Garbage collection time [ms]\n| lookup [\n  timeseries {\n    cpu_usage = max(dt.sfm.active_gate.jvm.cpu_usage),\n    memory_available = max(dt.sfm.active_gate.jvm.heap_memory_available),\n    memory_used = max(dt.sfm.active_gate.jvm.heap_memory_used),\n    gc_time = max(dt.sfm.active_gate.jvm.gc.major_collection_time)\n  },\n  by:{dt.active_gate.id},\n  shift:-3m\n  // Memory used percent is not available as a separate metric and therefore calculated\n  | fieldsAdd memory_used_percent = memory_used[] / memory_available[] * 100\n  // Determine if an ActiveGate is unhealthy:\n  // - CPU usage exceeds 85% for more than 3 samples within the last 30 minutes\n  // - Memory usage exceeds 80% for more than 3 samples within the last 30 minutes\n  // - Garbage collection time exceeds 3 seconds for more than 3 samples within the last 30 minutes\n  | fieldsAdd\n    unhealthy_cpu_usage = arraySum(iCollectArray(if(cpu_usage[] > 85, 1, else: 0))) > 3,\n    high_memory_usage = arraySum(iCollectArray(if(memory_used_percent[] > 80, 1, else: 0))) > 3,\n    high_gc_time = arraySum(iCollectArray(if(gc_time[] > 3000, 1, else: 0))) > 3\n  // Memory usage is unhealthy if the uage or garbage collection times are high\n  | fieldsAdd unhealthy_memory_usage = high_memory_usage or high_gc_time\n], sourceField:{activeGateId}, lookupField:{dt.active_gate.id}, fields:{unhealthy_cpu_usage, unhealthy_memory_usage}, executionOrder:leftFirst\n// Map the unhealthy states to human readable text\n| fieldsAdd conditions = arrayRemoveNulls(array(\n  if(unhealthy_cpu_usage, \"High CPU usage\", else:null),\n  if(unhealthy_memory_usage, \"High memory usage\", else:null)\n))\n// Show only unhealthy\n| filter arraySize(conditions) > 0\n// Create an intent link to the cluster connection settings\n| fieldsAdd Actions = concat(\"[Connection settings](/ui/intent/dynatrace.settings/open_settings#%7B%22settings.entityId%22%3A%22\", toString(id), \"%22%2C%22settings.itemId%22%3A%22kubernetes-cluster-connection%22%7D)\")\n| fieldsAdd `ActiveGate ID` = concat(\"[\", activeGateId, \"](/ui/intent/dynatrace.fleet.management/view-entity-dt.smartscape.activegate#%7B%22dt.active_gate.id%22%3A%22\", activeGateId, \"%22%7D)\")\n| fields id, Cluster = name, `ActiveGate ID`, `ActiveGate version` = activeGateVersion, Conditions = conditions, Actions",
+   "visualization": "table",
+   "visualizationSettings": {
+    "table": {
+     "columnTypeOverrides": [
+      {
+       "id": 266451.5,
+       "fields": [
+        "Actions"
+       ],
+       "value": "markdown",
+       "disableRemoval": false
+      },
+      {
+       "id": 301791.3999999985,
+       "fields": [
+        "ActiveGate ID"
+       ],
+       "value": "markdown",
+       "disableRemoval": false
+      }
+     ],
+     "hiddenColumns": [
+      [
+       "id"
+      ]
+     ],
+     "hideColumnsForLargeResults": false
+    },
+    "autoSelectVisualization": true
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "customLinkSettings": {
+    "version": 1,
+    "customLinks": [
+     {
+      "name": "Connection settings",
+      "icon": "LinkIcon",
+      "urlPattern": "/ui/intent/dynatrace.settings/open_settings#%7B%22settings.entityId%22%3A%22{{id}}%22%2C%22settings.itemId%22%3A%22kubernetes-cluster-connection%22%7D",
+      "added": 1774013076547
+     }
+    ]
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "16": {
+   "type": "markdown",
+   "content": "---"
+  },
+  "17": {
+   "type": "markdown",
+   "content": "### Conditions explanation\n\nThe DQL query thresholds for unhealthy conditions are based on the [Sizing guide for Dynatrace ActiveGates in the Kubernetes monitoring use-case](https://dt-url.net/26agsizes#monitoring-and-validation).\n\n#### High CPU usage\n\n- The ActiveGate's JVM CPU usage exceeded 85% for more than three samples within the last 30 minutes.\n\n#### High memory usage\n\n- The ActiveGate's JVM memory usage (used / available memory) exceeded 80% for more than three samples within the last 30 minutes.\n- The ActiveGate's JVM garbace collection time exceeded 3 seconds for more than three samples within the last 30 minutes.\n"
+  },
+  "18": {
+   "title": "ActiveGate JVM CPU usage",
+   "description": "**Description:**  \nThis tile displays the maximum CPU usage of ActiveGates over time.\n\n**Purpose:**\nThe line chart visualization highlights trends and fluctuations, enabling quick identification of performance spikes or resource bottlenecks.",
+   "type": "data",
+   "query": "// Fetch the ActiveGate's JVM self-monitoring metric for CPU usage\ntimeseries {\n    cpu_usage = max(dt.sfm.active_gate.jvm.cpu_usage)\n  },\n  by:{dt.active_gate.id},\n  shift:-3m,\n  // Filter by selected ActiveGate\n  filter: in(dt.active_gate.id, $ActiveGateId)\n// Filter by selected cluster name\n// The in-lookup expression is used as the cluster name is not available as a dimension\n| filter in(dt.active_gate.id, lookup(\n    [ smartscapeNodes \"K8S_CLUSTER\" | filter matchesValue(name, $Cluster) | fields activeGateId = dt.metadata[activegate_id] ],\n    sourceField:dt.active_gate.id, lookupField:activeGateId, executionOrder:leftFirst\n  )[activeGateId])",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "leftYAxisSettings": {
+      "min": {
+       "mode": "custom",
+       "value": 0
+      },
+      "max": {
+       "mode": "custom",
+       "value": 100
+      }
+     },
+     "curve": "smooth"
+    },
+    "coloring": {
+     "thresholdRules": [
+      {
+       "color": "var(--dt-colors-charts-apdex-fair-default, #a9780f)",
+       "label": "Unhealthy",
+       "colorMode": "single-color",
+       "mode": "range",
+       "position": "left",
+       "strokeOnly": false,
+       "min": 85,
+       "max": 100
+      }
+     ]
+    },
+    "autoSelectVisualization": true
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "19": {
+   "title": "ActiveGate JVM memory usage",
+   "description": "**Description:**  \nThis tile visualizes the percentage of heap memory used by ActiveGates over time, calculated as `memory_used / memory_available * 100`.\n\n**Purpose:**\nThe line chart effectively highlights trends and fluctuations in memory usage, enabling proactive monitoring and capacity planning.",
+   "type": "data",
+   "query": "// Fetch the ActiveGate's JVM self-monitoring metric for available memory and memory usage\ntimeseries {\n    memory_available = max(dt.sfm.active_gate.jvm.heap_memory_available),\n    memory_used = max(dt.sfm.active_gate.jvm.heap_memory_used)\n  },\n  by:{dt.active_gate.id},\n  shift:-3m,\n  // Filter by selected ActiveGate\n  filter: in(dt.active_gate.id, $ActiveGateId)\n// Calculate the memory usage in percent\n| fieldsAdd memory_used_percent = memory_used[] / memory_available[] * 100\n| fieldsRemove memory_used, memory_available\n// Filter by selected cluster name\n// The in-lookup expression is used as the cluster name is not available as a dimension\n| filter in(dt.active_gate.id, lookup(\n    [ smartscapeNodes \"K8S_CLUSTER\" | filter matchesValue(name, $Cluster) | fields activeGateId = dt.metadata[activegate_id] ],\n    sourceField:dt.active_gate.id, lookupField:activeGateId, executionOrder:leftFirst\n  )[activeGateId])",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "leftYAxisSettings": {
+      "min": {
+       "mode": "custom",
+       "value": 0
+      },
+      "max": {
+       "mode": "custom",
+       "value": 100
+      }
+     },
+     "curve": "smooth"
+    },
+    "coloring": {
+     "thresholdRules": [
+      {
+       "color": "var(--dt-colors-charts-apdex-fair-default, #a9780f)",
+       "label": "Unhealthy",
+       "colorMode": "single-color",
+       "mode": "range",
+       "position": "left",
+       "strokeOnly": false,
+       "min": 80,
+       "max": 100
+      }
+     ]
+    },
+    "autoSelectVisualization": true,
+    "unitsOverrides": [
+     {
+      "identifier": "memory_used_percent",
+      "unitCategory": "percentage",
+      "baseUnit": "percent",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": false,
+      "cascade": null,
+      "added": 1774013629561
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "20": {
+   "title": "ActiveGate JVM garbage collection time",
+   "description": "**Description:**  \nThis tile displays the maximum major garbage collection time for ActiveGates \n\n**Purpose:**  \nThe line chart helps visualize trends and fluctuations in garbage collection times, enabling quick identification of performance bottlenecks or anomalies in ActiveGate JVMs.",
+   "type": "data",
+   "query": "// Fetch the ActiveGate's JVM self-monitoring metric for garbage collection time\ntimeseries {\n    gc_time = max(dt.sfm.active_gate.jvm.gc.major_collection_time)\n  },\n  by:{dt.active_gate.id},\n  shift:-3m,\n  // Filter by selected ActiveGate\n  filter: in(dt.active_gate.id, $ActiveGateId)\n// Filter by selected cluster name\n// The in-lookup expression is used as the cluster name is not available as a dimension\n| filter in(dt.active_gate.id, lookup(\n    [ smartscapeNodes \"K8S_CLUSTER\" | filter matchesValue(name, $Cluster) | fields activeGateId = dt.metadata[activegate_id] ],\n    sourceField:dt.active_gate.id, lookupField:activeGateId, executionOrder:leftFirst\n  )[activeGateId])",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "leftYAxisSettings": {
+      "min": {
+       "mode": "custom",
+       "value": 0
+      }
+     },
+     "curve": "smooth"
+    },
+    "coloring": {
+     "thresholdRules": [
+      {
+       "color": "var(--dt-colors-charts-apdex-fair-default, #a9780f)",
+       "label": "Unhealthy",
+       "colorMode": "single-color",
+       "mode": "range",
+       "position": "left",
+       "strokeOnly": false,
+       "min": 3000
+      }
+     ]
+    },
+    "autoSelectVisualization": true
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  }
+ },
+ "layouts": {
+  "0": {
+   "x": 0,
+   "y": 27,
+   "w": 12,
+   "h": 3
+  },
+  "1": {
+   "x": 0,
+   "y": 7,
+   "w": 12,
+   "h": 7
+  },
+  "4": {
+   "x": 12,
+   "y": 7,
+   "w": 12,
+   "h": 7
+  },
+  "5": {
+   "x": 12,
+   "y": 14,
+   "w": 12,
+   "h": 7
+  },
+  "6": {
+   "x": 0,
+   "y": 14,
+   "w": 12,
+   "h": 7
+  },
+  "8": {
+   "x": 0,
+   "y": 2,
+   "w": 24,
+   "h": 5
+  },
+  "10": {
+   "x": 0,
+   "y": 21,
+   "w": 24,
+   "h": 6
+  },
+  "11": {
+   "x": 12,
+   "y": 27,
+   "w": 12,
+   "h": 8
+  },
+  "12": {
+   "x": 0,
+   "y": 0,
+   "w": 24,
+   "h": 2
+  },
+  "13": {
+   "x": 12,
+   "y": 35,
+   "w": 12,
+   "h": 3
+  },
+  "14": {
+   "x": 0,
+   "y": 30,
+   "w": 12,
+   "h": 8
+  },
+  "15": {
+   "x": 0,
+   "y": 39,
+   "w": 12,
+   "h": 6
+  },
+  "16": {
+   "x": 0,
+   "y": 38,
+   "w": 24,
+   "h": 1
+  },
+  "17": {
+   "x": 12,
+   "y": 39,
+   "w": 12,
+   "h": 6
+  },
+  "18": {
+   "x": 0,
+   "y": 45,
+   "w": 12,
+   "h": 6
+  },
+  "19": {
+   "x": 12,
+   "y": 45,
+   "w": 12,
+   "h": 6
+  },
+  "20": {
+   "x": 12,
+   "y": 51,
+   "w": 12,
+   "h": 6
+  }
+ },
+ "importedWithCode": false,
+ "settings": {},
+ "annotations": []
+}

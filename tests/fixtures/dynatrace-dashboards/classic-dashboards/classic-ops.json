@@ -1,0 +1,36 @@
+{
+  "id": "00000000-0000-0000-0000-0000000000c1",
+  "dashboardMetadata": {
+    "name": "Ops overview",
+    "shared": true,
+    "owner": "owner@example.invalid",
+    "dashboardFilter": {
+      "timeframe": "-2h",
+      "managementZone": {"id": "1000", "name": "Payments"}
+    },
+    "dynamicFilters": {"filters": ["OS_TYPE", "HOST_TAG_KEY:env"]},
+    "tags": ["ops"]
+  },
+  "tiles": [
+    {"name": "Markdown", "tileType": "MARKDOWN", "configured": true,
+     "bounds": {"top": 0, "left": 0, "width": 304, "height": 152},
+     "markdown": "## Ops\nSee [the runbook](https://example.invalid/runbook)."},
+    {"name": "Header", "tileType": "HEADER", "configured": true,
+     "bounds": {"top": 152, "left": 0, "width": 304, "height": 38}},
+    {"name": "CPU", "tileType": "DATA_EXPLORER", "configured": true,
+     "bounds": {"top": 190, "left": 0, "width": 304, "height": 304},
+     "queries": [{"id": "A", "metric": "builtin:host.cpu.usage", "spaceAggregation": "AVG",
+                  "timeAggregation": "DEFAULT", "splitBy": ["dt.entity.host"]}],
+     "visualConfig": {"type": "GRAPH_CHART"}},
+    {"name": "Custom chart", "tileType": "CUSTOM_CHARTING", "configured": true,
+     "bounds": {"top": 190, "left": 304, "width": 304, "height": 304}},
+    {"name": "USQL", "tileType": "USQL", "configured": true,
+     "bounds": {"top": 494, "left": 0, "width": 304, "height": 304}},
+    {"name": "Payments only", "tileType": "DATA_EXPLORER", "configured": true,
+     "bounds": {"top": 494, "left": 304, "width": 304, "height": 304},
+     "tileFilter": {"managementZone": {"id": "1000", "name": "Payments"}},
+     "queries": [{"id": "A", "metric": "builtin:service.response.time"}]},
+    {"name": "Hosts", "tileType": "HOSTS", "configured": true,
+     "bounds": {"top": 798, "left": 0, "width": 304, "height": 304}}
+  ]
+}
