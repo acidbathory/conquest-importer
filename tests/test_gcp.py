@@ -338,3 +338,19 @@ def test_a_long_counter_window_is_kept() -> None:
     m = _counter("ALIGN_DELTA", 5, period="600s")
     assert m.signal.aggregation_window_seconds == 600
     assert m.thresholds[0].value == 5
+
+
+def test_a_duration_that_is_not_a_whole_number_of_windows_is_rounded_up() -> None:
+    (m,) = translate_policy(
+        policy(
+            threshold(
+                filter='metric.type="pubsub.googleapis.com/topic/send_request_count" '
+                'AND resource.type="pubsub_topic"',
+                aggregations=[{"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_DELTA"}],
+                duration="420s",
+            )
+        )
+    )
+    assert m.signal.window_seconds == 600 and m.signal.aggregation_window_seconds == 300
+    assert any("rounded up to 600s" in r for r in m.reasons)
+    assert nrql_for(m)  # emits instead of failing

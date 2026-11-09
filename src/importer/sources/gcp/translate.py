@@ -208,6 +208,40 @@ def _counter_window(aligner: str, period: int) -> tuple[int, float, str]:
     return window, scale, note
 
 
+def _reducer(
+    agg: dict[str, object], aggregation: Aggregation, aligner: str
+) -> tuple[list[str], list[str]]:
+    """Group-by labels and notes for the cross-series reducer of a condition."""
+    reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
+    raw = agg.get("groupByFields")
+    fields = raw if isinstance(raw, list) else []
+    group_by = [label for f in fields if (label := _label_name(str(f)))]
+    if reducer in REDUCERS:
+        if REDUCERS[reducer] == aggregation:
+            return group_by, []
+        return group_by, [
+            f"{reducer} and {aligner} become one {aggregation.value} in New Relic's query"
+        ]
+    if reducer != "REDUCE_NONE":
+        raise _Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
+    return group_by, [
+        "Google evaluates each time series on its own; the New Relic query combines them "
+        "unless you facet by the resource id"
+    ]
+
+
+def _whole_windows(duration: int, period: int) -> tuple[int, str]:
+    """The breach duration as a whole number of windows, and a note when it had to change."""
+    window = max(duration, period)
+    if not window % period:
+        return window, ""
+    window = -(-window // period) * period
+    return window, (
+        f"the duration of {duration}s is not a whole number of {period}s windows, so it is "
+        f"rounded up to {window}s and the condition fires slightly later than in Google"
+    )
+
+
 def _metric_condition(
     body: dict[str, object],
 ) -> tuple[MetricSignal, int, int, float, list[str]]:
@@ -239,20 +273,8 @@ def _metric_condition(
     if aligner not in ALIGNERS:
         raise _Fail(Confidence.MANUAL, f"aligner {aligner!r} is not supported")
     aggregation, counter = ALIGNERS[aligner]
-    reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
-    group_by = [label for f in agg.get("groupByFields") or [] if (label := _label_name(str(f)))]
-    if reducer in REDUCERS:
-        if REDUCERS[reducer] != aggregation:
-            notes.append(
-                f"{reducer} and {aligner} become one {aggregation.value} in New Relic's query"
-            )
-    elif reducer != "REDUCE_NONE":
-        raise _Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
-    else:
-        notes.append(
-            "Google evaluates each time series on its own; the New Relic query combines them "
-            "unless you facet by the resource id"
-        )
+    group_by, reducer_notes = _reducer(agg, aggregation, aligner)
+    notes += reducer_notes
     period = _seconds(agg.get("alignmentPeriod"))
     duration = _seconds(body.get("duration"))
     if period < 60 or period % 60:
@@ -277,7 +299,10 @@ def _metric_condition(
     signal = MetricSignal(
         terms={"a": term}, aggregation=aggregation, scope=scope, group_by=group_by
     )
-    return signal, period, max(duration, period), scale, [*scope_notes, *notes]
+    window, note = _whole_windows(duration, period)
+    if note:
+        notes.append(note)
+    return signal, period, window, scale, [*scope_notes, *notes]
 
 
 def _name_notes(name: str, aligner: str, *, uses_labels: bool) -> list[str]:

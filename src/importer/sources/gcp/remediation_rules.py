@@ -78,7 +78,8 @@ RULES: list[Rule] = [
         "Filter not supported",
         [
             "The filter uses a feature the importer does not read (OR, regular expressions, "
-            "functions such as starts_with, or a severity range). Write the matching NRQL "
+            "functions such as starts_with, or a comparison on a field other than severity). Write "
+            "the matching NRQL "
             "`WHERE` clause by hand.",
         ],
     ),

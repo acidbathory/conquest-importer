@@ -104,7 +104,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"forecast|outlier"),
+        re.compile(r"forecast(?! conditions)|outlier"),
         "Forecast or outlier monitor",
         [
             "Recreate as a New Relic baseline NRQL condition for outlier-style detection. "
@@ -147,7 +147,10 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"metric math|nested metric math|different (dimensions|periods|statistics)"),
+        re.compile(
+            r"metric math(?! expressions in widgets)|nested metric math"
+            r"|different (dimensions|periods|statistics)"
+        ),
         "Metric math expression",
         [
             "Write the expression by hand as one NRQL query (for example "

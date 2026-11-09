@@ -37,3 +37,35 @@ def test_every_failed_widget_has_remediation() -> None:
 def test_steps_are_deduplicated_and_ordered() -> None:
     steps = steps_for(["anomaly detection alarms are not supported yet"] * 2)
     assert len(steps) == len(set(steps)) == 2
+
+
+@pytest.mark.parametrize(
+    ("reason", "title"),
+    [
+        ("forecast conditions are not converted", "Forecast condition"),
+        ("this alarm is a forecast alarm", "Forecast or outlier monitor"),
+        ("metric math expressions in widgets are not supported yet", "Metric math in a widget"),
+        ("metric math functions are not supported yet", "Metric math expression"),
+    ],
+)
+def test_a_specific_rule_is_not_shadowed_by_a_broader_one(reason: str, title: str) -> None:
+    from importer.core.remediation import remedies_for
+
+    assert [r.title for r in remedies_for([reason])] == [title]
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "not emitted: no evaluation window",
+        "not emitted: no thresholds",
+        "not emitted: evaluation window 99s is outside 60s-24h",
+        "not emitted: duration 90s is not a multiple of the 60s aggregation window",
+        "not emitted: signal kind heartbeat is not supported",
+        "not emitted: confidence is manual",
+        "alarm has no static threshold",
+        "metric type 'x' is not a recognised name",
+    ],
+)
+def test_emitter_limit_reasons_have_guidance(reason: str) -> None:
+    assert steps_for([reason])
