@@ -1,0 +1,160 @@
+{
+  "source": "docs/research/grafana-notifications-datapath.md section 1.4, with the destination names corrected by docs/research/newrelic-notifications-and-nrql-reference.md (Microsoft Teams has its own destination type). Every row is documentation or Grafana code, none was tested against a live New Relic account.",
+  "verdicts": {
+    "email": {
+      "verdict": "CONVERTS",
+      "target": "EMAIL",
+      "manual_step": ""
+    },
+    "webhook": {
+      "verdict": "CONVERTS",
+      "target": "WEBHOOK",
+      "manual_step": "Check that the receiver accepts the New Relic payload; it is not the Grafana alerts[] body.",
+      "when_set": [
+        {
+          "fields": ["password", "authorization_credentials"],
+          "step": "Create the destination with its basic or bearer credentials by hand; the stored secret cannot be read."
+        },
+        {
+          "fields": ["hmacConfig.secret", "hmacConfig.header", "hmacConfig.timestampHeader"],
+          "step": "New Relic does not sign webhook requests with HMAC; the receiver must accept unsigned calls or another check."
+        },
+        {
+          "fields": ["tlsConfig.caCertificate", "tlsConfig.clientCertificate", "tlsConfig.clientKey"],
+          "step": "Custom TLS material is not supported by the New Relic webhook destination; the receiver must use a public certificate."
+        },
+        {
+          "fields": ["headers"],
+          "step": "Custom headers may hold secrets. Add them as auth_custom_header values on the destination by hand."
+        },
+        {
+          "fields": ["payload.template", "payload.vars"],
+          "step": "The custom payload is a Go template and is not converted; write the channel payload by hand."
+        }
+      ],
+      "option_notes": [
+        {
+          "field": "httpMethod",
+          "not_equal": ["", "POST"],
+          "step": "New Relic webhooks always use POST; the configured HTTP method is lost."
+        }
+      ]
+    },
+    "oncall": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "Use a WEBHOOK destination with a payload in the format Grafana OnCall expects (Alertmanager-style JSON); supply the URL and any credentials."
+    },
+    "prometheus-alertmanager": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "A WEBHOOK to the Alertmanager /api/v2/alerts endpoint with a one-element array body is possible but of little value once New Relic replaces the Alertmanager."
+    },
+    "slack": {
+      "verdict": "MANUAL STEP",
+      "target": "SLACK",
+      "manual_step": "The Slack destination needs a one-time sign-in per workspace and cannot be created by Terraform. Create it in the New Relic UI, then pick the channel."
+    },
+    "pagerduty": {
+      "verdict": "MANUAL STEP",
+      "target": "PAGERDUTY_SERVICE_INTEGRATION",
+      "manual_step": "Create a New Relic integration on the PagerDuty service and use its integration key; the stored Grafana key cannot be read."
+    },
+    "teams": {
+      "verdict": "MANUAL STEP",
+      "target": "MICROSOFT_TEAMS",
+      "manual_step": "Install the New Relic app in Microsoft Teams, add it to the channel, and enter the security code it posts."
+    },
+    "jira": {
+      "verdict": "MANUAL STEP",
+      "target": "JIRA",
+      "manual_step": "Create the Jira destination with a new API token, then choose the project and issue type; the channel needs their numeric ids, not the key and name Grafana stores."
+    },
+    "opsgenie": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "Use the Atlassian-provided New Relic webhook template. The API key goes in an Authorization header (GenieKey) on the destination; auto-close on resolve needs a second URL."
+    },
+    "victorops": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "Use a WEBHOOK to the Splunk On-Call REST endpoint; the URL holds the integration and routing key, so enter it as a secure URL."
+    },
+    "discord": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "Use a WEBHOOK with a Discord message payload; the webhook URL is a secret, so enter it as a secure URL."
+    },
+    "googlechat": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "Use a WEBHOOK with a Google Chat card payload; the webhook URL is a secret, so enter it as a secure URL."
+    },
+    "telegram": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "Use a WEBHOOK to the Telegram sendMessage endpoint with the bot token as a secure URL part; whether the Bot API accepts a JSON body from New Relic is not confirmed."
+    },
+    "webex": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "Use a WEBHOOK to the Webex messages endpoint with the bot token as a bearer token on the destination and a roomId and markdown payload."
+    },
+    "sensugo": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "Use a WEBHOOK to the Sensu events endpoint for the namespace, with the API key in an Authorization header (Key) on the destination and an event payload."
+    },
+    "kafka": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "Use a WEBHOOK to the Kafka REST proxy topic endpoint with a records payload; whether New Relic honours the Kafka content type header is not confirmed."
+    },
+    "wecom": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "Robot mode: use a WEBHOOK with the robot URL as a secure URL.",
+      "requires_any": ["url"],
+      "otherwise": {
+        "verdict": "NO EQUIVALENT",
+        "target": "none",
+        "manual_step": "App mode fetches an access token from the corp id and secret before sending; a New Relic webhook cannot do two requests. Use robot mode or another channel."
+      }
+    },
+    "dingding": {
+      "verdict": "WEBHOOK TEMPLATE",
+      "target": "WEBHOOK",
+      "manual_step": "Use a WEBHOOK with a DingTalk link or card payload; the URL holds an access token, so enter it as a secure URL."
+    },
+    "pushover": {
+      "verdict": "MANUAL STEP",
+      "target": "none",
+      "manual_step": "Pushover needs its token and user key in the request body, so a payload template would hold secrets. Use a relay you control or another channel."
+    },
+    "sns": {
+      "verdict": "MANUAL STEP",
+      "target": "EVENT_BRIDGE",
+      "manual_step": "Create an EVENT_BRIDGE destination, then an AWS-side EventBridge rule that forwards to the SNS topic. The AWS side is a manual step."
+    },
+    "threema": {
+      "verdict": "NO EQUIVALENT",
+      "target": "none",
+      "manual_step": "Threema Gateway takes a form-encoded request with a secret in the body; New Relic has no destination for it. Use another channel."
+    },
+    "LINE": {
+      "verdict": "NO EQUIVALENT",
+      "target": "none",
+      "manual_step": "LINE Notify takes a form-encoded request; New Relic has no destination for it. Use another channel."
+    },
+    "mqtt": {
+      "verdict": "NO EQUIVALENT",
+      "target": "none",
+      "manual_step": "MQTT is not HTTP and New Relic cannot publish to a broker. Use a bridge that accepts a webhook, or another channel."
+    },
+    "wechat": {
+      "verdict": "NO EQUIVALENT",
+      "target": "none",
+      "manual_step": "WeChat exists only in an imported Alertmanager configuration and has no New Relic destination. Use another channel."
+    }
+  }
+}
