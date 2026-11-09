@@ -485,7 +485,8 @@ def test_totals_add_up_across_dashboards_and_carry_the_unreadable_items() -> Non
     plan = build_plan(estate)
     assert isinstance(plan, Plan)
     totals = plan.totals
-    assert totals.dashboards == 5
+    assert totals.dashboards == len(estate.dashboards) >= 5
+    assert totals.unreadable == len(plan.unreadable) == len(estate.unreadable)
     assert (totals.panels, totals.t1, totals.t2, totals.t3) == (
         sum(d.panel_count for d in plan.dashboards),
         sum(d.t1 for d in plan.dashboards),
@@ -494,7 +495,7 @@ def test_totals_add_up_across_dashboards_and_carry_the_unreadable_items() -> Non
     )
     assert totals.t1 <= totals.t2 <= totals.t3 <= totals.t3_extra <= totals.panels
     assert plan.panel_types["timeseries"] >= 4 and plan.datasources["prometheus"] > 0
-    assert sum(plan.reasons.values()) > 0 and plan.unreadable == []
+    assert sum(plan.reasons.values()) > 0
 
 
 def test_a_dashboard_of_ten_thousand_panels_is_planned_quickly_and_in_bounded_memory() -> None:

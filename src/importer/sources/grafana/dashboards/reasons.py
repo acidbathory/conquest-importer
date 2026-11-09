@@ -69,7 +69,9 @@ V_DUPLICATE = "dashboard variable name is used twice"
 V_KIND = "dashboard variable type is not one the converter knows"
 
 # --- dashboard level ---
-A_DROPPED = "dashboard annotation queries have no New Relic equivalent and are not converted"
+A_DROPPED = (
+    "dashboard annotations are not carried over; New Relic dashboards have no annotation layer"
+)
 
 # word shown for a panel type or data source type that is not in the tables
 OTHER_LABEL = "other"

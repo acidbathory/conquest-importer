@@ -1,0 +1,19 @@
+{
+  "uid": "term\u001b]0;owned\u0007",
+  "title": "\u001b[2J\u001b[31mred\u001b[0m ‮desrever‬ ​ zero width \u0000 nul \r\n newline | pipe ` tick <b>bold</b>",
+  "schemaVersion": 39,
+  "panels": [
+    {"id": 1, "type": "text", "title": "[link](javascript:alert(1)) ![img](http://evil.example/x.png)", "options": {"mode": "html", "content": "<iframe src=\"javascript:alert(1)\"></iframe>"}},
+    {"id": 2, "type": "stat", "title": "# heading\n- list\n| a | b |\n|---|---|", "targets": [
+      {"refId": "A", "expr": "up == 1", "legendFormat": "{{instance}} \u001b[1m bold"},
+      {"refId": "B", "expr": "sum(rate(x_total[5m])) by (le, \u001b[31mevil)"}
+    ]},
+    {"id": 3, "type": "timeseries", "title": "unicode: éè 中文 😀    ", "targets": [
+      {"refId": "A", "expr": "up{job=~\"‮.*\"}"}
+    ]}
+  ],
+  "templating": {"list": [
+    {"name": "\u001b[31m", "type": "custom", "query": "a,b"},
+    {"name": "ok_name", "type": "query", "query": "label_values(up, job)\u0000‮"}
+  ]}
+}

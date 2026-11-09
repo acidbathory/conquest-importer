@@ -36,7 +36,7 @@ def test_the_report_has_the_tier_table_and_the_caveat() -> None:
 def test_untrusted_text_in_the_report_is_escaped() -> None:
     body = {
         "uid": "u|v`w",
-        "title": "<script>alert(1)</script> | ``` [x](javascript:alert(1)) \x1b[31mred‮",
+        "title": "<script>alert(1)</script> | ``` [x](javascript:alert(1)) \x1b[31mred\u202e",
         "panels": [
             {
                 "id": 1,
@@ -48,7 +48,7 @@ def test_untrusted_text_in_the_report_is_escaped() -> None:
         "templating": {"list": [{"name": "<b>|`", "type": "custom"}]},
     }
     report = build_report(build_plan(load_data(body, "x|y`z.json")))
-    for bad in ("<script>", "<img", "\x1b", "‮", "\x00", "`", "[x](", "</"):
+    for bad in ("<script>", "<img", "\x1b", "\u202e", "\x00", "`", "[x](", "</"):
         assert bad not in report
     rows = [line for line in report.splitlines() if line.startswith("| ")]
     assert all(not line.startswith("| #") for line in rows)
@@ -57,11 +57,11 @@ def test_untrusted_text_in_the_report_is_escaped() -> None:
 
 
 def test_the_json_is_ascii_valid_and_carries_the_totals() -> None:
-    plan = build_plan(load_estate(FIXTURES))
-    text = plan_json(plan)
-    assert text.isascii() and "‮" not in text
+    estate = load_estate(FIXTURES)
+    text = plan_json(build_plan(estate))
+    assert text.isascii() and "\u202e" not in text
     data = json.loads(text)
-    assert data["totals"]["dashboards"] == 5
+    assert data["totals"]["dashboards"] == len(estate.dashboards)
     assert data["dashboards"][0]["panels"][0]["reasons"] is not None
     assert "variables" not in data["dashboards"][0]["panels"][0]  # the working set is not saved
 
@@ -87,8 +87,9 @@ def test_the_command_writes_a_report_and_json_and_prints_the_numbers(tmp_path: P
     result = run("--in", str(FIXTURES), "--out", str(out))
     assert result.exit_code == 0, result.output
     assert (out / "report.md").read_text().startswith("# Grafana dashboards")
-    assert json.loads((out / "plan.json").read_text())["totals"]["dashboards"] == 5
-    assert "5 dashboards" in result.output and "T2" in result.output
+    count = len(load_estate(FIXTURES).dashboards)
+    assert json.loads((out / "plan.json").read_text())["totals"]["dashboards"] == count
+    assert f"Planned {count} dashboards" in result.output and "T2" in result.output
     assert sorted(p.name for p in out.iterdir()) == ["plan.json", "report.md"]
 
 
