@@ -411,7 +411,7 @@ def test_a_contact_point_type_with_odd_characters_is_counted_as_other(tmp_path: 
 
 def test_a_deep_policy_tree_is_bounded(tmp_path: Path) -> None:
     tree: dict[str, Any] = {"receiver": "x"}
-    for _ in range(500):
+    for _ in range(90):  # two brackets a level, so 180 deep: under the 200 limit, over the cap
         tree = {"receiver": "x", "routes": [tree]}
     result = read(serve(policies=tree), tmp_path)
     assert result.inventory["policies"] == {"routes": gx.MAX_POLICY_DEPTH}
@@ -524,9 +524,10 @@ def test_the_cli_says_when_inventory_was_not_read_and_still_exits_zero(
     assert "SECRETSECRET" not in out.output
 
 
-def test_the_cli_help_documents_the_host_rule_and_the_certificate_variable() -> None:
-    result = CliRunner().invoke(app, ["extract-grafana", "--help"])
-    text = " ".join(result.output.split())
+def test_the_cli_help_documents_the_host_rule_and_the_certificate_variable(
+    help_text: Callable[..., str],
+) -> None:
+    text = help_text("extract-grafana", "--help")
     assert "GRAFANA_SA_TOKEN" in text and "grafana.net" in text and "--allow-host" in text
     assert "SSL_CERT_FILE" in text
 

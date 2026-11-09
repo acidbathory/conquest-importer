@@ -2,6 +2,7 @@
 editing the same shared lines."""
 
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,6 @@ import typer
 from typer.testing import CliRunner
 
 from importer import commands
-from importer.cli import app
 from importer.core import taxonomy
 from importer.core.taxonomy import Category, classify, register_taxonomy
 from importer.sources import base
@@ -57,9 +57,9 @@ def test_private_modules_are_skipped(extra_command_dir: Path) -> None:
     assert "_helpers" not in commands.load_all(typer.Typer())
 
 
-def test_the_real_cli_still_lists_its_commands() -> None:
-    result = CliRunner().invoke(app, ["--help"])
-    assert result.exit_code == 0 and "convert" in result.output and "extract-gcp" in result.output
+def test_the_real_cli_still_lists_its_commands(help_text: Callable[..., str]) -> None:
+    text = help_text("--help")
+    assert "convert" in text and "extract-gcp" in text
 
 
 @pytest.fixture
