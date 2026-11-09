@@ -154,9 +154,7 @@ module existed, so they were not seen failing; they test behaviour that did not 
    when typed destinations exist; offer `--incident-preference` and
    `--muting-handling` options that build an `EmitDefaults`; add a `convert-muting` command in
    `src/importer/commands/muting.py` once a source produces `MutingRule`.
-2. `sources/dynatrace/translate.py` (not mine): add `("victorops", "victorops")` and
-   `("xmatters", "xmatters")` before the `http` entry of `ACTION_LABELS`. `SERVICES` in
-   `notifications.py` already has both keys, but today those tasks are labelled "other".
+2. Done in round 2: `ACTION_LABELS` now has `victorops` and `xmatters` before `http`.
 3. `sources/gcp/notifications.py` (not mine): the channel types could build `NrDestination`
    values with `SecretRef` placeholders (email, token webhook, basic webhook, PagerDuty,
    Teams) and show `spec_for(...).human_steps` instead of its own reason texts.
@@ -168,3 +166,20 @@ module existed, so they were not seen failing; they test behaviour that did not 
 6. Owner decisions: which flips in the table to take, and when. Each one is a one-line change of
    `EMIT_DEFAULTS` plus regenerating `tests/fixtures/emitter-output-hashes.json` and updating the
    pinned tests listed.
+
+## Round 2 (review fixes)
+
+Changes after an independent review (which ran a real `terraform validate`; I did not).
+
+- Secret handling: logical names only, `nr_secret_` prefix on every generated variable, variables declared for exactly the emitted destinations, `hide_input_in_errors`, plaintext and key-shaped values refused at construction, typed emails checked with the shared address pattern, supplied secrets redacted from API errors.
+- Terraform checker: `tests/hcl_schema.py` now also fails undeclared variables, empty required lists, and (for chosen keys) `=` misalignment. New constructs are aligned like `terraform fmt` (incident preference line, muting blocks, optional condition lines, workflow trigger lines). Older condition lines are unchanged because they are pinned.
+- Muting: `ANY`, `IS_BLANK`, `IS_NOT_BLANK` are refused for Terraform with a remediation rule; NerdGraph still emits them (UNVERIFIED).
+- Conditions: ranges are checked before division; non-finite fill values, a timer without EVENT_TIMER and a null-safe scope covering every filter are refused with remediation rules. A fuzz grid asserts that only `CannotEmit` or `ValueError` escapes.
+- `apply_notifications`: `include_needs_review` (default false) and `ApplyResult.skipped_review`. Behaviour change for AWS: a topic with a Lambda, SQS or Firehose subscription is now `needs_review`, so apply skips it (and its email or https channels) unless the flag is set; other topics are unaffected. `cli.py` wiring is the integrator's.
+- CloudWatch: EventBridge account and region come from the subscriber ARN; entries are keyed by protocol, account and region; three short step lines per entry go into `unsupported` so `report.md` shows them (an end-to-end test checks it). Only done when the topic ARN passes `_SNS_TOPIC`.
+- Dynatrace: `victorops` and `xmatters` labels added before `http` in `ACTION_LABELS` (`translate.py`); `app.xmatters:http-post` is now `xmatters`. No fixture output changed.
+- Unique addresses: a repeated plan topic gets a different hash; `notifications_terraform_result` returns the violations. `plan_violations` also reports duplicate workflow names.
+- Boundary tests added for the surviving mutants the reviewer listed (filter size, 1,001 workflows, loss of signal 29/30/172800/172801 through `check_expiration_seconds`, delays 1200/1201 and 3600/3601, slide-by 29/30, muting 20/21 conditions and 500/501 values, end before start, timer default, fill value format, flag and title lines, `_omit_options`, `repeat_count`, remediation alternatives, Slack with OAuth auth). I did not run a mutation tool, so I cannot report a before and after count of survivors; the new tests were written to fail on those mutants.
+- Byte identity: `tests/fixtures/emitter-output-hashes.json` unchanged; the full suite passes with it.
+
+Still a request, not done: build the Terraform from a structured model instead of f-strings (dry-guidelines item 6); `cli.py` wiring for `include_needs_review`, `skipped_review`, `warn_https_payload` and `plan_violations`.

@@ -112,3 +112,11 @@ Limits and the provider.
 - `apply` (`core/apply_dashboards.py`) replaces the account placeholder in widget queries only. An `nrql` variable with no `account_ids` is written with the placeholder, so `with_account` must replace it before such a payload is sent.
 
 Serialisation. The new fields are left out of `model_dump_json` while they hold their default (`OmitDefaults`), and load back with defaults, so IR files written before the change still load and dashboards that do not use the fields write the same bytes.
+
+### Round 2 rules for the notification and muting IR
+
+- **Secret names** are logical names: upper case, at least one underscore, 3 to 40 characters, not shaped like a key (AWS `AKIA`/`ASIA`, `sk-`, `ghp_`, `glsa_`, `NRAK`, Dynatrace `dt0`, long unbroken runs). Terraform variables are always `nr_secret_<lower case name>`, declared only for the destinations whose blocks are emitted. Plaintext in a secret property (Teams `securityCode`), a key-shaped value in an auth user, prefix, header key or channel property, and an invalid typed email address are refused when `NrDestination` is built. The models do not echo input in validation errors. `apply_notifications` scrubs the supplied secret values from API errors.
+- **Resource addresses** use a hash of the plan topic. A second plan with the same topic gets a different hash, so addresses stay unique; a topic that occurs once keeps its old address. `notifications_terraform_result` returns the text and `plan_violations`.
+- **Muting operators** `ANY`, `IS_BLANK` and `IS_NOT_BLANK` take no values. The Terraform emitter refuses them (the provider needs one value). The NerdGraph emitter emits them with `values: []`; that is UNVERIFIED against a live account.
+- **`apply_notifications(..., include_needs_review=False)`** skips plans marked `needs_review` and lists them in `ApplyResult.skipped_review`; other plans are created. A CloudWatch topic with a Lambda, SQS or Firehose subscription is `needs_review` (it has a manual EventBridge destination), so it is skipped without the flag even if it also has email or https channels.
+- **Condition options** are range-checked before any arithmetic on them. A timer without EVENT_TIMER, a non-finite fill value and a `null_safe_scope` that covers every filter are refused.
