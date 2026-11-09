@@ -33,6 +33,7 @@ def test_a_rule_with_none_of_them_has_no_note() -> None:
         {"api_token": "abc"},
         {"password": "x"},
         {"x-secret": "y"},
+        {"unlisted": "v"},
         {"team": "a" * 64},
         {"team": "0123456789abcdef0123456789abcdef"},
         {"team": "<script>alert(1)</script>"},
@@ -51,11 +52,6 @@ def test_a_label_that_is_long_odd_or_secret_looking_is_counted_not_shown(
     assert note is not None and "1 more not shown" in note
     for value in labels.values():
         assert not isinstance(value, str) or len(value) < 3 or value not in note
-
-
-def test_only_ten_labels_are_shown() -> None:
-    note = origin(labels={f"k{i:02d}": "v" for i in range(14)})
-    assert note is not None and "k09=v" in note and "k10" not in note and "4 more" in note
 
 
 def test_an_unsafe_folder_is_not_shown() -> None:

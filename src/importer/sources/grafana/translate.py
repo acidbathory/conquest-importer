@@ -315,7 +315,8 @@ N_RATIO_ZERO = (
 )
 N_ABSENT = (
     "absent() becomes a loss-of-signal condition: it opens a violation when New Relic receives "
-    "no data points for five minutes (Prometheus keeps a series visible that long) plus the pending period, and it only works once the metric has "
+    "no data points for the silence Prometheus waits (five minutes for absent(), the range for "
+    "absent_over_time()) plus the pending period, and it only works once the metric has "
     "arrived at least once; like absent() it fires only when no matching series reports at all, so "
     "one missing series among several does not alert, which may differ from the rule's intent"
 )
