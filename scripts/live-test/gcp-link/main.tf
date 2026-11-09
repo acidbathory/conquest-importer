@@ -5,6 +5,8 @@
 # `terraform destroy` when the test is over.
 
 terraform {
+  required_version = ">= 1.5"
+
   required_providers {
     google   = { source = "hashicorp/google", version = "~> 8.10" }
     newrelic = { source = "newrelic/newrelic", version = "~> 3.101" }
