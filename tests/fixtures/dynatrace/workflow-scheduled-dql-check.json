@@ -1,0 +1,90 @@
+{
+  "actor": "00000000-0000-0000-0000-000000000000",
+  "description": "Conquest Importer test object. Runs a DQL check on a schedule. Safe to delete.",
+  "guide": null,
+  "hourlyExecutionLimit": 1000,
+  "id": "00000000-0000-0000-0000-000000000000",
+  "input": {},
+  "isDeployed": true,
+  "isPrivate": true,
+  "lastExecution": null,
+  "modificationInfo": {
+    "createdBy": "00000000-0000-0000-0000-000000000000",
+    "createdTime": "2026-01-01T00:00:00Z",
+    "lastModifiedBy": "00000000-0000-0000-0000-000000000000",
+    "lastModifiedTime": "2026-01-01T00:00:00Z"
+  },
+  "owner": "00000000-0000-0000-0000-000000000000",
+  "ownerType": "USER",
+  "result": null,
+  "schemaVersion": 4,
+  "tasks": {
+    "count_errors": {
+      "action": "dynatrace.automations:execute-dql-query",
+      "description": "Count error logs in the last 15 minutes",
+      "input": {
+        "query": "fetch logs, from:now() - 15m | filter loglevel == \"ERROR\" | summarize errors = count()"
+      },
+      "name": "count_errors",
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "predecessors": []
+    },
+    "notify": {
+      "action": "dynatrace.email:send-email",
+      "conditions": {
+        "custom": "{{ result(\"count_errors\")[\"records\"][0][\"errors\"] > 100 }}",
+        "states": {
+          "count_errors": "OK"
+        }
+      },
+      "description": "Email when the error count is above the threshold",
+      "input": {
+        "bcc": [],
+        "cc": [],
+        "content": "Errors: {{ result(\"count_errors\")[\"records\"][0][\"errors\"] }}",
+        "subject": "ckg test: error logs above threshold",
+        "to": [
+          "oncall@example.com"
+        ]
+      },
+      "name": "notify",
+      "position": {
+        "x": 0,
+        "y": 2
+      },
+      "predecessors": [
+        "count_errors"
+      ]
+    }
+  },
+  "throttle": {
+    "isLimitHit": false,
+    "limitEvents": []
+  },
+  "title": "example-scheduled-error-check",
+  "trigger": {
+    "schedule": {
+      "filterParameters": {},
+      "inputs": {},
+      "isActive": false,
+      "isFaulty": false,
+      "nextExecution": null,
+      "rule": null,
+      "timezone": "UTC",
+      "trigger": {
+        "intervalMinutes": 15,
+        "type": "interval"
+      }
+    }
+  },
+  "triggerType": "Schedule",
+  "type": "STANDARD",
+  "unacknowledgedSkippedScheduleAt": null,
+  "version": 1,
+  "workflowLimit": {
+    "isActive": false
+  }
+}

@@ -150,8 +150,17 @@ def load_env() -> tuple[str, str]:
     return base, token
 
 
-def call(base: str, token: str, method: str, path: str, body: object = None) -> tuple[int, object]:
+def call(
+    base: str,
+    token: str,
+    method: str,
+    path: str,
+    body: object = None,
+    params: dict[str, str] | None = None,
+) -> tuple[int, object]:
     url = base + urllib.parse.quote(path, safe="/:")
+    if params:
+        url += "?" + urllib.parse.urlencode(params)
     lines = [
         f'url = "{url}"',
         f'request = "{method}"',
@@ -235,11 +244,17 @@ def delete(base: str, token: str) -> None:
             print(f"{entry['kind']}: name does not start with ckg-, refusing to delete")
             left.append(entry)
             continue
-        code, _ = call(base, token, "DELETE", f"{entry['path']}/{entry['id']}")
+        item = f"{entry['path']}/{entry['id']}"
+        params = None
+        if entry["kind"] == "slo":  # SLOs are versioned: a delete must name the current version
+            _, current = call(base, token, "GET", item)
+            version = current.get("version") if isinstance(current, dict) else None
+            params = {"optimistic-locking-version": str(version)} if version else None
+        code, reply = call(base, token, "DELETE", item, params=params)
         if code in (200, 202, 204, 404):
             print(f"{entry['kind']}: deleted ({code})")
         else:
-            print(f"{entry['kind']}: HTTP {code}, kept in the manifest")
+            print(f"{entry['kind']}: HTTP {code} {json.dumps(reply)[:400]}; kept in the manifest")
             left.append(entry)
     save(left)
 

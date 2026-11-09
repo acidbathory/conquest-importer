@@ -1,0 +1,79 @@
+{
+  "actor": "00000000-0000-0000-0000-000000000000",
+  "description": "Conquest Importer test object. Safe to delete.",
+  "guide": null,
+  "hourlyExecutionLimit": 1000,
+  "id": "00000000-0000-0000-0000-000000000000",
+  "input": {},
+  "isDeployed": true,
+  "isPrivate": true,
+  "lastExecution": null,
+  "modificationInfo": {
+    "createdBy": "00000000-0000-0000-0000-000000000000",
+    "createdTime": "2026-01-01T00:00:00Z",
+    "lastModifiedBy": "00000000-0000-0000-0000-000000000000",
+    "lastModifiedTime": "2026-01-01T00:00:00Z"
+  },
+  "owner": "00000000-0000-0000-0000-000000000000",
+  "ownerType": "USER",
+  "result": null,
+  "schemaVersion": 4,
+  "tasks": {
+    "send_email": {
+      "action": "dynatrace.email:send-email",
+      "description": "Test email (never sent: the trigger is inactive)",
+      "input": {
+        "bcc": [],
+        "cc": [],
+        "content": "ckg test",
+        "subject": "ckg test problem",
+        "to": [
+          "oncall@example.com"
+        ]
+      },
+      "name": "send_email",
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "predecessors": []
+    }
+  },
+  "throttle": {
+    "isLimitHit": false,
+    "limitEvents": []
+  },
+  "title": "example-problem-email",
+  "trigger": {
+    "eventTrigger": {
+      "filterQuery": "event.kind == \"DAVIS_PROBLEM\" AND event.status == \"ACTIVE\" AND matchesValue(event.status_transition, {\"CREATED\", \"UPDATED\", \"REOPENED\"}) AND (event.category == \"AVAILABILITY\")",
+      "isActive": false,
+      "triggerConfiguration": {
+        "type": "davis-problem",
+        "value": {
+          "analysisReady": false,
+          "categories": {
+            "availability": true
+          },
+          "customFilter": "",
+          "entityTags": {},
+          "entityTagsMatch": null,
+          "maintenanceWindowTriggerBehavior": "always",
+          "onProblemClose": false,
+          "problemOpenDuration": null,
+          "severityThreshold": null,
+          "triggerOn": null,
+          "triggerOnUpdateFields": []
+        }
+      },
+      "uniqueExpression": "{{ event()[\"event.id\"] }}-{{ \"open\" if event()[\"event.status\"] == \"ACTIVE\" else \"resolved\" }}-{{ event()[\"dt.davis.last_reopen_timestamp\"] }}"
+    }
+  },
+  "triggerType": "Event",
+  "type": "STANDARD",
+  "unacknowledgedSkippedScheduleAt": null,
+  "version": 1,
+  "workflowLimit": {
+    "isActive": false
+  }
+}

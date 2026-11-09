@@ -1,0 +1,21 @@
+{
+  "criteria": [
+    {
+      "target": 99.0,
+      "timeframeFrom": "now-7d",
+      "timeframeTo": "now",
+      "warning": 99.5
+    }
+  ],
+  "customSli": {
+    "filterSegments": [],
+    "indicator": "timeseries { total = sum(dt.service.request.count), failed = sum(dt.service.request.failure_count) }, from:-7d | fieldsAdd sli = (total[] - failed[]) / total[] * 100"
+  },
+  "description": "Conquest Importer test object. Safe to delete.",
+  "id": "slo-id-example",
+  "name": "example-availability-slo",
+  "tags": [
+    "ckg-test"
+  ],
+  "version": "slo-version-example"
+}
