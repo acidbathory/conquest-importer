@@ -8,7 +8,7 @@ import hashlib
 from collections.abc import Mapping
 from typing import Any
 
-from importer.core.emit.common import CannotEmit
+from importer.core.emit.common import CannotEmit, emit_defaults
 from importer.core.emit.nerdgraph import nerdgraph_payload
 from importer.core.emit.terraform import hcl_string
 from importer.core.ir import IRMonitor
@@ -25,6 +25,7 @@ from importer.core.notification_ir import (
     SecretRef,
     spec_for,
     validate_destination,
+    workflow_violations,
 )
 
 EMAIL_SUBJECT = "{{ issueTitle }}"
@@ -166,11 +167,22 @@ def workflow_input(plan: NotificationPlan, channel_ids: list[str]) -> dict[str, 
     wf = plan.workflow
     if wf is None:
         raise ValueError("plan has no workflow")
-    return {
+    problems = workflow_violations(plan)
+    if problems:
+        raise CannotEmit(problems[0])
+    defaults = emit_defaults()
+    triggers = wf.notification_triggers or list(defaults.notification_triggers)
+    configs: list[dict[str, Any]] = []
+    for i in wf.destination_indexes:
+        config: dict[str, Any] = {"channelId": channel_ids[i]}
+        if triggers:
+            config["notificationTriggers"] = triggers
+        configs.append(config)
+    data: dict[str, Any] = {
         "name": wf.name,
         "workflowEnabled": False,  # imported disabled; a human enables after review
         "destinationsEnabled": True,
-        "mutingRulesHandling": "NOTIFY_ALL_ISSUES",
+        "mutingRulesHandling": wf.muting_rules_handling or defaults.muting_rules_handling,
         "issuesFilter": {
             "name": wf.name,
             "type": "FILTER",
@@ -179,10 +191,16 @@ def workflow_input(plan: NotificationPlan, channel_ids: list[str]) -> dict[str, 
                 for p in wf.issue_predicates()
             ],
         },
-        "destinationConfigurations": [
-            {"channelId": channel_ids[i]} for i in wf.destination_indexes
-        ],
+        "destinationConfigurations": configs,
     }
+    if wf.enrichments:
+        data["enrichmentsEnabled"] = True
+        data["enrichments"] = {
+            "nrql": [
+                {"name": e.name, "configuration": [{"query": e.query}]} for e in wf.enrichments
+            ]
+        }
+    return data
 
 
 def _slug(plan: NotificationPlan) -> str:
@@ -277,7 +295,20 @@ def _destination_blocks(dests: list[NrDestination], slug: str) -> tuple[list[str
     return blocks, skipped
 
 
+def _enrichment_blocks(wf: PlannedWorkflow) -> str:
+    if not wf.enrichments:
+        return ""
+    nrql = "".join(
+        f"\n    nrql {{\n      name = {hcl_string(e.name)}\n\n"
+        f"      configuration {{\n        query = {hcl_string(e.query)}\n      }}\n    }}\n"
+        for e in wf.enrichments
+    )
+    return f"\n  enrichments {{{nrql}  }}\n"
+
+
 def _workflow_block(wf: PlannedWorkflow, slug: str) -> str:
+    defaults = emit_defaults()
+    triggers = wf.notification_triggers or list(defaults.notification_triggers)
     predicates = "".join(
         f"\n    predicate {{\n"
         f"      attribute = {hcl_string(p.attribute)}\n"
@@ -285,18 +316,25 @@ def _workflow_block(wf: PlannedWorkflow, slug: str) -> str:
         f"      values    = [{', '.join(hcl_string(v) for v in p.values)}]\n    }}\n"
         for p in wf.issue_predicates()
     )
+    if triggers:
+        listed = ", ".join(hcl_string(t) for t in triggers)
+        extra = f"    notification_triggers = [{listed}]\n"
+        pad = " " * 12  # lines channel_id up with notification_triggers
+    else:
+        extra, pad = "", ""
     dests = "".join(
-        f"\n  destination {{\n    channel_id = newrelic_notification_channel.n_{slug}_{i}.id\n"
-        f"  }}\n"
+        f"\n  destination {{\n    channel_id{pad} = newrelic_notification_channel.n_{slug}_{i}.id\n"
+        f"{extra}  }}\n"
         for i in wf.destination_indexes
     )
+    handling = wf.muting_rules_handling or defaults.muting_rules_handling
     return (
         f'resource "newrelic_workflow" "n_{slug}" {{\n'
         f"  name                  = {hcl_string(wf.name)}\n"
-        f'  muting_rules_handling = "NOTIFY_ALL_ISSUES"\n'
+        f"  muting_rules_handling = {hcl_string(handling)}\n"
         f"  enabled               = false\n\n"
         f"  issues_filter {{\n    name = {hcl_string(wf.name)}\n"
-        f'    type = "FILTER"\n{predicates}  }}\n{dests}}}\n'
+        f'    type = "FILTER"\n{predicates}  }}\n{dests}{_enrichment_blocks(wf)}}}\n'
     )
 
 
@@ -318,10 +356,10 @@ def notifications_terraform(plans: list[NotificationPlan]) -> str:
             secrets.update(_secret_names(dests))
         if plan.workflow is None:
             continue
-        if skipped:
-            blocks.append(
-                f"# not emitted: workflow of {slug}: a destination could not be emitted\n"
-            )
+        problems = workflow_violations(plan)
+        if skipped or problems:
+            why = "a destination could not be emitted" if skipped else problems[0]
+            blocks.append(f"# not emitted: workflow of {slug}: {why}\n")
         else:
             blocks.append(_workflow_block(plan.workflow, slug))
     return "\n".join([_variable_block(n) for n in sorted(secrets)] + blocks)

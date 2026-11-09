@@ -1,7 +1,34 @@
 """Shared emitter rules: which IR monitors can be emitted, and how windows map to New Relic."""
 
+from dataclasses import dataclass
+
 from importer.core.emit.nrql import build_nrql
 from importer.core.ir import Confidence, IRMonitor, SignalKind
+
+
+@dataclass(frozen=True)
+class EmitDefaults:
+    """What the emitters do when the IR does not say. Each value reproduces the output of the
+    releases before these options existed. Changing one changes the bytes of every converted
+    fixture; tests/test_emitter_byte_identity.py shows which, and a person decides.
+    """
+
+    muting_rules_handling: str = "NOTIFY_ALL_ISSUES"
+    notification_triggers: tuple[str, ...] = ()  # empty: leave it to New Relic's defaults
+    incident_preference: str | None = None  # None: the Terraform policy sets nothing
+    # source system -> aggregation method for metric and heartbeat signals; empty: EVENT_FLOW
+    aggregation_method_by_source: tuple[tuple[str, str], ...] = ()
+    count_fill: tuple[str, float] | None = None  # fill option and value for log and APM counts
+    null_safe_count: bool = False  # wrap log and APM counts in filter(count(*), WHERE ...)
+
+
+EMIT_DEFAULTS = EmitDefaults()
+
+
+def emit_defaults() -> EmitDefaults:
+    """Read at call time, so a test (or a later decision) can replace EMIT_DEFAULTS."""
+    return EMIT_DEFAULTS
+
 
 # A source "avg over the last 5 minutes" is evaluated as 1-minute windows that must breach
 # for 5 minutes.

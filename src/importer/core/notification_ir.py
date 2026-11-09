@@ -6,6 +6,7 @@ migrated channel, and ONE workflow per topic that routes the issues of the condi
 that topic to those channels. Workflows are always created disabled.
 """
 
+import json
 import re
 from dataclasses import dataclass
 from enum import StrEnum
@@ -66,10 +67,72 @@ class ManualDestination(BaseModel):
     steps: list[str]
 
 
+# Issue filter operators the provider schema accepts (newrelic_workflow.issues_filter.predicate).
+PREDICATE_OPERATORS = frozenset(
+    [
+        "CONTAINS",
+        "DOES_NOT_CONTAIN",
+        "DOES_NOT_EQUAL",
+        "DOES_NOT_EXACTLY_MATCH",
+        "ENDS_WITH",
+        "EQUAL",
+        "EXACTLY_MATCHES",
+        "GREATER_OR_EQUAL",
+        "GREATER_THAN",
+        "IS",
+        "IS_NOT",
+        "LESS_OR_EQUAL",
+        "LESS_THAN",
+        "STARTS_WITH",
+    ]
+)
+NOTIFICATION_TRIGGERS = frozenset(
+    ["ACTIVATED", "ACKNOWLEDGED", "INVESTIGATING", "PRIORITY_CHANGED", "CLOSED", "OTHER_UPDATES"]
+)
+MUTING_HANDLING = frozenset(
+    [
+        "NOTIFY_ALL_ISSUES",
+        "DONT_NOTIFY_FULLY_MUTED_ISSUES",
+        "DONT_NOTIFY_FULLY_OR_PARTIALLY_MUTED_ISSUES",
+    ]
+)
+FILTER_LIMIT = 4096  # characters of issue filter per workflow; New Relic does not raise it
+MAX_ENRICHMENTS = 2
+MAX_WORKFLOWS = 1000  # per account, existing workflows included
+TAG_NAME = re.compile(r"[A-Za-z0-9_.:-]{1,64}")
+
+
 class PlannedPredicate(BaseModel):
     attribute: str
     operator: str
     values: list[str]
+
+    @field_validator("operator")
+    @classmethod
+    def _known_operator(cls, value: str) -> str:
+        if value not in PREDICATE_OPERATORS:
+            raise ValueError("unknown issue filter operator")
+        return value
+
+
+def tag_predicate(name: str, values: list[str]) -> PlannedPredicate:
+    """Match issues that carry the entity tag `name` with one of `values`.
+
+    The attribute is accumulations.tag.NAME (documented in New Relic's workflow examples). The
+    spelling tags.NAME belongs to muting rules and title templates, not to issue filters.
+    """
+    if not TAG_NAME.fullmatch(name):
+        raise ValueError("tag name must be 1-64 letters, digits and _ . : -")
+    return PlannedPredicate(
+        attribute=f"accumulations.tag.{name}", operator="EXACTLY_MATCHES", values=values
+    )
+
+
+class Enrichment(BaseModel):
+    """An NRQL query whose result is added to the notification; the name is used in templates."""
+
+    name: str
+    query: str
 
 
 class PlannedWorkflow(BaseModel):
@@ -77,6 +140,33 @@ class PlannedWorkflow(BaseModel):
     condition_names: list[str]  # issues of these conditions are routed
     destination_indexes: list[int]  # which planned destinations/channels it notifies
     predicates: list[PlannedPredicate] = []  # when set, these replace the condition-name filter
+    # the next three are options; at their default they are left out of the written file and the
+    # emitters use the defaults in emit/common.py (EmitDefaults)
+    notification_triggers: list[str] = []
+    muting_rules_handling: str = ""
+    enrichments: list["Enrichment"] = []
+
+    @field_validator("notification_triggers")
+    @classmethod
+    def _known_triggers(cls, value: list[str]) -> list[str]:
+        if not NOTIFICATION_TRIGGERS.issuperset(value):
+            raise ValueError("unknown notification trigger")
+        return value
+
+    @field_validator("muting_rules_handling")
+    @classmethod
+    def _known_handling(cls, value: str) -> str:
+        if value and value not in MUTING_HANDLING:
+            raise ValueError("unknown muting rules handling")
+        return value
+
+    @model_serializer(mode="wrap")
+    def _omit_options(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        for name in ("notification_triggers", "muting_rules_handling", "enrichments"):
+            if not data.get(name):
+                data.pop(name, None)
+        return data
 
     def issue_predicates(self) -> list[PlannedPredicate]:
         """What the workflow's issue filter tests: its own predicates or the condition names."""
@@ -134,7 +224,12 @@ def plan_destinations(
     return planned
 
 
-def build_plan(topic: IRTopic, condition_names: list[str], prefix: str) -> NotificationPlan:
+def build_plan(
+    topic: IRTopic,
+    condition_names: list[str],
+    prefix: str,
+    muting_rules_handling: str = "",
+) -> NotificationPlan:
     """Plan the New Relic objects for one topic. No workflow if nothing can be routed."""
     destinations = plan_destinations(topic.name, topic.channels, prefix)
     if not destinations or not condition_names:
@@ -143,6 +238,7 @@ def build_plan(topic: IRTopic, condition_names: list[str], prefix: str) -> Notif
         name=_name(f"{prefix} {topic.name}"),
         condition_names=sorted(set(condition_names)),
         destination_indexes=list(range(len(destinations))),
+        muting_rules_handling=muting_rules_handling,
     )
     return NotificationPlan(topic=topic.name, destinations=destinations, workflow=workflow)
 
@@ -446,3 +542,72 @@ def validate_destination(dest: NrDestination) -> None:
     _check_auth(dest, spec)
     if dest.channel_product not in spec.products:
         raise DestinationError(f"{dest.type.value} channels use product {spec.products[0]}")
+
+
+def issue_filter_size(wf: PlannedWorkflow) -> int:
+    """Characters in the workflow's issue filter, counted as the JSON that carries it.
+
+    This is the upper bound of any reading of New Relic's 4,096-character limit (UNVERIFIED which
+    one it measures), so a filter that passes here passes there.
+    """
+    return len(
+        json.dumps(
+            [p.model_dump() for p in wf.issue_predicates()],
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+    )
+
+
+def workflow_violations(plan: NotificationPlan) -> list[str]:
+    """What stops this plan's workflow from being created. Fixed wording: no source text."""
+    wf = plan.workflow
+    if wf is None:
+        return []
+    problems: list[str] = []
+    count = len(plan.destinations) + len(plan.typed_destinations)
+    seen: set[int] = set()
+    for index in wf.destination_indexes:
+        if not 0 <= index < count:
+            problems.append(f"destination index {index} does not exist in the plan")
+        elif index in seen:
+            problems.append(
+                f"destination {index + 1} is listed more than once; a channel can be used once "
+                "in a workflow"
+            )
+        seen.add(index)
+    if not wf.destination_indexes:
+        problems.append("the workflow notifies no destination")
+    size = issue_filter_size(wf)
+    if size > FILTER_LIMIT:
+        problems.append(
+            f"the issue filter is {size} characters; New Relic allows {FILTER_LIMIT} per workflow"
+        )
+    if len(wf.enrichments) > MAX_ENRICHMENTS:
+        problems.append(
+            f"the workflow has {len(wf.enrichments)} enrichments; "
+            f"New Relic allows {MAX_ENRICHMENTS}"
+        )
+    if len({e.name for e in wf.enrichments}) != len(wf.enrichments):
+        problems.append("enrichment names must be unique")
+    return problems
+
+
+def plan_violations(plans: list[NotificationPlan]) -> list[str]:
+    """Problems across a set of plans: the account limit and objects that would be shared."""
+    problems: list[str] = []
+    made = [p for p in plans if p.workflow is not None]
+    if len(made) > MAX_WORKFLOWS:
+        problems.append(
+            f"{len(made)} workflows are planned; New Relic allows {MAX_WORKFLOWS} per account, "
+            "counting the ones that exist"
+        )
+    topics = [p.topic for p in plans]
+    if len(set(topics)) != len(topics):
+        problems.append(
+            "two plans have the same topic, so they would create the same objects; a channel "
+            "can serve one workflow only"
+        )
+    for n, plan in enumerate(plans, start=1):
+        problems += [f"plan {n}: {p}" for p in workflow_violations(plan)]
+    return problems

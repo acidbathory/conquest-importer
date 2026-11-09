@@ -19,7 +19,7 @@ from importer.core.emit.notifications import (
     workflow_input,
 )
 from importer.core.manifest import CreatedObject
-from importer.core.notification_ir import NotificationPlan
+from importer.core.notification_ir import NotificationPlan, workflow_violations
 
 WORKFLOW_SEARCH = (
     "query($accountId: Int!, $name: String!) { actor { account(id: $accountId) "
@@ -59,6 +59,9 @@ def apply_notifications(
             inputs = [nr_destination_input(d, supplied) for d in dests]
             for d in dests:
                 nr_channel_input(d, "0")  # the same checks, before the first write
+            problems = workflow_violations(plan)
+            if problems:
+                raise CannotEmit(problems[0])
         except CannotEmit as exc:
             result.failed.append((wf.name, str(exc)))
             continue
