@@ -25,7 +25,7 @@ New code, all in the workstream's own paths:
   `docs/improvement/lessons.d/2026-11-09-dynatrace-inventory.md`.
 
 Gate: `rm -rf .mypy_cache; sh scripts/improve/gate.sh` prints GATE PASSED (ruff, ruff format,
-`mypy --strict` on src and tests, vulture, 2106 passed and 24 skipped, measure compared with the
+`mypy --strict` on src and tests, vulture, 2576 passed and 24 skipped, measure compared with the
 baseline, golden files untouched). The conversion measure is unchanged because the plans are not
 registered with `register_fixtures`: their inputs are dashboards, not the workflows and SLOs that
 `convert --source dynatrace` reads.
