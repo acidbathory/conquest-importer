@@ -6,6 +6,7 @@ import sys
 import webbrowser
 from collections.abc import Callable
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 from typing import Annotated, NoReturn
 
@@ -25,6 +26,7 @@ from importer.core.apply_dashboards import apply_dashboards, load_dashboard_plan
 from importer.core.apply_notifications import apply_notifications
 from importer.core.dashboard_ir import IRDashboard
 from importer.core.dashboard_report import build_dashboard_report
+from importer.core.data_check import run_data_check
 from importer.core.doctor import DOCTOR_SOURCES, passed, render, run_checks
 from importer.core.dotenv import load_dotenv_file
 from importer.core.emit.common import CannotEmit, emit_defaults_replaced
@@ -406,36 +408,21 @@ def gcp_link_terraform_command(
     typer.echo("Next: review it, set NEW_RELIC_API_KEY, then `terraform init && terraform apply`.")
 
 
-def _run_data_check[C](
-    alerts: Path,
-    nr_account_id: int,
-    nr_region: str,
-    hours: int,
-    out: Path | None,
-    check_all: Callable[[NewRelicClient, int, list[IRMonitor], int], list[C]],
-    render_report: Callable[[list[C], int], str],
-    has_blind: Callable[[list[C]], bool],
-) -> None:
-    """Shared body of the data checks: read the IR, ask New Relic, report, exit 2 if blind."""
-    if not nr_account_id or not 1 <= hours <= 168:
-        typer.echo("Error: --nr-account-id is required and --hours must be 1 to 168", err=True)
-        raise typer.Exit(code=1)
-    try:
-        monitors = [
-            IRMonitor.model_validate_json(p.read_text())
-            for p in sorted((alerts / "ir").glob("*.json"))
-        ]
-        with NewRelicClient(require_env("NEW_RELIC_API_KEY"), nr_region) as client:
-            checks = check_all(client, nr_account_id, monitors, hours)
-    except (NewRelicAPIError, ValueError, OSError) as exc:
-        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
-        raise typer.Exit(code=1) from None
-    text = render_report(checks, hours)
-    typer.echo(text)
-    if out:
-        out.write_text(text)
-    if has_blind(checks):
-        raise typer.Exit(code=2)
+def _open_new_relic(region: str) -> NewRelicClient:
+    return NewRelicClient(require_env("NEW_RELIC_API_KEY"), region)
+
+
+class _GcpData:
+    """The Google data check under the names the shared command body expects."""
+
+    check_all = staticmethod(gcp_data.check_all)
+    render_report = staticmethod(gcp_data.render)
+    has_blind_conditions = staticmethod(gcp_data.has_blind_conditions)
+
+
+def _finish_data_check(code: int) -> None:
+    if code:
+        raise typer.Exit(code=code)
 
 
 @app.command("check-gcp-data")
@@ -453,15 +440,18 @@ def check_gcp_data_command(
     A condition on a metric that never arrives would look healthy and never fire. Exits with
     code 2 if any converted condition has no data.
     """
-    _run_data_check(
-        alerts,
-        nr_account_id,
-        nr_region,
-        hours,
-        out,
-        gcp_data.check_all,
-        gcp_data.render,
-        gcp_data.has_blind_conditions,
+    _finish_data_check(
+        run_data_check(
+            alerts,
+            nr_account_id,
+            nr_region,
+            hours,
+            out,
+            _GcpData(),
+            typer.echo,
+            partial(typer.echo, err=True),
+            open_client=_open_new_relic,
+        )
     )
 
 
@@ -480,15 +470,18 @@ def check_dynatrace_data_command(
     Read-only. Exit code 2 means a condition had no matching events in the window. That is
     not proof the condition is broken: the event may not have occurred in those hours.
     """
-    _run_data_check(
-        alerts,
-        nr_account_id,
-        nr_region,
-        hours,
-        out,
-        dynatrace_data.check_all,
-        dynatrace_data.render_report,
-        dynatrace_data.has_blind_conditions,
+    _finish_data_check(
+        run_data_check(
+            alerts,
+            nr_account_id,
+            nr_region,
+            hours,
+            out,
+            dynatrace_data,
+            typer.echo,
+            partial(typer.echo, err=True),
+            open_client=_open_new_relic,
+        )
     )
 
 

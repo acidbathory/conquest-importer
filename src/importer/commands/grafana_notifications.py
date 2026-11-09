@@ -9,15 +9,17 @@
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from functools import partial
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from importer.core.apply import GuardError, NewRelicAPIError, NewRelicClient
+from importer.core.apply import NewRelicClient
+from importer.core.data_check import run_data_check
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.ir import IRMonitor
-from importer.core.secrets import MissingSecretError, require_env
+from importer.core.secrets import require_env
 from importer.core.text import printable
 from importer.sources.grafana.datapath import check as data_check
 from importer.sources.grafana.datapath import plan as datapath
@@ -154,22 +156,20 @@ def _check(
     A condition on a metric that never arrives looks healthy and never fires. Exits with code 2
     if any converted condition has no data (or a filter attribute that is missing).
     """
-    if not nr_account_id or not 1 <= hours <= 168:
-        typer.echo("Error: --nr-account-id is required and --hours must be 1 to 168", err=True)
-        raise typer.Exit(code=1)
-    try:
-        monitors = _read_ir(alerts)
-        with new_relic_client(nr_region) as client:
-            checks = data_check.check_all(client, nr_account_id, monitors, hours)
-    except (NewRelicAPIError, GuardError, MissingSecretError, ValueError, OSError) as exc:
-        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
-        raise typer.Exit(code=1) from None
-    text = data_check.render_report(checks, hours)
-    typer.echo(text)
-    if out:
-        out.write_text(text)
-    if data_check.has_blind_conditions(checks):
-        raise typer.Exit(code=2)
+    code = run_data_check(
+        alerts,
+        nr_account_id,
+        nr_region,
+        hours,
+        out,
+        data_check,
+        typer.echo,
+        partial(typer.echo, err=True),
+        open_client=new_relic_client,
+        read_ir=_read_ir,
+    )
+    if code:
+        raise typer.Exit(code=code)
 
 
 def register(app: typer.Typer) -> None:
