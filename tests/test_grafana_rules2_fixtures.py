@@ -41,7 +41,7 @@ CONVERTED = {
 }
 MANUAL = {
     "r2-error-ratio-one-metric": t.R_RATIO_SHAPE,
-    "r2-up-compared-in-query": t.R_COMPARE_AND_NODE,
+    "r2-up-compared-in-query": t.R_COMPARE_NEVER.format(query='up{job="payments"}', value=0.0),
     "r2-rate-of-a-gauge": t.R_COUNTER_NAME,
     "r2-math-over-two-queries": t.R_MATH_QUERIES.format(count=2),
     "r2-classic-two-conditions": t.R_CLASSIC,

@@ -127,6 +127,10 @@ R_COMPARE_AND_NODE = (
     "promql expression compares inside the query and the rule also has a threshold node, so the "
     "two cannot be one New Relic threshold"
 )
+R_COMPARE_NEVER = (
+    "promql expression `{query} == {value}` keeps only series whose value is {value}, and the "
+    "rule's own threshold is not met by that value, so this Grafana rule can never fire"
+)
 R_COUNTER_NAME = (
     "promql counter function on a metric whose name does not end in _total, _count or _bucket, "
     "so New Relic may not store it as a delta count"
@@ -917,11 +921,34 @@ class _Plan:
     notes: list[str] = field(default_factory=list)
 
 
+def breaches(threshold: Threshold, value: float) -> bool:
+    """Whether `value` is on the firing side of the threshold."""
+    return {
+        Operator.ABOVE: value > threshold.value,
+        Operator.ABOVE_OR_EQUALS: value >= threshold.value,
+        Operator.BELOW: value < threshold.value,
+        Operator.BELOW_OR_EQUALS: value <= threshold.value,
+        Operator.EQUALS: value == threshold.value,
+        Operator.NOT_EQUALS: value != threshold.value,
+    }[threshold.operator]
+
+
 def _grafana_plan(rule: GrafanaRule) -> _Plan:
     query, reducer, threshold, recovery, notes = _pipeline(rule)
     kind, inferred = _datasource_type(query)
+    expr = str(query.model.get("expr", ""))
+    comparison = split_comparison(expr) if kind == "prometheus" else None
+    if comparison is not None and comparison.operator == "eq":
+        # `query == c` leaves only series whose value is exactly c, so the threshold node tests c
+        # (every reducer that converts gives c back): either it always fires, and the comparison
+        # is the whole test, or it never does
+        if not breaches(threshold, comparison.value):
+            raise Fail(R_COMPARE_NEVER.format(query=comparison.query, value=comparison.value))
+        found = _make_threshold(comparison.operator, [comparison.value])
+        ctx = Ctx(reducer, _instant(query), _range_seconds(query), found, node=False)
+        return _Plan(kind, inferred, comparison.query, ctx, found, recovery, notes)
     ctx = Ctx(reducer, _instant(query), _range_seconds(query), threshold)
-    return _Plan(kind, inferred, str(query.model.get("expr", "")), ctx, threshold, recovery, notes)
+    return _Plan(kind, inferred, expr, ctx, threshold, recovery, notes)
 
 
 def _rule_file_plan(rule: GrafanaRule) -> _Plan:

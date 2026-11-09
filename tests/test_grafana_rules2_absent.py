@@ -162,6 +162,23 @@ def test_up_equal_to_zero_is_an_ordinary_metric_condition_not_absence() -> None:
     assert m.thresholds[0].operator is Operator.EQUALS and m.thresholds[0].value == 0
 
 
-def test_a_comparison_in_the_query_and_a_threshold_node_cannot_combine() -> None:
-    m = prom('up{job="payments"} == 0')
+def test_equality_in_the_query_and_a_threshold_node_that_the_value_misses_never_fires() -> None:
+    m = prom('up{job="payments"} == 0')  # the node is `gt 0`; the kept series all have value 0
+    assert m.confidence is Confidence.MANUAL
+    assert m.reasons == [t.R_COMPARE_NEVER.format(query='up{job="payments"}', value=0.0)]
+
+
+@pytest.mark.parametrize(("kind", "value"), [("lt", 1), ("lte", 0), ("eq", 0), ("gte", 0)])
+def test_equality_in_the_query_and_a_node_the_value_meets_is_the_comparison_alone(
+    kind: str, value: int
+) -> None:
+    m = prom('up{job="payments"} == 0', kind=kind, params=[value])
+    assert m.signal.kind is SignalKind.METRIC
+    assert m.thresholds[0].operator is Operator.EQUALS and m.thresholds[0].value == 0
+    assert nrql_for(m).startswith("SELECT ")
+
+
+@pytest.mark.parametrize("expr", ["up < 1", "up != 0", "up >= 1", "up > 0"])
+def test_other_comparisons_with_a_node_stay_manual_with_the_old_reason(expr: str) -> None:
+    m = prom(expr)
     assert m.confidence is Confidence.MANUAL and m.reasons == [t.R_COMPARE_AND_NODE]

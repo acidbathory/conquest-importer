@@ -140,7 +140,7 @@ def test_every_unconverted_sample_rule_has_one_specific_reason_and_steps() -> No
         ("ckg-prom-offset-manual", "promql uses offset"),
         ("ckg-prom-p95", "promql uses histogram_quantile"),
         ("ckg-prom-topk-manual", "promql uses topk"),
-        ("ckg-prom-up-zero", "compares inside the query"),
+        ("ckg-prom-up-zero", "can never fire"),
     ],
 )
 def test_each_unconverted_sample_rule_says_why(title: str, fragment: str) -> None:
@@ -435,7 +435,7 @@ def test_identical_copies_that_were_merged_are_counted_in_a_note() -> None:
         ("absent(sum(x))", "promql uses absent"),
         ("absent_over_time(x)", "promql uses absent"),
         ("x + y", "promql uses a binary operator"),
-        ("x == 0", "compares inside the query"),
+        ("x == 0", "can never fire"),
         ("x == y", "promql uses a binary operator"),
         ("x > bool 1", "promql uses a binary operator"),
         ("x and y", "promql uses a binary operator"),
