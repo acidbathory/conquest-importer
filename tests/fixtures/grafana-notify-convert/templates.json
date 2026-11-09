@@ -1,0 +1,6 @@
+[
+  {
+    "name": "custom-title",
+    "template": "{{ define \"custom-title\" }}{{ .Labels.password }} LEAK-template{{ end }}"
+  }
+]

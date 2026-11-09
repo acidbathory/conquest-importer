@@ -1,0 +1,317 @@
+{
+  "receiver": "Platform email",
+  "group_by": [
+    "grafana_folder",
+    "alertname"
+  ],
+  "group_wait": "30s",
+  "routes": [
+    {
+      "receiver": "PagerDuty platform",
+      "object_matchers": [
+        [
+          "team",
+          "=",
+          "platform"
+        ]
+      ],
+      "mute_time_intervals": [
+        "Nights"
+      ],
+      "routes": [
+        {
+          "receiver": "Slack alerts",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-slack"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Teams ops",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-teams"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Jira tickets",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-jira"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "OnCall",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-oncall"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Opsgenie infra",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-opsgenie"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "VictorOps",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-victorops"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Discord alerts",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-discord"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Google Chat",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-googlechat"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Telegram",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-telegram"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Webex",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-webex"
+            ]
+          ],
+          "continue": true
+        }
+      ]
+    },
+    {
+      "receiver": "Generic hook",
+      "object_matchers": [
+        [
+          "team",
+          "=",
+          "infra"
+        ]
+      ],
+      "routes": [
+        {
+          "receiver": "Sensu",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-sensugo"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Kafka",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-kafka"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "DingTalk",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-dingding"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "WeCom robot",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-wecom"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "WeCom app",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-wecom-app"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Alertmanager",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-am"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Pushover",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-pushover"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "SNS topic",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-sns"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Threema",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-threema"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "LINE",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-line"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "MQTT",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-mqtt"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "WeChat",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-wechat"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Something new",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-new"
+            ]
+          ],
+          "continue": true
+        },
+        {
+          "receiver": "Both chat",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "svc-both"
+            ]
+          ],
+          "continue": true
+        }
+      ]
+    },
+    {
+      "receiver": "Data team",
+      "object_matchers": [
+        [
+          "team",
+          "=",
+          "data"
+        ]
+      ],
+      "active_time_intervals": [
+        "Business hours"
+      ],
+      "mute_time_intervals": [
+        "Month end"
+      ]
+    }
+  ]
+}

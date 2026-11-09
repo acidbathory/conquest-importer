@@ -82,7 +82,7 @@ class PlanSet:
     muting_rules: list[MutingRule] = field(default_factory=list)
     outcomes: list[RouteOutcome] = field(default_factory=list)
     reasons: list[str] = field(default_factory=list)
-    rules_without_destination: int = 0
+    routes_without_destination: int = 0
     used_timings: set[str] = field(default_factory=set)
     expired_schedules: int = 0
     unscoped_schedules: int = 0
@@ -257,7 +257,7 @@ def _route(
     if members is None:
         _add(out.reasons, [C.R_UNKNOWN_RECEIVER])
         _add(outcome.reasons, [C.R_UNKNOWN_RECEIVER])
-        out.rules_without_destination += len(route.names)
+        out.routes_without_destination += 1
         return
     manual = [p.manual for p in members if p.manual is not None]
     outcome.manual = len(manual)
@@ -266,7 +266,7 @@ def _route(
     if not groups:
         _add(out.reasons, [C.R_NO_DESTINATION])
         _add(outcome.reasons, [C.R_NO_DESTINATION])
-        out.rules_without_destination += len(route.names)
+        out.routes_without_destination += 1
         if manual:
             out.plans.append(
                 NotificationPlan(

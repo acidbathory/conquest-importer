@@ -190,7 +190,7 @@ def test_a_receiver_that_is_not_in_the_export_is_reported_and_creates_nothing() 
     c = run(export([email("Ops")], {"receiver": "Gone"}), [monitor("A", 1)])
     assert c.plans == [] and R.R_POLICY_NO_RECEIVER not in c.reasons
     assert C.R_UNKNOWN_RECEIVER in c.reasons
-    assert c.counts.rules_without_destination == 1
+    assert c.counts.routes_without_destination == 1
 
 
 def test_no_policy_in_the_export_reports_every_rule_unrouted() -> None:

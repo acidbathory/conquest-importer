@@ -52,7 +52,7 @@ class Counts:
     muting_rules: int = 0
     rules_routed: int = 0
     rules_not_converted: int = 0
-    rules_without_destination: int = 0
+    routes_without_destination: int = 0
     rules_undecidable: int = 0
     secrets: int = 0
 
@@ -139,7 +139,7 @@ def convert_notifications(inputs: Inputs) -> Conversion:
     if result.unused_mute_timings:
         _add(result.reasons, [C.R_ORPHAN_MUTE])
     result.violations = plan_violations(result.plans)
-    result.counts = _counts(result, routeset, planned.rules_without_destination, not_converted)
+    result.counts = _counts(result, routeset, planned.routes_without_destination, not_converted)
     return result
 
 
@@ -160,7 +160,7 @@ def _counts(
         muting_rules=len(c.muting_rules),
         rules_routed=len(routed),
         rules_not_converted=not_converted,
-        rules_without_destination=without_destination,
+        routes_without_destination=without_destination,
         rules_undecidable=len({u.rule for u in c.undecidable}),
         secrets=len({s for p in c.points for s in p.secrets}),
     )
