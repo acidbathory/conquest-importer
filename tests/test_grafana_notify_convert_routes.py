@@ -507,3 +507,10 @@ def test_problems_found_when_the_export_was_read_reach_the_report() -> None:
     ex.problems.append("mute timings were NOT read: the file is not JSON")
     c = run(ex, [monitor("A", 1)])
     assert "mute timings were NOT read" in render_report(c)
+
+
+def test_a_workflow_says_when_a_contact_point_of_its_receiver_has_no_equivalent() -> None:
+    mqtt = {"name": "Ops", "type": "mqtt", "uid": "u-mqtt", "settings": {"topic": "t"}}
+    c = run(export([email("Ops"), mqtt], ROOT), [monitor("A", 1)])
+    assert len(workflows(c)) == 1
+    assert any("no New Relic equivalent" in n for n in c.plans[0].notes)

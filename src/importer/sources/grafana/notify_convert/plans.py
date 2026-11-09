@@ -55,6 +55,10 @@ NOTE_PREFERENCE = {
         "the preference of their policy"
     ),
 }
+NOTE_DROPPED = (
+    "{count} other integration(s) of this receiver have no New Relic equivalent and were not "
+    "converted; the report lists them"
+)
 NOTE_MUTE_SCOPE = (
     "the muting rule covers these conditions in every workflow; only workflows with the strict "
     "muting handling honour it"
@@ -287,10 +291,13 @@ def _route(
     _add(out.reasons, muted.reasons)
     _add(outcome.reasons, muted.reasons)
     chunks = split_names(route)
+    dropped = sum(p.destination is None and p.manual is None and not p.skipped for p in members)
     for off, group in groups:
         for part, chunk in enumerate(chunks, start=1):
             label = _label(number, off, part, len(chunks))
             plan = _plan(route, chunk, group, label, off, bool(muted.rules), muted.reasons, prefix)
+            if dropped:
+                plan.notes.append(NOTE_DROPPED.format(count=dropped))
             if manual and outcome.workflows == 0:  # the manual steps ride on the first workflow
                 plan.manual_destinations = manual
                 plan.needs_review = True
