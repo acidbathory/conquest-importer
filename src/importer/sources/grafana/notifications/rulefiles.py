@@ -7,10 +7,12 @@ One bad rule is counted and skipped; it does not stop the group.
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.redact import looks_sensitive
 from importer.core.text import printable
 from importer.sources.grafana.models import parse_duration
 from importer.sources.grafana.notifications.models import (
@@ -26,6 +28,14 @@ from importer.sources.grafana.notifications.models import (
 from importer.sources.grafana.notifications.reasons import R_RULE_GROUP_UNREADABLE
 
 MAX_EXPR = 100_000
+PLACEHOLDER = "<redacted>"
+N_LABEL_REDACTED = "a label value looked like an address, URL or token and was replaced"
+N_EXPR_REDACTED = "the expression looked like it holds an address, URL or token and was replaced"
+# core.redact.SENSITIVE without its `?` and key=value parts, which every PromQL matcher has
+EXPR_SENSITIVE = re.compile(
+    r"://|@|[0-9A-Fa-f]{20,}"
+    r"|(?=[A-Za-z0-9+/]*[0-9])(?=[A-Za-z0-9+/]*[A-Za-z])[A-Za-z0-9+/]{20,}"
+)
 MAX_TEXT = 4_000
 MAX_LABELS = 200
 
@@ -41,6 +51,14 @@ def _expr(value: Any) -> str | None:
     return value[:MAX_EXPR] if isinstance(value, str) and value.strip() else None
 
 
+def _checked_labels(labels: dict[str, str], notes: list[str]) -> dict[str, str]:
+    """Label values that look like an address, URL or token become a placeholder."""
+    checked = {k: (PLACEHOLDER if looks_sensitive(v) else v) for k, v in labels.items()}
+    if any(checked[k] != labels[k] for k in labels):
+        notes.append(N_LABEL_REDACTED)
+    return checked
+
+
 def _rule(raw: Any, group_labels: dict[str, str]) -> PromRule | None:
     entry = as_dict(raw)
     alert, record = entry.get("alert"), entry.get("record")
@@ -53,14 +71,19 @@ def _rule(raw: Any, group_labels: dict[str, str]) -> PromRule | None:
         keep = parse_duration(entry.get("keep_firing_for"))
     except ValueError:
         return None
+    notes: list[str] = []
+    labels = _checked_labels({**group_labels, **_text_map(entry.get("labels"))}, notes)
+    if EXPR_SENSITIVE.search(expr):
+        expr = PLACEHOLDER
+        notes.append(N_EXPR_REDACTED)
     return PromRule(
         kind="alert" if isinstance(alert, str) and alert else "record",
         name=printable(name, MAX_NAME),
         expr=expr,
         for_seconds=for_seconds,
         keep_firing_for_seconds=keep,
-        labels={**group_labels, **_text_map(entry.get("labels"))},
-        annotations=_text_map(entry.get("annotations")),
+        labels=labels,
+        notes=notes,
     )
 
 
@@ -137,7 +160,7 @@ def as_ruler_group(group: PromRuleGroup) -> dict[str, Any]:
     """The group in the ruler shape the Grafana loader reads (`folder` is the namespace)."""
     rules = []
     for r in group.rules:
-        body: dict[str, Any] = {"expr": r.expr, "labels": r.labels, "annotations": r.annotations}
+        body: dict[str, Any] = {"expr": r.expr, "labels": r.labels}
         body["alert" if r.kind == "alert" else "record"] = r.name
         if r.for_seconds:
             body["for"] = f"{r.for_seconds}s"

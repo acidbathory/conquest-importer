@@ -86,9 +86,7 @@ def test_an_alert_with_a_comparison_becomes_a_grafana_pipeline() -> None:
     (group,) = load_rule_groups(GROUP, "prometheus")
     rule = to_grafana_rule(group.rules[0], group, "prom-uid")
     assert (rule.title, rule.folder, rule.group, rule.interval_seconds) == ("Hot", "ns", "g", 30)
-    assert (rule.for_seconds, rule.labels, rule.annotations) == (
-        300, {"severity": "page"}, {"summary": "hot"}
-    )  # fmt: skip
+    assert (rule.for_seconds, rule.labels, rule.annotations) == (300, {"severity": "page"}, {})
     assert not rule.datasource_managed and rule.condition == "C"
     a, b, c = rule.data
     assert (a.refId, a.datasourceUid, a.model["expr"]) == ("A", "prom-uid", "max(temp)")

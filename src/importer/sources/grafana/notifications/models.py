@@ -130,7 +130,7 @@ class PromRule(BaseModel):
     for_seconds: int = 0
     keep_firing_for_seconds: int = 0
     labels: dict[str, str] = {}
-    annotations: dict[str, str] = {}
+    notes: list[str] = []  # fixed sentences about values replaced by a placeholder
 
 
 class PromRuleGroup(BaseModel):

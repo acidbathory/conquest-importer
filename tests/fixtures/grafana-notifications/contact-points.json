@@ -4,7 +4,7 @@
     "name": "HOSTILE-slack `x` | <b>",
     "type": "slack",
     "settings": {
-      "recipient": "#alerts",
+      "recipient": "#LEAK-channel",
       "token": "[REDACTED]",
       "url": "https://hooks.slack.com/services/LEAK-T000/LEAK-B000/LEAK-xyz",
       "title": "{{ template \"default.title\" . }}",
@@ -38,7 +38,7 @@
     "uid": "cp-pd",
     "name": "HOSTILE-pd",
     "type": "pagerduty",
-    "settings": {"integrationKey": "LEAK-integration-key", "severity": "critical", "client": "LEAK-client@x.io"}
+    "settings": {"integrationKey": "LEAK-integration-key", "severity": "LEAK-sev", "client": "LEAK-client@x.io"}
   },
   {
     "uid": "cp-discord",
@@ -60,8 +60,8 @@
       "api_url": "https://LEAK-tenant.atlassian.net/rest/api/2",
       "user": "LEAK-jira-user",
       "api_token": "LEAK-jira-token",
-      "project": "OPS",
-      "issue_type": "Task"
+      "project": "LEAK-project",
+      "issue_type": "LEAK-type"
     }
   },
   {

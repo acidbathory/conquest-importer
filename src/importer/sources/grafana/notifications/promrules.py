@@ -128,7 +128,6 @@ def to_grafana_rule(rule: PromRule, group: PromRuleGroup, datasource_uid: str) -
         "for_seconds": rule.for_seconds,
         "keep_firing_for_seconds": rule.keep_firing_for_seconds,
         "labels": dict(rule.labels),
-        "annotations": dict(rule.annotations),
         "shape": "ruler",
         "expr": rule.expr,
     }

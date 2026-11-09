@@ -1,5 +1,7 @@
 """Mute timings, round 2: real time zones, no silent truncation, one definition of the patterns."""
 
+import inspect
+
 import pytest
 
 from importer.sources.grafana.notifications import muting, timings
@@ -8,7 +10,7 @@ from importer.sources.grafana.notifications.models import MuteTiming, TimeInterv
 
 
 def interval(**kw: object) -> TimeInterval:
-    return TimeInterval(**kw)  # type: ignore[arg-type]
+    return TimeInterval(**kw)
 
 
 def plan(*intervals: TimeInterval) -> muting.MutingPlan:
@@ -59,4 +61,5 @@ def test_dst_handling_is_noted_as_unverified_when_there_are_schedules() -> None:
 
 
 def test_the_patterns_have_one_definition() -> None:
-    assert muting.ZONE is timings.ZONE and muting.CLOCK is timings.CLOCK
+    assert "re.compile" not in inspect.getsource(muting)
+    assert timings.ZONE.pattern and timings.CLOCK.pattern

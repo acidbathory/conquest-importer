@@ -424,7 +424,7 @@ RULE_FILE = {
                     "for": "10m",
                     "keep_firing_for": "5m",
                     "labels": {"severity": "critical"},
-                    "annotations": {"summary": "errors", "bad": 3},
+                    "annotations": {"summary": "errors", "bad": 3},  # not read
                 },
                 {"record": "job:errors:rate5m", "expr": "sum(rate(errors_total[5m]))"},
                 {"alert": "NoExpr"},
@@ -443,7 +443,7 @@ def test_prometheus_rule_groups_are_read_with_group_labels_merged() -> None:
         "alert", "HighErrors", 600, 300
     )  # fmt: skip
     assert alert.labels == {"team": "pay", "severity": "critical"}
-    assert alert.annotations == {"summary": "errors"}
+    assert not hasattr(alert, "annotations")
     assert record.kind == "record"
 
 
