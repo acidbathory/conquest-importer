@@ -7,12 +7,47 @@ from typing import Any
 
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.ir import IRMonitor
-from importer.core.notification_ir import EMAIL_ADDRESS, ChannelKind, IRChannel, IRTopic
+from importer.core.notification_ir import (
+    EMAIL_ADDRESS,
+    ChannelKind,
+    DestinationType,
+    IRChannel,
+    IRTopic,
+    ManualDestination,
+    spec_for,
+)
 from importer.core.text import printable
 from importer.sources.cloudwatch.extract import _SNS_TOPIC
 
 _HTTPS = re.compile(r"^https://[^\s\"'<>\\]{1,2000}$")
-NO_EQUIVALENT = {"sms", "lambda", "sqs", "application", "firehose"}
+NO_EQUIVALENT = {"sms", "application"}
+# SNS protocols a New Relic EventBridge destination can reach, through a rule on the AWS side
+EVENT_BRIDGE_TARGETS = {
+    "lambda": "Lambda function",
+    "sqs": "SQS queue",
+    "firehose": "Firehose stream",
+}
+_TOPIC_PARTS = re.compile(r"^arn:aws[a-z-]*:sns:([a-z0-9-]+):(\d{12}):")
+HTTPS_WARNING = (
+    "https subscription: the receiver gets New Relic's webhook payload, not the SNS message "
+    "envelope, and cannot answer the SNS subscription handshake; an endpoint written for SNS "
+    "will not understand it, so check the payload template"
+)
+
+
+def _event_bridge(protocol: str, topic_arn: str) -> ManualDestination:
+    """The manual route for a Lambda, SQS or Firehose subscription."""
+    parts = _TOPIC_PARTS.match(topic_arn)
+    where = f"AWS account {parts.group(2)} in {parts.group(1)}" if parts else "your AWS account"
+    target = EVENT_BRIDGE_TARGETS[protocol]
+    steps = [
+        f"Create a New Relic EventBridge destination for {where}, then a channel with the "
+        "event source name New Relic gives it.",
+        *spec_for(DestinationType.EVENT_BRIDGE).human_steps,
+        f"Add an EventBridge rule on that event bus that sends the events to the {target} "
+        "this SNS topic delivered to.",
+    ]
+    return ManualDestination(service=protocol, nr_type="EVENT_BRIDGE", steps=steps)
 
 
 def load_topics(path: Path) -> list[dict[str, Any]]:
@@ -29,11 +64,13 @@ def load_topics(path: Path) -> list[dict[str, Any]]:
     return topics
 
 
-def translate_topic(raw: dict[str, Any]) -> IRTopic:
+def translate_topic(raw: dict[str, Any], warn_https_payload: bool = False) -> IRTopic:
     arn = str(raw.get("TopicArn", ""))
     name = arn.rsplit(":", 1)[-1] if _SNS_TOPIC.match(arn) else "unknown-topic"
     channels: list[IRChannel] = []
     unsupported: list[str] = []
+    manual: dict[str, ManualDestination] = {}
+    warnings: list[str] = []
     for sub in raw["Subscriptions"]:
         if not isinstance(sub, dict):
             unsupported.append("subscription entry is not an object")
@@ -50,10 +87,18 @@ def translate_topic(raw: dict[str, Any]) -> IRTopic:
         elif protocol == "https":
             if _HTTPS.match(endpoint):
                 channels.append(IRChannel(kind=ChannelKind.WEBHOOK, target=endpoint))
+                if warn_https_payload and HTTPS_WARNING not in warnings:
+                    warnings.append(HTTPS_WARNING)
             else:
                 unsupported.append("https subscription has a URL that is not supported")
         elif protocol == "http":
             unsupported.append("plain http endpoints are not migrated (use https)")
+        elif protocol in EVENT_BRIDGE_TARGETS:
+            manual.setdefault(protocol, _event_bridge(protocol, arn))
+            unsupported.append(
+                f"{protocol} subscriptions are reached through a New Relic EventBridge "
+                "destination, which needs steps in AWS; see the manual steps in the plan"
+            )
         elif protocol in NO_EQUIVALENT:
             unsupported.append(f"{protocol} subscriptions have no New Relic equivalent")
         else:
@@ -66,6 +111,8 @@ def translate_topic(raw: dict[str, Any]) -> IRTopic:
         name=name,
         channels=channels,
         unsupported=unsupported,
+        manual_destinations=list(manual.values()),
+        warnings=warnings,
     )
 
 

@@ -186,11 +186,11 @@ def test_templated_tag_values_are_noted_and_not_mapped(bad: str) -> None:
 # 8. tags.NAME
 
 
-def test_notes_and_report_say_tags_name_not_angle_brackets() -> None:
+def test_notes_and_report_say_tag_name_not_angle_brackets() -> None:
     wf = davis({"e": email("a@example.com")}, {"entityTags": {"team": "core"}})
     plans = davis_plans([wf], "P:")
     assert all("<" not in n for p in plans for n in p.notes)
-    assert "tags.NAME" in render_report(plans)
+    assert "accumulations.tag.NAME" in render_report(plans)
 
 
 # 9. names, caps, output folder

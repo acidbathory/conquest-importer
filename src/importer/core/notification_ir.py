@@ -44,20 +44,6 @@ class IRChannel(BaseModel):
     target: str  # an email address or an https URL
 
 
-class IRTopic(BaseModel):
-    source_system: str
-    source_key: str  # for example the SNS topic ARN
-    name: str
-    channels: list[IRChannel]
-    unsupported: list[str] = []  # one reason per subscription that cannot be migrated
-
-
-class PlannedDestination(BaseModel):
-    kind: ChannelKind
-    name: str
-    target: str
-
-
 class ManualDestination(BaseModel):
     """A destination that needs a person: it takes a secret, an OAuth sign-in or has no match."""
 
@@ -65,6 +51,23 @@ class ManualDestination(BaseModel):
     nr_type: str  # the closest New Relic destination type, or "" when there is none
     label: str = ""  # untrusted text from the source (a channel name); escape before printing
     steps: list[str]
+
+
+class IRTopic(BaseModel):
+    source_system: str
+    source_key: str  # for example the SNS topic ARN
+    name: str
+    channels: list[IRChannel]
+    unsupported: list[str] = []  # one reason per subscription that cannot be migrated
+    # subscriptions that need a person (an AWS-side step); kept in the plan with their steps
+    manual_destinations: list["ManualDestination"] = []
+    warnings: list[str] = []  # caveats about the channels that did migrate
+
+
+class PlannedDestination(BaseModel):
+    kind: ChannelKind
+    name: str
+    target: str
 
 
 # Issue filter operators the provider schema accepts (newrelic_workflow.issues_filter.predicate).
@@ -232,15 +235,22 @@ def build_plan(
 ) -> NotificationPlan:
     """Plan the New Relic objects for one topic. No workflow if nothing can be routed."""
     destinations = plan_destinations(topic.name, topic.channels, prefix)
+    extras: dict[str, Any] = {}
+    if topic.manual_destinations:
+        extras = {"needs_review": True, "manual_destinations": topic.manual_destinations}
+    if topic.warnings:
+        extras["notes"] = topic.warnings
     if not destinations or not condition_names:
-        return NotificationPlan(topic=topic.name, destinations=[], workflow=None)
+        return NotificationPlan(topic=topic.name, destinations=[], workflow=None, **extras)
     workflow = PlannedWorkflow(
         name=_name(f"{prefix} {topic.name}"),
         condition_names=sorted(set(condition_names)),
         destination_indexes=list(range(len(destinations))),
         muting_rules_handling=muting_rules_handling,
     )
-    return NotificationPlan(topic=topic.name, destinations=destinations, workflow=workflow)
+    return NotificationPlan(
+        topic=topic.name, destinations=destinations, workflow=workflow, **extras
+    )
 
 
 # ---------------------------------------------------------------------------------------------

@@ -9,8 +9,9 @@ What does not map is a note. Every plan is marked as needing review.
 Recipient addresses go into the plan file and the Terraform only. Notes, steps and the report
 name counts and fixed vocabulary, never an address or other text from the export.
 
-Attribute and type names on the New Relic side are not confirmed against a live account
-(UNVERIFIED): `tags.<key>` as an issue attribute, and the destination type names.
+The New Relic side is not confirmed against a live account (UNVERIFIED): the issue attribute
+`accumulations.tag.<key>` is documented in New Relic's workflow examples, but a live test must
+show that it matches (docs/research/newrelic-notifications-and-nrql-reference.md, section 1.2).
 """
 
 import hashlib
@@ -20,12 +21,15 @@ from typing import Any
 from importer.core.notification_ir import (
     EMAIL_ADDRESS,
     ChannelKind,
+    DestinationType,
     IRChannel,
     ManualDestination,
     NotificationPlan,
     PlannedPredicate,
     PlannedWorkflow,
     plan_destinations,
+    spec_for,
+    tag_predicate,
 )
 from importer.core.report import md_cell
 from importer.core.text import printable
@@ -55,6 +59,12 @@ UNMAPPED_SETTINGS = (
 SETTING_DEFAULTS: tuple[object, ...] = (None, "", "always", [], {})
 
 AGAIN_STEP = "Enter the credentials again in New Relic; Dynatrace does not export them."
+# New Relic documents these services as webhook templates, not as destination types.
+VENDOR_WEBHOOK_STEPS = [
+    "New Relic reaches this service through a webhook destination. A vendor payload template is "
+    "required: write the payload and headers the service's API expects.",
+    "Create the webhook destination with the service's API URL and credentials.",
+]
 # label -> (closest New Relic destination type, steps). A type of "" means there is none.
 SERVICES: dict[str, tuple[str, list[str]]] = {
     "slack": (
@@ -74,15 +84,20 @@ SERVICES: dict[str, tuple[str, list[str]]] = {
         ["Create a Jira destination with the site URL and an API token. " + AGAIN_STEP],
     ),
     "ms teams": (
-        "WEBHOOK",
+        DestinationType.MICROSOFT_TEAMS.value,
         [
-            "A Teams destination type is not confirmed for New Relic; use a webhook "
-            "destination that points at a Teams incoming-webhook URL. " + AGAIN_STEP,
+            *spec_for(DestinationType.MICROSOFT_TEAMS).human_steps,
+            "Dynatrace does not export the Teams connection, so none of it carries over.",
         ],
     ),
     "servicenow": (
-        "SERVICE_NOW",
-        ["Create a ServiceNow destination with the instance URL and credentials. " + AGAIN_STEP],
+        DestinationType.SERVICE_NOW_APP.value,
+        [
+            *spec_for(DestinationType.SERVICE_NOW_APP).human_steps,
+            "Create a ServiceNow application destination with the instance URL and the "
+            "credentials. " + AGAIN_STEP,
+            "The older SERVICE_NOW destination still exists but is in maintenance mode.",
+        ],
     ),
     "http request": (
         "WEBHOOK",
@@ -92,6 +107,10 @@ SERVICES: dict[str, tuple[str, list[str]]] = {
             "Write the payload as a New Relic template; Dynatrace placeholders do not carry over.",
         ],
     ),
+    **{
+        service: ("WEBHOOK", [*VENDOR_WEBHOOK_STEPS, AGAIN_STEP])
+        for service in ("opsgenie", "victorops", "xmatters")
+    },
 }
 NO_EQUIVALENT = [
     "This action has no matching New Relic destination type. Decide how the message should "
@@ -164,9 +183,7 @@ def _tag_predicates(value: dict[str, Any], notes: list[str]) -> list[PlannedPred
         if not isinstance(key, str) or not TAG_KEY.fullmatch(key) or values is None:
             notes.append(unreadable)
             return []
-        predicates.append(
-            PlannedPredicate(attribute=f"tags.{key}", operator="EXACTLY_MATCHES", values=values)
-        )
+        predicates.append(tag_predicate(key, values))
     match = value.get("entityTagsMatch")
     if len(predicates) > 1 and match != "all":
         mode = "any" if match == "any" else "not stated"
@@ -175,7 +192,10 @@ def _tag_predicates(value: dict[str, Any], notes: list[str]) -> list[PlannedPred
             "match; the tags were not mapped"
         )
         return []
-    notes.append("the issue filter attribute tags.NAME is unverified in New Relic; check it")
+    notes.append(
+        "the issue filter attribute accumulations.tag.NAME is documented but unverified for "
+        "this account; check it"
+    )
     return predicates
 
 

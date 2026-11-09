@@ -50,8 +50,10 @@ def test_supported_subscriptions_become_channels(
     [
         (sub("http", "http://x.example.com"), "plain http"),
         (sub("sms", "+15551234567"), "no New Relic equivalent"),
-        (sub("lambda", "arn:aws:lambda:x"), "no New Relic equivalent"),
-        (sub("sqs", "arn:aws:sqs:x"), "no New Relic equivalent"),
+        (sub("lambda", "arn:aws:lambda:x"), "EventBridge destination"),
+        (sub("sqs", "arn:aws:sqs:x"), "EventBridge destination"),
+        (sub("firehose", "arn:aws:firehose:x"), "EventBridge destination"),
+        (sub("application", "arn:aws:sns:x:1:endpoint/GCM/app"), "no New Relic equivalent"),
         (sub("email", "not an address"), "address that is not supported"),
         (sub("https", 'https://x.example.com/"><script>'), "URL that is not supported"),
         (sub("email", "a@example.com", "PendingConfirmation"), "not confirmed"),
