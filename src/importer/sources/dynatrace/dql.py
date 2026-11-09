@@ -19,6 +19,14 @@ CONTAINS_NOTE = (
     "contains() is case-sensitive in Dynatrace and maps to a LIKE match; how LIKE treats "
     "case in New Relic was not checked, so matches may differ"
 )
+MEMBER_NOTE = (
+    "matchesValue() and in() may ignore case or look inside arrays in Dynatrace, while = and IN "
+    "in New Relic are exact, so matches may differ"
+)
+CONTRADICTION_NOTE = (
+    "the same field is tested against two different values joined by and, so nothing can "
+    "match; the converted condition may differ from what was intended"
+)
 FILTER_FORM = (
     f'{NOT_NARROW}: the filter has a test other than field == "value", contains(), '
     "matchesValue() or in() joined by and, or a value with a control character or an escape "
@@ -43,7 +51,7 @@ MAX_VALUES = 50
 SECONDS_PER_UNIT = {"m": 60, "h": 3600}
 
 _STR = r'"(?:[^"\\\x00-\x1f\x7f]|\\["\\])*"'  # a value: no control characters, escapes \" and \\
-_FIELD = r"([A-Za-z_][A-Za-z0-9_.]*)"
+_FIELD = r"([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*)"  # no empty part: not a. or a..b
 _LIST = rf"({_STR}(?:\s*,\s*{_STR})*)"
 _STRINGS = re.compile(_STR)
 FETCH = re.compile(r"fetch\s+logs(?:\s*,\s*from:\s*now\(\)\s*-\s*(\d+)\s*([mh]))?")
@@ -110,39 +118,56 @@ def _in(name: str, raw: str) -> CountFilter:
     return _members(name, raw, wildcard_check=False)
 
 
-# first match wins; the function forms come before `field == "v"`
-TERMS: list[tuple[re.Pattern[str], Callable[[str, str], CountFilter]]] = [
-    (re.compile(rf"contains\(\s*{_FIELD}\s*,\s*({_STR})\s*\)"), _contains),
-    (re.compile(rf"matchesValue\(\s*{_FIELD}\s*,\s*({_STR})\s*\)"), _match),
-    (re.compile(rf"matchesValue\(\s*{_FIELD}\s*,\s*\{{\s*{_LIST}\s*\}}\s*\)"), _match_set),
-    (re.compile(rf"in\(\s*{_FIELD}\s*,\s*array\(\s*{_LIST}\s*\)\s*\)"), _in),
-    (re.compile(rf"in\(\s*{_FIELD}\s*,\s*{_LIST}\s*\)"), _in),
-    (re.compile(rf"{_FIELD}\s*==\s*({_STR})"), _eq),
+# first match wins; the function forms come before `field == "v"`. The flag marks the
+# membership tests that carry MEMBER_NOTE.
+TERMS: list[tuple[re.Pattern[str], Callable[[str, str], CountFilter], bool]] = [
+    (re.compile(rf"contains\(\s*{_FIELD}\s*,\s*({_STR})\s*\)"), _contains, False),
+    (re.compile(rf"matchesValue\(\s*{_FIELD}\s*,\s*({_STR})\s*\)"), _match, True),
+    (re.compile(rf"matchesValue\(\s*{_FIELD}\s*,\s*\{{\s*{_LIST}\s*\}}\s*\)"), _match_set, True),
+    (re.compile(rf"in\(\s*{_FIELD}\s*,\s*array\(\s*{_LIST}\s*\)\s*\)"), _in, True),
+    (re.compile(rf"in\(\s*{_FIELD}\s*,\s*{_LIST}\s*\)"), _in, True),
+    (re.compile(rf"{_FIELD}\s*==\s*({_STR})"), _eq, False),
 ]
 
 
-def _term(text: str, pos: int) -> tuple[CountFilter, int]:
-    for pattern, build in TERMS:
+def _term(text: str, pos: int) -> tuple[CountFilter, int, bool]:
+    for pattern, build, member in TERMS:
         if match := pattern.match(text, pos):
-            return build(match[1], match[2]), match.end()
+            return build(match[1], match[2]), match.end(), member
     raise DqlError(FILTER_FORM)
 
 
-def parse_filter(text: str) -> list[CountFilter]:
-    """The tests of a `filter ...` step, joined by and."""
+def _contradiction(filters: list[CountFilter]) -> bool:
+    """True when one field is tested for equality against two different values (and-joined)."""
+    equal: dict[str, str] = {}
+    for f in filters:
+        if f.values or f.wildcard or f.negate:
+            continue
+        if equal.setdefault(f.key, f.value) != f.value:
+            return True
+    return False
+
+
+def parse_filter(text: str) -> tuple[list[CountFilter], list[str]]:
+    """The tests of a `filter ...` step, joined by and, and the notes they call for."""
     head = _HEAD.match(text)
     if head is None:
         raise DqlError(FILTER_FORM)
     filters: list[CountFilter] = []
+    notes: list[str] = []
     pos = head.end()
     while len(filters) < MAX_TERMS:
-        built, pos = _term(text, pos)
+        built, pos, member = _term(text, pos)
         filters.append(built)
+        if member and MEMBER_NOTE not in notes:
+            notes.append(MEMBER_NOTE)
         joint = _AND.match(text, pos)
         if joint is None:
-            if pos == len(text):
-                return filters
-            raise DqlError(FILTER_FORM)
+            if pos != len(text):
+                raise DqlError(FILTER_FORM)
+            if _contradiction(filters):
+                notes.append(CONTRADICTION_NOTE)
+            return filters, notes
         pos = joint.end()
     raise DqlError(f"{NOT_NARROW}: the filter has more than {MAX_TERMS} tests")
 
@@ -180,7 +205,7 @@ def parse_dql(query: str) -> CountQuery:
         raise DqlError(
             f"{NOT_NARROW}: the first step is not fetch logs with an hour or minute range"
         )
-    filters = parse_filter(parts[1])
+    filters, notes = parse_filter(parts[1])
     summarize = SUMMARIZE.fullmatch(parts[2])
     if summarize is None:
         if SUMMARIZE_BY.match(parts[2]):
@@ -188,5 +213,6 @@ def parse_dql(query: str) -> CountQuery:
         raise DqlError(f"{NOT_NARROW}: the last step is not a single summarize name = count()")
     amount, unit = fetch.groups()
     seconds = int(amount) * SECONDS_PER_UNIT[unit] if amount else 0
-    contains = any(f.wildcard for f in filters)
-    return CountQuery(filters, summarize[1], seconds, [CONTAINS_NOTE] if contains else [])
+    if any(f.wildcard for f in filters):
+        notes.insert(0, CONTAINS_NOTE)
+    return CountQuery(filters, summarize[1], seconds, notes)

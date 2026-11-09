@@ -7,7 +7,7 @@ import webbrowser
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated, Any, NoReturn
+from typing import Annotated, NoReturn
 
 import typer
 
@@ -370,15 +370,15 @@ def gcp_link_terraform_command(
     typer.echo("Next: review it, set NEW_RELIC_API_KEY, then `terraform init && terraform apply`.")
 
 
-def _run_data_check(
+def _run_data_check[C](
     alerts: Path,
     nr_account_id: int,
     nr_region: str,
     hours: int,
     out: Path | None,
-    check_all: Callable[[Any, int, list[IRMonitor], int], list[Any]],
-    render_report: Callable[[list[Any], int], str],
-    has_blind: Callable[[list[Any]], bool],
+    check_all: Callable[[NewRelicClient, int, list[IRMonitor], int], list[C]],
+    render_report: Callable[[list[C], int], str],
+    has_blind: Callable[[list[C]], bool],
 ) -> None:
     """Shared body of the data checks: read the IR, ask New Relic, report, exit 2 if blind."""
     if not nr_account_id or not 1 <= hours <= 168:
@@ -441,8 +441,8 @@ def check_dynatrace_data_command(
 ) -> None:
     """Check that log events matching each converted Dynatrace condition reach New Relic.
 
-    Read-only. A log-count condition with no matching events cannot fire. Exits with code 2 if
-    any converted condition has no matching events.
+    Read-only. Exit code 2 means a condition had no matching events in the window. That is
+    not proof the condition is broken: the event may not have occurred in those hours.
     """
     _run_data_check(
         alerts,
@@ -683,9 +683,17 @@ def _convert_dynatrace_notifications(export: Path, out: Path, prefix: str) -> No
     except (OSError, ValueError) as exc:
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
         raise typer.Exit(code=1) from None
-    (out / "notification-plans").mkdir(parents=True, exist_ok=True)
+    folder = out / "notification-plans"
+    if folder.is_dir() and any(folder.glob("topic-*.json")):
+        typer.echo(
+            f"Error: {folder} already has plans; apply-notifications would read stale ones. "
+            "Pass a new --out folder",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    folder.mkdir(parents=True, exist_ok=True)
     for n, plan in enumerate(plans, start=1):
-        (out / "notification-plans" / f"topic-{n:04d}.json").write_text(plan_json(plan))
+        (folder / f"topic-{n:04d}.json").write_text(plan_json(plan))
     (out / "report.md").write_text(dynatrace_notification_report(plans))
     (out / "notifications.tf").write_text(TERRAFORM_HEADER + "\n" + notifications_terraform(plans))
     made = sum(p.workflow is not None for p in plans)
@@ -814,10 +822,19 @@ def apply_notifications_command(
     manifest: Annotated[
         Path | None, typer.Option(help="Record of what was created (default: <in>/manifest.json)")
     ] = None,
+    include_needs_review: Annotated[
+        bool,
+        typer.Option(
+            "--include-needs-review",
+            help="Also create plans marked needs_review (Dynatrace plans); a person checked them",
+        ),
+    ] = False,
 ) -> None:
     """Create the planned destinations, channels and (disabled) workflows in New Relic.
 
-    Dry run by default; writing needs the same three guards as `apply`.
+    Dry run by default; writing needs the same three guards as `apply`. A plan marked
+    needs_review (from Dynatrace) is created only with --include-needs-review, and only when it
+    has a workflow: a plan with destinations but no workflow creates nothing here.
     """
     if account_id <= 0:
         typer.echo("Error: --account-id is required", err=True)
@@ -838,9 +855,21 @@ def apply_notifications_command(
                 f"  {printable(plan.workflow.name, 50):50} {len(plan.destinations)} channels, "
                 f"{len(plan.workflow.condition_names)} conditions"
             )
+    review = [p for p in plans if p.needs_review]
+    if review:
+        typer.echo(f"{len(review)} plans need review")
+        bare = sum(p.workflow is None for p in review)
+        if bare:
+            typer.echo(f"{bare} plans have no workflow: nothing is created for them here")
     if not do_apply:
         typer.echo("\nDRY RUN: nothing was sent. Add --apply --confirm-account to create them.")
         return
+    if review and not include_needs_review:
+        typer.echo(
+            f"Error: {len(review)} plans need review; check them, then add --include-needs-review",
+            err=True,
+        )
+        raise typer.Exit(code=1)
     try:
         check_guards(account_id, confirm_account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS"))
         key = require_env("NEW_RELIC_API_KEY")

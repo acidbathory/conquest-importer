@@ -13,6 +13,7 @@ Attribute and type names on the New Relic side are not confirmed against a live 
 (UNVERIFIED): `tags.<key>` as an issue attribute, and the destination type names.
 """
 
+import hashlib
 import re
 from typing import Any
 
@@ -37,6 +38,11 @@ MAX_TAG_VALUES = 20
 MAX_NAME = 120
 TAG_KEY = re.compile(r"[A-Za-z0-9_.:-]{1,64}")
 TAG_VALUE_LIMIT = 128
+MAX_MANUAL = 50
+MAX_PLANS = 2000
+NAME_LIMIT = 80  # title characters kept in a New Relic name
+# Dynatrace templating: it would become a literal filter that never matches
+TEMPLATE = re.compile(r"\{\{|\{%|\$\{")
 CATEGORIES = ("availability", "error", "slowdown", "resource", "custom")
 # trigger settings that are not mapped; "always" is the default for the maintenance setting
 UNMAPPED_SETTINGS = (
@@ -94,27 +100,41 @@ NO_EQUIVALENT = [
 ]
 
 
-def _recipients(task: DtTask, notes: list[str]) -> list[IRChannel]:
-    """Valid addresses from to, cc and bcc, once each; the rest are counted in a note."""
+def _recipients(task: DtTask, notes: list[str]) -> list[str]:
+    """Valid addresses from to, cc and bcc, once each. Anything unread leaves a note."""
     found: list[str] = []
-    bad = extra = 0
+    bad = 0
+    unread: set[str] = set()
     for field in ("to", "cc", "bcc"):
         raw = task.input.get(field)
-        for item in raw if isinstance(raw, list) else []:
-            if not isinstance(item, str) or not EMAIL_ADDRESS.match(item):
+        if raw is None or raw == []:
+            continue
+        if not isinstance(raw, list):
+            unread.add("template" if isinstance(raw, str) and TEMPLATE.search(raw) else "list")
+            continue
+        for item in raw:
+            if isinstance(item, str) and TEMPLATE.search(item):
+                unread.add("template")
+            elif not isinstance(item, str) or not EMAIL_ADDRESS.match(item):
                 bad += 1
             elif item not in found:
                 found.append(item)
-    if len(found) > MAX_RECIPIENTS:
-        extra = len(found) - MAX_RECIPIENTS
-        found = found[:MAX_RECIPIENTS]
+    if "template" in unread:
+        notes.append("recipients are a template and were not read")
+    if "list" in unread:
+        notes.append("recipients are not a list and were not read")
     if bad:
         notes.append(f"{bad} recipient entries are not valid email addresses and were left out")
-    if extra:
-        notes.append(f"more than {MAX_RECIPIENTS} recipients: {extra} were left out")
     if any(task.input.get(f) for f in ("cc", "bcc")):
         notes.append("cc and bcc recipients become ordinary recipients in New Relic")
-    return [IRChannel(kind=ChannelKind.EMAIL, target=a) for a in found]
+    if not (found or unread or bad):
+        notes.append("an email task has no readable recipients")
+    return found
+
+
+def _has_template(raw: object) -> bool:
+    values = raw if isinstance(raw, list) else [raw]
+    return any(isinstance(v, str) and TEMPLATE.search(v) for v in values)
 
 
 def _tag_values(raw: object) -> list[str] | None:
@@ -137,6 +157,9 @@ def _tag_predicates(value: dict[str, Any], notes: list[str]) -> list[PlannedPred
         return []
     predicates: list[PlannedPredicate] = []
     for key, raw in tags.items():
+        if _has_template(raw):
+            notes.append("an entity tag value is a template and was not mapped")
+            return []
         values = _tag_values(raw)
         if not isinstance(key, str) or not TAG_KEY.fullmatch(key) or values is None:
             notes.append(unreadable)
@@ -152,13 +175,15 @@ def _tag_predicates(value: dict[str, Any], notes: list[str]) -> list[PlannedPred
             "match; the tags were not mapped"
         )
         return []
-    notes.append("the issue filter attribute tags.<name> is unverified in New Relic; check it")
+    notes.append("the issue filter attribute tags.NAME is unverified in New Relic; check it")
     return predicates
 
 
 def _trigger_notes(value: dict[str, Any], active: bool) -> list[str]:
     notes: list[str] = []
     categories = value.get("categories")
+    if categories is not None and not isinstance(categories, dict):
+        notes.append("Davis categories are not in a form the importer reads")
     if isinstance(categories, dict):
         chosen = [c for c in CATEGORIES if categories.get(c) is True]
         if chosen:
@@ -200,15 +225,27 @@ def _plan(
     wf: DtWorkflow, value: dict[str, Any], key: str, name: str, prefix: str
 ) -> NotificationPlan:
     notes = _trigger_notes(value, _active(wf))
-    channels: list[IRChannel] = []
+    addresses: list[str] = []
     manual: list[ManualDestination] = []
-    for task in wf.tasks.values():
-        if task.action == DQL_ACTION:
-            continue
+    tasks = [t for t in wf.tasks.values() if t.action != DQL_ACTION]
+    for task in tasks:
         if action_label(task.action) == "email":
-            channels += _recipients(task, notes)
+            addresses += [a for a in _recipients(task, notes) if a not in addresses]
         else:
             manual.append(_manual(task))
+    if not tasks:
+        notes.append("the workflow has no notification task")
+    if len(addresses) > MAX_RECIPIENTS:
+        notes.append(
+            f"more than {MAX_RECIPIENTS} recipients: {len(addresses) - MAX_RECIPIENTS} left out"
+        )
+        addresses = addresses[:MAX_RECIPIENTS]
+    if len(manual) > MAX_MANUAL:
+        notes.append(
+            f"more than {MAX_MANUAL} other notification tasks: {len(manual) - MAX_MANUAL} left out"
+        )
+        manual = manual[:MAX_MANUAL]
+    channels = [IRChannel(kind=ChannelKind.EMAIL, target=a) for a in addresses]
     predicates = _tag_predicates(value, notes)
     destinations = plan_destinations(name, channels, prefix)
     workflow = None
@@ -234,6 +271,14 @@ def _plan(
     )
 
 
+def _unique_name(title: str, key: str, n: int) -> str:
+    """The title, cut short; a short hash of the key follows when the title repeats or was cut."""
+    short = printable(title, NAME_LIMIT)
+    if n == 1 and len(title) <= NAME_LIMIT:
+        return short
+    return f"{short} [{hashlib.sha256(key.encode()).hexdigest()[:6]}]"
+
+
 def davis_plans(workflows: list[DtWorkflow], prefix: str) -> list[NotificationPlan]:
     """One plan per Davis problem workflow, in order; other workflows are skipped.
 
@@ -242,6 +287,8 @@ def davis_plans(workflows: list[DtWorkflow], prefix: str) -> list[NotificationPl
     """
     seen: dict[str, int] = {}
     plans: list[NotificationPlan] = []
+    if sum(davis_config(wf) is not None for wf in workflows) > MAX_PLANS:
+        raise ValueError(f"more than {MAX_PLANS} Davis problem workflows; split the export")
     for wf in workflows:
         value = davis_config(wf)
         if value is None:
@@ -250,7 +297,7 @@ def davis_plans(workflows: list[DtWorkflow], prefix: str) -> list[NotificationPl
         seen[base] = seen.get(base, 0) + 1
         n = seen[base]
         key = base if n == 1 else f"{base}#{n}"
-        name = wf.title if n == 1 else f"{wf.title} ({n})"
+        name = _unique_name(wf.title, key, n)
         plans.append(_plan(wf, value, key, name, prefix))
     return plans
 

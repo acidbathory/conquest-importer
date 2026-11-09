@@ -14,8 +14,15 @@ from pydantic import BaseModel
 from importer.core.text import printable
 
 MAX_NAME = 120
-# no nested quantifiers, and each part is length-bounded, so a long hostile string cannot backtrack
-EMAIL_ADDRESS = re.compile(r"^[^@\s,;<>\"'\\]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$")
+# ASCII only. The local part is dot-separated atoms without $ { } or a backtick (they could start
+# a template), at most 64 characters; the domain has at least two labels that do not start or end
+# with a hyphen, and a letters-only last label. \Z, not $, so a trailing newline fails. Every
+# part is length-bounded and unambiguous, so a long hostile string cannot make it backtrack.
+_ATOM = r"[A-Za-z0-9!#&*+/=?^_|~%-]+"
+_LABEL = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+EMAIL_ADDRESS = re.compile(
+    rf"(?=[^@]{{1,64}}@){_ATOM}(?:\.{_ATOM})*@(?:{_LABEL}\.){{1,10}}[A-Za-z]{{2,24}}\Z"
+)
 
 
 class ChannelKind(StrEnum):
@@ -100,14 +107,12 @@ def plan_destinations(
     name: str, channels: list[IRChannel], prefix: str
 ) -> list[PlannedDestination]:
     """One planned destination (and channel) per migrated channel, named from the topic."""
-    return [
-        PlannedDestination(
-            kind=ch.kind,
-            name=_name(f"{prefix} {name} {ch.kind.value} {i + 1}"),
-            target=ch.target,
-        )
-        for i, ch in enumerate(channels)
-    ]
+    planned: list[PlannedDestination] = []
+    for i, ch in enumerate(channels):
+        suffix = f" {ch.kind.value} {i + 1}"  # the index is never cut off a long title
+        head = printable(f"{prefix} {name}", MAX_NAME - len(suffix))
+        planned.append(PlannedDestination(kind=ch.kind, name=head + suffix, target=ch.target))
+    return planned
 
 
 def build_plan(topic: IRTopic, condition_names: list[str], prefix: str) -> NotificationPlan:

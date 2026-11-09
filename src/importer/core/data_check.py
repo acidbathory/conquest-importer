@@ -17,6 +17,9 @@ NRQL_QUERY = (
 )
 
 
+NOTE_LIMIT = 300
+
+
 class Status(StrEnum):
     DATA = "data arrives"
     NO_DATA = "no data"
@@ -56,9 +59,8 @@ def render(checks: list[Check], hours: int, intro: str) -> str:
     ]
     for c in checks:
         value = "" if c.value is None else f"{c.value:g}"
-        lines.append(
-            f"| {md_cell(c.name)} | {c.status.value} | {c.points} | {value} | {md_cell(c.note)} |"
-        )
+        note = md_cell(c.note, NOTE_LIMIT)
+        lines.append(f"| {md_cell(c.name)} | {c.status.value} | {c.points} | {value} | {note} |")
     return "\n".join(lines) + "\n"
 
 

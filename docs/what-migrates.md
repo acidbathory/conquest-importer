@@ -226,8 +226,12 @@ the converter was built from scrubbed copies of three real objects and a few han
   on the trigger become issue-filter predicates (`tags.<name>`, unverified in New Relic) and a
   disabled workflow is planned only when there is such a filter; Davis categories, a custom
   filter, the severity threshold and notify-on-close are notes. Every plan is marked as needing
-  review. `apply-notifications` can create the email destinations and a planned workflow, as for
-  AWS, after review.
+  review. `apply-notifications` creates a planned workflow with its destinations only when you
+  add `--include-needs-review` to `--apply`; its dry run prints how many plans need review. A plan
+  with destinations but no workflow (no mappable filter) gets its destinations and channels only
+  through `notifications.tf`; `apply-notifications` creates nothing for it. `tags.NAME` is
+  unverified in New Relic. `matchesValue()` and `in()` may ignore case or match inside arrays in
+  Dynatrace (UNVERIFIED, from memory), so a converted condition carries a note.
 - **Service level plans for SLOs:** `importer plan-service-levels --in out/dynatrace --out
   out/dynatrace/service-levels` writes one plan per SLO with the target, the period (only 1, 7 or
   28 days map; unverified) and notes, a report, and a commented-out `newrelic_service_level`
@@ -237,7 +241,9 @@ the converter was built from scrubbed copies of three real objects and a few han
 - **Checks:** `importer doctor --source dynatrace` checks the token and tenant address offline
   (no network call) and warns when `SSL_CERT_FILE` is not set. `importer check-dynatrace-data
   --alerts out/dynatrace/alerts --nr-account-id <id>` asks New Relic whether matching `Log` events
-  exist for each converted condition (read-only, exit 2 if one has none).
+  exist for each converted condition (read-only). Exit 2 means a condition had no matching
+  events in the window; that is not proof it is broken, because the event may simply not have
+  occurred in those hours.
 - **Not done:** classic alerting profiles and problem notifications, anomaly detectors,
   dashboards, service level creation, and routing a converted condition to its notification plan.
 - **Sequence:** `importer extract-dynatrace --out out/dynatrace`, then `importer convert

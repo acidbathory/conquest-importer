@@ -137,7 +137,7 @@ def service_level_plans(slos: list[DtSlo]) -> list[ServiceLevelPlan]:
 
 def _skeleton(plan: ServiceLevelPlan) -> str:
     slug = hashlib.sha256(plan.source_key.encode()).hexdigest()[:10]
-    target = f"{plan.target:g}" if plan.target is not None else TODO
+    target = f"{plan.target:.10g}" if plan.target is not None else TODO
     count, unit = plan.nr_period.split(" ") if plan.nr_period else (TODO, TODO)
     return (
         f'# resource "newrelic_service_level" "sl_{slug}" {{\n'
@@ -179,8 +179,8 @@ def render_report(plans: list[ServiceLevelPlan]) -> str:
         "|---|---|---|---|---|---|",
     ]
     for p in plans:
-        target = "" if p.target is None else f"{p.target:g}"
-        warning = "" if p.warning is None else f"{p.warning:g}"
+        target = "" if p.target is None else f"{p.target:.10g}"
+        warning = "" if p.warning is None else f"{p.warning:.10g}"
         lines.append(
             f"| {md_cell(p.name)} | {target} | {warning} | {md_cell(p.nr_period or 'none')} "
             f"| {md_cell(', '.join(p.source_metrics) or 'not read')} "

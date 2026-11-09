@@ -12,14 +12,14 @@ from importer.core.emit.common import CannotEmit, nrql_for
 from importer.core.ir import Confidence, IRMonitor, SignalKind
 from importer.core.text import printable
 
-NOT_FORWARDED = "no log events at all arrived; are the logs forwarded to New Relic?"
+NOT_FORWARDED = "no log events at all in {hours} hours; are the logs forwarded to New Relic?"
 NO_MATCH = (
-    "logs arrive but none match the filters; check that the attribute names are the same "
-    "(Dynatrace loglevel may be level in New Relic)"
+    "no matching events in {hours} hours: the filters may not match the attribute names in "
+    "New Relic, or the event did not occur"
 )
 INTRO = (
-    "Log events seen for each converted log-count condition. A condition with no matching "
-    "events cannot fire."
+    "Log events seen for each converted log-count condition. No matching events does not "
+    "prove the condition is broken: the event may simply not have occurred in the window."
 )
 
 
@@ -38,7 +38,13 @@ def check_monitor(client: NewRelicClient, account_id: int, monitor: IRMonitor, h
     if points:
         return Check(name, Status.DATA, points, float(points), "")
     anything = first_number(rows(client, account_id, f"SELECT count(*) FROM Log {since}"))  # noqa: S608 - fixed text, int hours
-    return Check(name, Status.NO_DATA, 0, None, NO_MATCH if anything else NOT_FORWARDED)
+    return Check(
+        name,
+        Status.NO_DATA,
+        0,
+        None,
+        (NO_MATCH if anything else NOT_FORWARDED).format(hours=int(hours)),
+    )
 
 
 def check_all(

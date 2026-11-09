@@ -24,7 +24,9 @@ Offline work only: fixtures, no network, no tenant, no New Relic account.
    reason.
 4. `doctor --source dynatrace` (offline) and `check-dynatrace-data` (asks New Relic whether
    matching `Log` events exist; when none do, asks whether any logs arrive, so the note says
-   "not forwarded" or "attribute names do not match"). The shared result type and report moved to
+   "no log events at all" or "no matching events: the filters may not match the attribute names,
+   or the event did not occur"). Exit 2 means no matching events in the window; it is not proof the
+   condition is broken. The shared result type and report moved to
    `core/data_check.py`.
 5. `docs/research/dynatrace-native-coverage.md` has a new section listing what one real Davis
    anomaly detector would settle, with the places to look first.
@@ -76,3 +78,20 @@ for byte (the files were also diffed by hand against a run on the previous commi
 3. Whether to keep `plan-service-levels` as its own command or fold it into `convert`.
 4. A live read of one Davis anomaly detector, once you create it (questions in the research file).
 5. Review of the New Relic names above against the provider documentation before any apply.
+
+## Round 2 (review fixes)
+
+- Email pattern tightened and anchored with `\Z` (a trailing newline used to pass). This also
+  changes the AWS path: addresses with `$`, braces, a backtick, non-ASCII characters, a hyphen at a
+  label edge, consecutive dots or a one-letter last label are now refused. Owner: confirm that is
+  acceptable for real SNS subscriptions.
+- Unreadable recipients, categories, tag templates and empty workflows always leave a note.
+  Destinations are capped at 20 and other tasks at 50 per plan, plans at 2000 per run.
+- Names keep the destination index; repeated or long titles get a short hash. A non-empty
+  `--out` is refused for the Dynatrace notification plans.
+- `apply-notifications` needs `--include-needs-review` for plans marked needs_review, prints how
+  many need review, and says plans with no workflow create nothing.
+- `matchesValue()` and `in()` carry a "matches may differ" note (case and arrays: UNVERIFIED).
+- Field names with an empty part (`a.`, `a..b`) stay manual; two different equal values on one
+  field joined by and get a note.
+- One token rule and one URL rule live in `dynatrace/extract.py` and are used by doctor.
