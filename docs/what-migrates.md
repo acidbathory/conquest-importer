@@ -161,8 +161,15 @@ AWS CloudWatch is the supported platform. Google Cloud is in progress: `importer
 accepts the JSON of `gcloud alpha monitoring policies list --format=json`.
 
 - **Converts:** metric threshold conditions (including percentile series for distribution
-  metrics) and log-match conditions with plain terms.
-- **Manual, with steps:** absence, MQL, PromQL, SQL, ratio and forecast conditions, filters with
+  metrics), metric-absence conditions and log-match conditions with plain terms.
+- **Absence:** an absence condition becomes a loss-of-signal check: a count of the metric's data
+  points below 1, plus an expiration that opens a violation when no data arrives for the
+  duration. New Relic polls every 5 minutes, so the duration is at least 300 seconds and rounded
+  up to a whole number of windows (the notes say so). Without a group-by it fires only when no
+  series reports. If the metric never arrives in New Relic (VM CPU utilization in our test), the
+  condition fires as soon as it is enabled; the notes say so. An absence condition whose filter,
+  aggregation or metric cannot be mapped stays manual.
+- **Manual, with steps:** MQL, PromQL, SQL, ratio and forecast conditions, filters with
   OR, regular expressions or functions, uptime-check alerts, and alerts on custom, Ops Agent,
   Prometheus or log-based metrics (New Relic does not document collecting those from Google
   Cloud, so a converted query would return nothing).

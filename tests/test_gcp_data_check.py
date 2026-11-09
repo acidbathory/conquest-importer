@@ -11,15 +11,21 @@ from importer.sources.gcp.translate import translate_policy
 class FakeClient:
     """Answers count queries from a table of metric name -> points."""
 
-    def __init__(self, points: dict[str, int], logs: int = 0) -> None:
+    def __init__(
+        self, points: dict[str, int], logs: int = 0, facet_rows: list[int] | None = None
+    ) -> None:
         self.points = points
         self.logs = logs
+        self.facet_rows = facet_rows
         self.queries: list[str] = []
 
     def run(self, query: str, variables: dict[str, Any], *, is_write: bool) -> dict[str, Any]:
         assert is_write is False
         nrql = variables["n"]
         self.queries.append(nrql)
+        if self.facet_rows is not None:
+            rows = [{"count": n} for n in self.facet_rows]
+            return {"actor": {"account": {"nrql": {"results": rows}}}}
         if "FROM Log" in nrql:
             row: dict[str, Any] = {"count": self.logs}
         else:
@@ -82,3 +88,47 @@ def test_the_report_escapes_names() -> None:
     m.name = "a|b`c`<x>"
     text = render(check_all(FakeClient({}), 1, [m]), 6)  # type: ignore[arg-type]
     assert "a|b" not in text and "<x>" not in text
+
+
+ABSENCE = {
+    "filter": 'metric.type="pubsub.googleapis.com/subscription/ack_message_count"',
+    "aggregations": [{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_RATE"}],
+    "duration": "900s",
+}
+
+
+def test_an_absence_condition_is_checked_with_its_own_query() -> None:
+    (m,) = translate_policy(policy("conditionAbsent", ABSENCE))
+    client = FakeClient({"gcp.pubsub.subscription.ack_message_count": 5})
+    (c,) = check_all(client, 1, [m])  # type: ignore[arg-type]
+    assert c.status is Status.DATA and c.points == 5 and "series are reporting" in c.note
+    assert "metricName = " in client.queries[0] and "SINCE 24 hours ago" in client.queries[0]
+
+
+def test_an_absence_condition_with_no_data_is_blind() -> None:
+    (m,) = translate_policy(policy("conditionAbsent", ABSENCE))
+    (c,) = check_all(FakeClient({}), 1, [m])  # type: ignore[arg-type]
+    assert c.status is Status.NO_DATA and "fire as soon as it is enabled" in c.note
+    assert has_blind_conditions([c])
+
+
+def test_a_faceted_absence_check_sums_every_row() -> None:
+    body = {
+        **ABSENCE,
+        "aggregations": [
+            {
+                "alignmentPeriod": "300s",
+                "crossSeriesReducer": "REDUCE_SUM",
+                "groupByFields": ["resource.label.subscription_id"],
+            }
+        ],
+    }
+    (m,) = translate_policy(policy("conditionAbsent", body))
+    (c,) = check_all(FakeClient({}, facet_rows=[2, 3, 4]), 1, [m])  # type: ignore[arg-type]
+    assert c.status is Status.DATA and c.points == 9
+
+
+def test_the_report_header_is_right_for_both_kinds() -> None:
+    text = render([], 6)
+    assert "A condition with no data cannot fire." not in text
+    assert "threshold condition" in text and "absence condition" in text

@@ -50,7 +50,7 @@ Input is the JSON from `aws cloudwatch describe-alarms` (a file or folder); no A
 - `source_id` is a stable integer derived from the alarm ARN; the original is kept in `source_key`.
 
 ## Known gaps (prototype)
-Composite alarms, anomaly bands on metric math, Google forecast, absence, MQL, PromQL and SQL conditions, SLOs, log rollups other than counts, OR in log filters, recovery thresholds, unit conversion inside formulas, and migration of notification channels for Google Cloud.
+Composite alarms, anomaly bands on metric math, Google forecast, MQL, PromQL and SQL conditions, SLOs, log rollups other than counts, OR in log filters, recovery thresholds, unit conversion inside formulas, and migration of notification channels for Google Cloud.
 
 Settings that are not migrated (priority, renotify, evaluation delay, ...) are listed per monitor and downgrade it to `approximate`. Defaults and record metadata are ignored.
 

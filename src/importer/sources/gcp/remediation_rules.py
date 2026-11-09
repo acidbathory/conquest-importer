@@ -7,10 +7,11 @@ from importer.core.remediation import Rule, register_rules
 RULES: list[Rule] = [
     (
         re.compile(r"metric-absence condition"),
-        "Metric-absence condition",
+        "Metric-absence condition that could not be converted",
         [
-            "Create an NRQL alert condition on the same metric and turn on loss of signal "
-            "(for example after 15 minutes without data), or use a query such as "
+            "The reason above says what stopped the conversion (the filter, the aggregation or "
+            "the metric). Create an NRQL alert condition on the same metric and turn on loss of "
+            "signal (for example after 15 minutes without data), or use a query such as "
             "`SELECT count(*) FROM Metric WHERE metricName = '<name>'` with a threshold of "
             "below 1.",
         ],
@@ -91,6 +92,24 @@ RULES: list[Rule] = [
             "measures in Cloud Monitoring (metrics explorer shows the aligner and reducer), then "
             "write the equivalent NRQL: `average`, `max`, `sum` or `percentile` over the `gcp.` "
             "metric, faceted by the resource.",
+        ],
+    ),
+    (
+        re.compile(r"over new relic's limit"),
+        "Window longer than New Relic allows",
+        [
+            "New Relic accepts a breach duration of up to 24 hours and an aggregation window of "
+            "up to 1 hour. Create the condition by hand with values inside those limits, or "
+            "alert on a longer period with a shorter duration and a rolled-up query.",
+        ],
+    ),
+    (
+        re.compile(r"valid new relic attribute name"),
+        "Label that is not a valid attribute name",
+        [
+            "Find the attribute New Relic stores for this label (run `SELECT keyset() FROM "
+            "Metric WHERE metricName = '<name>'`) and write the `WHERE` or `FACET` clause by "
+            "hand with that name in backticks.",
         ],
     ),
     (

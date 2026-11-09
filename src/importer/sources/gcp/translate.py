@@ -1,7 +1,8 @@
 """Alert policies to IR.
 
-One IR monitor per condition. Threshold and log-match conditions convert; the rest (absence, MQL,
-PromQL, SQL, ratios, forecasts) stay manual with the reason. `translate_policy` never raises.
+One IR monitor per condition. Threshold, metric-absence and log-match conditions convert; the
+rest (MQL, PromQL, SQL, ratios, forecasts) stay manual with the reason. `translate_policy` never
+raises.
 New Relic's names for GCP metrics follow the documented rule but are not yet confirmed against
 live data, so every conversion is approximate until they are.
 """
@@ -11,11 +12,14 @@ import json
 import re
 from pathlib import Path
 
+from importer.core.emit.common import MAX_AGGREGATION_WINDOW_SECONDS, MAX_DURATION_SECONDS
+from importer.core.emit.nrql import identifier
 from importer.core.ir import (
     Aggregation,
     Confidence,
     CountFilter,
     CountSignal,
+    HeartbeatSignal,
     IRMonitor,
     MetricSignal,
     MetricTerm,
@@ -62,11 +66,12 @@ REDUCERS = {
     "REDUCE_SUM": Aggregation.SUM,
 }
 MANUAL_KINDS = {
-    "conditionAbsent": "a metric-absence condition has no automatic conversion",
     "conditionMonitoringQueryLanguage": "MQL conditions are not converted",
     "conditionPrometheusQueryLanguage": "PromQL conditions are not converted",
     "conditionSql": "SQL conditions are not converted",
 }
+ABSENCE_KIND = "conditionAbsent"
+ABSENCE_PREFIX = "a metric-absence condition could not be converted: "
 SERVICE_SEGMENT = re.compile(r"^(?P<service>[a-z0-9_.]+?)(?:\.googleapis\.com)?/(?P<path>.+)$")
 SAFE_PATH = re.compile(r"^[a-z0-9_/]+$")
 NAMING_NOTE = (
@@ -102,6 +107,16 @@ MISSING_NOTE = (
     "enable it"
 )
 VERIFIED_PATH = Path(__file__).with_name("gcp_verified.json")
+ABSENCE_NOTE = (
+    "this differs from Google: it fires when New Relic receives no data points for the metric "
+    "for the duration; New Relic polls Google Cloud every 5 minutes, so the duration is at least "
+    "300s and a whole number of aggregation windows"
+)
+ABSENCE_MISSING_NOTE = (
+    "New Relic documents this metric, but it never arrived in our live test, so a condition "
+    "that fires when no data arrives would fire as soon as it is enabled and stay open, which "
+    "is not how the Google condition behaves"
+)
 POLL_SECONDS = 300  # New Relic reads Google Cloud metrics every 5 minutes
 AGGREGATION_DELAY_SECONDS = 120  # Cloud Monitoring can delay metrics by 2 to 3 minutes
 
@@ -165,11 +180,22 @@ def _label_name(field: str) -> str | None:
     for prefix in ("resource.labels.", "resource.label."):
         if field.startswith(prefix):
             label = field[len(prefix) :]
-            return PROJECT_LABELS.get(label, f"gcp.{label}")
+            return _valid_attribute(PROJECT_LABELS.get(label, f"gcp.{label}"), field)
     for prefix in ("metric.labels.", "metric.label."):
         if field.startswith(prefix):
-            return f"metric.{field[len(prefix) :]}"
+            return _valid_attribute(f"metric.{field[len(prefix) :]}", field)
     return None
+
+
+def _valid_attribute(attribute: str, field: str) -> str:
+    """The attribute when NRQL accepts it as a name; otherwise the condition stays manual."""
+    try:
+        identifier(attribute)
+    except ValueError:
+        raise _Fail(
+            Confidence.MANUAL, f"label {field!r} does not make a valid New Relic attribute name"
+        ) from None
+    return attribute
 
 
 def _scope(terms: list[Term]) -> tuple[str, list[TagFilter], list[str]]:
@@ -213,21 +239,20 @@ def _reducer(
 ) -> tuple[list[str], list[str]]:
     """Group-by labels and notes for the cross-series reducer of a condition."""
     reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
-    raw = agg.get("groupByFields")
-    fields = raw if isinstance(raw, list) else []
-    group_by = [label for f in fields if (label := _label_name(str(f)))]
+    group_by, notes = _group_labels(agg)
     if reducer in REDUCERS:
-        if REDUCERS[reducer] == aggregation:
-            return group_by, []
-        return group_by, [
-            f"{reducer} and {aligner} become one {aggregation.value} in New Relic's query"
-        ]
+        if REDUCERS[reducer] != aggregation:
+            notes.append(
+                f"{reducer} and {aligner} become one {aggregation.value} in New Relic's query"
+            )
+        return group_by, notes
     if reducer != "REDUCE_NONE":
         raise _Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
-    return group_by, [
+    notes.append(
         "Google evaluates each time series on its own; the New Relic query combines them "
         "unless you facet by the resource id"
-    ]
+    )
+    return group_by, notes
 
 
 def _whole_windows(duration: int, period: int) -> tuple[int, str]:
@@ -242,6 +267,65 @@ def _whole_windows(duration: int, period: int) -> tuple[int, str]:
     )
 
 
+def _check_limits(period: int, window: int) -> None:
+    """Manual when New Relic would refuse the window at emit time."""
+    if period > MAX_AGGREGATION_WINDOW_SECONDS:
+        raise _Fail(
+            Confidence.MANUAL,
+            f"aggregation window {period}s is over New Relic's limit of "
+            f"{MAX_AGGREGATION_WINDOW_SECONDS}s",
+        )
+    if window > MAX_DURATION_SECONDS:
+        raise _Fail(
+            Confidence.MANUAL,
+            f"duration {window}s is over New Relic's limit of {MAX_DURATION_SECONDS}s",
+        )
+
+
+def _metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[str]]:
+    """Metric type, label scope and notes from a condition's filter; manual when not collected."""
+    try:
+        metric_type, scope, notes = _scope(parse_filter(str(body.get("filter", ""))))
+    except FilterError as err:
+        raise _Fail(Confidence.MANUAL, f"filter not supported: {err}") from err
+    if metric_type.startswith("monitoring.googleapis.com/uptime_check/"):
+        raise _Fail(
+            Confidence.MANUAL,
+            "an uptime check alert depends on the check itself, which is not migrated",
+        )
+    if metric_type.startswith(NOT_GOOGLE_SERVICE):
+        raise _Fail(Confidence.MANUAL, UNCOLLECTED)
+    return metric_type, scope, notes
+
+
+def _first_aggregation(body: dict[str, object]) -> tuple[dict[str, object], str]:
+    """The single aggregation stage of a condition and its aligner."""
+    aggregations = body.get("aggregations")
+    if isinstance(aggregations, list) and len(aggregations) > 1:
+        raise _Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
+    first = aggregations[0] if isinstance(aggregations, list) and aggregations else {}
+    agg = first if isinstance(first, dict) else {}
+    aligner = str(agg.get("perSeriesAligner", ""))
+    if aligner not in ALIGNERS:
+        raise _Fail(Confidence.MANUAL, f"aligner {aligner!r} is not supported")
+    return agg, aligner
+
+
+def _group_labels(agg: dict[str, object]) -> tuple[list[str], list[str]]:
+    """Mapped group-by attributes without repeats, and a note for each field that was dropped."""
+    raw = agg.get("groupByFields")
+    fields = raw if isinstance(raw, list) else []
+    labels: list[str] = []
+    notes: list[str] = []
+    for field in map(str, fields):
+        label = _label_name(field)
+        if label is None:
+            notes.append(f"group-by field {field!r} is not mapped and was dropped")
+        elif label not in labels:
+            labels.append(label)
+    return labels, notes
+
+
 def _metric_condition(
     body: dict[str, object],
 ) -> tuple[MetricSignal, int, int, float, list[str]]:
@@ -253,25 +337,8 @@ def _metric_condition(
     trigger = body.get("trigger")
     if isinstance(trigger, dict) and (trigger.get("percent") or int(trigger.get("count", 1)) > 1):
         raise _Fail(Confidence.MANUAL, "a trigger on several time series is not supported")
-    try:
-        metric_type, scope, scope_notes = _scope(parse_filter(str(body.get("filter", ""))))
-    except FilterError as err:
-        raise _Fail(Confidence.MANUAL, f"filter not supported: {err}") from err
-    if metric_type.startswith("monitoring.googleapis.com/uptime_check/"):
-        raise _Fail(
-            Confidence.MANUAL,
-            "an uptime check alert depends on the check itself, which is not migrated",
-        )
-    if metric_type.startswith(NOT_GOOGLE_SERVICE):
-        raise _Fail(Confidence.MANUAL, UNCOLLECTED)
-    aggregations = body.get("aggregations")
-    if isinstance(aggregations, list) and len(aggregations) > 1:
-        raise _Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
-    first = aggregations[0] if isinstance(aggregations, list) and aggregations else {}
-    agg = first if isinstance(first, dict) else {}
-    aligner = str(agg.get("perSeriesAligner", ""))
-    if aligner not in ALIGNERS:
-        raise _Fail(Confidence.MANUAL, f"aligner {aligner!r} is not supported")
+    metric_type, scope, scope_notes = _metric_scope(body)
+    agg, aligner = _first_aggregation(body)
     aggregation, counter = ALIGNERS[aligner]
     group_by, reducer_notes = _reducer(agg, aggregation, aligner)
     notes += reducer_notes
@@ -300,22 +367,69 @@ def _metric_condition(
         terms={"a": term}, aggregation=aggregation, scope=scope, group_by=group_by
     )
     window, note = _whole_windows(duration, period)
+    _check_limits(period, window)
     if note:
         notes.append(note)
     return signal, period, window, scale, [*scope_notes, *notes]
 
 
-def _name_notes(name: str, aligner: str, *, uses_labels: bool) -> list[str]:
+def _name_notes(
+    name: str, aligner: str, *, uses_labels: bool, missing_note: str = MISSING_NOTE
+) -> list[str]:
     """Say what is and is not confirmed about the New Relic name and attributes."""
     notes: list[str] = []
     base = name.rsplit(".", 1)[0] if aligner.startswith("ALIGN_PERCENTILE_") else name
     if base in NOT_RECEIVED:
-        notes.append(MISSING_NOTE)
+        notes.append(missing_note)
     elif base not in RECEIVED:
         notes.append(NAMING_NOTE)
     if uses_labels:
         notes.append(LABEL_NOTE)
     return notes
+
+
+def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, int, list[str]]:
+    """A loss-of-signal check: heartbeat signal, aggregation window, duration and notes."""
+    metric_type, scope, scope_notes = _metric_scope(body)
+    agg, aligner = _first_aggregation(body)
+    reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
+    if reducer not in (*REDUCERS, "REDUCE_NONE"):
+        raise _Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
+    period = _seconds(agg.get("alignmentPeriod"))
+    if period < 60 or period % 60:
+        raise _Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
+    duration = _seconds(body.get("duration"))
+    if duration < 60:
+        raise _Fail(Confidence.MANUAL, f"duration {duration}s is not supported")
+    name = nr_metric_name(metric_type)
+    group_by, notes = _group_labels(agg)
+    notes.append(ABSENCE_NOTE)
+    if period < POLL_SECONDS:
+        notes.append(
+            f"the alignment period of {period}s is raised to {POLL_SECONDS}s, the polling interval"
+        )
+    window = max(period, POLL_SECONDS)
+    if duration < window:
+        notes.append(f"the duration of {duration}s is raised to {window}s, one polling interval")
+    duration, note = _whole_windows(duration, window)
+    _check_limits(window, duration)
+    if note:
+        notes.append(note)
+    if not group_by:
+        notes.append(
+            "Google tracks each time series on its own; this condition fires only when no "
+            "series reports, so group by the resource id to alert for each one"
+        )
+    notes += _name_notes(
+        name, aligner, uses_labels=bool(scope or group_by), missing_note=ABSENCE_MISSING_NOTE
+    )
+    signal = HeartbeatSignal(
+        check=name,
+        group_by=group_by,
+        scope=scope,
+        nr_target=NrTarget(event="Metric", attribute=name),
+    )
+    return signal, window, duration, [*scope_notes, *notes]
 
 
 def _log_count(body: dict[str, object]) -> CountSignal:
@@ -389,7 +503,21 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
     body = cond.body
     no_data = NoData()
     try:
-        if cond.kind == "conditionMatchedLog":
+        if cond.kind == ABSENCE_KIND:
+            heartbeat, period, duration, notes = _absence_condition(cond.body)
+            reasons += notes
+            signal = Signal(
+                kind=SignalKind.HEARTBEAT,
+                raw_query=name,
+                window_seconds=duration,
+                aggregation_window_seconds=period,
+                aggregation_delay_seconds=AGGREGATION_DELAY_SECONDS,
+                occurrences=Occurrences.ALL,
+                heartbeat=heartbeat,
+            )
+            thresholds = [Threshold(severity=severity, operator=Operator.BELOW, value=1)]
+            no_data = NoData(notify=True, timeout_minutes=max(1, duration // 60))
+        elif cond.kind == "conditionMatchedLog":
             count = _log_count(body)
             reasons.append(LOG_NOTE)
             signal = Signal(
@@ -429,7 +557,8 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
             value = float(str(body.get("thresholdValue", 0))) * scale
             thresholds = [Threshold(severity=severity, operator=operator, value=value)]
     except _Fail as fail:
-        return failed(fail.confidence, fail.reason)
+        prefix = ABSENCE_PREFIX if cond.kind == ABSENCE_KIND else ""
+        return failed(fail.confidence, prefix + fail.reason)
     return IRMonitor(
         **base,
         signal=signal,
