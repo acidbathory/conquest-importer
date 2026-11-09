@@ -1,0 +1,66 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-mz-0001",
+      "schemaId": "builtin:management-zones",
+      "scope": "environment",
+      "value": {
+        "name": "GCP hosts",
+        "rules": [
+          {
+            "enabled": true,
+            "type": "ME",
+            "entitySelector": "",
+            "attributeRule": {
+              "entityType": "HOST",
+              "hostToPGPropagation": true,
+              "conditions": [
+                {
+                  "key": "HOST_CLOUD_TYPE",
+                  "operator": "EQUALS",
+                  "enumValue": "GOOGLE_CLOUD_PLATFORM"
+                }
+              ]
+            }
+          },
+          {
+            "enabled": true,
+            "type": "ME",
+            "entitySelector": "",
+            "attributeRule": {
+              "entityType": "SERVICE",
+              "serviceToHostPropagation": true,
+              "serviceToPGPropagation": true,
+              "conditions": [
+                {
+                  "key": "HOST_GROUP_ID",
+                  "operator": "EQUALS",
+                  "entityId": "HOST_GROUP-8A29CED074001723"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "objectId": "INVENTED-tag-0001",
+      "schemaId": "builtin:tags.auto-tagging",
+      "scope": "environment",
+      "value": {
+        "name": "GKE-Hosts",
+        "rules": [
+          {
+            "enabled": true,
+            "type": "SELECTOR",
+            "entitySelector": "type(host),entityName.startsWith(\"gke\")",
+            "valueFormat": "true",
+            "valueNormalization": "Leave text as-is"
+          }
+        ]
+      }
+    }
+  ],
+  "totalCount": 2,
+  "pageSize": 500
+}

@@ -1,0 +1,49 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-notification-0002",
+      "schemaId": "builtin:problem.notifications",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "type": "WEBHOOK",
+        "displayName": "Incident bridge",
+        "alertingProfile": "INVENTED-profile-0002",
+        "webHookNotification": {
+          "urlContainsSecret": true,
+          "url": "",
+          "secretUrl": "MASKED",
+          "acceptAnyCertificate": false,
+          "notifyEventMergesEnabled": true,
+          "notifyClosedProblems": true,
+          "useOAuth2": true,
+          "oAuth2Credentials": {
+            "accessTokenUrl": "https://idp.example.invalid/oauth/token",
+            "clientId": "dynatrace-bridge",
+            "clientSecret": "MASKED",
+            "scope": "incidents.write",
+            "authenticateViaRequestHeader": true
+          },
+          "timeoutInSeconds": 30,
+          "headers": [
+            {
+              "name": "X-Team",
+              "secret": false,
+              "value": "platform",
+              "secretValue": null
+            },
+            {
+              "name": "Authorization",
+              "secret": true,
+              "value": null,
+              "secretValue": "MASKED"
+            }
+          ],
+          "payload": "{\"title\":\"{ProblemTitle}\",\"state\":\"{State}\",\"tags\":\"{Tags}\",\"details\":{ProblemDetailsJSONv2}}"
+        }
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

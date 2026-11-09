@@ -1,0 +1,35 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-profile-0001",
+      "schemaId": "builtin:alerting.profile",
+      "scope": "environment",
+      "value": {
+        "name": "Default",
+        "severityRules": [
+          {
+            "severityLevel": "AVAILABILITY",
+            "delayInMinutes": 0,
+            "tagFilterIncludeMode": "NONE",
+            "tagFilter": []
+          },
+          {
+            "severityLevel": "ERRORS",
+            "delayInMinutes": 0,
+            "tagFilterIncludeMode": "NONE",
+            "tagFilter": []
+          },
+          {
+            "severityLevel": "PERFORMANCE",
+            "delayInMinutes": 30,
+            "tagFilterIncludeMode": "NONE",
+            "tagFilter": []
+          }
+        ],
+        "eventFilters": []
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}
