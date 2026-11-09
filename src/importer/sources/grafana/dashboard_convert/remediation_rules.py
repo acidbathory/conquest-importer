@@ -115,6 +115,17 @@ ROWS: list[tuple[str, str, list[str], Category]] = [
         C.UNSUPPORTED_QUERY,
     ),
     (
+        r.C_AGG_RATE,
+        "Dashboard average, minimum or maximum of rates",
+        [
+            "New Relic stores one change per scrape, so `rate(average(c), 1 second)` divides one "
+            "sample by the whole bucket and reads too low. Use `rate(sum(c), 1 second)` and divide "
+            "by `uniqueCount()` of the label that names one series (for example `cpu`), or "
+            "FACET by that label and read each series.",
+        ],
+        C.UNSUPPORTED_QUERY,
+    ),
+    (
         r.C_REUSE,
         "Dashboard panel reusing a query that did not convert",
         [

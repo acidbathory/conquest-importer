@@ -27,6 +27,9 @@ C_VARIABLE_UNDEFINED = (
     f"{PREFIX}: the query uses a variable that did not become a New Relic variable"
 )
 C_LIKE_PERCENT = f"{PREFIX}: a pattern contains % which NRQL LIKE cannot match literally"
+C_AGG_RATE = (
+    f"{PREFIX}: an average, minimum or maximum of rates has no correct New Relic form"
+)
 C_REUSE = f"{PREFIX}: the panel reuses a query that did not convert"
 C_UNEXPECTED = f"{PREFIX}: the panel could not be read"
 
@@ -35,6 +38,9 @@ N_MERGED = f"{NOTE} series are not kept apart; add a FACET for the labels that i
 N_INSTANT = f"{NOTE} the value is taken over the whole time range, Grafana showed the latest point"
 N_RATE_WINDOW = f"{NOTE} the rate window of the query becomes the automatic New Relic bucket"
 N_INCREASE = f"{NOTE} increase over a variable window is the sum per bucket"
+N_SUM_GAUGE = (
+    f"{NOTE} sum() of a gauge adds every sample in the bucket, so a series counts once per scrape"
+)
 N_COUNT = f"{NOTE} count() counts samples, not series; use uniqueCount of a label that names one"
 N_TOPK = f"{NOTE} topk ranks over the whole time range, not at each step"
 N_TOPK_FLAT = f"{NOTE} topk over series that are not grouped has no FACET to rank"
@@ -74,7 +80,7 @@ D_TIME = "original time range: {text}"
 D_REPEAT_ROWS = "{count} repeated rows are shown once"
 D_TABS = "{count} tabs were flattened into one page with headings"
 D_PANELS = "{done} of {total} panels converted, {placeholders} are placeholders"
-D_WIDGET_CAP = "{count} widgets over the limit of 300 were left out"
+D_WIDGET_CAP = "{count} widgets over the limit of 150 per page were left out"
 D_VARIABLE_DROPPED = "{count} interval or data source variables were dropped"
 D_VARIABLE_MANUAL = "{count} variables were not converted"
 D_SUBSTITUTED = "{count} constant variables were written into the queries"

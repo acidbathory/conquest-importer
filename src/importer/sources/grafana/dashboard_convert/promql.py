@@ -335,6 +335,8 @@ class _Parse:
             raise Unconvertible(r.C_SHAPE)
         event, metric = self.metric(name)
         func = NR_AGGREGATE[agg or "avg"]
+        if agg == "sum":
+            self.note(r.N_SUM_GAUGE)
         if agg is None:
             func = "latest" if not self.opts.timeseries else "average"
         return Leaf(
@@ -349,6 +351,8 @@ class _Parse:
         function, name, body, window = call[1], call[2], (call[3] or "")[1:-1], call[4]
         if agg == "count":
             raise Unconvertible(r.C_SHAPE)
+        if agg in ("avg", "min", "max"):  # one sample's delta over a whole bucket: too low
+            raise Unconvertible(r.C_AGG_RATE)
         event, metric = self.metric(name)
         core = f"{NR_AGGREGATE[agg or 'sum']}({metric})"
         kind, seconds = _window(window)

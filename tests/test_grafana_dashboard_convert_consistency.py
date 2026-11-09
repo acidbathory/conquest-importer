@@ -37,6 +37,7 @@ CONVERTER_ONLY = {
     r.C_BUILTIN,
     r.C_EVENTS,
     r.C_FILTERS,
+    r.C_AGG_RATE,
     r.C_VARIABLE_UNDEFINED,
 }
 
@@ -161,7 +162,9 @@ def test_converter_only_reasons_on_the_corpus_are_listed_and_few() -> None:
             convert_query(expr, family, options(True))
         except Unconvertible:
             refused += 1
-    assert refused <= 2  # `up{job="x$job"}` and `sum(up) * $__interval` at most
+    # `up{job="x$job"}`, `sum(up) * $__interval` and the three averages of a rate (refused on
+    # purpose: rate(average()) reads too low by the scrapes in a bucket) at most
+    assert refused <= 5
 
 
 def test_queries_the_planner_refuses_are_never_converted_by_accident() -> None:

@@ -104,11 +104,6 @@ def test_rate_increase_histogram_topk_tier_two(expr: str, expected: str) -> None
     ("expr", "expected"),
     [
         (
-            '1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))',
-            "SELECT 1 - rate(average(node_cpu_seconds_total), 1 second) FROM Metric "
-            "WHERE mode = 'idle' TIMESERIES AUTO",
-        ),
-        (
             "sum(rate(a_total[5m])) / sum(rate(b_total[5m])) * 100",
             "SELECT (rate(sum(a_total), 1 second) / rate(sum(b_total), 1 second)) * 100 "
             "FROM Metric TIMESERIES AUTO",

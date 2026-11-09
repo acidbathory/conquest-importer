@@ -106,7 +106,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "1 - avg by (instance) (rate(node_cpu_seconds_total{job=~\"$job\", mode=\"idle\"}[$__rate_interval]))",
+          "expr": "sum by (instance) (rate(node_cpu_seconds_total{job=~\"$job\", mode!=\"idle\"}[$__rate_interval]))",
           "datasource": {
             "type": "prometheus",
             "uid": "prom-main"
