@@ -180,6 +180,8 @@ def test_a_dynatrace_report_uses_dynatrace_wording() -> None:
     )
     assert "Dynatrace tenant abc12345" in html and "Workflows and SLOs" in html
     assert "AWS" not in html and "CloudWatch" not in html and "Google" not in html
+    assert "importer apply --in" in html and "--confirm-account 7" in html
+    assert "Davis problem workflows are notification routes" in html
 
 
 def test_the_default_report_is_still_the_aws_one() -> None:

@@ -194,13 +194,15 @@ the converter was built from scrubbed copies of three real objects and a few han
 - **Converts (approximate):** a scheduled workflow with one `execute-dql-query` task of the form
   `fetch logs[, from:now() - Nm|Nh] | filter field == "value" [and ...] | summarize n = count()`,
   and notify tasks gated by `result("task")["records"][0]["n"] > N` (also `>=`, `<`, `<=`). It
-  becomes a New Relic count of `Log` events with that threshold and a window equal to the
-  schedule interval (one hour at most).
+  becomes a New Relic count of `Log` events with that threshold. The window is the query's time
+  range (the threshold counts that much log), or the schedule interval when the query has none;
+  one hour at most, otherwise the workflow stays manual.
 - **Caveats on a converted workflow:** the logs must be forwarded to New Relic and the attribute
   names must match them; the mapping of `loglevel` to `level` is not confirmed. Dynatrace ran the
   query on a schedule and New Relic evaluates continuously. A below condition may not fire on an
-  empty result. Notification tasks are listed but not converted. An inactive trigger is noted and
-  the condition is created disabled.
+  empty result. Notification tasks are listed but not converted. An inactive trigger or a draft
+  (not deployed) workflow is noted and the condition is created disabled. A notify task that
+  runs on a state other than OK keeps the workflow manual.
 - **Manual, with steps:** any other DQL (metrics, several summaries, joins, other functions),
   other task layouts, schedules longer than one hour, manual and non-Davis event triggers, Davis
   problem workflows (these are notification routes: recreate the destination, channel and a
@@ -208,7 +210,9 @@ the converter was built from scrubbed copies of three real objects and a few han
   a New Relic service level).
 - **Not done:** classic alerting profiles and problem notifications, anomaly detectors,
   dashboards, service level creation, and any check that the converted query returns data.
-- **Report:** `importer report <run folder> --source dynatrace`.
+- **Sequence:** `importer extract-dynatrace --out out/dynatrace`, then `importer convert
+  --source dynatrace --in out/dynatrace --out out/dynatrace/alerts`, then `importer report
+  out/dynatrace --source dynatrace` (the report reads `alerts/` inside the folder you give it).
 - **Behind a TLS-inspecting proxy:** set `SSL_CERT_FILE` to the corporate root certificate file.
 
 Azure and other platforms are planned; see the [roadmap](../README.md#roadmap).

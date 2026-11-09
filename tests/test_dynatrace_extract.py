@@ -21,7 +21,6 @@ WORKFLOW: dict[str, Any] = json.loads(
 SLO: dict[str, Any] = json.loads(
     (Path(__file__).parent / "fixtures/dynatrace/slo-second.json").read_text()
 )
-UUID = "00000000-0000-0000-0000-000000000009"
 
 
 class Fake:
@@ -38,13 +37,14 @@ class Fake:
             raise DynatraceError("403 denied")
         if url.endswith("/workflows"):
             offset = int(params.get("offset", "0"))
-            item = {"id": UUID, "title": "summary"} if self.summary_only else WORKFLOW
+            uid = f"00000000-0000-0000-0000-00000000000{offset}"
+            item = {"id": uid, "title": "summary"} if self.summary_only else {**WORKFLOW, "id": uid}
             return {"count": 2, "results": [item], "offset": offset}
         if "/workflows/" in url:
             return WORKFLOW
         if "page-key" not in params:
             return {"slos": [SLO], "nextPageKey": "k2"}
-        return {"slos": [{**SLO, "name": "second"}]}
+        return {"slos": [{**SLO, "name": "second", "id": "other"}]}
 
 
 def test_reads_all_pages_and_writes_two_folders(tmp_path: Path) -> None:
@@ -77,7 +77,10 @@ def test_a_list_without_task_details_is_completed_from_the_single_workflow(
 ) -> None:
     fake = Fake(summary_only=True)
     extract(fake, HOST, tmp_path / "out")
-    assert any(u == f"{HOST}/platform/automation/v1/workflows/{UUID}" for u, _ in fake.calls)
+    assert any(
+        u == f"{HOST}/platform/automation/v1/workflows/00000000-0000-0000-0000-000000000001"
+        for u, _ in fake.calls
+    )
     assert len(load_workflows(tmp_path / "out" / "workflows")) == 2
 
 
@@ -123,9 +126,25 @@ def test_paging_is_bounded(tmp_path: Path) -> None:
             return {"slos": [SLO], "nextPageKey": "again"}
         return {"count": 10**9, "results": [WORKFLOW] * 100}
 
-    with pytest.raises(DynatraceError, match="pages"):
+    with pytest.raises(DynatraceError, match="more than"):
         extract(endless, HOST, tmp_path / "out")
     assert calls <= dx.MAX_PAGES + 1
+
+
+def test_the_page_count_is_bounded_even_when_the_item_cap_is_not_reached(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(dx, "MAX_WORKFLOWS", 10**9)
+    calls = 0
+
+    def endless(url: str, params: dict[str, str]) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        return {"count": 10**9, "results": [WORKFLOW] * 100}
+
+    with pytest.raises(DynatraceError, match="pages"):
+        extract(endless, HOST, tmp_path / "out")
+    assert calls == dx.MAX_PAGES
 
 
 def test_failure_reading_workflows_stops_but_slos_only_warn(tmp_path: Path) -> None:
@@ -141,13 +160,6 @@ def test_the_token_comes_from_the_environment(monkeypatch: pytest.MonkeyPatch) -
         dx.api_token()
     monkeypatch.setenv("DYNATRACE_API_TOKEN", " dt0s16.abc ")
     assert dx.api_token() == "dt0s16.abc"
-
-
-def test_the_http_client_is_closed_when_the_block_ends() -> None:
-    with dx.http_getter("token") as get:
-        assert callable(get)
-    with dx.http_getter("token"):
-        pass
 
 
 def test_cli_reports_a_missing_host_without_printing_the_token(

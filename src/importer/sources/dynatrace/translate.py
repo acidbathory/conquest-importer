@@ -7,11 +7,12 @@ Reasons name only fixed vocabulary and parsed numbers, never text from the expor
 safe to print. `translate` never raises.
 """
 
-import hashlib
+import math
 import re
 from dataclasses import dataclass
 from typing import Any
 
+from importer.core.ids import source_id
 from importer.core.ir import (
     Confidence,
     CountFilter,
@@ -50,9 +51,9 @@ ACTION_LABELS = (
 SECONDS_PER_UNIT = {"m": 60, "h": 3600}
 
 # the only DQL accepted: fetch logs[, from:now() - N(m|h)] | filter <field> == "<value>" [and ...]
-# | summarize <name> = count()
+# | summarize <name> = count(). A value has no control characters and only the escapes \" and \\.
 FETCH = re.compile(r"fetch\s+logs(?:\s*,\s*from:\s*now\(\)\s*-\s*(\d+)\s*([mh]))?")
-TERM = r'([A-Za-z_][A-Za-z0-9_.]*)\s*==\s*"((?:[^"\\]|\\.)*)"'
+TERM = r'([A-Za-z_][A-Za-z0-9_.]*)\s*==\s*"((?:[^"\\\x00-\x1f\x7f]|\\["\\])*)"'
 FILTER = re.compile(rf"filter\s+{TERM}(?:\s+(?:and|AND)\s+{TERM})*")
 SUMMARIZE = re.compile(r"summarize\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*count\(\)")
 CONDITION = re.compile(
@@ -64,30 +65,41 @@ TIMEFRAME = re.compile(r"now(?:-\d+[smhdw])?")
 DAVIS_REASON = "Davis problem notification workflow"
 SLO_REASON = "SLO is not converted automatically"
 INACTIVE_REASON = "the Dynatrace trigger was inactive"
+DRAFT_REASON = "the workflow was a draft (not deployed)"
 OTHER_TRIGGER = (
     "workflow trigger is a manual or other event trigger, not a schedule or a Davis problem"
 )
 SHAPE = "workflow tasks are not one DQL query plus notify tasks gated by a condition"
+STATES = "workflow tasks run on a state of the query task other than OK"
 NOT_NARROW = "DQL query is not the supported pattern (fetch logs, equality filters, one count)"
+BAD_THRESHOLD = (
+    "the notify condition expression has a threshold that is not a usable number "
+    "(a finite number, not below 0)"
+)
+LONG_REASON = "{what} is longer than one hour, the longest count window New Relic evaluates"
+# notes on a converted workflow, most specific first; the two generic ones go last
 LOG_NOTE = (
-    "converts to a count of Log events, so the logs must be forwarded to New Relic; the "
-    "attribute names must match the forwarded logs, and the mapping of a Dynatrace attribute "
-    "such as loglevel to New Relic's level is not confirmed"
+    "the logs must be forwarded to New Relic with the same attribute names; the mapping of "
+    "loglevel to level is not confirmed"
 )
 SCHEDULE_NOTE = (
-    "the Dynatrace workflow ran on a schedule, while New Relic evaluates continuously in "
-    "windows of {window}s, so the moment it fires may differ"
+    "Dynatrace ran this on a schedule; New Relic evaluates continuously over {window}s "
+    "windows, so the timing may differ"
 )
 BELOW_NOTE = (
-    "a below condition: Dynatrace counts an empty result as 0, but in New Relic no matching "
-    "logs means no data, so it may differ and not fire unless loss of signal is set"
+    "below: an empty result is 0 in Dynatrace but no data in New Relic, so it may differ and "
+    "not fire without loss of signal"
 )
 NOT_INTERVAL_NOTE = (
-    "the schedule is not an interval, so the window is taken from the query's time range"
+    "the schedule is not an interval, so the window comes from the time range and may differ"
 )
 LOOKBACK_NOTE = (
-    "the query looks back {lookback}s but the workflow ran every {window}s; the New Relic "
-    "window is {window}s and may differ"
+    "the workflow ran every {interval}s but counts the last {window}s; the window is "
+    "{window}s and may differ"
+)
+NO_RANGE_NOTE = (
+    "there is no time range; Dynatrace's default range is not modelled, so the window is the "
+    "schedule interval and may differ"
 )
 
 
@@ -104,10 +116,6 @@ class _Count:
     filters: list[CountFilter]
     name: str
     lookback_seconds: int
-
-
-def source_id(key: str) -> int:
-    return int(hashlib.sha256(key.encode()).hexdigest()[:12], 16)
 
 
 def _key(identifier: str, name: str) -> str:
@@ -137,7 +145,8 @@ def _split_pipes(query: str) -> list[str]:
 
 
 def _unescape(value: str) -> str:
-    return re.sub(r"\\(.)", r"\1", value)
+    """Undo the only two escapes the pattern allows (TERM rejects any other)."""
+    return re.sub(r'\\(["\\])', r"\1", value)
 
 
 def parse_dql(query: str) -> _Count:
@@ -146,11 +155,12 @@ def parse_dql(query: str) -> _Count:
     if len(parts) != 3:
         raise _Fail(f"{NOT_NARROW}: it needs exactly a fetch, a filter and a summarize step")
     fetch = FETCH.fullmatch(parts[0])
-    if fetch is None:
+    if fetch is None or (fetch[1] is not None and int(fetch[1]) == 0):
         raise _Fail(f"{NOT_NARROW}: the first step is not fetch logs with an hour or minute range")
     if not FILTER.fullmatch(parts[1]):
         raise _Fail(
-            f'{NOT_NARROW}: the filter has a test other than field == "value" joined by and'
+            f'{NOT_NARROW}: the filter has a test other than field == "value" joined by and, '
+            "or a value with a control character or an escape other than a quote or backslash"
         )
     summarize = SUMMARIZE.fullmatch(parts[2])
     if summarize is None:
@@ -162,6 +172,12 @@ def parse_dql(query: str) -> _Count:
     amount, unit = fetch.groups()
     seconds = int(amount) * SECONDS_PER_UNIT[unit] if amount else 0
     return _Count(filters, summarize[1], seconds)
+
+
+def _gate_ok(task: DtTask, query_task: str) -> bool:
+    """True when the task runs only if the query task succeeded (no states, or exactly OK)."""
+    states = task.conditions.get("states")
+    return not states or states == {query_task: "OK"}
 
 
 def _threshold(tasks: dict[str, DtTask], query_task: str, name: str) -> tuple[Operator, float]:
@@ -177,32 +193,46 @@ def _threshold(tasks: dict[str, DtTask], query_task: str, name: str) -> tuple[Op
                 "the notify condition expression is not a comparison of the query's count "
                 "against a number (>, >=, < or <=)"
             )
+        if not _gate_ok(task, query_task):
+            raise _Fail(STATES)
         found.add((match[3], match[4]))
     if len(found) > 1:
         raise _Fail("the notify condition expression differs between notify tasks")
     ((symbol, number),) = found
-    return OPERATORS[symbol], float(number)
+    value = float(number)
+    if not math.isfinite(value) or value < 0:
+        raise _Fail(BAD_THRESHOLD)
+    return OPERATORS[symbol], value
 
 
 def _window(schedule: dict[str, Any], lookback: int) -> tuple[int, list[str]]:
-    """The count window in seconds (whole minutes, from the interval) and notes about it."""
+    """The count window in seconds and the notes about it.
+
+    The query's own range decides the window, because the threshold counts that many seconds of
+    logs. Without a range the schedule interval is used.
+    """
     trigger = schedule.get("trigger")
     minutes = trigger.get("intervalMinutes") if isinstance(trigger, dict) else None
+    interval = (
+        minutes * 60
+        if isinstance(minutes, int) and not isinstance(minutes, bool) and minutes > 0
+        else 0
+    )
     notes: list[str] = []
-    if isinstance(minutes, int) and not isinstance(minutes, bool) and minutes > 0:
-        window = minutes * 60
-        if lookback and lookback != window:
-            notes.append(LOOKBACK_NOTE.format(lookback=lookback, window=window))
-    else:
-        window = lookback or DEFAULT_WINDOW_SECONDS
+    if not interval:
         notes.append(NOT_INTERVAL_NOTE)
-    window = max(MIN_WINDOW_SECONDS, -(-window // 60) * 60)
+    if lookback:
+        window = lookback
+        if interval and interval != window:
+            notes.append(LOOKBACK_NOTE.format(interval=interval, window=window))
+        what = f"the query's time range of {window}s"
+    else:
+        window = interval or DEFAULT_WINDOW_SECONDS
+        notes.append(NO_RANGE_NOTE)
+        what = f"the schedule interval of {window}s"
     if window > MAX_WINDOW_SECONDS:
-        raise _Fail(
-            f"the schedule interval of {window}s is longer than one hour, the longest count "
-            "window New Relic evaluates"
-        )
-    return window, notes
+        raise _Fail(LONG_REASON.format(what=what))
+    return max(MIN_WINDOW_SECONDS, window), notes
 
 
 def _labels(tasks: dict[str, DtTask]) -> list[str]:
@@ -219,8 +249,14 @@ def _labels(tasks: dict[str, DtTask]) -> list[str]:
 
 
 def _number(value: object) -> str:
-    ok = isinstance(value, int | float) and not isinstance(value, bool)
-    return f"{value:g}" if ok else ""
+    """A plain number for a reason, or "" for anything else (huge, nan, inf, not a number)."""
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return ""
+    try:
+        number = float(value)
+    except OverflowError:
+        return ""
+    return f"{value:g}" if math.isfinite(number) else ""
 
 
 def _criteria(criteria: dict[str, Any]) -> str:
@@ -257,23 +293,21 @@ def _active(trigger: dict[str, Any]) -> bool:
     return True
 
 
-def _scheduled(wf: DtWorkflow, schedule: dict[str, Any]) -> IRMonitor:
-    queries = [(key, task) for key, task in wf.tasks.items() if task.action == DQL_ACTION]
+def _scheduled(wf: DtWorkflow, key: str, schedule: dict[str, Any]) -> IRMonitor:
+    queries = [(name, task) for name, task in wf.tasks.items() if task.action == DQL_ACTION]
     if len(queries) != 1:
         raise _Fail(f"{SHAPE}: it has {len(queries)} DQL tasks")
-    key, task = queries[0]
+    name, task = queries[0]
     count = parse_dql(str(task.input.get("query", "")))
-    operator, value = _threshold(wf.tasks, key, count.name)
+    operator, value = _threshold(wf.tasks, name, count.name)
     window, notes = _window(schedule, count.lookback_seconds)
-    reasons = [LOG_NOTE, SCHEDULE_NOTE.format(window=window), *notes]
-    if operator in (Operator.BELOW, Operator.BELOW_OR_EQUALS):
-        reasons.append(BELOW_NOTE)
+    reasons = [BELOW_NOTE] if operator in (Operator.BELOW, Operator.BELOW_OR_EQUALS) else []
     return _monitor(
-        _key(wf.id, wf.title),
+        key,
         "workflow",
         wf.title,
         Confidence.APPROXIMATE,
-        reasons,
+        [*reasons, *notes],
         signal=Signal(
             kind=SignalKind.LOG,
             raw_query=wf.title,
@@ -286,27 +320,24 @@ def _scheduled(wf: DtWorkflow, schedule: dict[str, Any]) -> IRMonitor:
     )
 
 
-def _route(wf: DtWorkflow) -> IRMonitor:
+def _route(wf: DtWorkflow, key: str) -> IRMonitor:
     trigger = wf.trigger
     schedule = trigger.get("schedule")
     event = trigger.get("eventTrigger")
     if isinstance(schedule, dict):
-        return _scheduled(wf, schedule)
+        return _scheduled(wf, key, schedule)
     config = event.get("triggerConfiguration") if isinstance(event, dict) else None
     if isinstance(config, dict) and config.get("type") == "davis-problem":
-        return _monitor(
-            _key(wf.id, wf.title), "workflow", wf.title, Confidence.MANUAL, [DAVIS_REASON]
-        )
+        return _monitor(key, "workflow", wf.title, Confidence.MANUAL, [DAVIS_REASON])
     raise _Fail(OTHER_TRIGGER)
 
 
-def translate_workflow(wf: DtWorkflow) -> IRMonitor:
+def translate_workflow(wf: DtWorkflow, key: str | None = None) -> IRMonitor:
+    key = key or _key(wf.id, wf.title)
     try:
-        monitor = _route(wf)
+        monitor = _route(wf, key)
     except _Fail as fail:
-        monitor = _monitor(
-            _key(wf.id, wf.title), "workflow", wf.title, Confidence.MANUAL, [fail.reason]
-        )
+        monitor = _monitor(key, "workflow", wf.title, Confidence.MANUAL, [fail.reason])
     if labels := _labels(wf.tasks):
         monitor.reasons.append(
             f"notification tasks ({', '.join(labels)}) must be configured manually"
@@ -314,13 +345,30 @@ def translate_workflow(wf: DtWorkflow) -> IRMonitor:
     if not _active(wf.trigger):
         monitor.reasons.append(INACTIVE_REASON)
         monitor.unmapped["enabled"] = False
+    if not wf.isDeployed:
+        monitor.reasons.append(DRAFT_REASON)
+    if monitor.confidence is Confidence.APPROXIMATE:  # the generic notes go last
+        window = monitor.signal.window_seconds
+        monitor.reasons += [LOG_NOTE, SCHEDULE_NOTE.format(window=window)]
     return monitor
 
 
-def translate_slo(slo: DtSlo) -> IRMonitor:
+def translate_slo(slo: DtSlo, key: str | None = None) -> IRMonitor:
     reasons = [SLO_REASON, *(_criteria(c) for c in slo.criteria)]
-    return _monitor(_key(slo.id, slo.name), "slo", slo.name, Confidence.MANUAL, reasons)
+    return _monitor(key or _key(slo.id, slo.name), "slo", slo.name, Confidence.MANUAL, reasons)
 
 
 def translate(items: list[DtItem]) -> list[IRMonitor]:
-    return [translate_workflow(i) if isinstance(i, DtWorkflow) else translate_slo(i) for i in items]
+    """One monitor per item; a repeated id and name gets an index so ids stay distinct."""
+    seen: dict[str, int] = {}
+    monitors: list[IRMonitor] = []
+    for item in items:
+        base = _key(item.id, item.title if isinstance(item, DtWorkflow) else item.name)
+        seen[base] = seen.get(base, 0) + 1
+        key = base if seen[base] == 1 else f"{base}#{seen[base]}"
+        monitors.append(
+            translate_workflow(item, key)
+            if isinstance(item, DtWorkflow)
+            else translate_slo(item, key)
+        )
+    return monitors

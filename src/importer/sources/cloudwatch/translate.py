@@ -4,13 +4,13 @@ translate_alarm and translate_composite never raise: anything they cannot conver
 becomes a manual or unsupported IRMonitor with the reason recorded.
 """
 
-import hashlib
 import json
 import math
 import re
 from pathlib import Path
 
 from importer.core.emit.nrql import identifier
+from importer.core.ids import source_id
 from importer.core.ir import (
     Aggregation,
     BaselineSpec,
@@ -170,11 +170,6 @@ def alarm_namespaces(alarms: list[CloudWatchAlarm]) -> set[str]:
             if q.MetricStat:
                 found.add(q.MetricStat.Metric.Namespace)
     return found
-
-
-def alarm_source_id(key: str) -> int:
-    """A stable integer id derived from the alarm ARN or name (used for file names and labels)."""
-    return int(hashlib.sha256(key.encode()).hexdigest()[:12], 16)
 
 
 # --- metric math -------------------------------------------------------------------
@@ -509,7 +504,7 @@ def translate_alarm(alarm: CloudWatchAlarm, prefixes: dict[str, str]) -> IRMonit
 
     base = {
         "source_system": "cloudwatch",
-        "source_id": alarm_source_id(key),
+        "source_id": source_id(key),
         "source_key": key,
         "source_type": "log-metric alarm" if alarm.log_metric_filters else "metric alarm",
         "name": alarm.AlarmName,
@@ -640,7 +635,7 @@ def translate_composite(
     )
     return IRMonitor(
         source_system="cloudwatch",
-        source_id=alarm_source_id(key),
+        source_id=source_id(key),
         source_key=key,
         source_type="composite alarm",
         name=alarm.AlarmName,

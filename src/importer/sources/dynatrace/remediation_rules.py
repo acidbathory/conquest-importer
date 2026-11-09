@@ -104,6 +104,14 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"workflow was a draft"),
+        "Draft workflow",
+        [
+            "The workflow was saved but not deployed, so it was not running in Dynatrace. Check "
+            "with its owner that it is still wanted before enabling the New Relic condition.",
+        ],
+    ),
+    (
         re.compile(r"trigger was inactive"),
         "Inactive trigger",
         [

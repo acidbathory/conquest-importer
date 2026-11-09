@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-MAX_INPUT_BYTES = 50 * 1024 * 1024
+from importer.core.ids import MAX_INPUT_BYTES
 
 
 class Dimension(BaseModel):

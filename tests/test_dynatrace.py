@@ -7,12 +7,12 @@ from typing import Any
 import pytest
 
 from importer.core.emit.common import nrql_for
+from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.ir import Confidence, IRMonitor, Operator, SignalKind
 from importer.core.remediation import remedies_for, steps_for
 from importer.core.taxonomy import Category, classify
 from importer.sources import REGISTRY
 from importer.sources.dynatrace.models import (
-    MAX_INPUT_BYTES,
     DtSlo,
     DtWorkflow,
     load_exports,
@@ -53,6 +53,7 @@ def scheduled(query: str, condition: str, minutes: int = 15, active: bool = True
 
 
 GOOD_QUERY = 'fetch logs, from:now() - 15m | filter loglevel == "ERROR" | summarize n = count()'
+NO_RANGE_QUERY = 'fetch logs | filter loglevel == "ERROR" | summarize n = count()'
 GOOD_CONDITION = '{{ result("count")["records"][0]["n"] > 100 }}'
 
 
@@ -99,6 +100,16 @@ def test_a_folder_of_folders_loads(tmp_path: Path) -> None:
     )
     (tmp_path / "slos" / "b.json").write_text((FIXTURES / "slo-second.json").read_text())
     assert len(load_exports(tmp_path)) == 2
+
+
+def test_the_converted_output_inside_the_input_folder_is_not_read_again(tmp_path: Path) -> None:
+    (tmp_path / "workflows").mkdir()
+    (tmp_path / "workflows" / "a.json").write_text(
+        (FIXTURES / "workflow-manual-trigger.json").read_text()
+    )
+    (tmp_path / "alerts" / "ir").mkdir(parents=True)
+    (tmp_path / "alerts" / "ir" / "1.json").write_text('{"source_system": "dynatrace"}')
+    assert len(load_exports(tmp_path)) == 1
 
 
 def test_an_unknown_shape_is_rejected(tmp_path: Path) -> None:
@@ -175,8 +186,9 @@ def test_a_below_condition_says_an_empty_result_is_not_a_zero() -> None:
     ("minutes", "window"), [(1, 60), (5, 300), (30, 1800)], ids=["1m", "5m", "30m"]
 )
 def test_the_window_is_the_schedule_interval(minutes: int, window: int) -> None:
-    m = translate_workflow(scheduled(GOOD_QUERY, GOOD_CONDITION, minutes))
+    m = translate_workflow(scheduled(NO_RANGE_QUERY, GOOD_CONDITION, minutes))
     assert m.signal.window_seconds == window == m.signal.aggregation_window_seconds
+    assert any("default range is not modelled" in r for r in m.reasons)
 
 
 def test_a_schedule_that_is_not_an_interval_uses_the_query_range_and_says_so() -> None:
@@ -188,7 +200,7 @@ def test_a_schedule_that_is_not_an_interval_uses_the_query_range_and_says_so() -
 
 
 def test_a_schedule_longer_than_an_hour_is_manual() -> None:
-    m = translate_workflow(scheduled(GOOD_QUERY, GOOD_CONDITION, 120))
+    m = translate_workflow(scheduled(NO_RANGE_QUERY, GOOD_CONDITION, 120))
     assert m.confidence is Confidence.MANUAL
     assert any("longer than one hour" in r for r in m.reasons) and steps_for(m.reasons)
 
@@ -197,7 +209,7 @@ def test_a_schedule_longer_than_an_hour_is_manual() -> None:
     "query",
     [
         'fetch logs | filter loglevel == "ERROR" | summarize n = count()',
-        'fetch logs, from:now() - 2h | filter a == "b" AND c == "d" | summarize n = count()',
+        'fetch logs, from:now() - 1h | filter a == "b" AND c == "d" | summarize n = count()',
         'fetch logs | filter msg == "a | b and c == \\"d\\"" | summarize n = count()',
     ],
 )

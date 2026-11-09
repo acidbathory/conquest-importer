@@ -10,7 +10,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-MAX_INPUT_BYTES = 50 * 1024 * 1024
+from importer.core.ids import MAX_INPUT_BYTES
+
 MAX_FILES = 10_000
 WORKFLOW_KEYS = ("tasks", "trigger")
 SLO_KEYS = ("criteria", "customSli")
@@ -37,6 +38,7 @@ class DtWorkflow(BaseModel):
     tasks: dict[str, DtTask] = {}
     trigger: dict[str, Any] = {}
     triggerType: str = ""
+    isDeployed: bool = True
 
 
 class DtSlo(BaseModel):
@@ -56,7 +58,10 @@ DtItem = DtWorkflow | DtSlo
 def _files(path: Path) -> list[Path]:
     if not path.is_dir():
         return [path]
-    found = sorted(path.rglob("*.json"))
+    # the files here and in the folders `extract-dynatrace` writes; not alerts/, which holds IR
+    found = sorted(
+        f for folder in (path, path / "workflows", path / "slos") for f in folder.glob("*.json")
+    )
     if len(found) > MAX_FILES:
         raise ValueError(f"{path} has more than {MAX_FILES} JSON files; pass a smaller folder")
     return found

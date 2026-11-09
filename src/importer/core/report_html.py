@@ -60,7 +60,7 @@ def _aws_create(account: str, nr: str, area: str) -> str:
     )
 
 
-def _gcp_create(_project: str, nr: str, _area: str) -> str:
+def _apply_create(_project: str, nr: str, _area: str) -> str:
     return (
         f"importer apply --in &lt;run folder&gt;/alerts --account-id {nr} "
         f"--apply --confirm-account {nr}"
@@ -120,7 +120,7 @@ PROFILES: dict[str, Profile] = {
         "as two). Dashboards, notification channels and uptime checks are not read yet, so "
         "they are not counted.",
         names_word="policy",
-        create_command=_gcp_create,
+        create_command=_apply_create,
         checklist=GCP_CHECKLIST,
     ),
     "dynatrace": Profile(
@@ -132,7 +132,7 @@ PROFILES: dict[str, Profile] = {
         unit_sentence="One workflow or one SLO is one asset. Classic alerting profiles and "
         "problem notifications are not read, so they are not counted.",
         names_word="workflow",
-        create_command=_gcp_create,
+        create_command=_apply_create,
         checklist=DYNATRACE_CHECKLIST,
     ),
 }

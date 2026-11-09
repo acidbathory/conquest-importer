@@ -31,8 +31,9 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
             r"monitor type|composite|anomaly|forecast|outlier|percentile|no new relic equivalent"
             r"|high-resolution|mql conditions|promql conditions|sql conditions|metric-absence"
             r"|ratio conditions|trigger on several|not one of the google cloud service metrics"
-            r"|uptime check|davis problem notification|workflow trigger|workflow tasks"
-            r"|slo is not converted|longer than one hour"
+            r"|uptime check|davis problem notification workflow|workflow trigger is a"
+            r"|workflow tasks are not|workflow tasks run on|slo is not converted automatically"
+            r"|longer than one hour, the longest count window"
         ),
     ),
     # Before the approximation rule: the Metric Streams note says "assumed".
@@ -63,8 +64,8 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
     (
         Category.MANUAL_FOLLOWUP,
         re.compile(
-            r"configured manually|must be confirmed|not migrated|template variables|was inactive"
-            r"|slo criteria"
+            r"configured manually|must be confirmed|not migrated|template variables"
+            r"|the dynatrace trigger was inactive|slo criteria: target|the workflow was a draft"
         ),
     ),
 ]

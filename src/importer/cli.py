@@ -475,11 +475,13 @@ def extract_dynatrace_command(
     except (DynatraceError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
         raise typer.Exit(code=1) from None
-    typer.echo(f"Read {result.workflows} workflows and {result.slos} SLOs.")
+    slos = f"{result.slos} SLOs" if result.slos_read else "SLOs were NOT read (see below)"
+    typer.echo(f"Read {result.workflows} workflows; {slos}.")
     for warning in result.warnings:
-        typer.echo(f"  Could not read {printable(warning, 200)}", err=True)
+        typer.echo(f"  Warning: {printable(warning, 300)}", err=True)
     typer.echo("Next:")
-    typer.echo(f"  importer convert --source dynatrace --in {out} --out out/dynatrace-alerts")
+    typer.echo(f"  importer convert --source dynatrace --in {out} --out {out / 'alerts'}")
+    typer.echo(f"  importer report {out} --source dynatrace")
 
 
 @app.command("extract-cloudwatch")
