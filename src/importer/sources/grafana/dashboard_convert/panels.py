@@ -66,6 +66,16 @@ MAX_BUCKET = 86_400
 PROBE = Layout(column=1, row=1, width=12, height=1)
 
 
+def may_be_exact(kind: WidgetKind, notes: list[str]) -> bool:
+    """The one rule for "exact": static content copied verbatim, with nothing to note.
+
+    A tile that runs a query is never exact: the New Relic bucket differs from the Grafana step,
+    counter or gauge is read from the metric name, and an instant value is the latest point in
+    Grafana but a whole-range value in New Relic. None of those can be proved offline.
+    """
+    return kind == WidgetKind.MARKDOWN and not notes
+
+
 @dataclass
 class Draft:
     """A widget without a place on the page."""
@@ -82,6 +92,8 @@ class Draft:
     thresholds: list[Threshold] = field(default_factory=list)
 
     def widget(self, layout: Layout) -> IRWidget:
+        if self.confidence == Confidence.EXACT and not may_be_exact(self.kind, self.reasons):
+            raise ValueError("only static content may be labelled exact")
         return IRWidget(
             kind=self.kind,
             source_type=self.source_type,

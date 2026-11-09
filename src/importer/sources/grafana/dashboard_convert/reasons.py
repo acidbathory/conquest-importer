@@ -52,7 +52,10 @@ N_REPEAT_FLAT = f"{NOTE} the panel repeats on a variable no label of the query u
 N_BARS = f"{NOTE} the bar drawing style is shown as lines"
 N_STACK = f"{NOTE} percent stacking is shown as normal stacking"
 N_UNIT = f"{NOTE} the unit has no New Relic unit and was left out"
-N_PERCENTUNIT = f"{NOTE} a 0 to 1 percent unit has no New Relic unit; values are not scaled"
+N_PERCENT = (
+    f"{NOTE} a 0 to 100 percent unit was left out: the New Relic percentage unit reads 1 as 100%"
+    " and the values were not scaled"
+)
 N_THRESHOLD_ORDER = f"{NOTE} thresholds that go from bad to good were left out"
 N_THRESHOLD_COLORS = (
     f"{NOTE} threshold steps in other colours than red, orange, yellow or green were left out"

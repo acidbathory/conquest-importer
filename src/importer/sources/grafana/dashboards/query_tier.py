@@ -23,6 +23,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from importer.sources.grafana.dashboards import reasons as r
+from importer.sources.grafana.dashboards.regex_matchers import mask
 from importer.sources.grafana.translate import (
     BODY,
     BOTH,
@@ -446,6 +447,8 @@ def variables_in(text: str) -> set[str]:
 def _prepare(expr: str, language: str, known: frozenset[str] | None) -> tuple[str, set[str], str]:
     """The rewritten text, the variables used and a reason when the query cannot be read."""
     text, used, formatted = _substitute(" ".join(expr.split()), known)
+    if language == "prometheus":
+        text, _carried = mask(text)  # matchers RLIKE carries exactly read as plain words
     if formatted:
         return text, used, r.Q_VAR_FORMAT
     if LONG_WORD.search(text):

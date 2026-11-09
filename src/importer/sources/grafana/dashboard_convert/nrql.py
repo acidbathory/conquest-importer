@@ -76,6 +76,9 @@ def cond_sql(cond: Cond, names: list[str]) -> str:
         raise Unconvertible(r.C_NAME) from None
     if cond.kind == "absent":
         return f"{attr} IS NOT NULL" if cond.negate else f"{attr} IS NULL"
+    if cond.kind == "rlike":
+        operator = "NOT RLIKE" if cond.negate else "RLIKE"
+        return f"{attr} {operator} {quote_string(cond.values[0])}"
     if cond.kind == "like":
         pattern = cond.values[0]
         if "%" in pattern:
