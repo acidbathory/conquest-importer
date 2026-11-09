@@ -50,6 +50,7 @@ REASONS = [
     (R.R_MUTE_TIMES, "Grafana mute timing time range", C.UNSUPPORTED_FEATURE),
     (R.R_MUTE_WEEKDAYS, "Grafana mute timing weekdays", C.UNSUPPORTED_FEATURE),
     (R.R_MUTE_ACTIVE, "Grafana active time interval", C.UNSUPPORTED_FEATURE),
+    (R.R_MUTE_TOO_MANY, "Grafana mute timing with too many schedules", C.UNSUPPORTED_FEATURE),
     (R.R_MUTE_COMBINED, "Grafana mute timing with combined fields", C.UNSUPPORTED_FEATURE),
     (
         R.R_DATASOURCE_PATH,

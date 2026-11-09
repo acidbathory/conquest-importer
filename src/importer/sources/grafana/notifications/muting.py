@@ -12,13 +12,15 @@ A mute timing is active when any interval matches; within one interval every lis
 match, so intervals become separate schedules and fields combine inside one.
 """
 
-import re
+from functools import lru_cache
 from typing import Literal
+from zoneinfo import available_timezones
 
 from pydantic import BaseModel
 
 from importer.sources.grafana.notifications import reasons as R
 from importer.sources.grafana.notifications.models import MuteTiming, TimeInterval
+from importer.sources.grafana.notifications.timings import CLOCK, ZONE
 
 MAX_SCHEDULES = 200
 MAX_DAY_SCHEDULES = 10
@@ -29,10 +31,12 @@ MONTH_NAMES = [
     "january", "february", "march", "april", "may", "june",
     "july", "august", "september", "october", "november", "december",
 ]  # fmt: skip
-CLOCK = re.compile(r"(\d{1,2}):(\d{2})")
-ZONE = re.compile(r"[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+){0,2}")
 WINDOW_END_ACTION = "DO_NOTHING"  # Grafana does not close alerts when a mute timing ends
 N_NO_INTERVALS = "the mute timing has no intervals, so it never mutes"
+N_DST = (
+    "how a muting rule schedule behaves when the clock changes for daylight saving time is "
+    "UNVERIFIED; check the first changeover after the rule is created"
+)
 
 
 class MutingSchedule(BaseModel):
@@ -121,12 +125,18 @@ def _weekdays(interval: TimeInterval) -> list[str]:
     return [DAY_NAMES[d].upper() for d in days]
 
 
+@lru_cache(maxsize=1)
+def _known_zones() -> frozenset[str]:
+    return frozenset(available_timezones()) | {"UTC"}
+
+
 def _zone(interval: TimeInterval) -> str:
+    """An IANA zone name as the time zone database spells it (so `utc` and `Local` are not)."""
     if not interval.location:
         return "UTC"
     if len(interval.location) > 64 or not ZONE.fullmatch(interval.location):
         raise _Unconvertible(R.R_MUTE_LOCATION)
-    if interval.location == "Local":
+    if interval.location not in _known_zones():
         raise _Unconvertible(R.R_MUTE_LOCATION)
     return interval.location
 
@@ -239,5 +249,11 @@ def mute_timing_to_muting(timing: MuteTiming) -> MutingPlan:
             if exc.reason not in plan.manual:
                 plan.manual.append(exc.reason)
             continue
-        plan.schedules.extend(found[: MAX_SCHEDULES - len(plan.schedules)])
+        if len(plan.schedules) + len(found) > MAX_SCHEDULES:
+            if R.R_MUTE_TOO_MANY not in plan.manual:
+                plan.manual.append(R.R_MUTE_TOO_MANY)  # the whole interval, never a part of it
+            continue
+        plan.schedules.extend(found)
+    if plan.schedules:
+        plan.notes.append(N_DST)
     return plan

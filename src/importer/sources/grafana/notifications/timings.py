@@ -20,7 +20,7 @@ MAX_LIST = 400
 INVALID = "?"  # stands for a value that is not plain schedule text; conversion reports it
 _ITEM = r"-?\d{1,4}|[A-Za-z]{3,12}"
 TOKEN = re.compile(rf"(?:{_ITEM})(?::(?:{_ITEM}))?")
-CLOCK = re.compile(r"\d{1,2}:\d{2}")
+CLOCK = re.compile(r"(\d{1,2}):(\d{2})")
 ZONE = re.compile(r"[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+){0,2}")
 
 

@@ -30,6 +30,7 @@ R_MUTE_LOCATION = "grafana mute timing location not converted"
 R_MUTE_TIMES = "grafana mute timing time range not understood"
 R_MUTE_WEEKDAYS = "grafana mute timing weekdays not understood"
 R_MUTE_ACTIVE = "grafana active time interval not converted"
+R_MUTE_TOO_MANY = "grafana mute timing makes too many schedules"
 R_MUTE_COMBINED = "grafana mute timing combines fields that one muting rule cannot express"
 
 # data path

@@ -190,6 +190,15 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile("^" + re.escape(R.R_MUTE_TOO_MANY)),
+        "Grafana mute timing with too many schedules",
+        [
+            "One interval would need more muting rules than the importer creates from one mute "
+            "timing, so none of its schedules were planned. Split the interval in Grafana, or "
+            "create the muting rules by hand.",
+        ],
+    ),
+    (
         re.compile("^" + re.escape(R.R_MUTE_COMBINED)),
         "Grafana mute timing with combined fields",
         [
