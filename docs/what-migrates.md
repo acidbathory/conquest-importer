@@ -412,15 +412,36 @@ them. The loader also reads a rule file or folder in any of the four shapes Graf
 provisioning and export shapes come from one sandbox stack (17 paused sample rules, Grafana 13.4);
 the ruler and `/apis` shapes are hand-made from the documentation.
 
-- **Converts (approximate):** a rule whose pipeline is exactly query, optional reduce, one
-  threshold (above, at least, below, at most, equal, not equal), on one of:
+- **Converts (approximate):** a rule whose pipeline is a query, an optional resample, an optional
+  reduce and one threshold (above, at least, below, at most, equal, not equal), or one classic
+  condition on one query (reducers avg, min, max, sum, last), on one of:
   - a Prometheus selector with an optional single `avg`, `sum`, `min` or `max` and `by (...)`:
     `avg by (instance) (cpu{job="node",env!="dev"})` becomes `SELECT average(cpu) FROM Metric
     WHERE job = 'node' AND env != 'dev' FACET instance`. Matchers `=`, `!=`, `=~` and `!~` convert
     when the regex is plain words joined by `|` (IN), or a plain word with `.*` before or after
-    (LIKE). Names ending `_total`, `_count`, `_sum` or `_bucket` look like counters and stay manual.
+    (LIKE). A plain selector whose name ends `_total`, `_count`, `_sum` or `_bucket` stays manual.
+  - a counter in `rate()` or `increase()` over a whole number of minutes, with no aggregation or
+    `sum [by (...)]`, on a name ending `_total`, `_count` or `_bucket` (what New Relic stores as a
+    count): `sum by (s) (rate(x_total[5m]))` becomes `SELECT sum(x_total) / 300 FROM Metric FACET
+    s` with a 300 second window, and `increase(x_total[10m])` becomes `SELECT sum(x_total)` with a
+    600 second window. `rate()` itself is not documented as usable in an alert condition, so
+    `sum()` and arithmetic are used. Only the last value converts, not a reducer over the rate
+    series.
+  - a ratio `a / b`, `a / b * 100` or `100 * a / b` of two aggregates of different metrics with
+    the same matchers, grouping and range: `avg` of gauges or `sum` of counter rates, as one
+    SELECT. A ratio of one metric under two different filters (an error rate) needs `filter()`
+    and stays manual.
+  - `absent(m{...})` and `absent_over_time(m{...}[5m])` (the Grafana threshold must fire on the
+    value 1): a loss-of-signal condition that counts the rows of the metric and opens a violation
+    when none arrive for the pending period (or the range). It only works once the metric has
+    arrived, and it fires only when no matching series reports.
   - a Loki `count_over_time({k="v"} |= "text" [5m])`, optionally in `sum (by ...)`. It becomes a
     count of `Log` events with the labels and `message LIKE` filters. The range is the window.
+- **Rule-file rules:** a rule from a Prometheus rule file or the Mimir or Loki ruler (a query
+  `expr` with a comparison against a number) goes through the same handlers. The comparison is the
+  threshold, the query is read as an instant query, and the note says it is a rule-file rule. The
+  data source type is inferred from the query shape. A query with no comparison against a number
+  is manual (no threshold), and a recording rule stays a recording rule.
 - **Aggregation layers:** Grafana aggregates across series (the PromQL `avg`, `sum`, `min`,
   `max`) and then reduces over time (the reduce node). One New Relic aggregation does both only
   when they are the same operation, so these convert: `avg` with reducer last or mean, `max` with
@@ -446,16 +467,23 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   or OTLP) and its New Relic name and label attributes are not confirmed. A rule without a data
   source type in its query has the type inferred from the data source uid or the query shape, and
   says so. Paused rules are created disabled. `keep_firing_for` and a recovery threshold are
-  ignored. No-data state `Alerting` becomes loss of signal; `NoData` and `KeepLast`, and any
-  query-error state, have no equivalent. Contact points and notification policies are not
-  converted.
-- **Manual, with steps:** expression chains, math across queries, classic conditions, SQL
-  expressions, resample, mixed data sources or several queries, recording rules, rules run by the
-  Mimir or Loki ruler, range thresholds (`within_range`, `outside_range`), reducers `count` and
-  `median`, other data source types (CloudWatch, Azure Monitor, Elasticsearch, SQL and so on),
-  PromQL with `offset`, subqueries, `group_left`, `topk`, `histogram_quantile`, `rate` and other
-  range functions, `absent()`, binary operators or comparisons, and LogQL with parser stages,
-  `unwrap`, other functions or regular-expression line filters.
+  ignored. No-data state `Alerting` becomes loss of signal; `NoData`, `KeepLast` and `OK`, and any
+  query-error state, have no equivalent and are noted. The folder, group and short plain labels
+  (not secret-looking, at most 10) are listed in one note, because the IR has no field the emitters
+  write for them. An annotation `runbook_url` that is a plain https address (no credentials,
+  fragment or token-like parameter) becomes the condition's runbook URL; another is noted and
+  dropped. The `description` or `summary` annotation is kept in the IR, but the emitters do not
+  write it yet. Contact points and notification policies are not converted.
+- **Manual, with steps:** longer expression chains, math across queries (the reason says how many
+  queries it combines), classic conditions with more than one test, SQL expressions, mixed data
+  sources or several queries, recording rules, range thresholds (`within_range`,
+  `outside_range`), reducers `count` and `median`, other data source types (CloudWatch, Azure
+  Monitor, Elasticsearch, SQL and so on), PromQL with `offset`, subqueries, `group_left`, `topk`,
+  `histogram_quantile` (`bucketPercentile` is not documented as usable in a condition), `irate`
+  and other range functions, `*_over_time`, a counter function on a name that is not a count, an
+  aggregation other than `sum` over a rate, a comparison inside the query of a Grafana rule that
+  also has a threshold node, other binary operators, and LogQL with parser stages, `unwrap`,
+  other functions or regular-expression line filters.
 - **Not done:** contact points, policies, mute timings and templates (the extractor counts them
   only), dashboards, a check that the metric exists in New Relic, and any live test.
 - **Host rule:** the extractor accepts only `https://<stack>.grafana.net`. Another https host needs

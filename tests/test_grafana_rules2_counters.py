@@ -6,6 +6,7 @@ that converts also runs the NRQL on sample rows and compares it with the PromQL 
 """
 
 import importlib
+from typing import Any
 
 import pytest
 
@@ -23,7 +24,7 @@ def prom(expr: str, **kw: object) -> IRMonitor:
     return one(make(expr, instant=True, **kw))  # type: ignore[arg-type]
 
 
-def delta_rows(metric: str, series: dict[str, list[float]], **labels: str) -> list[dict]:
+def delta_rows(metric: str, series: dict[str, list[float]], **labels: str) -> list[dict[str, Any]]:
     """One row per interval and series, as New Relic stores a counter: the change since the last."""
     return [
         {metric: d, "service": name, **labels} for name, deltas in series.items() for d in deltas

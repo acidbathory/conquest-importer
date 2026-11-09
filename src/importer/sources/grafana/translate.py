@@ -1,11 +1,14 @@
 """Grafana alert rules to IR.
 
-One IR monitor per rule. Only the pipeline query, optional reduce, one threshold converts, and
-only when the query is a plain Prometheus selector with one optional aggregation, or a plain Loki
-`count_over_time`. Everything else is manual with a fixed reason. Reasons never contain text from
-the rule (titles, expressions, labels, data source types): they name fixed vocabulary and parsed
-numbers only. Text that reaches the NRQL does so through the IR and the shared escaping. `translate`
-never raises.
+One IR monitor per rule. A rule is a query, an optional resample and reduce, and one threshold
+(or one classic condition), or a rule-file rule whose query holds the comparison. The query
+converts when it is a plain Prometheus selector with one optional aggregation, a counter in
+`rate`/`increase`, a ratio, `absent`, or a plain Loki `count_over_time`. The extra PromQL forms
+live in `rules2/promql.py` and register in `PROM_FORMS`. Everything else is manual with a fixed
+reason. Reasons never contain text from the rule: they name fixed vocabulary and parsed numbers
+only, except one note that lists the folder, group and labels when each is short, plain and not
+secret-looking (`rules2/fields.py`). Text that reaches the NRQL does so through the IR and the
+shared escaping. `translate` never raises.
 
 Neither the New Relic metric names nor the label attribute names are confirmed against live data,
 so every conversion is approximate and says so.

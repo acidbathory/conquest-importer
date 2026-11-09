@@ -34,12 +34,9 @@ CONVERTED = {
         "AND message LIKE '%error%' FACET app"
     ),
     "PaymentsDown": "SELECT count(*) FROM Metric WHERE metricName = 'up' AND job = 'payments'",
-    "PaymentsErrorRate": (
-        "SELECT sum(payments_errors_total) / 300 FROM Metric WHERE env = 'prod'"
-    ),
+    "PaymentsErrorRate": ("SELECT sum(payments_errors_total) / 300 FROM Metric WHERE env = 'prod'"),
     "QueueDeep": (
-        "SELECT average(queue_depth) FROM Metric WHERE queue IN ('orders', 'billing') "
-        "FACET queue"
+        "SELECT average(queue_depth) FROM Metric WHERE queue IN ('orders', 'billing') FACET queue"
     ),
 }
 MANUAL = {

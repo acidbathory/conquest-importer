@@ -29,7 +29,7 @@ def file_rule(expr: str, **fields: object) -> IRMonitor:
         datasource_managed=True,
         expr=expr,
         interval_seconds=60,
-        **fields,  # type: ignore[arg-type]
+        **fields,
     )
     return one(rule)
 
