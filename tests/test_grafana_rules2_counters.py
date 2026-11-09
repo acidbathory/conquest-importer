@@ -43,8 +43,9 @@ def test_sum_of_a_rate_is_sum_over_the_window_divided_by_the_window() -> None:
     rows = delta_rows("http_requests_total", series, env="prod")
     rows += delta_rows("http_requests_total", {"api": [9999.0]}, env="dev")  # other label value
     got = evaluate(nrql_for(m), rows)
+    # the PromQL values worked by hand: api rose 300 in 300 s, web rose 3000 in 300 s
+    assert got == {("api",): 1.0, ("web",): 10.0}
     assert got == {("api",): rate(series["api"], 300), ("web",): rate(series["web"], 300)}
-    assert got[("api",)] == 1.0 and got[("web",)] == 10.0  # the PromQL values, by hand
 
 
 def test_increase_is_the_sum_over_the_range_with_no_division() -> None:
