@@ -25,7 +25,7 @@ New code, all in the workstream's own paths:
   `docs/improvement/lessons.d/2026-11-09-dynatrace-inventory.md`.
 
 Gate: `rm -rf .mypy_cache; sh scripts/improve/gate.sh` prints GATE PASSED (ruff, ruff format,
-`mypy --strict` on src and tests, vulture, 2576 passed and 24 skipped, measure compared with the
+`mypy --strict` on src and tests, vulture, 4604 passed and 24 skipped (after merging integration/all-threads again), measure compared with the
 baseline, golden files untouched). The conversion measure is unchanged because the plans are not
 registered with `register_fixtures`: their inputs are dashboards, not the workflows and SLOs that
 `convert --source dynatrace` reads.
@@ -103,9 +103,9 @@ stated as a draft. Exact still does not prove the numbers match: that needs a li
 
 ## Requests for the integrator (not made by me)
 
-1. `tests/test_extension_points.py` (not my file, not frozen): two assertions assumed that no real
-   command module exists. I changed them to look only at the modules the test creates (two lines).
-   Other workstreams will hit the same; take one version.
+1. `tests/test_extension_points.py`: I had changed two assertions that broke with any real command
+   module; after the second merge of `integration/all-threads` the file is identical to the base, so
+   there is no longer any difference to resolve.
 2. `core/dashboard_ir.py` (frozen, being changed by another agent): the plan carries, per tile, the
    New Relic visualization id and the 12-column layout, and per variable the verdict, `multiple`
    and `select_all`. The emit step needs from the IR: raw-NRQL series, a table widget, billboard and
