@@ -41,7 +41,10 @@ N_INSTANT = (
 )
 N_INTERVAL = "note: the query sets its own interval; New Relic uses an automatic bucket"
 N_LEGEND = "note: legend text around {{labels}} is lost; the facet value is the legend"
-N_DOWNGRADED = "note: value mappings, overrides, a unit or a reducer change what it shows, so the tier is one lower"
+N_DOWNGRADED = (
+    "note: value mappings, overrides, a unit or a reducer change what it shows, "
+    "so the tier is one lower"
+)
 
 # --- queries (PromQL) ---
 Q_TOO_LONG = "dashboard query is longer than the importer reads"

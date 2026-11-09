@@ -215,6 +215,12 @@ def test_the_alert_translator_is_reached_through_a_public_wrapper() -> None:
         "topk(1," * 1000,
         "up{a=" + '"x\\' * 2000,
         "sum without(" + "a" * 9000,
+        "[" * 9000,
+        "[a" * 4000,
+        "a" * 9990,
+        "x_over_time" * 800,
+        "a_over_time(" * 800,
+        "rate(x[5m]) " * 800,
     ],
     ids=lambda e: f"{len(e)}chars-{e[:8]!r}",
 )

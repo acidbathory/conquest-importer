@@ -127,3 +127,88 @@ ruff check, ruff format, `mypy --strict src tests`, vulture, pytest (2173 passed
 measure against the unchanged baseline, and the golden check: GATE PASSED. The measure is
 unchanged for every source because dashboards are not part of it. `git log --format=%B | grep -i
 co-authored` prints nothing.
+
+## Round 2 (review fixes)
+
+Owner decisions applied: exports hold no secrets, the plan never overstates, and a regex matcher is
+T1 only in the forms the alert translator accepts.
+
+### What changed
+
+- Secrets: `redact.py` runs on every dashboard and library panel before writing: keys such as
+  `password`, `secureJsonData`, `token`, `authorization`, `headers`, `basicAuth*`, `httpHeader*` are
+  blanked at any depth; URL user info, `?token=`-style values, bearer/basic values and token-shaped
+  words are masked in every string. The count is printed. Folder 0700, files 0600. Planted-secret
+  test over dashboards, library panels and mixed nesting.
+- Export: files are `dashboard-<hash of the exact uid>.json` (the uid is recorded in `meta`), written
+  with exclusive create; the whole export is built in a temporary folder and moved into place only
+  when the run finished, so a stopped run leaves nothing. `RecursionError` while parsing is an
+  error, not a traceback. Paging reads to an empty page (a server may cap pages), stops on a repeated
+  page, and a full set of pages is an error for folders and library panels as for dashboards.
+- `__elements` entries are unwrapped from `{uid, name, kind, model}` (shape unverified).
+- Loader: classic with stray `elements`/`layout` is read as classic with a note; v2 `repeat` goes to
+  the item's own element; elements placed twice are noted; the unplaced note counts only panels;
+  duplicate uids are kept once and noted; BOM accepted, bad encoding named; `schemaVersion` with
+  non-ASCII digits is ignored; plan files are skipped and `--out` inside `--in` is refused;
+  more than 5,000 dashboards or 10,000 files keep the first ones and warn.
+- Planner (each change can only lower a number): a panel using a variable that stays manual is
+  manual; variable regexes beyond plain words (capture groups included) are manual; `timeShift` and
+  `timeFrom` make a panel manual; a stat or table with mappings, overrides, a scaling unit or a
+  non-latest reducer goes one tier lower (manual from T3); instant/table format, query interval and
+  legend text are noted; reuse of a text panel is not T1; binary operations need identical grouping;
+  a group-by variable is manual; regex matchers outside the translator's forms are manual
+  ("needs RLIKE verification"); `_bucket` and `count` are found as tokens; `up * .5`, `1e3`, `1h30m`
+  are read; rate calls inside quoted strings are not rewritten. Query counts reconcile:
+  `queries = T1 + T2 + T3 + manual` (tested on generated plans).
+- ReDoS: the two quadratic patterns are rewritten, a run of 200+ word characters is refused before
+  the translator's patterns, and hostile inputs (including `[` x 9000 and `x_over_time` x 800)
+  finish under a second. plan.json lists at most 1,000 panels per dashboard and says how many were
+  left out; counts and inventories cover all.
+- DRY: the token comes from `api_token()` of the alert extractor; limits are defined once in
+  `models.py`; one `note()` helper; `Target.instant`, `fmt`, `legend` now feed panel notes.
+
+### Tier numbers on the research fixtures, after round 2
+
+| Fixture | Panels | T1 | T2 | T3 | Before | Why it changed |
+|---|---|---|---|---|---|---|
+| easy-node-overview | 5 | 4 | 5 | 5 | 4/5/5 | unchanged |
+| hard-service-mixed | 10 | 0 | 0 | 0 | 0/2/2 | `service` has a lookahead regex and stays manual, so every panel that uses `$service` is manual. Single queries: 9 looked at, 5 reach T2, 4 manual |
+| legacy-rows-v12 | 3 | 0 | 2 | 2 | 1/2/2 | the singlestat has value maps: one tier lower |
+| v2-small | 3 | 2 | 2 | 2 | 2/2/2 | unchanged |
+| hostile | 5 | 1 | 1 | 1 | 1/1/1 | unchanged (the text panel) |
+| all five | 26 | 7 | 10 | 10 | 8/12/12 | the two above |
+
+### Mutation check
+
+29 hand-made mutants (caps, write-size, fatal handling, host check, symlink, raw library shape, v2
+cap/transformations/hidden/repeat, reuse depth, undefined variables, T2 boundary, report caps,
+four redaction patterns, exponent numbers, label sets, plain regex, quoted rate, display
+lowering). Survivors on the first round-2 run: 4 (exclusive create, reuse depth, undefined
+variables, per-dashboard manual cap). Tests were added for each; survivors now: 0 of 29. The
+mutation script is not committed. The new query rows were written after the code, not before: a
+slip against test-first for that part.
+
+### Requests (files I do not own)
+
+- `sources/grafana/translate.py`: a public parse function (selector, aggregation, group-by, no
+  `_Ctx`, no `_Fail`), and a public `PROM_FEATURES` table that `query_tier.PROM_CHECKS` can reuse
+  instead of restating it.
+- `core/safe_http.py`: a `want` parameter on `decode_json` (list or object); `extract._decode` is a
+  copy that accepts lists and treats `RecursionError` as bad JSON.
+- `sources/grafana/extract.py`: `http_getter` takes a path only and has a fixed allow-list; a
+  version taking query parameters and a path predicate would remove `dashboards/extract.http_getter`.
+- `tests/test_extension_points.py`: unchanged request from round 1.
+
+### Decisions for the owner
+
+- Redaction is key and pattern based. Is it enough, or should the export also drop `datasource`
+  blocks and `links` entirely?
+- Value mappings, overrides and units lower a stat or table by one tier. A stricter rule would make
+  them manual.
+- `/api/folders` nested folders are still not read.
+
+### UNVERIFIED (new)
+
+The `__elements` wrapper shape; that `RLIKE` is RE2 (still the reason regexes stay manual); the
+"scaling unit" list (everything except none, short, string, locale, percent); that a `timeShift`
+cannot be expressed as `COMPARE WITH` in a widget.

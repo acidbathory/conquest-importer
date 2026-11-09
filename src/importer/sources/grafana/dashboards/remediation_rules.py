@@ -289,7 +289,8 @@ RULES: list[Rule] = [
         "Dashboard variable regex",
         [
             "The variable's regex is more than plain words: lookahead, a backreference, a capture "
-            "group, anchors or a pattern that needs `RLIKE`, which is not verified. Filter in the variable's NRQL with WHERE conditions, or list the values "
+            "group, anchors or a pattern that needs `RLIKE`, which is not verified. "
+            "Filter in the variable's NRQL with WHERE conditions, or list the values "
             "to keep in an `enum` variable.",
         ],
     ),

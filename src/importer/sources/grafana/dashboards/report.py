@@ -54,9 +54,16 @@ def _header(plan: Plan) -> list[str]:
         f"histogram, logs | {_share(t.t3_extra, t.panels)} |",
         "",
         f"Single queries that convert, by the tier they reach: T1 {t.query_t1}, "
-        f"T2 {t.query_t2}, T3 {t.query_t3} of {t.queries}.",
+        f"T2 {t.query_t2}, T3 {t.query_t3}, manual {t.query_manual}, of {t.queries}.",
         "",
+        *_warnings(plan),
     ]
+
+
+def _warnings(plan: Plan) -> list[str]:
+    lines = [f"- {cell(w, 200)}" for w in plan.warnings]
+    lines += [f"- {cell(d.title)}: {cell(w, 200)}" for d in plan.dashboards for w in d.warnings[:3]]
+    return ["## Notes from reading", "", *lines[:50], ""] if lines else []
 
 
 def _dashboard_row(d: DashboardPlan) -> str:

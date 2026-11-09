@@ -17,3 +17,16 @@
   note's measured percentages were not reproduced.
 - The classifier reuses the alert translator through its private context and failure types. A
   public function there would remove that coupling (listed in the proposal).
+
+## Round 2 (review)
+
+| Defect | How it hid | Check that catches the class |
+|---|---|---|
+| Whole dashboard bodies, with data source passwords, headers and tokens, written to disk at mode 0644 | The extractor was tested for the Grafana token, never for secrets inside the data it saved | A test plants a secret in every shape (URL user info, key names, query strings, bearer text, nested lists, library panels) and asserts it is in no file; files 0600, folder 0700 |
+| File names from the uid lost data on a case-insensitive file system | Tests used lowercase uids | Names come from a hash of the exact uid; a test asserts the names differ case-insensitively |
+| A stopped run left a partial export that the planner planned | Errors were tested, the leftover folder was not | Build in a temporary folder and rename at the end; a test asserts nothing is left after a fatal error |
+| The plan placed panels above what they depend on (manual variable, time shift, mappings) | Each rule was tested alone, never "what does this panel depend on" | A table of dependencies with a test per row; counts reconcile (`queries = tiers + manual`) on generated plans |
+| A shortcut (regex softening) made the plan more optimistic than the translator | The note's numbers assumed it | Regex forms are exactly those of the translator's own table (`WORD`, `PREFIX`, `SUFFIX`, `BOTH`) |
+| Substring tests for `_bucket` and `count` | Fixtures had no label value containing them | Token-based detection and tests with the word inside a label value and as a metric name |
+| Quadratic regex while the docstring said "linear" | Timing tests used inputs the patterns handle well | Hostile inputs per pattern (`[` x 9000, `x_over_time` x 800); the claim in the docstring is the bound that was tested |
+| Mutants survived: exclusive create, reuse depth, undefined variables, per-dashboard manual cap | Coverage looked complete | A hand-made mutation list run before the gate; each survivor gets a test (29 mutants, 0 survivors now) |

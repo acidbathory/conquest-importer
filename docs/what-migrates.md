@@ -160,18 +160,39 @@ reading and the plan are described here; the conversion comes next.
   `GRAFANA_SA_TOKEN` under the same host rule as `extract-grafana`; the token needs to read
   dashboards, folders and library panels, which the alert-only token may not. The `/apis`
   dashboard API is not used. These paths have not been run against a live stack yet.
+- **What is written:** `dashboards/dashboard-<hash>.json` (one per dashboard; the exact uid is
+  recorded inside), `folders.json` and `library-panels.json`, in a new folder (mode 0700, files
+  0600) that appears only when the run finishes; a stopped run leaves nothing. The files are
+  dashboard JSON with credentials removed first: values under keys such as `password`,
+  `secureJsonData`, `token`, `authorization`, `headers`, `basicAuth*`, URL user info, `?token=`
+  style query values, bearer values and token-shaped words. The number removed is printed. This is
+  a safety net: a secret typed into a title or description is only caught if it looks like one of
+  those patterns, so review the files before sharing.
 - **Shapes read:** the classic JSON, the same object under `spec` of a v1 resource, and the v2
   resource (`elements` with a Grid, Rows, Tabs or AutoGrid layout), as a file, a list, an API
   response or a folder. Old schemas are read as stored (`rows` with `span`, string data source
   names, old `hide` values). A dashboard that cannot be read is listed with a fixed reason and the
-  others load. Limits: 10,000 panels per dashboard, 200 nested levels, 5,000 dashboards.
+  others load. Limits, which cut the input and say so rather than stop the run: 10,000 panels per
+  dashboard, 200 nested levels, 5,000 dashboards and 10,000 files (the first ones are kept). A
+  dashboard whose uid repeats an earlier one is left out once and noted; plan files written by
+  `plan-grafana-dashboards` are skipped. A UTF-8 byte order mark is accepted.
 - **Plan:** `importer plan-grafana-dashboards --in <folder> --out <folder>` writes `report.md` and
   `plan.json`. Every panel is placed at a tier, or stays manual with one specific reason:
   - T1: a Prometheus selector with matchers and an optional `avg`, `sum`, `min` or `max` (what the
-    alert converter reads), plus regex matchers that RLIKE can express; a LogQL count.
+    alert converter reads); a LogQL count. A regex matcher is T1 only in the forms the alert
+    converter accepts (plain words, a prefix or suffix, alternatives of plain words). Any other
+    regex (`.*`, `.+`, `(?i)`, anchors, `a|`) needs `RLIKE`, which is not verified in New Relic, so
+    the query stays manual.
   - T2: also `rate`, `irate`, `increase`, `histogram_quantile` over `_bucket` series, `topk`, and
     LogQL `rate`.
-  - T3: also arithmetic between those terms and numbers, and `count`.
+  - T3: also arithmetic between those terms and numbers, and `count`, when every term is grouped
+    by the same labels. A variable as a group-by label stays manual.
+  - A panel is never placed above what it depends on. It is manual if it uses a variable that
+    stays manual, a time override (`timeShift`, `timeFrom`, which act like `offset`), or a
+    transformation. A stat or table with value mappings, field overrides, a unit that rescales the
+    value, or a reducer other than the latest value is placed one tier lower, and manual if it was
+    at T3. Instant queries, a table format, a query interval and legend text around labels are
+    noted on the panel.
   - Panels of type gauge, bar gauge, bar chart, heatmap, histogram and logs have a New Relic widget
     that the importer cannot create yet; they are counted separately ("with extra widget types").
     State timeline, status history, alert list, geomap and the other types in the report have no

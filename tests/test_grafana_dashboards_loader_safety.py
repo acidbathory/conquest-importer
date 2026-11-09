@@ -43,9 +43,7 @@ def element(title: str) -> dict[str, Any]:
     }
 
 
-def test_a_classic_dashboard_that_also_has_elements_and_a_layout_is_read_as_classic_with_a_note() -> (
-    None
-):
+def test_a_classic_dashboard_with_elements_and_a_layout_is_read_as_classic_with_a_note() -> None:
     body = {
         "title": "t",
         "panels": [{"id": 1, "type": "stat", "title": "real", "targets": []}],
@@ -113,7 +111,7 @@ def test_a_utf8_bom_file_is_read_and_a_bad_encoding_is_named(tmp_path: Path) -> 
     assert "encoding" in models.U_ENCODING
 
 
-@pytest.mark.parametrize("value", ["²", "٣٩", "4²", "  ", "٣٩"])
+@pytest.mark.parametrize("value", ["²", "٣٩", "4²", "  "])
 def test_a_schema_version_with_odd_digits_does_not_crash_the_dashboard(value: str) -> None:
     d = load_data({"title": "t", "panels": [], "schemaVersion": value}, "x").dashboards[0]
     assert d.schema_version is None
