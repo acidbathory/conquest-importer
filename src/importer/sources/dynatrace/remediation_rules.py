@@ -78,6 +78,8 @@ RULES: list[Rule] = [
         re.compile(r"slo is not converted"),
         "SLO",
         [
+            "Run `importer plan-service-levels --in <export folder>` for a plan with the "
+            "target, period and notes of each SLO; the good and valid event queries stay TODO.",
             "In New Relic create a service level over the same data: open the service level "
             "page, choose the entity, and write the good-events and valid-events NRQL "
             "queries from the SLO's indicator (Dynatrace reports one indicator percentage; "

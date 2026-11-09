@@ -72,9 +72,12 @@ from importer.sources.dynatrace.extract import api_token as dynatrace_api_token
 from importer.sources.dynatrace.extract import environment_url as dynatrace_env_url
 from importer.sources.dynatrace.extract import extract as extract_dynatrace
 from importer.sources.dynatrace.extract import http_getter as dynatrace_getter
+from importer.sources.dynatrace.models import load_slos as load_dynatrace_slos
 from importer.sources.dynatrace.models import load_workflows as load_dynatrace_workflows
 from importer.sources.dynatrace.notifications import davis_plans
 from importer.sources.dynatrace.notifications import render_report as dynatrace_notification_report
+from importer.sources.dynatrace.service_levels import render_report as service_level_report
+from importer.sources.dynatrace.service_levels import service_level_plans, service_levels_terraform
 from importer.sources.gcp import data_check as gcp_data
 from importer.sources.gcp.extract import GcpError, access_token, http_getter
 from importer.sources.gcp.extract import extract as extract_gcp
@@ -716,6 +719,32 @@ def convert_notifications(
     (out / "notifications.tf").write_text(tf)
     made = sum(p.workflow is not None for p in plans)
     typer.echo(f"Read {len(plans)} topics, planned {made} workflows. See {out / 'report.md'}")
+
+
+@app.command("plan-service-levels")
+def plan_service_levels_command(
+    source: Annotated[
+        Path, typer.Option("--in", help="Dynatrace export folder (extract-dynatrace)")
+    ] = Path("out/dynatrace"),
+    out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/service-levels"),
+) -> None:
+    """Plan New Relic service levels from Dynatrace SLOs. Offline and read-only.
+
+    Writes the target, period and notes for each SLO and leaves the good and valid event queries
+    as TODO: Dynatrace metrics do not exist in New Relic, so a person must choose the data.
+    """
+    try:
+        plans = service_level_plans(load_dynatrace_slos(source))
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    (out / "service-levels").mkdir(parents=True, exist_ok=True)
+    for n, plan in enumerate(plans, start=1):
+        text = plan.model_dump_json(indent=2) + "\n"
+        (out / "service-levels" / f"slo-{n:04d}.json").write_text(text)
+    (out / "report.md").write_text(service_level_report(plans))
+    (out / "service-levels.tf").write_text(service_levels_terraform(plans))
+    typer.echo(f"Planned {len(plans)} service levels; all need review. See {out / 'report.md'}")
 
 
 @app.command("apply-notifications")
