@@ -55,7 +55,7 @@ TIMESERIES_VISUALIZATIONS = {Visualization.LINE, Visualization.AREA}
 # because the AWS and GCP translators clamp to that; the emitters refuse what the provider refuses.
 PROVIDER_MAX_HEIGHT = 12
 
-CHARTS = {v for v in Visualization if v != Visualization.MARKDOWN}
+CHARTS: set[Visualization] = {v for v in Visualization if v != Visualization.MARKDOWN}
 # Which widget types carry each option, from the provider schema (newrelic_one_dashboard):
 # `threshold` blocks exist on widget_line and widget_table, `critical`/`warning` on
 # widget_billboard, `y_axis_left_zero` on widget_line only, `y_axis_left_min/max` on every chart.

@@ -14,7 +14,7 @@ from importer.core.dashboard_nrql import (
     ["LIMIT", "SINCE", "TIMESERIES", "COMPARE WITH", "AS", "OFFSET", "SLIDE BY", "UNTIL", "WITH"],
 )
 def test_a_variable_in_a_forbidden_clause_is_rejected(clause: str) -> None:
-    nrql = f"SELECT count(*) FROM Transaction FACET host {clause} {{{{v}}}}"
+    nrql = f"SELECT count(*) FROM Transaction FACET host {clause} {{{{v}}}}"  # noqa: S608
     with pytest.raises(ValueError, match="not allowed"):
         check_variable_usage(nrql)
 
@@ -49,7 +49,7 @@ def test_a_variable_inside_a_quoted_string_follows_the_clause_around_it() -> Non
 @pytest.mark.parametrize("bad", ["{{", "{{a b}}", "{{a-b}}", "x }}", "{{1a}}"])
 def test_malformed_variable_references_are_rejected(bad: str) -> None:
     with pytest.raises(ValueError, match="malformed"):
-        check_variable_usage(f"SELECT count(*) FROM Log WHERE a = {bad}")
+        check_variable_usage(f"SELECT count(*) FROM Log WHERE a = {bad}")  # noqa: S608
 
 
 def test_variables_used_but_not_defined_are_rejected() -> None:
