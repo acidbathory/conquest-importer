@@ -81,7 +81,7 @@ def heading(section: str, row: int) -> IRWidget:
         title=title,
         layout=Layout(column=1, row=row, width=12, height=HEADING_ROWS),
         visualization=Visualization.MARKDOWN,
-        text=f"## {md_cell(section, 100)}",
+        text="## " + " ".join(md_cell(section, 100).split()),
         confidence=Confidence.EXACT,
     )
 

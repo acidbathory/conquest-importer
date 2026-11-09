@@ -107,26 +107,51 @@ def _variable_reasons(found: Variables) -> list[str]:
     return notes
 
 
+@dataclass
+class Drafted:
+    """The planner's verdicts next to the widget drafts, panel by panel (before layout)."""
+
+    plan: DashboardPlan
+    raw: RawDashboard
+    variables: Variables
+    ctx: Context
+    drafts: list[Draft]
+
+
+def draft_panels(dash: Dashboard, raw: RawDashboard | None, names: NameMap) -> Drafted:
+    """Plan the dashboard, convert its variables and turn every panel into a draft."""
+    known = raw or RawDashboard(displays=[None] * len(dash.panels), matched=False)
+    plan = plan_dashboard(dash)
+    raw_variables = known.variables + [RawVar()] * max(
+        0, len(dash.variables) - len(known.variables)
+    )
+    variables = convert_variables(dash, plan.variables, raw_variables, names)
+    ctx = Context(dash=dash, name_map=names, variables=variables)
+    drafts = [
+        convert_panel(
+            panel,
+            plan.panels[index],
+            known.displays[index] if index < len(known.displays) else None,
+            ctx,
+        )
+        for index, panel in enumerate(dash.panels)
+    ]
+    return Drafted(plan, known, variables, ctx, drafts)
+
+
 def translate_dashboard(item: Item, names: NameMap, metrics: Counter[str]) -> IRDashboard:
     dash = item.dash
     if dash is None:
         return _unreadable(item)
-    raw = item.raw or RawDashboard(displays=[None] * len(dash.panels), matched=False)
-    plan = plan_dashboard(dash)
-    raw_variables = raw.variables + [RawVar()] * max(0, len(dash.variables) - len(raw.variables))
-    variables = convert_variables(dash, plan.variables, raw_variables, names)
-    ctx = Context(dash=dash, name_map=names, variables=variables)
-    placed: list[Placed] = []
-    for index, panel in enumerate(dash.panels):
-        display = raw.displays[index] if index < len(raw.displays) else None
-        draft = convert_panel(panel, plan.panels[index], display, ctx)
-        placed.append(_placed(draft, dash, index))
+    found = draft_panels(dash, item.raw, names)
+    placed = [_placed(d, dash, i) for i, d in enumerate(found.drafts)]
     widgets, skipped = lay_out(placed)
-    done = sum(p.draft.kind != WidgetKind.UNSUPPORTED for p in placed)
-    metrics.update(ctx.metrics)
-    reasons = _dashboard_reasons(dash, plan, raw, (done, len(placed)), skipped)
-    reasons += _variable_reasons(variables)
-    return _build(dash, item, widgets, variables.with_numeric(ctx.numeric), reasons, done)
+    done = sum(d.kind != WidgetKind.UNSUPPORTED for d in found.drafts)
+    metrics.update(found.ctx.metrics)
+    reasons = _dashboard_reasons(dash, found.plan, found.raw, (done, len(placed)), skipped)
+    reasons += _variable_reasons(found.variables)
+    variables = found.variables.with_numeric(found.ctx.numeric)
+    return _build(dash, item, widgets, variables, reasons, done)
 
 
 def _build(

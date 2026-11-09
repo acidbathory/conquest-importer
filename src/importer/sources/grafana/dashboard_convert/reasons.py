@@ -21,7 +21,7 @@ C_FILTERS = (
     f"{PREFIX}: the terms of this expression have different filters, which a percentile cannot take"
 )
 C_SHAPE = f"{PREFIX}: the query is a shape the planner reads but the converter does not write"
-C_NAME = f"{PREFIX}: a metric or label name is not a valid New Relic attribute name"
+C_NAME = f"{PREFIX}: a metric or label name has a character NRQL does not accept in a name"
 C_NRQL = f"{PREFIX}: the converted query is not accepted by the dashboard query checks"
 C_VARIABLE_UNDEFINED = (
     f"{PREFIX}: the query uses a variable that did not become a New Relic variable"
@@ -54,7 +54,7 @@ N_THRESHOLD_COLORS = (
     f"{NOTE} threshold steps in other colours than red, orange, yellow or green were left out"
 )
 N_THRESHOLD_MODE = f"{NOTE} percentage thresholds were left out"
-N_THRESHOLD_TYPE = f"{NOTE} this widget type takes no thresholds"
+N_THRESHOLD_TYPE = f"{NOTE} this widget type cannot show threshold lines"
 N_THRESHOLD_TABLE = f"{NOTE} table thresholds need a column name and were left out"
 N_HTML = f"{NOTE} html in a text panel was reduced to plain text"
 N_LOGS = f"{NOTE} a logs panel is a table of the newest 200 lines"

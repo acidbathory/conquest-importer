@@ -304,13 +304,10 @@ class _Parse:
         return self.bucket_percentile(inner, labels, f"{percent:f}")
 
     def bucket_percentile(self, inner: str, labels: list[str], percent: str) -> Leaf:
-        call = RATE_CALL.fullmatch(inner)
-        if call is not None:
-            name, body = call[2], (call[3] or "")[1:-1]
-        else:
-            name, body = selector(inner, r.C_SHAPE)
-        if not name.endswith("_bucket"):
+        call = RATE_CALL.fullmatch(inner)  # a bucket counter is only read through a rate call
+        if call is None or not call[2].endswith("_bucket"):
             raise Unconvertible(r.C_SHAPE)
+        name, body = call[2], (call[3] or "")[1:-1]
         event, metric = self.metric(name)
         where = self.where(body)
         core = f"bucketPercentile({metric}, {percent})"
