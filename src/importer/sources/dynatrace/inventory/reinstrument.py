@@ -9,6 +9,7 @@ UNVERIFIED and a source.
 """
 
 import json
+import re
 from collections import Counter
 from functools import lru_cache
 from pathlib import Path
@@ -20,7 +21,7 @@ from importer.core.remediation import remedies_for
 from importer.core.report import md_cell
 from importer.core.text import printable
 from importer.sources.dynatrace.inventory import reasons as r
-from importer.sources.dynatrace.inventory.models import Entity, Loaded
+from importer.sources.dynatrace.inventory.models import Entity, Loaded, Slo
 
 DATA = Path(__file__).parent / "data"
 MAX_ROWS = 60  # rows shown for technologies and types that are not in the tables
@@ -82,6 +83,16 @@ class TargetRow(BaseModel):
     status: str
 
 
+class SloSummary(BaseModel):
+    """SLOs by shape and by whether the window fits a New Relic rolling window (1, 7, 28 days)."""
+
+    custom: int = 0
+    template: int = 0
+    classic: int = 0
+    rolling_window_fits: int = 0
+    other_window: int = 0
+
+
 class ReinstrumentPlan(BaseModel):
     entities_read: int
     entities_skipped: int
@@ -94,6 +105,7 @@ class ReinstrumentPlan(BaseModel):
     notes: list[str] = []
     no_path: list[dict[str, str]] = []
     unverified_rows: list[str] = []
+    slos: SloSummary | None = None
 
 
 @lru_cache(maxsize=1)
@@ -229,7 +241,27 @@ def _target_rows(entities: list[Entity], service_targets: Counter[str]) -> list[
     return [TargetRow(target=t, count=c, status=status[t]) for t, c in totals.most_common()]
 
 
-def plan_reinstrumentation(loaded: Loaded[Entity]) -> ReinstrumentPlan:
+WINDOW = re.compile(r"^(?:now)?-(\d{1,4})([dw])$")
+ROLLING_DAYS = frozenset({1, 7, 28})
+
+
+def summarize_slos(slos: Loaded[Slo]) -> SloSummary:
+    """Count SLOs by shape; the window fits when it is -1d, -7d or -28d (or -1w, -4w)."""
+    summary = SloSummary()
+    for slo in slos.items:
+        setattr(summary, slo.kind, getattr(summary, slo.kind) + 1)
+        match = WINDOW.match(slo.timeframe)
+        days = int(match.group(1)) * (7 if match and match.group(2) == "w" else 1) if match else 0
+        if days in ROLLING_DAYS:
+            summary.rolling_window_fits += 1
+        elif slo.timeframe:
+            summary.other_window += 1
+    return summary
+
+
+def plan_reinstrumentation(
+    loaded: Loaded[Entity], slos: Loaded[Slo] | None = None
+) -> ReinstrumentPlan:
     entities = loaded.items
     technologies, service_targets, without = _technology_rows(entities)
     hosts = Counter(e.os or "unknown" for e in entities if e.type == "HOST")
@@ -244,6 +276,7 @@ def plan_reinstrumentation(loaded: Loaded[Entity]) -> ReinstrumentPlan:
         targets=_target_rows(entities, service_targets),
         no_path=[{"capability": c, "path": p} for c, p in NO_PATH],
         unverified_rows=sorted(_technology_table()[1]),
+        slos=summarize_slos(slos) if slos is not None and slos.items else None,
     )
     if loaded.reported_total is not None and loaded.reported_total > len(entities):
         plan.notes.append(r.I_PARTIAL)
@@ -257,6 +290,21 @@ def plan_reinstrumentation(loaded: Loaded[Entity]) -> ReinstrumentPlan:
 def _table(header: list[str], rows: list[list[str]]) -> list[str]:
     lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
     return lines + ["| " + " | ".join(row) + " |" for row in rows]
+
+
+def _slo_lines(plan: ReinstrumentPlan) -> list[str]:
+    if plan.slos is None:
+        return []
+    s = plan.slos
+    return [
+        "## SLOs",
+        "",
+        f"Custom SLI: {s.custom}; from a template: {s.template}; classic: {s.classic}. "
+        f"Window fits a New Relic rolling window (1, 7 or 28 days): {s.rolling_window_fits}; "
+        f"another window: {s.other_window}. The SLO plan itself is "
+        "`importer convert --source dynatrace`.",
+        "",
+    ]
 
 
 def render_report(plan: ReinstrumentPlan) -> str:
@@ -300,6 +348,7 @@ def render_report(plan: ReinstrumentPlan) -> str:
         "",
         f"Services that list no technology: {plan.services_without_technology}.",
         "",
+        *_slo_lines(plan),
         "## Has no migration path",
         "",
         *[f"- {md_cell(i['capability'], 200)}: {md_cell(i['path'], 300)}" for i in plan.no_path],

@@ -328,3 +328,13 @@ def test_thousands_of_tiles_and_huge_text_are_bounded(tmp_path: Path) -> None:
     report = render_report(plans)
     assert time.monotonic() - started < 5.0
     assert plans.dashboards[0].unreadable_tiles == 1 and "big" in report
+
+
+def test_a_variable_in_a_dropped_clause_is_not_a_dependency() -> None:
+    """The delivery stream list mentions $dynatraceEnvironment only inside a Smartscape
+    filter that is dropped, so the list does not depend on it."""
+    variables = {v.key: v for v in plan_of("aws-firehose").variables}
+    stream = variables["deliveryStreamName"]
+    assert stream.verdict is Verdict.DRAFT and stream.depends_on == []
+    assert reasons.D_VAR_NAMES in stream.notes and reasons.D_VAR_ENTITY in stream.notes
+    assert reasons.D_VAR_DEPENDS not in stream.notes

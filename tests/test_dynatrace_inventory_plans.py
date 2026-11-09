@@ -273,3 +273,30 @@ def test_the_commands_refuse_empty_input_and_a_used_folder(command: str, tmp_pat
     (tmp_path / "used" / "x").write_text("1")
     result = run(command, "--in", str(FIXTURES), "--out", str(tmp_path / "used"))
     assert result.exit_code == 1 and "already has files" in result.output
+
+
+def test_slos_are_counted_by_shape_and_by_whether_the_window_fits() -> None:
+    plan = ri.plan_reinstrumentation(m.load_entities(FIXTURES), m.load_slos(FIXTURES))
+    assert plan.slos == ri.SloSummary(
+        custom=2, template=1, classic=1, rolling_window_fits=2, other_window=1
+    )  # now-7d and -1w fit; now-30d does not; the template has no window
+    report = ri.render_report(plan)
+    assert "Window fits a New Relic rolling window (1, 7 or 28 days): 2" in report
+
+
+@pytest.mark.parametrize(
+    ("frame", "fits"),
+    [("now-1d", True), ("-28d", True), ("-4w", True), ("-1w", True), ("now-30d", False),
+     ("-2w", False), ("-1d/d", False), ("-1h", False), ("now-7d to now", False)],
+)  # fmt: skip
+def test_slo_windows_fit_only_when_they_are_one_seven_or_twenty_eight_days(
+    frame: str, fits: bool
+) -> None:
+    loaded = m.Loaded[m.Slo](items=[m.Slo(kind="custom", timeframe=frame)])
+    summary = ri.summarize_slos(loaded)
+    assert (summary.rolling_window_fits, summary.other_window) == ((1, 0) if fits else (0, 1))
+
+
+def test_a_folder_without_slos_gives_no_slo_section() -> None:
+    plan = ri.plan_reinstrumentation(m.load_entities(FIXTURES), m.Loaded[m.Slo]())
+    assert plan.slos is None and "## SLOs" not in ri.render_report(plan)

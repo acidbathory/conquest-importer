@@ -21,7 +21,12 @@ from importer.sources.dynatrace.inventory.extract import (
     inventory_token,
 )
 from importer.sources.dynatrace.inventory.extract import extract as extract_inventory
-from importer.sources.dynatrace.inventory.models import load_entities, load_locations, load_monitors
+from importer.sources.dynatrace.inventory.models import (
+    load_entities,
+    load_locations,
+    load_monitors,
+    load_slos,
+)
 
 OutOption = Annotated[Path, typer.Option(help="New folder for the result")]
 
@@ -121,7 +126,7 @@ def register(app: typer.Typer) -> None:
             loaded = load_entities(source)
             if not loaded.items:
                 raise ValueError(f"no entities found in {source}")
-            plan = reinstrument.plan_reinstrumentation(loaded)
+            plan = reinstrument.plan_reinstrumentation(loaded, load_slos(source))
             reinstrument.write_plan(plan, out)
         except (ValueError, OSError) as exc:
             raise _fail(exc) from None
