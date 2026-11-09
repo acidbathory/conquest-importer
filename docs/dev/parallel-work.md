@@ -33,9 +33,21 @@ from the same few shared lines every time, so those lines now have extension poi
 | Workstream | Owns |
 |---|---|
 | Dynatrace alerting objects | `sources/dynatrace/classic/`, `tests/*dynatrace_classic*`, `tests/fixtures/dynatrace-classic/` |
-| Dynatrace dashboards, SLOs, synthetics, inventory | `sources/dynatrace/dashboards/`, `sources/dynatrace/inventory/`, `tests/*dynatrace_dashboards*`, `tests/fixtures/dynatrace-dashboards/` |
-| Grafana dashboards | `sources/grafana/dashboards/`, `tests/*grafana_dashboards*`, `tests/fixtures/grafana-dashboards/` |
-| Grafana notifications and data path | `sources/grafana/notifications/`, `sources/grafana/datapath/`, `tests/*grafana_notifications*`, `tests/fixtures/grafana-notifications/` |
+| Dynatrace dashboards, SLOs, synthetics, inventory | `sources/dynatrace/dashboards/`, `sources/dynatrace/inventory/`, `commands/dynatrace_inventory.py`, `tests/*dynatrace_dashboards*`, `tests/fixtures/dynatrace-dashboards/` |
+| Grafana stream 1: alert rules | `sources/grafana/translate.py`, `sources/grafana/models.py`, `tests/test_grafana*.py` (not the two streams below), `tests/fixtures/grafana/` |
+| Grafana stream 2: dashboards | `sources/grafana/dashboards/`, `commands/grafana_dashboards.py`, `tests/*grafana_dashboards*`, `tests/fixtures/grafana-dashboards/` |
+| Grafana stream 3: notifications and data path | `sources/grafana/notifications/`, `sources/grafana/datapath/`, `commands/grafana_notifications.py`, `tests/*grafana_notifications*`, `tests/*grafana_datapath*`, `tests/fixtures/grafana-notifications/` |
+| Integrator | `cli.py`, `core/report_html.py` (PROFILES), `core/emit/common.py` (SOURCE_LABELS, RESOURCE_PREFIXES), `core/doctor.py`, `core/data_check.py`, `core/dynatrace_env.py`, `tests/test_sources.py`, `tests/test_improve.py`, `tests/test_migration_report.py`, `tests/test_cli_wiring.py` |
 | New Relic destination and workflow model | integrator only (frozen files above) |
+
+Sub-packages that register themselves from their own `__init__` (loaded by
+`improve.import_subpackages`): `sources/dynatrace/classic/`, `sources/dynatrace/dashboards/`,
+`sources/dynatrace/inventory/`, `sources/grafana/dashboards/`, `sources/grafana/notifications/`,
+`sources/grafana/datapath/`.
+
+Tests that list sources (`tests/test_sources.py`, `tests/test_improve.py`) derive the list from the
+registry and a required core of `cloudwatch` and `gcp`, so a new source needs no edit there. A new
+source still needs a report profile (`PROFILES`) and, if its output is not pinned, entries in
+`SOURCE_LABELS` and `RESOURCE_PREFIXES`; ask the integrator.
 
 A workstream that finds it needs a file another one owns uses rule 6.

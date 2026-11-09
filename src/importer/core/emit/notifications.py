@@ -288,7 +288,7 @@ def _destination_text(dest: NrDestination, slug: str, i: int) -> str:
     )
 
 
-def _secret_names(dests: list[NrDestination]) -> list[str]:
+def secret_names(dests: list[NrDestination]) -> list[str]:
     names: set[str] = set()
     for d in dests:
         names |= {v.name for v in d.properties.values() if isinstance(v, SecretRef)}
@@ -390,7 +390,7 @@ def notifications_terraform_result(plans: list[NotificationPlan]) -> TerraformRe
             blocks.append(f"# not emitted: workflow of {slug}: {why}\n")
         else:
             blocks.append(_workflow_block(plan.workflow, slug))
-    declared = [_variable_block(n) for n in _secret_names(emitted)]
+    declared = [_variable_block(n) for n in secret_names(emitted)]
     return TerraformResult("\n".join(declared + blocks), plan_violations(plans))
 
 

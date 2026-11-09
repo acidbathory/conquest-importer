@@ -3,7 +3,10 @@
 import importlib
 import math
 import re
-from dataclasses import dataclass
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass, replace
+from typing import Any
 
 from importer.core.emit.nrql import build_nrql
 from importer.core.ir import Confidence, EmitOptions, IRMonitor, SignalKind, Threshold
@@ -33,6 +36,18 @@ def emit_defaults() -> EmitDefaults:
     return EMIT_DEFAULTS
 
 
+@contextmanager
+def emit_defaults_replaced(**changes: Any) -> Iterator[EmitDefaults]:
+    """Use changed defaults for the emitters inside the block, then put the old ones back."""
+    global EMIT_DEFAULTS
+    saved = EMIT_DEFAULTS
+    EMIT_DEFAULTS = replace(saved, **changes)
+    try:
+        yield EMIT_DEFAULTS
+    finally:
+        EMIT_DEFAULTS = saved
+
+
 # A source "avg over the last 5 minutes" is evaluated as 1-minute windows that must breach
 # for 5 minutes.
 # This is a close but not identical semantic; the report states it once for all monitors.
@@ -46,8 +61,12 @@ EMITTABLE_KINDS = (SignalKind.METRIC, SignalKind.LOG, SignalKind.APM, SignalKind
 MAX_NAME_LENGTH = 128
 MIN_AGGREGATION_WINDOW_SECONDS = 30
 MAX_AGGREGATION_WINDOW_SECONDS = 3600
-SOURCE_LABELS = {"cloudwatch": "CloudWatch alarm", "gcp": "Google Cloud alert policy"}
-RESOURCE_PREFIXES = {"cloudwatch": "cw", "gcp": "gcp"}
+SOURCE_LABELS = {
+    "cloudwatch": "CloudWatch alarm",
+    "gcp": "Google Cloud alert policy",
+    "dynatrace-classic": "Dynatrace classic alerting object",
+}
+RESOURCE_PREFIXES = {"cloudwatch": "cw", "gcp": "gcp", "dynatrace-classic": "dtc"}
 
 
 def condition_name(name: str) -> str:

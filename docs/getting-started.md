@@ -158,7 +158,34 @@ Set `--since` to the time ingestion started. Each mismatch is listed with a like
 | `importer stats out/migration-<date>-<time>/alerts` | Prints a summary without names, safe to share |
 | `importer extract-cloudwatch`, `convert`, `convert-dashboards` and others | The individual steps behind `migrate` |
 
-For Google Cloud there are `importer extract-gcp`, `convert --source gcp`, `gcp-link-terraform`,
-`check-gcp-data` and `report --source gcp`; see [what migrates](what-migrates.md#other-platforms).
+Other platforms have the same shape: `extract-<platform>`, then `convert --source <platform>`, then
+`report <folder> --source <platform>`. Offline checks of the sign-in settings:
+`importer doctor --source cloudwatch|gcp|dynatrace|dynatrace-classic|grafana`.
+
+| Platform | Commands |
+|---|---|
+| Google Cloud | `extract-gcp`, `convert --source gcp`, `gcp-link-terraform`, `convert-gcp-notifications`, `convert-gcp-uptime`, `check-gcp-data` |
+| Dynatrace (workflows, SLOs) | `extract-dynatrace`, `convert --source dynatrace`, `convert-notifications --source dynatrace`, `plan-service-levels`, `check-dynatrace-data` |
+| Dynatrace (classic alerting) | `extract-dynatrace-classic`, `convert --source dynatrace-classic`, `check-dynatrace-metrics`, `summarize-dynatrace-classic`, `validate-dynatrace-map` |
+| Dynatrace (dashboards, synthetics, inventory) | `extract-dynatrace-inventory`, `plan-dynatrace-dashboards`, `plan-dynatrace-synthetics`, `plan-dynatrace-reinstrumentation` |
+| Grafana | `extract-grafana`, `convert --source grafana`, `extract-grafana-dashboards`, `plan-grafana-dashboards`, `extract-grafana-notifications`, `plan-grafana-datapath`, `check-grafana-data` |
+
+See [what migrates](what-migrates.md#other-platforms) for what each one converts.
+
+### Notifications
+
+`convert-notifications` plans destinations and (disabled) workflows; `apply-notifications` creates
+them, as a dry run unless you add `--apply --confirm-account`.
+
+- A plan marked `needs_review` (Dynatrace, or an SNS topic with a Lambda, SQS or Firehose
+  subscription) is skipped and listed. Check it, then add `--include-needs-review`.
+- A destination that takes a secret (a PagerDuty key, a token, a password) reads it from the
+  environment variable that has the name of the secret in the plan, for example `PD_KEY`. The value
+  is never printed. A missing variable stops the run before anything is written.
+- `convert-notifications` prints problems across the plans, such as too many workflows or two
+  plans for one topic. `--warn-https-payload` adds a note to https plans: New Relic sends its own
+  payload, not the SNS envelope. `--muting-handling` sets what workflows do for muted issues.
+- `convert --incident-preference PER_POLICY|PER_CONDITION|PER_CONDITION_AND_TARGET` writes the
+  preference on the Terraform policy. Without it nothing is written, as before.
 
 Run `importer --help` for the full list.

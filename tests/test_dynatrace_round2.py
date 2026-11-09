@@ -383,14 +383,16 @@ def test_a_plan_without_a_workflow_is_said_to_create_nothing(tmp_path: Path) -> 
     assert res.exit_code == 0 and "1 plans have no workflow" in res.output
 
 
-def test_applying_a_plan_that_needs_review_requires_the_extra_flag(
+def test_a_plan_that_needs_review_no_longer_stops_the_command_before_the_guards(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # Core skips and lists such plans (tests/test_cli_wiring.py); the command goes on to the
+    # account guards, which fail here because no account is allowed.
     monkeypatch.setenv("IMPORTER_NO_DOTENV", "1")
     out = convert_plan(tmp_path, tags=True)
     args = ["apply-notifications", "--in", str(out), "--account-id", "7", "--apply"]
     res = CliRunner().invoke(app, [*args, "--confirm-account", "7"])
-    assert res.exit_code == 1 and "--include-needs-review" in res.output
+    assert res.exit_code == 1 and "NEW_RELIC_ALLOWED_ACCOUNT_IDS" in res.output
 
 
 def test_aws_plans_are_not_affected_by_the_review_flag(
