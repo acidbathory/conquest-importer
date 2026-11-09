@@ -339,4 +339,51 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   grafana` (the report reads `alerts/` inside the folder you give it).
 - **Behind a TLS-inspecting proxy:** set `SSL_CERT_FILE` to the corporate root certificate file.
 
+### Grafana notifications and data path (read side and plans)
+
+Status: the read side and pure plans exist and are tested offline. Nothing is created in New
+Relic from them yet; wiring them into the notification plan is the next wave.
+
+- **Read:** `importer extract-grafana-notifications --out <new folder>` reads contact points,
+  the notification policy tree, mute timings, templates, the data source list (type and uid
+  only) and the rules that Mimir or Loki rulers hold. It sends only GET requests, never with a
+  query string, so contact points are never decrypted and every stored secret arrives as
+  `[REDACTED]`. Secret values, header values, URL paths and queries, and template text are not
+  written; email addresses are written to `contact-points.json` only. Use a folder other than
+  the one `extract-grafana` wrote.
+- **Contact points:** each of the 24 integration types has a verdict. Converts: `email` (EMAIL)
+  and `webhook` (WEBHOOK, with a warning that the receiver gets the New Relic payload and that
+  the HTTP method, credentials, signing, TLS and custom payload are manual). Webhook template (a
+  WEBHOOK destination and a payload written by hand, 12 types): oncall, prometheus-alertmanager,
+  opsgenie, victorops, discord, googlechat, telegram, webex, sensugo, kafka, wecom in robot
+  mode, dingding. Manual step (6): slack, pagerduty, teams, jira, pushover, sns. No equivalent
+  (4, plus wecom in app mode): threema, LINE, mqtt, wechat. The destination names follow the
+  New Relic reference note; none was tested on a live account.
+- **Notification policies:** the tree is flattened with Alertmanager's rules (first match wins
+  unless `continue`, anchored regular expressions, a missing label is the empty string, mute
+  and active intervals are not inherited). Labels of the rule and of its query are decided now;
+  labels in the query's `by (...)` become tag predicates on the issue. Anything that cannot be
+  decided (a bare selector with an unknown label set, a template in a rule label, a regular
+  expression a filter cannot say, an earlier route that cannot be negated) is listed, never
+  guessed. Group wait, group interval and repeat interval are lost.
+- **Mute timings:** a time range with weekdays or days 1 to 28 of the month, a time zone, and
+  years convert to muting schedules (clock times and recurrence). Negative days, days 29 to 31,
+  months without a year, a run of months across the year end, and a mute timing that combines
+  days of the month with weekdays are reported. Active time intervals are reported, not
+  converted.
+- **Templates:** only Grafana's default templates map to a fixed Handlebars body. A custom
+  template is reported and never translated.
+- **Rule files:** Prometheus, Mimir and Loki rule groups (JSON; `rules.yml` needs
+  `yq -o=json` first because PyYAML is not a dependency) become rule objects the Grafana
+  translator can read. An alert with one top-level comparison against a number gets the same
+  query, reduce and threshold nodes as a Grafana rule; others stay data source-managed.
+- **Data path:** `importer plan-grafana-datapath --region us|eu|jp --out <new folder>` writes
+  a Prometheus remote write block, Alloy snippets for dual write and for OTLP, the naming
+  consequences, and the NRQL a data check would run. The license key is a placeholder or the
+  name of an environment variable, never a value. `importer check-grafana-data` asks New Relic
+  (read-only) whether the metric or logs behind each converted condition arrive and which
+  attributes they carry; it exits with code 2 when a condition would be blind.
+- **Not verified on a live account:** destination behaviour, the metric names and attributes
+  Prometheus data gets in New Relic, and the workflow predicate operators on list attributes.
+
 Azure and other platforms are planned; see the [roadmap](../README.md#roadmap).
