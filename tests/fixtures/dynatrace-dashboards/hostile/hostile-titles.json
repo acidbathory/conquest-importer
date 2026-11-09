@@ -1,0 +1,41 @@
+{
+  "version": 21,
+  "variables": [
+    {"key": "x| injected |", "type": "query", "multiple": true, "input": "fetch security.events | summarize v = collectDistinct(a)"},
+    {"key": "`tick`<b>bold</b>", "type": "text", "defaultValue": "[click](https://evil.invalid)"},
+    {"key": "limit_var", "type": "query", "input": "timeseries avg(m), by:{a} | fields a"},
+    "not a variable",
+    {"type": "query"}
+  ],
+  "tiles": {
+    "| | |": {
+      "type": "data",
+      "title": "| injected | cell |\n| --- | --- |\n| more | rows |",
+      "query": "timeseries avg(dt.sfm.hostile), by:{a}, filter:{a == \"| x |\"}\n| limit $limit_var",
+      "visualization": "lineChart"
+    },
+    "ansi": {
+      "type": "data",
+      "title": "\u001b[31mred\u001b[0m ‮ right-to-left \u0000 nul",
+      "query": "fetch security.events | join [fetch security.events], on:{a==b}",
+      "visualization": "table"
+    },
+    "<img src=x onerror=alert(1)>": {
+      "type": "markdown",
+      "title": "<script>alert(1)</script>",
+      "content": "[click me](javascript:alert(1)) ![x](https://dt-cdn.net/x.png) [ui](/ui/apps/x)"
+    },
+    "long": {
+      "type": "data",
+      "title": "TITLEXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "query": "timeseries avg(m)",
+      "visualization": "honeycomb"
+    },
+    "prompt": {"type": "data", "title": "ask", "query": "timeseries avg(m)", "visualization": "lineChart", "davisCopilot": {"enabled": true}},
+    "code": {"type": "code", "title": "js", "input": "return 1;", "visualization": "table"},
+    "slo": {"type": "slo", "title": "slo", "input": "00000000-0000-0000-0000-000000000000"},
+    "weird": {"type": "frobnicator", "title": "?"},
+    "nulls": {"type": "data", "title": null, "query": null, "visualization": null}
+  },
+  "layouts": {"| | |": {"x": "a", "y": -1, "w": 1e9, "h": null}}
+}

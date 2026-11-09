@@ -1,0 +1,15 @@
+[
+  {"id": "00000000-0000-0000-0000-000000000011", "name": "Checkout availability",
+   "customSli": {"indicator": "timeseries { total = sum(dt.service.request.count) }"},
+   "criteria": [{"target": 99.0, "timeframeFrom": "now-7d", "timeframeTo": "now"}]},
+  {"id": "00000000-0000-0000-0000-000000000012", "name": "Search latency",
+   "customSli": {"indicator": "timeseries { x = avg(dt.service.request.response_time) }"},
+   "criteria": [{"target": 95.0, "timeframeFrom": "now-30d", "timeframeTo": "now"}]},
+  {"id": "00000000-0000-0000-0000-000000000013", "name": "From a template",
+   "sliReference": {"templateId": "00000000-0000-0000-0000-0000000000aa", "variables": []},
+   "criteria": [{"target": 99.9, "timeframeFrom": "now-28d"}]},
+  {"id": "00000000-0000-0000-0000-000000000014", "name": "Classic",
+   "metricExpression": "(100)*(builtin:service.errors.total.successCount:splitBy())/(builtin:service.requestCount.total:splitBy())",
+   "evaluationType": "AGGREGATE", "timeframe": "-1w", "target": 99.0},
+  "broken"
+]

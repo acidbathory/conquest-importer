@@ -217,6 +217,67 @@ Forwarding logs in general (only the groups behind converted conditions get Terr
 account per run. Existing New Relic objects with the same name are skipped, never updated. To apply
 a fix, roll back and re-apply.
 
+## Dynatrace dashboards and inventory
+
+Read side and plans only. No New Relic dashboard, monitor or agent is created from any of this;
+the plans say what could be, with what confidence, and what a person must do. Research:
+`docs/research/dynatrace-dashboards-inventory-datapath.md`.
+
+- **Extract:** `importer extract-dynatrace-inventory --out out/dynatrace-inventory` reads Platform
+  dashboard documents, classic dashboards, synthetic monitors and locations, and an entity
+  inventory, with GET requests to a fixed list of paths on
+  `https://<tenant id>.apps.dynatrace.com`. What is saved is built from an allow-list, in files
+  only the owner can read. Monitors keep their structure (methods, cleaned URLs, event and rule
+  types, flags that say a body, header or credential was present) and never a body, a header or
+  cookie value, a credential, typed text, script code or a validation pattern. Entities keep only
+  their type, product names of their technologies and operating system (a value that does not look
+  like a product name is dropped); no name, id or address. Platform dashboards keep the tile fields
+  the planner reads, and their titles, queries and markdown are stored as written, so they can
+  name internal systems: review the export before sharing it. An area that cannot be read is a
+  warning and the others still run. The document content path and the classic, synthetic and
+  entity endpoints on that host are UNVERIFIED (never called on a tenant). Smartscape counts are
+  not read: they need a POST query.
+- **Dashboard plan:** `importer plan-dynatrace-dashboards --in <folder or file> --out <folder>`
+  writes `report.md` and `plan.json`. A data tile is exact only when every clause maps to NRQL
+  with the same meaning and nothing is dropped: plain aggregations without options, plain fields,
+  `==`, `!=`, `in()` and null checks, one plain sort key, a numeric limit, plain renames, and
+  commands in an order NRQL keeps. It is a draft when something is dropped or not verified, and
+  the note says what: an entity-selection clause (Smartscape id or primary tag), a second sort
+  key, link columns, a variable in a limit, an average of averages, `matchesValue` or `contains`
+  (wildcard and case rules differ from `LIKE`), an aggregation option such as `rate` or
+  `default`, an interval, a time range in the query, a tile timeframe or segment, a select-all
+  test, a sort by a series average. It is manual otherwise (join, lookup, append, expand, parse,
+  dedup, `shift`, `scalar`, array arithmetic, computed fields and sort keys, a sort or filter after
+  a limit, `bins`, Smartscape or Davis sources, unknown visualizations, code and SLO tiles).
+  Display settings (thresholds and colours) are noted but do not change the verdict, which is
+  about the query. Markdown tiles convert; spacers are dropped, and Dynatrace links, `dt-cdn.net`
+  images, raw HTML and script-scheme links are flagged (a tile without a flag was not found unsafe
+  by these checks, which is not proof). Each tile that reads Dynatrace-only data
+  (self-monitoring, OneAgent host, service and process, Kubernetes and cloud metrics, security
+  events, entities, Smartscape, Davis) is marked "no New Relic data source"; `cloud.aws.*` and
+  `cloud.azure.*` metrics are not, because the research lists documented counterparts. Variables
+  are classed the same way, and a default of `*` (or a UUID and `*`) is read as select-all. On the
+  four ready-made Dynatrace dashboards in the fixtures it gives 59 data tiles: 5 exact, 21 draft,
+  33 manual; 34 markdown tiles; 18 variables: 1 exact, 4 draft, 13 manual. The earlier, more
+  optimistic reading gave 10, 22 and 27; the five tiles that moved to manual all use
+  `scalar: true`. All 5 exact tiles read Dynatrace security events, which New Relic does not have.
+  Exact copies of a dashboard (same content, any name or id) are read once and listed.
+- **Classic dashboards:** markdown and header tiles convert; metric charts are manual until a
+  metric name map exists; every other tile type and every management zone filter is manual.
+- **Re-instrumentation:** `importer plan-dynatrace-reinstrumentation --in <folder> --out
+  <folder>` counts entities per type and per technology and names the New Relic agent or
+  integration for each, from two data files whose rows are marked DOCS or UNVERIFIED (a target
+  is UNVERIFIED when any row naming it is, and a spelling that matched only after changing
+  underscores or hyphens is marked). It lists
+  what has no migration path (OneAgent deep monitoring, PurePath, Davis, Smartscape filters,
+  management zones) and counts SLOs whose window fits a New Relic rolling window.
+- **Synthetics:** `importer plan-dynatrace-synthetics --in <folder> --out <folder>` maps each
+  monitor to a simple, simple browser, certificate check, step, scripted API or scripted browser
+  monitor, says which could be created from the JSON alone, maps locations from a table (UNVERIFIED
+  rows marked) and records availability thresholds for an alert condition.
+- **Not done:** converting any dashboard, variable, monitor or agent into a New Relic object, the
+  metric name map, a data check against New Relic, and any live test.
+
 ## Other platforms
 
 AWS CloudWatch is the supported platform. Google Cloud is in progress: `importer extract-gcp

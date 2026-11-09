@@ -1,0 +1,1376 @@
+{
+ "version": 21,
+ "variables": [
+  {
+   "key": "SmartscapeId",
+   "visible": true,
+   "type": "query",
+   "version": 2,
+   "editable": true,
+   "input": "smartscapeNodes AZURE_MICROSOFT_WEB_SERVERFARMS\n| filter in(azure.subscription, array($Subscription))\n| filter in(azure.location, array($Location))\n| filter in(azure.resource.group, array($ResourceGroup))\n| fieldsKeep id",
+   "multiple": true,
+   "defaultValue": [
+    "00000000-0000-0000-0000-000000000000*"
+   ]
+  },
+  {
+   "version": 2,
+   "key": "Subscription",
+   "type": "query",
+   "visible": true,
+   "editable": true,
+   "input": "smartscapeNodes AZURE_MICROSOFT_WEB_SERVERFARMS\n| fields azure.subscription\n| dedup azure.subscription\n| sort azure.subscription",
+   "multiple": true,
+   "defaultValue": [
+    "00000000-0000-0000-0000-000000000000*"
+   ]
+  },
+  {
+   "version": 2,
+   "key": "Location",
+   "type": "query",
+   "visible": true,
+   "editable": true,
+   "input": "smartscapeNodes AZURE_MICROSOFT_WEB_SERVERFARMS\n| fields azure.location\n| dedup azure.location\n| sort azure.location",
+   "multiple": true,
+   "defaultValue": [
+    "00000000-0000-0000-0000-000000000000*"
+   ]
+  },
+  {
+   "version": 2,
+   "key": "ResourceGroup",
+   "type": "query",
+   "visible": true,
+   "editable": true,
+   "input": "smartscapeNodes AZURE_MICROSOFT_WEB_SERVERFARMS\n| fields azure.resource.group\n| dedup azure.resource.group\n| sort azure.resource.group",
+   "multiple": true,
+   "defaultValue": [
+    "00000000-0000-0000-0000-000000000000*"
+   ]
+  },
+  {
+   "version": 2,
+   "key": "PrimaryTag",
+   "type": "query",
+   "visible": true,
+   "editable": true,
+   "input": "data record(name=\"ANY\")\n| append [\n    fieldsSnapshot metrics\n    | filter startsWith(field, \"primary_tags.\")\n    | fieldsRename name = field\n    | fields name\n]\n| dedup name",
+   "multiple": false,
+   "defaultValue": "ANY"
+  },
+  {
+   "version": 2,
+   "key": "PrimaryTagValues",
+   "type": "query",
+   "visible": true,
+   "editable": true,
+   "input": "smartscapeNodes AZURE_MICROSOFT_WEB_SERVERFARMS\n| filter isNotNull($PrimaryTag:noquote)\n| dedup $PrimaryTag:noquote\n| fields $PrimaryTag:noquote\n| sort $PrimaryTag:noquote",
+   "multiple": true,
+   "defaultValue": [
+    "00000000-0000-0000-0000-000000000000*"
+   ]
+  },
+  {
+   "version": 2,
+   "key": "Limit",
+   "type": "text",
+   "visible": true,
+   "editable": true,
+   "defaultValue": "10"
+  }
+ ],
+ "tiles": {
+  "header": {
+   "type": "markdown",
+   "content": "### Azure App Service Plans\n\nMonitor CPU, memory, queue depths, network throughput, and TCP connection states for Azure App Service Plans.\n\nInspect the selected plans in the [Clouds App](</ui/intent/dynatrace.clouds/view_azure_service/#{\"dt.timeframe\":{\"to\":\"$dt_timeframe_to\",\"from\":\"$dt_timeframe_from\"},\"explorer.type\":\"webAppHosting\",\"dt.smartscape.azure_microsoft_web_serverfarms\":\"$SmartscapeId\"}>).\n\n---"
+  },
+  "kpi-count": {
+   "title": "App Service Plans",
+   "description": "Total number of Azure App Service Plans matching the current filter selection.",
+   "type": "data",
+   "query": "smartscapeNodes AZURE_MICROSOFT_WEB_SERVERFARMS\n| filter (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\"))))\n| filter in(toString(id), array($SmartscapeId))\n| summarize count = count()",
+   "visualization": "singleValue",
+   "visualizationSettings": {
+    "singleValue": {
+     "labelMode": "none",
+     "label": "Plans",
+     "recordField": "count",
+     "prefixIcon": "",
+     "colorThresholdTarget": "background",
+     "sparklineSettings": {
+      "isVisible": false,
+      "record": "count"
+     },
+     "trend": {
+      "isVisible": false
+     }
+    },
+    "autoSelectVisualization": false
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "kpi-cpu": {
+   "title": "Avg CPU Utilization",
+   "description": "Average CPU utilization across all selected App Service Plans. Values consistently above 80% indicate the plan needs scaling up or out.",
+   "type": "data",
+   "query": "timeseries val = avg(cloud.azure.microsoft_web.serverfarms.CpuPercentage),\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| summarize AvgCpu = avg(arrayAvg(val))",
+   "visualization": "singleValue",
+   "visualizationSettings": {
+    "singleValue": {
+     "labelMode": "none",
+     "label": "Avg CPU Utilization",
+     "recordField": "AvgCpu",
+     "prefixIcon": "",
+     "colorThresholdTarget": "background",
+     "sparklineSettings": {
+      "record": "val"
+     },
+     "trend": {
+      "isVisible": false
+     }
+    },
+    "coloring": {
+     "colorRules": [
+      {
+       "value": 0,
+       "comparator": ">=",
+       "field": "AvgCpu",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+       }
+      },
+      {
+       "value": 60,
+       "comparator": ">",
+       "field": "AvgCpu",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+       }
+      },
+      {
+       "value": 80,
+       "comparator": ">=",
+       "field": "AvgCpu",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+       }
+      }
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "AvgCpu",
+      "unitCategory": "percentage",
+      "baseUnit": "percent",
+      "displayUnit": null,
+      "decimals": 1,
+      "suffix": "",
+      "delimiter": false,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "kpi-memory": {
+   "title": "Avg Memory Utilization",
+   "description": "Average memory utilization across all selected App Service Plans. High values signal capacity pressure and may require a higher SKU tier.",
+   "type": "data",
+   "query": "timeseries val = avg(cloud.azure.microsoft_web.serverfarms.MemoryPercentage),\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| summarize AvgMem = avg(arrayAvg(val))",
+   "visualization": "singleValue",
+   "visualizationSettings": {
+    "singleValue": {
+     "labelMode": "none",
+     "label": "Avg Memory Utilization",
+     "recordField": "AvgMem",
+     "prefixIcon": "",
+     "colorThresholdTarget": "background",
+     "sparklineSettings": {
+      "record": "val"
+     },
+     "trend": {
+      "isVisible": false
+     }
+    },
+    "coloring": {
+     "colorRules": [
+      {
+       "value": 0,
+       "comparator": ">=",
+       "field": "AvgMem",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+       }
+      },
+      {
+       "value": 60,
+       "comparator": ">",
+       "field": "AvgMem",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+       }
+      },
+      {
+       "value": 80,
+       "comparator": ">=",
+       "field": "AvgMem",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+       }
+      }
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "AvgMem",
+      "unitCategory": "percentage",
+      "baseUnit": "percent",
+      "displayUnit": null,
+      "decimals": 1,
+      "suffix": "",
+      "delimiter": false,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "kpi-disk-queue": {
+   "title": "Avg Disk Queue Length",
+   "description": "Average disk queue length across selected plans. A sustained non-zero queue indicates disk I/O saturation that can degrade all apps on the plan.",
+   "type": "data",
+   "query": "timeseries val = avg(cloud.azure.microsoft_web.serverfarms.DiskQueueLength),\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| summarize AvgDiskQ = avg(arrayAvg(val))",
+   "visualization": "singleValue",
+   "visualizationSettings": {
+    "singleValue": {
+     "labelMode": "none",
+     "label": "Disk Queue Length",
+     "recordField": "AvgDiskQ",
+     "prefixIcon": "",
+     "colorThresholdTarget": "background",
+     "sparklineSettings": {
+      "record": "val"
+     },
+     "trend": {
+      "isVisible": false
+     }
+    },
+    "coloring": {
+     "colorRules": [
+      {
+       "value": 0,
+       "comparator": ">=",
+       "field": "AvgDiskQ",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+       }
+      },
+      {
+       "value": 1,
+       "comparator": ">=",
+       "field": "AvgDiskQ",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+       }
+      },
+      {
+       "value": 5,
+       "comparator": ">=",
+       "field": "AvgDiskQ",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+       }
+      }
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "AvgDiskQ",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 1,
+      "suffix": "",
+      "delimiter": false,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "kpi-http-queue": {
+   "title": "Avg HTTP Queue Length",
+   "description": "Average HTTP request queue length across selected plans. A growing queue means requests are waiting for a worker thread and users experience increased latency.",
+   "type": "data",
+   "query": "timeseries val = avg(cloud.azure.microsoft_web.serverfarms.HttpQueueLength),\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| summarize AvgHttpQ = avg(arrayAvg(val))",
+   "visualization": "singleValue",
+   "visualizationSettings": {
+    "singleValue": {
+     "labelMode": "none",
+     "label": "HTTP Queue Length",
+     "recordField": "AvgHttpQ",
+     "prefixIcon": "",
+     "colorThresholdTarget": "background",
+     "sparklineSettings": {
+      "record": "val"
+     },
+     "trend": {
+      "isVisible": false
+     }
+    },
+    "coloring": {
+     "colorRules": [
+      {
+       "value": 0,
+       "comparator": ">=",
+       "field": "AvgHttpQ",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+       }
+      },
+      {
+       "value": 1,
+       "comparator": ">=",
+       "field": "AvgHttpQ",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+       }
+      },
+      {
+       "value": 10,
+       "comparator": ">=",
+       "field": "AvgHttpQ",
+       "colorMode": "custom-color",
+       "customColor": {
+        "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+       }
+      }
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "AvgHttpQ",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 1,
+      "suffix": "",
+      "delimiter": false,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "sec-resources": {
+   "type": "markdown",
+   "content": "##### Resource Utilization"
+  },
+  "chart-cpu": {
+   "title": "CPU Utilization by Plan",
+   "description": "CPU percentage per App Service Plan. Plans sustained above 80% CPU are at risk of throttling the apps they host — consider scaling up or enabling autoscale.",
+   "type": "data",
+   "query": "timeseries val = avg(cloud.azure.microsoft_web.serverfarms.CpuPercentage),\n  by: {azure.resource.name, azure.subscription, azure.resource.group, azure.location, dt.smartscape_source.id},\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| sort arrayAvg(val) desc\n| limit toLong($Limit)",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "fieldMapping": {
+      "leftAxisValues": [
+       "val"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "dataMapping": {
+     "displayedFields": [
+      "azure.resource.name"
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "val",
+      "unitCategory": "percentage",
+      "baseUnit": "percent",
+      "displayUnit": null,
+      "decimals": 1,
+      "suffix": "",
+      "delimiter": false,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "chart-memory": {
+   "title": "Memory Utilization by Plan",
+   "description": "Memory percentage per App Service Plan. High memory on a shared plan affects all apps hosted on that plan and may cause out-of-memory crashes.",
+   "type": "data",
+   "query": "timeseries val = avg(cloud.azure.microsoft_web.serverfarms.MemoryPercentage),\n  by: {azure.resource.name, azure.subscription, azure.resource.group, azure.location, dt.smartscape_source.id},\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| sort arrayAvg(val) desc\n| limit toLong($Limit)",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "fieldMapping": {
+      "leftAxisValues": [
+       "val"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "dataMapping": {
+     "displayedFields": [
+      "azure.resource.name"
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "val",
+      "unitCategory": "percentage",
+      "baseUnit": "percent",
+      "displayUnit": null,
+      "decimals": 1,
+      "suffix": "",
+      "delimiter": false,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "sec-queues": {
+   "type": "markdown",
+   "content": "##### Queue Depths"
+  },
+  "chart-disk-queue": {
+   "title": "Disk Queue Length by Plan",
+   "description": "Disk I/O queue depth per App Service Plan. A persistent non-zero queue means disk operations are serializing and will slow all hosted apps equally.",
+   "type": "data",
+   "query": "timeseries val = avg(cloud.azure.microsoft_web.serverfarms.DiskQueueLength),\n  by: {azure.resource.name, azure.subscription, azure.resource.group, azure.location, dt.smartscape_source.id},\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| sort arrayAvg(val) desc\n| limit toLong($Limit)",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "fieldMapping": {
+      "leftAxisValues": [
+       "val"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "dataMapping": {
+     "displayedFields": [
+      "azure.resource.name"
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "val",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "chart-http-queue": {
+   "title": "HTTP Queue Length by Plan",
+   "description": "HTTP request queue depth per App Service Plan. A non-zero queue means incoming requests wait for a free worker — a leading indicator of latency spikes and timeouts.",
+   "type": "data",
+   "query": "timeseries val = avg(cloud.azure.microsoft_web.serverfarms.HttpQueueLength),\n  by: {azure.resource.name, azure.subscription, azure.resource.group, azure.location, dt.smartscape_source.id},\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| sort arrayAvg(val) desc\n| limit toLong($Limit)",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "fieldMapping": {
+      "leftAxisValues": [
+       "val"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "dataMapping": {
+     "displayedFields": [
+      "azure.resource.name"
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "val",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "sec-network": {
+   "type": "markdown",
+   "content": "##### Network I/O"
+  },
+  "chart-bytes-in": {
+   "title": "Bytes Received Rate by Plan",
+   "description": "Average inbound bytes per minute per App Service Plan sorted by highest receivers. Use this to spot traffic spikes and identify plans receiving disproportionate load.",
+   "type": "data",
+   "query": "timeseries bytesIn = avg(cloud.azure.microsoft_web.serverfarms.BytesReceived),\n  by: {azure.resource.name, azure.subscription, azure.resource.group, azure.location, dt.smartscape_source.id},\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| sort arrayAvg(bytesIn) desc\n| limit toLong($Limit)",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "fieldMapping": {
+      "leftAxisValues": [
+       "bytesIn"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "dataMapping": {
+     "displayedFields": [
+      "azure.resource.name"
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "bytesIn",
+      "unitCategory": "data",
+      "baseUnit": "byte",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": false,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "chart-bytes-out": {
+   "title": "Bytes Sent Rate by Plan",
+   "description": "Average outbound bytes per minute per App Service Plan sorted by highest senders. Use this to spot egress spikes and identify plans making data-intensive calls to downstream services.",
+   "type": "data",
+   "query": "timeseries bytesOut = avg(cloud.azure.microsoft_web.serverfarms.BytesSent),\n  by: {azure.resource.name, azure.subscription, azure.resource.group, azure.location, dt.smartscape_source.id},\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| sort arrayAvg(bytesOut) desc\n| limit toLong($Limit)",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "fieldMapping": {
+      "leftAxisValues": [
+       "bytesOut"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "dataMapping": {
+     "displayedFields": [
+      "azure.resource.name"
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "bytesOut",
+      "unitCategory": "data",
+      "baseUnit": "byte",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": false,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "sec-tcp": {
+   "type": "markdown",
+   "content": "##### TCP Connection States"
+  },
+  "chart-tcp-established": {
+   "title": "TCP Established Connections by Plan",
+   "description": "Active established TCP connections per App Service Plan. A sudden drop signals connection resets or worker crashes; sustained growth may indicate connection leaks.",
+   "type": "data",
+   "query": "timeseries val = avg(cloud.azure.microsoft_web.serverfarms.TcpEstablished),\n  by: {azure.resource.name, azure.subscription, azure.resource.group, azure.location, dt.smartscape_source.id},\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| sort arrayAvg(val) desc\n| limit toLong($Limit)",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "fieldMapping": {
+      "leftAxisValues": [
+       "val"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "dataMapping": {
+     "displayedFields": [
+      "azure.resource.name"
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "val",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "chart-tcp-states": {
+   "title": "TCP State Distribution (Aggregate)",
+   "description": "All nine TCP connection states averaged across the filtered plans. A spike in FinWait, TimeWait, or CloseWait states indicates slow connection teardown or upstream service timeouts.",
+   "type": "data",
+   "query": "timeseries {\n  established = avg(cloud.azure.microsoft_web.serverfarms.TcpEstablished),\n  synSent = avg(cloud.azure.microsoft_web.serverfarms.TcpSynSent),\n  synReceived = avg(cloud.azure.microsoft_web.serverfarms.TcpSynReceived),\n  finWait1 = avg(cloud.azure.microsoft_web.serverfarms.TcpFinWait1),\n  finWait2 = avg(cloud.azure.microsoft_web.serverfarms.TcpFinWait2),\n  closing = avg(cloud.azure.microsoft_web.serverfarms.TcpClosing),\n  closeWait = avg(cloud.azure.microsoft_web.serverfarms.TcpCloseWait),\n  lastAck = avg(cloud.azure.microsoft_web.serverfarms.TcpLastAck),\n  timeWait = avg(cloud.azure.microsoft_web.serverfarms.TcpTimeWait)\n},\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "fieldMapping": {
+      "leftAxisValues": [
+       "established",
+       "synSent",
+       "synReceived",
+       "finWait1",
+       "finWait2",
+       "closing",
+       "closeWait",
+       "lastAck",
+       "timeWait"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "established",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     },
+     {
+      "identifier": "synSent",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     },
+     {
+      "identifier": "synReceived",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     },
+     {
+      "identifier": "finWait1",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     },
+     {
+      "identifier": "finWait2",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     },
+     {
+      "identifier": "closing",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     },
+     {
+      "identifier": "closeWait",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     },
+     {
+      "identifier": "lastAck",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     },
+     {
+      "identifier": "timeWait",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "sec-sockets": {
+   "type": "markdown",
+   "content": "##### Sockets"
+  },
+  "chart-socket-overview": {
+   "title": "Socket Traffic Overview",
+   "description": "Total inbound and outbound socket counts aggregated across the filtered plans. A growing gap between inbound and outbound may indicate socket exhaustion or asymmetric load.",
+   "type": "data",
+   "query": "timeseries {socketIn = avg(cloud.azure.microsoft_web.serverfarms.SocketInboundAll), socketOut = avg(cloud.azure.microsoft_web.serverfarms.SocketOutboundAll)},\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "fieldMapping": {
+      "leftAxisValues": [
+       "socketIn",
+       "socketOut"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "socketIn",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     },
+     {
+      "identifier": "socketOut",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "chart-socket-outbound": {
+   "title": "Outbound Socket Detail by Plan",
+   "description": "Outbound socket breakdown per App Service Plan: established, time-wait, and loopback. Sort by any column to surface the problematic plan. High time-wait counts indicate rapid connection churn; high loopback counts suggest heavy intra-host communication.",
+   "type": "data",
+   "query": "timeseries {socketEstablished = avg(cloud.azure.microsoft_web.serverfarms.SocketOutboundEstablished), socketTimeWait = avg(cloud.azure.microsoft_web.serverfarms.SocketOutboundTimeWait), socketLoopback = avg(cloud.azure.microsoft_web.serverfarms.SocketLoopback)},\n  by: {azure.resource.name, azure.subscription, azure.resource.group, azure.location, dt.smartscape_source.id},\n  filter: {\n    in(azure.subscription, array($Subscription)) AND\n    in(azure.location, array($Location)) AND\n    in(azure.resource.group, array($ResourceGroup)) AND\n    (matchesValue($PrimaryTag,\"ANY\") or arraySize(array($PrimaryTagValues)) == 0 or in($PrimaryTag:noquote, arrayConcat(array($PrimaryTagValues), array(\"\")))) AND\n    in(dt.smartscape_source.id, iCollectArray(toSmartscapeId(array($SmartscapeId)[])))\n  }\n| sort arrayAvg(socketEstablished) desc\n| limit toLong($Limit)",
+   "visualization": "lineChart",
+   "visualizationSettings": {
+    "chartSettings": {
+     "fieldMapping": {
+      "leftAxisValues": [
+       "socketEstablished",
+       "socketTimeWait",
+       "socketLoopback"
+      ],
+      "timestamp": "timeframe"
+     }
+    },
+    "dataMapping": {
+     "displayedFields": [
+      "azure.resource.name",
+      "socketEstablished",
+      "socketTimeWait",
+      "socketLoopback"
+     ]
+    },
+    "autoSelectVisualization": false,
+    "unitsOverrides": [
+     {
+      "identifier": "socketEstablished",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     },
+     {
+      "identifier": "socketTimeWait",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     },
+     {
+      "identifier": "socketLoopback",
+      "unitCategory": "unspecified",
+      "baseUnit": "none",
+      "displayUnit": null,
+      "decimals": 0,
+      "suffix": "",
+      "delimiter": true,
+      "added": 1783900800000
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "footer": {
+   "type": "markdown",
+   "content": "### Additional information\n\nLearn more about Clouds Observability:\n* [Explore the Clouds App in Playground](https://tenant1.apps.dynatrace.com/ui/apps/dynatrace.clouds/)\n\n* [Explore our documentation](https://docs.dynatrace.com/docs/observe/infrastructure-observability/cloud-platform-monitoring/clouds-app)"
+  },
+  "problems-kpi-active": {
+   "title": "Active Problems",
+   "type": "data",
+   "query": "fetch dt.davis.problems\n| filter contains(toString(smartscape.affected_entities), \"AZURE_MICROSOFT_WEB_SERVERFARMS\") OR contains(toString(affected_entity_types), \"azure_microsoft_web_serverfarms\")\n| filter event.status == \"ACTIVE\"\n| filter isNull(dt.davis.is_duplicate) OR not(dt.davis.is_duplicate)\n| summarize count()",
+   "visualization": "singleValue",
+   "visualizationSettings": {
+    "singleValue": {
+     "labelMode": "none",
+     "label": "count()",
+     "recordField": "count()",
+     "prefixIcon": "",
+     "trend": {
+      "isVisible": false
+     }
+    },
+    "thresholds": [
+     {
+      "id": 1,
+      "field": "count()",
+      "title": "",
+      "isEnabled": true,
+      "rules": [
+       {
+        "id": 1,
+        "color": {
+         "Default": "var(--dt-colors-charts-status-ideal-default, #2f6863)"
+        },
+        "comparator": "=",
+        "label": "",
+        "value": 0
+       },
+       {
+        "id": 2,
+        "color": {
+         "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+        },
+        "comparator": ">",
+        "label": "",
+        "value": 0
+       }
+      ]
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "problems-kpi-warnings": {
+   "title": "Active warning signals",
+   "type": "data",
+   "query": "fetch dt.davis.events.snapshots\n| filter contains(toString(smartscape.affected_entities), \"AZURE_MICROSOFT_WEB_SERVERFARMS\") OR contains(toString(affected_entity_types), \"azure_microsoft_web_serverfarms\")\n| filter event.type == \"WARNING\"\n| dedup event.id, sort: {timestamp desc}\n| filter event.status == \"ACTIVE\"\n| summarize count()",
+   "visualization": "singleValue",
+   "visualizationSettings": {
+    "singleValue": {
+     "labelMode": "none",
+     "label": "count()",
+     "recordField": "count()",
+     "prefixIcon": "",
+     "trend": {
+      "isVisible": false
+     }
+    },
+    "thresholds": [
+     {
+      "id": 1,
+      "field": "count()",
+      "title": "",
+      "isEnabled": true,
+      "rules": [
+       {
+        "id": 1,
+        "color": {
+         "Default": "var(--dt-colors-charts-loglevel-warning-default, #a9780f)"
+        },
+        "comparator": ">",
+        "label": "",
+        "value": 0
+       },
+       {
+        "id": 2,
+        "color": {
+         "Default": "var(--dt-colors-charts-status-ideal-default, #2f6863)"
+        },
+        "comparator": "=",
+        "label": "",
+        "value": 0
+       }
+      ]
+     }
+    ]
+   },
+   "querySettings": {
+    "maxResultRecords": 1000,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "problems-header": {
+   "type": "markdown",
+   "content": "### Problems & Warnings\nProblems and warning signals for your Azure App Service Plans. [Investigate active problems](/ui/apps/dynatrace.davis.problems/)."
+  },
+  "problems-detail": {
+   "title": "Active problems details",
+   "type": "data",
+   "query": "fetch dt.davis.problems\n| filter contains(toString(smartscape.affected_entities), \"AZURE_MICROSOFT_WEB_SERVERFARMS\") OR contains(toString(affected_entity_types), \"azure_microsoft_web_serverfarms\")\n| filter event.status == \"ACTIVE\"\n| filter isNull(dt.davis.is_duplicate) OR not(dt.davis.is_duplicate)\n| fields display_id, event.name, event.category, event.start\n| fieldsRename id = display_id, problem = event.name, category = event.category, start = event.start\n| sort category asc",
+   "visualization": "table",
+   "visualizationSettings": {
+    "autoSelectVisualization": false
+   },
+   "querySettings": {
+    "maxResultRecords": 50,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  },
+  "warnings-detail": {
+   "title": "Active warnings details",
+   "type": "data",
+   "query": "fetch dt.davis.events.snapshots\n| filter contains(toString(smartscape.affected_entities), \"AZURE_MICROSOFT_WEB_SERVERFARMS\") OR contains(toString(affected_entity_types), \"azure_microsoft_web_serverfarms\")\n| filter event.type == \"WARNING\"\n| dedup event.id, sort: {timestamp desc}\n| filter event.status == \"ACTIVE\"\n| fields event.name, event.category, event.start\n| fieldsRename name = event.name, category = event.category, start = event.start\n| sort category asc",
+   "visualization": "table",
+   "visualizationSettings": {
+    "autoSelectVisualization": false
+   },
+   "querySettings": {
+    "maxResultRecords": 50,
+    "defaultScanLimitGbytes": 500,
+    "maxResultMegaBytes": 1,
+    "defaultSamplingRatio": 10,
+    "enableSampling": false
+   },
+   "davis": {
+    "enabled": false,
+    "davisVisualization": {
+     "isAvailable": true
+    }
+   }
+  }
+ },
+ "layouts": {
+  "header": {
+   "x": 0,
+   "y": 0,
+   "w": 24,
+   "h": 3
+  },
+  "kpi-count": {
+   "x": 0,
+   "y": 6,
+   "w": 4,
+   "h": 4
+  },
+  "kpi-cpu": {
+   "x": 4,
+   "y": 6,
+   "w": 5,
+   "h": 4
+  },
+  "kpi-memory": {
+   "x": 9,
+   "y": 6,
+   "w": 5,
+   "h": 4
+  },
+  "kpi-disk-queue": {
+   "x": 14,
+   "y": 6,
+   "w": 5,
+   "h": 4
+  },
+  "kpi-http-queue": {
+   "x": 19,
+   "y": 6,
+   "w": 5,
+   "h": 4
+  },
+  "sec-resources": {
+   "x": 0,
+   "y": 10,
+   "w": 24,
+   "h": 1
+  },
+  "chart-cpu": {
+   "x": 0,
+   "y": 11,
+   "w": 12,
+   "h": 5
+  },
+  "chart-memory": {
+   "x": 12,
+   "y": 11,
+   "w": 12,
+   "h": 5
+  },
+  "sec-queues": {
+   "x": 0,
+   "y": 16,
+   "w": 24,
+   "h": 1
+  },
+  "chart-disk-queue": {
+   "x": 0,
+   "y": 17,
+   "w": 12,
+   "h": 5
+  },
+  "chart-http-queue": {
+   "x": 12,
+   "y": 17,
+   "w": 12,
+   "h": 5
+  },
+  "sec-network": {
+   "x": 0,
+   "y": 22,
+   "w": 24,
+   "h": 1
+  },
+  "chart-bytes-in": {
+   "x": 0,
+   "y": 23,
+   "w": 12,
+   "h": 5
+  },
+  "chart-bytes-out": {
+   "x": 12,
+   "y": 23,
+   "w": 12,
+   "h": 5
+  },
+  "sec-tcp": {
+   "x": 0,
+   "y": 28,
+   "w": 24,
+   "h": 1
+  },
+  "chart-tcp-established": {
+   "x": 0,
+   "y": 29,
+   "w": 12,
+   "h": 5
+  },
+  "chart-tcp-states": {
+   "x": 12,
+   "y": 29,
+   "w": 12,
+   "h": 5
+  },
+  "sec-sockets": {
+   "x": 0,
+   "y": 34,
+   "w": 24,
+   "h": 1
+  },
+  "chart-socket-overview": {
+   "x": 0,
+   "y": 35,
+   "w": 12,
+   "h": 5
+  },
+  "chart-socket-outbound": {
+   "x": 12,
+   "y": 35,
+   "w": 12,
+   "h": 5
+  },
+  "footer": {
+   "x": 0,
+   "y": 48,
+   "w": 24,
+   "h": 3
+  },
+  "problems-kpi-active": {
+   "x": 0,
+   "y": 3,
+   "w": 12,
+   "h": 3
+  },
+  "problems-kpi-warnings": {
+   "x": 12,
+   "y": 3,
+   "w": 12,
+   "h": 3
+  },
+  "problems-header": {
+   "x": 0,
+   "y": 40,
+   "w": 24,
+   "h": 2
+  },
+  "problems-detail": {
+   "x": 0,
+   "y": 42,
+   "w": 12,
+   "h": 6
+  },
+  "warnings-detail": {
+   "x": 12,
+   "y": 42,
+   "w": 12,
+   "h": 6
+  }
+ },
+ "importedWithCode": false,
+ "settings": {},
+ "annotations": []
+}
