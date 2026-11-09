@@ -1,10 +1,13 @@
 """SNS subscriptions that need an EventBridge destination, and the https payload warning."""
 
 import json
+from pathlib import Path
 from typing import Any
 
 import pytest
+from typer.testing import CliRunner
 
+from importer.cli import app
 from importer.core.notification_ir import build_plan, plan_json
 from importer.sources.cloudwatch.notifications import translate_topic
 
@@ -21,7 +24,9 @@ def topic_file(*subs: dict[str, str]) -> dict[str, Any]:
 
 @pytest.mark.parametrize("protocol", ["lambda", "sqs", "firehose"])
 def test_aws_targets_become_an_eventbridge_plan_with_the_aws_side_steps(protocol: str) -> None:
-    topic = translate_topic(topic_file(sub(protocol, f"arn:aws:{protocol}:us-east-1:1:x")))
+    topic = translate_topic(
+        topic_file(sub(protocol, f"arn:aws:{protocol}:us-east-1:123456789012:x"))
+    )
     (manual,) = topic.manual_destinations
     assert (manual.service, manual.nr_type) == (protocol, "EVENT_BRIDGE")
     text = " ".join(manual.steps)
@@ -34,9 +39,13 @@ def test_aws_targets_become_an_eventbridge_plan_with_the_aws_side_steps(protocol
 
 def test_several_subscriptions_of_one_kind_share_one_manual_destination() -> None:
     topic = translate_topic(
-        topic_file(sub("lambda", "arn:aws:lambda:x:1:function:a"), sub("lambda", "arn:b"))
+        topic_file(
+            sub("lambda", "arn:aws:lambda:us-east-1:123456789012:function:a"),
+            sub("lambda", "arn:aws:lambda:us-east-1:123456789012:function:b"),
+        )
     )
-    assert len(topic.manual_destinations) == 1 and len(topic.unsupported) == 2
+    assert len(topic.manual_destinations) == 1
+    assert len(topic.unsupported) == 2 + 3  # two subscriptions, three report lines
 
 
 def test_email_and_https_plans_gain_no_new_fields() -> None:
@@ -62,3 +71,45 @@ def test_https_warning_is_opt_in_so_default_output_stays_identical() -> None:
         warn_https_payload=True,
     )
     assert len(both.warnings) == 1
+
+
+def test_the_eventbridge_steps_reach_report_md(tmp_path: Path) -> None:
+    runner = CliRunner()
+    alerts, out = tmp_path / "alerts", tmp_path / "n"
+    fixtures = Path(__file__).parent / "fixtures"
+    done = runner.invoke(
+        app,
+        [
+            "convert",
+            "--source",
+            "cloudwatch",
+            "--in",
+            str(fixtures / "cloudwatch"),
+            "--out",
+            str(alerts),
+        ],
+    )
+    assert done.exit_code == 0, done.output
+    topics = tmp_path / "topic.json"
+    topics.write_text(
+        json.dumps(topic_file(sub("lambda", "arn:aws:lambda:eu-west-1:210987654321:function:f")))
+    )
+    done = runner.invoke(
+        app,
+        [
+            "convert-notifications",
+            "--topics",
+            str(topics),
+            "--alerts",
+            str(alerts),
+            "--out",
+            str(out),
+        ],
+    )
+    assert done.exit_code == 0, done.output
+    report = (out / "report.md").read_text()
+    assert (
+        "210987654321" in report
+        and "partner event source" in report
+        and "EventBridge rule" in report
+    )
