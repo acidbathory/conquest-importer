@@ -31,6 +31,11 @@ AGGREGATION = f"{QUERY} an aggregation has no NRQL function"
 COMMAND = f"{QUERY} the query uses a command the planner does not read"
 PARAMETER = f"{QUERY} the query uses a timeseries option the planner does not read"
 LIMIT = f"{QUERY} the limit is neither a number nor a dashboard variable"
+SCALAR = f"{QUERY} the query asks for a single value (the scalar option) instead of a series"
+REORDER = (
+    f"{QUERY} a command after limit would run before the limit in NRQL, which has a fixed order"
+)
+SORT_EXPR = f"{QUERY} the sort key is an expression, not a field"
 
 # Why a tile cannot be written at all.
 TILE_VIZ = f"{TILE} the visualization has no New Relic widget"
@@ -58,6 +63,24 @@ D_LINK = f"{NOTE} link columns to the Dynatrace interface were dropped"
 D_LIMIT = f"{NOTE} a variable in the limit is fixed at its default, because LIMIT takes no variable"
 D_AVERAGE = f"{NOTE} an average of per-interval averages becomes an average of the raw points"
 D_WIDGET = f"{NOTE} the visualization is shown with the closest New Relic widget"
+D_INTERVAL = f"{NOTE} the bucket size (interval) is not set; TIMESERIES chooses its own"
+D_TIMEFRAME = (
+    f"{NOTE} a time range written in the query was dropped; the dashboard time picker applies"
+)
+D_RATE = f"{NOTE} the rate option becomes rate() over the same interval; the result is unverified"
+D_OPTION = f"{NOTE} an option of an aggregation (such as default) was dropped"
+D_MATCH = (
+    f"{NOTE} matchesValue, contains, startsWith and endsWith differ from LIKE in case and wildcard "
+    "rules, and the difference is not verified"
+)
+D_SORT_SERIES = f"{NOTE} a sort by the average of a series becomes ORDER BY on the aggregate"
+D_TILE_TIMEFRAME = f"{NOTE} the tile's own timeframe is lost; the dashboard time picker applies"
+D_SEGMENTS = f"{NOTE} the tile's segment filter was dropped"
+D_SELECT_ALL = (
+    f"{NOTE} the test for the select-all value of a variable is replaced by the New Relic "
+    "default value *, which the variable must be set to"
+)
+N_SETTINGS = f"{NOTE} threshold colours and other display settings are not carried over"
 D_VAR_NAMES = f"{NOTE} the list reads metric names, which need the New Relic metric name map"
 D_VAR_DEPENDS = (
     f"{NOTE} the list depends on another variable; whether a New Relic variable query can use "
@@ -99,6 +122,9 @@ BLOCKERS = (
     COMMAND,
     PARAMETER,
     LIMIT,
+    SCALAR,
+    REORDER,
+    SORT_EXPR,
     TILE_VIZ,
     TILE_CODE,
     TILE_SLO,
@@ -115,6 +141,16 @@ BLOCKERS = (
     C_TILE,
 )
 NOTES = (
+    D_INTERVAL,
+    D_TIMEFRAME,
+    D_RATE,
+    D_OPTION,
+    D_MATCH,
+    D_SORT_SERIES,
+    D_TILE_TIMEFRAME,
+    D_SEGMENTS,
+    D_SELECT_ALL,
+    N_SETTINGS,
     D_ENTITY,
     D_SORT,
     D_LINK,

@@ -145,12 +145,12 @@ def _depths(mask: str) -> list[int]:
 
 def unwrap(s: Scanned) -> Scanned:
     """Remove outer brackets that enclose the whole text, repeatedly."""
-    while len(s.mask) >= 2 and s.mask[0] in OPEN and _closes_at_end(s.mask):
+    while len(s.mask) >= 2 and s.mask[0] in OPEN and closes_at_end(s.mask):
         s = s.sub(1, len(s.mask) - 1)
     return s
 
 
-def _closes_at_end(mask: str) -> bool:
+def closes_at_end(mask: str) -> bool:
     depth = 0
     for i, ch in enumerate(mask):
         if ch in OPEN:

@@ -27,10 +27,10 @@ def test_the_command_writes_a_report_and_a_plan_that_reads_back(tmp_path: Path) 
     result = plan(FIXTURES, tmp_path / "out")
     assert result.exit_code == 0, result.output
     assert (
-        "Planned 5 dashboards" in result.output and "10 exact, 22 draft, 32 manual" in result.output
+        "Planned 5 dashboards" in result.output and "5 exact, 21 draft, 38 manual" in result.output
     )
     plans = DashboardPlans.model_validate_json((tmp_path / "out" / "plan.json").read_text())
-    assert (plans.totals.exact, plans.totals.draft) == (10, 22)
+    assert (plans.totals.exact, plans.totals.draft) == (5, 21)
     assert len(plans.dashboards) == 5
     report = (tmp_path / "out" / "report.md").read_text()
     assert report.startswith("# Dynatrace dashboard plan") and "no New Relic data source" in report

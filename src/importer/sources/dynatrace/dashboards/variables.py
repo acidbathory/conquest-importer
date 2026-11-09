@@ -7,6 +7,8 @@
   variable sets a LIMIT, or the query is not a shape the planner reads.
 """
 
+import re
+
 from importer.sources.dynatrace.dashboards import reasons as r
 from importer.sources.dynatrace.dashboards.dql_rules import (
     Analysis,
@@ -26,6 +28,7 @@ from importer.sources.dynatrace.dashboards.models import Variable
 from importer.sources.dynatrace.dashboards.plan_models import VariablePlan, Verdict
 
 # commands that shape a list of values; their arguments cannot change what the list holds
+SELECT_ALL = re.compile(r"^(?:[0-9a-fA-F-]{36})?\*$")  # `*`, or a UUID and `*`
 LIST_COMMANDS = frozenset({"fields", "fieldsKeep", "fieldsRename", "sort", "summarize", "expand"})
 DYNATRACE_ONLY_DATASETS = ("security.events", "dt.entity", "dt.davis")
 
@@ -39,6 +42,9 @@ def _subquery(commands: list[Scanned]) -> Scanned | None:
 
 def _list_pipeline(commands: list[Scanned], a: Analysis) -> None:
     """Check the source of a list query and the commands after it."""
+    if not commands:  # an empty query, or an empty `append [ ]`
+        a.block(r.VAR_SHAPE)
+        return
     source = commands[0]
     name = head(source)
     if name == "timeseries":
@@ -76,10 +82,7 @@ def _analyse_list(query: str) -> Analysis:
         a.block(r.VAR_SHAPE)
         return a
     inner = _subquery(commands)
-    if inner is None:
-        _list_pipeline(commands, a)
-        return a
-    _list_pipeline(split_at(inner, "|"), a)
+    _list_pipeline(commands if inner is None else split_at(inner, "|"), a)
     return a
 
 
@@ -100,6 +103,8 @@ def _finish(variable: Variable, a: Analysis, limit_variables: set[str]) -> Varia
         notes=notes,
         no_data_source=a.dynatrace_only,
         depends_on=others,
+        multiple=variable.multiple,
+        select_all=bool(SELECT_ALL.match(variable.default)),
     )
 
 

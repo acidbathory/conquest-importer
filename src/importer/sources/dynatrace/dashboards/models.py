@@ -70,7 +70,6 @@ class Tile(BaseModel):
     query: str = ""  # DQL of a data tile
     input: str = ""  # script of a code tile, SLO id of an slo tile
     visualization: str = ""
-    subtype: str = ""
     settings: dict[str, Any] = {}
     tile_timeframe: bool = False  # a tile timeframe that is switched on
     segments: bool = False
@@ -175,13 +174,12 @@ def parse_tile(tile_id: str, raw: object, layout: object) -> Tile | Unreadable:
     segments = raw.get("segments")
     return Tile(
         id=tile_id[:80],
-        kind=kind,
+        kind=kind[:40],  # shown in reports; the cap is applied here, once
         title=_str(raw.get("title"), 300),
         content=_str(raw.get("content")),
         query=_str(raw.get("query")),
         input=_str(raw.get("input")),
         visualization=_str(raw.get("visualization"), 80),
-        subtype=_str(raw.get("subType"), 80),
         settings=settings if isinstance(settings, dict) else {},
         tile_timeframe=_on(timeframe, "tileTimeframeEnabled"),
         segments=_on(segments, "tileSegmentsEnabled"),
@@ -208,7 +206,7 @@ def parse_variable(index: int, raw: object) -> Variable | Unreadable:
         return Unreadable(ref=key[:80], code=TOO_LARGE)
     return Variable(
         key=key[:80],
-        type=kind,
+        type=kind[:40],
         input=text if isinstance(text, str) else "",
         multiple=raw.get("multiple") is True,
         default=_default(raw.get("defaultValue")),

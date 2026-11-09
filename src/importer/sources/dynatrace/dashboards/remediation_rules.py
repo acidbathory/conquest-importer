@@ -160,6 +160,31 @@ _TABLE: list[tuple[str, str, list[str]]] = [
         ],
     ),
     (
+        r.SCALAR,
+        "Dashboard query asks for a scalar",
+        [
+            "The scalar option returns one number per group, used to rank or colour. Write an "
+            "NRQL query without TIMESERIES (a plain aggregation with FACET) for that value.",
+        ],
+    ),
+    (
+        r.REORDER,
+        "Dashboard command after limit",
+        [
+            "In DQL the limit comes first and a later sort or filter acts on the limited rows. "
+            "NRQL sorts and filters before it limits. Decide which result you want and write "
+            "the ORDER BY and LIMIT by hand.",
+        ],
+    ),
+    (
+        r.SORT_EXPR,
+        "Dashboard sort by an expression",
+        [
+            "NRQL ORDER BY takes an aggregate or a field. Rewrite the expression as an "
+            "aggregate in the SELECT list and order by that.",
+        ],
+    ),
+    (
         r.TILE_VIZ,
         "Dashboard visualization without a New Relic widget",
         [
@@ -244,6 +269,62 @@ _TABLE: list[tuple[str, str, list[str]]] = [
             "If the tile must stay narrow, filter on a tag or attribute that your New Relic "
             "data carries, with a dashboard variable.",
         ],
+    ),
+    (
+        r.D_INTERVAL,
+        "Bucket size not set",
+        ["Add TIMESERIES <n> minutes if the bucket size matters."],
+    ),
+    (
+        r.D_TIMEFRAME,
+        "Time range in the query dropped",
+        ["Set SINCE and UNTIL by hand if the tile must not follow the dashboard time picker."],
+    ),
+    (
+        r.D_RATE,
+        "Rate option mapped to rate()",
+        ["Check that the metric is a counter in New Relic. " + REVIEW],
+    ),
+    (
+        r.D_OPTION,
+        "Aggregation option dropped",
+        ["Check what the dropped option changed. " + REVIEW],
+    ),
+    (
+        r.D_MATCH,
+        "Wildcard and case rules differ",
+        [
+            "matchesValue and contains are not the same as LIKE: wildcard characters, case "
+            "and escaping differ. Test the filter against known values. " + REVIEW,
+        ],
+    ),
+    (
+        r.D_SORT_SERIES,
+        "Sort by series average",
+        ["The ranking is by the aggregate over the whole time range. " + REVIEW],
+    ),
+    (
+        r.D_TILE_TIMEFRAME,
+        "Tile timeframe lost",
+        ["Add SINCE and UNTIL and the widget's ignore-time-range option by hand."],
+    ),
+    (
+        r.D_SEGMENTS,
+        "Tile segment filter dropped",
+        ["A segment is a saved Dynatrace filter. Rebuild it as a WHERE clause or a variable."],
+    ),
+    (
+        r.D_SELECT_ALL,
+        "Select-all test replaced",
+        [
+            "Set the New Relic variable's default value to * so that it selects everything, "
+            "and allow multiple selection if the Dynatrace variable did.",
+        ],
+    ),
+    (
+        r.N_SETTINGS,
+        "Display settings not carried over",
+        ["Threshold colours, units and axis settings are not part of the query. Set them by hand."],
     ),
     (
         r.D_SORT,

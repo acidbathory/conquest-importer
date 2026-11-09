@@ -54,6 +54,8 @@ class VariablePlan(BaseModel):
     notes: list[str] = []
     no_data_source: list[str] = []
     depends_on: list[str] = []
+    multiple: bool = False
+    select_all: bool = False  # the default is the select-all value (* or a UUID followed by *)
 
 
 class Counts(BaseModel):

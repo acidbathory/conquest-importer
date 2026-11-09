@@ -28,6 +28,7 @@ CLOSEST_WIDGETS = {  # shown with a different look; UNVERIFIED as equivalents
     "gauge": "viz.bullet",
     "meterBar": "viz.bullet",
 }
+DISPLAY_SETTINGS = ("thresholds", "coloring")
 OTHER_KINDS = {"code": r.TILE_CODE, "slo": r.TILE_SLO}
 
 
@@ -71,7 +72,13 @@ def _data_tile(tile: Tile) -> TilePlan:
     widget = _widget(tile, a)
     if tile.prompt:
         a.block(r.TILE_PROMPT)
+    if tile.tile_timeframe:
+        a.draft(r.D_TILE_TIMEFRAME)
+    if tile.segments:
+        a.draft(r.D_SEGMENTS)
     notes = list(a.drafts)
+    if any(tile.settings.get(key) for key in DISPLAY_SETTINGS):
+        notes.append(r.N_SETTINGS)  # informational: display settings do not change the verdict
     if a.dynatrace_only:
         notes.append(r.NO_DATA)
     return TilePlan(

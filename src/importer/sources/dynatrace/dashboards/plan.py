@@ -138,8 +138,8 @@ def _summary(plans: DashboardPlans) -> list[str]:
             ["Tiles", "Count"],
             [
                 ["data tiles", str(t.data)],
-                ["exact (every clause maps to NRQL unchanged)", str(t.exact)],
-                ["draft (one plumbing clause dropped, with a note)", str(t.draft)],
+                ["exact (same meaning in NRQL, nothing dropped)", str(t.exact)],
+                ["draft (a clause dropped or not verified, with a note)", str(t.draft)],
                 ["manual", str(t.manual)],
                 ["markdown (convert; spacers are dropped)", str(t.markdown)],
                 [

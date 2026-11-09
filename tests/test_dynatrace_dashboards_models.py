@@ -37,7 +37,7 @@ def test_a_tile_keeps_the_fields_the_planner_needs() -> None:
     assert doc.platform is not None
     tile = next(t for t in doc.platform.tiles if t.id == "4")
     assert tile.kind == "data" and tile.visualization == "lineChart"
-    assert tile.subtype == "dql-builder-metrics" and tile.query.startswith("timeseries")
+    assert tile.query.startswith("timeseries")
     assert tile.layout == m.Layout(x=12, y=7, w=12, h=7)
     assert not tile.tile_timeframe  # present in the file but switched off
 

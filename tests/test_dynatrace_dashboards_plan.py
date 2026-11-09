@@ -20,16 +20,16 @@ from importer.sources.dynatrace.dashboards.tiles import layout_plan
 FIXTURES = Path(__file__).parent / "fixtures" / "dynatrace-dashboards"
 # stem -> data tiles, exact, draft, manual, markdown
 TILE_COUNTS = {
-    "aws-firehose": (8, 1, 5, 2, 4),
+    "aws-firehose": (8, 0, 5, 3, 4),
     "azure-app-service-plan": (19, 0, 14, 5, 8),
     "host-vulnerability": (22, 5, 2, 15, 15),
-    "kubernetes-statistics": (10, 4, 1, 5, 7),
+    "kubernetes-statistics": (10, 0, 0, 10, 7),
 }
 EXACT = {
-    "aws-firehose": {"14"},
+    "aws-firehose": set(),
     "azure-app-service-plan": set(),
     "host-vulnerability": {"5", "6", "10", "20", "49"},
-    "kubernetes-statistics": {"1", "4", "5", "6"},
+    "kubernetes-statistics": set(),
 }
 DRAFT = {
     "aws-firehose": {"1", "3", "4", "5", "6"},
@@ -40,7 +40,7 @@ DRAFT = {
         *(f"chart-{c}" for c in ("socket-overview", "socket-outbound")),
     },
     "host-vulnerability": {"2", "58"},
-    "kubernetes-statistics": {"8"},
+    "kubernetes-statistics": set(),
 }
 # stem -> variables exact, draft, manual
 VARIABLE_COUNTS = {
@@ -73,7 +73,7 @@ def test_each_real_dashboard_reproduces_the_research_counts(
 def test_the_four_dashboards_total_93_tiles_and_18_variables() -> None:
     plans = platform_plans()
     t = plans.totals
-    assert (t.data, t.exact, t.draft, t.manual, t.markdown) == (59, 10, 22, 27, 34)
+    assert (t.data, t.exact, t.draft, t.manual, t.markdown) == (59, 5, 21, 33, 34)
     assert t.data + t.markdown == 93 and not any(d.unreadable_tiles for d in plans.dashboards)
     assert (t.variables_exact, t.variables_draft, t.variables_manual) == (1, 4, 13)
 
@@ -119,7 +119,7 @@ def test_a_variable_that_depends_on_another_is_a_draft_with_a_note() -> None:
 def test_every_exact_tile_reads_data_that_new_relic_does_not_have() -> None:
     plans = platform_plans()
     exact = [t for d in plans.dashboards for t in d.tiles if t.verdict is Verdict.EXACT]
-    assert len(exact) == 10 and all(t.no_data_source for t in exact)
+    assert len(exact) == 5 and all(t.no_data_source for t in exact)
     assert all(reasons.NO_DATA in t.notes for t in exact)
 
 
@@ -192,7 +192,7 @@ def test_layout_goes_from_24_columns_to_12() -> None:
         ("timeseries avg(cpu), filter:{foo(region)}", Verdict.MANUAL, reasons.FILTER),
         ("timeseries avg(cpu), filter:{a == 1 or b == 2}", Verdict.EXACT, None),
         ("timeseries avg(cpu), filter:{not in(a, $X)}", Verdict.EXACT, None),
-        ('timeseries avg(cpu), filter: matchesValue(a, "x*")', Verdict.EXACT, None),
+        ('timeseries avg(cpu), filter: matchesValue(a, "x*")', Verdict.DRAFT, reasons.D_MATCH),
         (
             "timeseries avg(cpu), filter:{dt.smartscape_source.id == 1}",
             Verdict.DRAFT,
@@ -289,7 +289,7 @@ def test_classic_tiles_are_planned_by_type() -> None:
 
 def test_the_report_has_counts_reasons_and_steps() -> None:
     report = render_report(platform_plans())
-    assert "59" in report and "| exact (every clause maps to NRQL unchanged) | 10 |" in report
+    assert "59" in report and "| exact (same meaning in NRQL, nothing dropped) | 5 |" in report
     assert "## What to do" in report and "Manual reasons, most frequent first" in report
 
 
