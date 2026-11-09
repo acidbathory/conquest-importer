@@ -149,7 +149,14 @@ def _count_nrql(kind: SignalKind, signal: CountSignal) -> str:
 
 
 def _heartbeat_nrql(signal: HeartbeatSignal) -> str:
-    query = f"SELECT count(*) FROM {identifier(signal.nr_target.event)}"  # noqa: S608
+    target = signal.nr_target
+    query = f"SELECT count(*) FROM {identifier(target.event)}"  # noqa: S608
+    clauses = [_tag_clause(f) for f in signal.scope]
+    if target.event == "Metric" and target.attribute:
+        # a metric arrives as rows of the Metric event named by metricName
+        clauses.insert(0, f"metricName = {quote_string(target.attribute)}")
+    if clauses:
+        query += " WHERE " + " AND ".join(clauses)
     return query + _facet(SignalKind.HEARTBEAT, signal.group_by)
 
 

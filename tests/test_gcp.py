@@ -59,7 +59,7 @@ def test_a_threshold_policy_becomes_a_metric_condition() -> None:
     assert m.notification.message_template == "CPU is high"
 
 
-@pytest.mark.parametrize("name", ["ckg-pubsub-absent", "ckg-mql"])
+@pytest.mark.parametrize("name", ["ckg-mql"])
 def test_unconverted_kinds_stay_manual_with_steps(name: str) -> None:
     m = by_name()[name]
     assert m.confidence is Confidence.MANUAL
@@ -354,3 +354,118 @@ def test_a_duration_that_is_not_a_whole_number_of_windows_is_rounded_up() -> Non
     assert m.signal.window_seconds == 600 and m.signal.aggregation_window_seconds == 300
     assert any("rounded up to 600s" in r for r in m.reasons)
     assert nrql_for(m)  # emits instead of failing
+
+
+ABSENT_METRIC = "pubsub.googleapis.com/subscription/ack_message_count"
+
+
+def absence(**overrides: object) -> GcpAlertPolicy:
+    body: dict[str, object] = {
+        "filter": f'metric.type="{ABSENT_METRIC}" AND resource.type="pubsub_subscription" '
+        'AND resource.labels.subscription_id="s"',
+        "aggregations": [{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_RATE"}],
+        "duration": "900s",
+    }
+    return policy({"conditionAbsent": {**body, **overrides}})
+
+
+def test_an_absence_condition_becomes_a_loss_of_signal_check() -> None:
+    m = by_name()["ckg-pubsub-absent"]
+    assert m.confidence is Confidence.APPROXIMATE and m.signal.kind is SignalKind.HEARTBEAT
+    assert nrql_for(m) == (
+        "SELECT count(*) FROM Metric WHERE metricName = 'gcp.pubsub.subscription.ack_message_count'"
+    )
+    assert (m.signal.window_seconds, m.signal.aggregation_window_seconds) == (900, 300)
+    assert m.thresholds[0].operator is Operator.BELOW and m.thresholds[0].value == 1
+    assert m.no_data.notify and m.no_data.timeout_minutes == 15
+    assert any("no data points" in r for r in m.reasons)
+
+
+def test_an_absence_condition_keeps_labels_and_grouping() -> None:
+    (m,) = translate_policy(
+        absence(
+            aggregations=[
+                {
+                    "alignmentPeriod": "300s",
+                    "perSeriesAligner": "ALIGN_RATE",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": ["resource.label.subscription_id"],
+                }
+            ]
+        )
+    )
+    assert nrql_for(m) == (
+        "SELECT count(*) FROM Metric WHERE metricName = "
+        "'gcp.pubsub.subscription.ack_message_count' AND gcp.subscription_id = 's' "
+        "FACET gcp.subscription_id"
+    )
+
+
+@pytest.mark.parametrize(
+    ("duration", "period", "expected_window", "expected_period", "adjusted"),
+    [
+        ("900s", "300s", 900, 300, False),
+        ("200s", "60s", 300, 300, True),
+        ("700s", "300s", 900, 300, True),
+        ("600s", "120s", 600, 300, True),
+    ],
+)
+def test_absence_durations_are_whole_five_minute_windows(
+    duration: str, period: str, expected_window: int, expected_period: int, adjusted: bool
+) -> None:
+    (m,) = translate_policy(
+        absence(
+            duration=duration,
+            aggregations=[{"alignmentPeriod": period, "perSeriesAligner": "ALIGN_RATE"}],
+        )
+    )
+    assert m.signal.window_seconds == expected_window
+    assert m.signal.aggregation_window_seconds == expected_period
+    assert m.signal.window_seconds % m.signal.aggregation_window_seconds == 0
+    assert nrql_for(m)
+    assert any("rounded up" in r or "raised to" in r for r in m.reasons) is adjusted
+
+
+def test_absence_of_a_metric_that_never_arrives_says_so() -> None:
+    (m,) = translate_policy(
+        absence(filter='metric.type="compute.googleapis.com/instance/cpu/utilization"')
+    )
+    assert m.confidence is Confidence.APPROXIMATE
+    assert any("never arrived" in r and "fire" in r for r in m.reasons)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "fragment"),
+    [
+        ({"filter": 'metric.type="custom.googleapis.com/x"'}, "not one of the google cloud"),
+        ({"filter": 'resource.type="pubsub_subscription"'}, "no metric.type"),
+        ({"filter": 'metric.type="a" OR metric.type="b"'}, "filter"),
+        ({"filter": 'metric.type="pubsub.googleapis.com/subscription/x" AND zone=~"a"'}, "filter"),
+        (
+            {
+                "aggregations": [
+                    {"alignmentPeriod": "300s"},
+                    {"alignmentPeriod": "300s"},
+                ]
+            },
+            "second-stage",
+        ),
+        (
+            {"aggregations": [{"alignmentPeriod": "300s", "crossSeriesReducer": "REDUCE_COUNT"}]},
+            "reducer",
+        ),
+        ({"aggregations": [{"alignmentPeriod": "30s"}]}, "alignment period"),
+        ({"duration": "0s"}, "duration"),
+    ],
+)
+def test_unmappable_absence_conditions_stay_manual_with_steps(
+    overrides: dict[str, object], fragment: str
+) -> None:
+    (m,) = translate_policy(absence(**overrides))
+    assert m.confidence is Confidence.MANUAL
+    assert fragment in m.reasons[0].lower()
+    assert steps_for(m.reasons)
+
+
+def test_the_absence_remediation_rule_still_matches_the_old_reason() -> None:
+    assert steps_for(["a metric-absence condition could not be converted: reason"])

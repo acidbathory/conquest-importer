@@ -7,10 +7,11 @@ from importer.core.remediation import Rule, register_rules
 RULES: list[Rule] = [
     (
         re.compile(r"metric-absence condition"),
-        "Metric-absence condition",
+        "Metric-absence condition that could not be converted",
         [
-            "Create an NRQL alert condition on the same metric and turn on loss of signal "
-            "(for example after 15 minutes without data), or use a query such as "
+            "The reason above says what stopped the conversion (the filter, the aggregation or "
+            "the metric). Create an NRQL alert condition on the same metric and turn on loss of "
+            "signal (for example after 15 minutes without data), or use a query such as "
             "`SELECT count(*) FROM Metric WHERE metricName = '<name>'` with a threshold of "
             "below 1.",
         ],

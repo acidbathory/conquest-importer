@@ -125,6 +125,7 @@ class HeartbeatSignal(BaseModel):
 
     check: str
     group_by: list[str] = []
+    scope: list[TagFilter] = []
     nr_target: NrTarget
 
 
