@@ -11,16 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from importer.core.ids import MAX_INPUT_BYTES
-from importer.sources.grafana.notifications.contact_points import (
-    contact_points_from_payload,
-)
+from importer.sources.grafana.notifications.contact_points import read_contact_points
 from importer.sources.grafana.notifications.models import (
-    MAX_CONTACT_POINTS,
     MAX_DATASOURCES,
     MAX_FILES,
     MAX_TEMPLATE_CHARS,
     MAX_TEMPLATES,
-    ContactPoint,
     DataSource,
     NotificationError,
     NotificationExport,
@@ -53,23 +49,6 @@ def _read_json(path: Path) -> Any:
         raise NotificationError("nested too deeply to read") from None
     except json.JSONDecodeError:
         raise NotificationError("not JSON") from None
-
-
-def read_contact_points(payload: Any) -> list[ContactPoint]:
-    """Raw API items are sanitised; items already in the sanitised shape are validated."""
-    raw = list(as_list(payload)[:MAX_CONTACT_POINTS])
-    if any("settings" in as_dict(i) or "receivers" in as_dict(i) for i in raw):
-        return contact_points_from_payload(raw)
-    found: list[ContactPoint] = []
-    for item in raw:
-        try:
-            cp = ContactPoint.model_validate(item)
-        except ValueError:
-            continue
-        if cp.type != "email":
-            cp.addresses = []
-        found.append(cp)
-    return found
 
 
 def read_templates(payload: Any) -> list[Template]:

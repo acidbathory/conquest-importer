@@ -20,6 +20,11 @@ class FieldSpec(BaseModel):
     protected: bool
     required: bool
     kind: str
+    values: list[str] = []  # option: the allowed values
+    type: str = ""  # option: bool or int
+    min: int = 0
+    max: int = 0
+    pattern: str = ""  # option: a fixed shape
 
 
 class TypeSpec(BaseModel):

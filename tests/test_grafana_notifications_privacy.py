@@ -82,16 +82,16 @@ def test_the_odd_contact_point_and_data_source_are_contained(exported: Path) -> 
 
 def test_the_verdicts_carry_no_name_or_secret(exported: Path) -> None:
     export = load_export(exported)
-    verdicts = {c.name: contact_point_verdict(c) for c in export.contact_points}
+    verdicts = {c.uid: contact_point_verdict(c) for c in export.contact_points}
     text = " ".join(
         [*(s for v in verdicts.values() for s in (*v.manual_steps, *v.reasons, v.target))]
     )
     for marker in (*NEVER, "HOSTILE", "EMAILADDR"):
         assert marker not in text
-    kinds = {c.type: verdicts[c.name].verdict for c in export.contact_points}
+    kinds = {c.type: verdicts[c.uid].verdict for c in export.contact_points}
     assert kinds["email"] is Verdict.CONVERTS and kinds["slack"] is Verdict.MANUAL_STEP
     assert kinds["mqtt"] is Verdict.NO_EQUIVALENT and kinds["wecom"] is Verdict.NO_EQUIVALENT
-    webhook = next(v for n, v in verdicts.items() if "hook" in n)
+    webhook = verdicts["cp-hook"]
     assert R.R_CP_WEBHOOK_SETTINGS in webhook.reasons
 
 

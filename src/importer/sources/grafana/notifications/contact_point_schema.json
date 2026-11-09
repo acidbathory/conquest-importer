@@ -4,11 +4,10 @@
   "secret": "value never kept",
   "url": "host only, and only when the field is not secure",
   "address": "email addresses, only for type email",
-  "label": "short text for a person to recognise (a Slack channel, a Jira project key or issue type), kept after a check for token-like content",
-  "ident": "name only: an id, user name or key that can identify a person or account",
+  "ident": "name only: free text, an id, a user name or a key",
   "template": "only classified as default, empty or custom",
   "structured": "name only",
-  "option": "short plain value such as an enum, number or boolean"
+  "option": "a value of a known type (boolean, integer range, one of a list, or a fixed shape); any other value is dropped and its name is listed as dropped"
  },
  "types": {
   "prometheus-alertmanager": {
@@ -52,7 +51,11 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "link",
+      "actionCard"
+     ]
     },
     {
      "name": "title",
@@ -106,14 +109,16 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     },
     {
      "name": "use_embed_description",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     }
    ]
   },
@@ -132,7 +137,8 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     },
     {
      "name": "subject",
@@ -179,14 +185,16 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     },
     {
      "name": "hide_version_info",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     }
    ]
   },
@@ -226,14 +234,14 @@
      "secure": false,
      "protected": false,
      "required": true,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "issue_type",
      "secure": false,
      "protected": false,
      "required": true,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "summary",
@@ -282,7 +290,8 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "pattern": "[0-9]{1,5}[smhd]?"
     },
     {
      "name": "wont_fix_resolution",
@@ -329,7 +338,11 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "v2",
+      "v3"
+     ]
     },
     {
      "name": "kafkaClusterId",
@@ -416,7 +429,11 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "json",
+      "text"
+     ]
     },
     {
      "name": "clientId",
@@ -451,21 +468,26 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "int",
+     "min": 0,
+     "max": 2
     },
     {
      "name": "retain",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     },
     {
      "name": "tlsConfig.insecureSkipVerify",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     },
     {
      "name": "tlsConfig.caCertificate",
@@ -505,7 +527,11 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "POST",
+      "PUT"
+     ]
     },
     {
      "name": "username",
@@ -526,7 +552,11 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "Bearer",
+      "Basic"
+     ]
     },
     {
      "name": "authorization_credentials",
@@ -540,7 +570,10 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "int",
+     "min": 0,
+     "max": 1000000
     },
     {
      "name": "title",
@@ -594,21 +627,28 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     },
     {
      "name": "overridePriority",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     },
     {
      "name": "sendTagsAs",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "tags",
+      "details",
+      "both"
+     ]
     },
     {
      "name": "responders",
@@ -634,7 +674,13 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "critical",
+      "error",
+      "warning",
+      "info"
+     ]
     },
     {
      "name": "class",
@@ -730,49 +776,62 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "int",
+     "min": -2,
+     "max": 2
     },
     {
      "name": "okPriority",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "int",
+     "min": -2,
+     "max": 2
     },
     {
      "name": "retry",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "int",
+     "min": 30,
+     "max": 86400
     },
     {
      "name": "expire",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "int",
+     "min": 0,
+     "max": 10800
     },
     {
      "name": "sound",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "ident"
     },
     {
      "name": "okSound",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "ident"
     },
     {
      "name": "uploadImage",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     },
     {
      "name": "title",
@@ -852,7 +911,7 @@
      "secure": false,
      "protected": false,
      "required": true,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "token",
@@ -915,7 +974,11 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "here",
+      "channel"
+     ]
     },
     {
      "name": "color",
@@ -1004,7 +1067,8 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "pattern": "[a-z]{2}(?:-[a-z]+)+-[0-9]"
     },
     {
      "name": "sigv4.access_key",
@@ -1112,28 +1176,37 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "Markdown",
+      "MarkdownV2",
+      "HTML",
+      "None"
+     ]
     },
     {
      "name": "disable_web_page_preview",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     },
     {
      "name": "protect_content",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     },
     {
      "name": "disable_notifications",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     }
    ]
   },
@@ -1192,7 +1265,12 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "CRITICAL",
+      "WARNING",
+      "INFO"
+     ]
     },
     {
      "name": "title",
@@ -1258,7 +1336,11 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "POST",
+      "PUT"
+     ]
     },
     {
      "name": "username",
@@ -1279,7 +1361,11 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "Bearer",
+      "Basic"
+     ]
     },
     {
      "name": "authorization_credentials",
@@ -1300,7 +1386,10 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "int",
+     "min": 0,
+     "max": 1000000
     },
     {
      "name": "title",
@@ -1335,7 +1424,8 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "type": "bool"
     },
     {
      "name": "tlsConfig.caCertificate",
@@ -1424,7 +1514,11 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "option"
+     "kind": "option",
+     "values": [
+      "text",
+      "markdown"
+     ]
     },
     {
      "name": "title",

@@ -5,9 +5,13 @@ settings that hold a value and a few plain options; see `contact_points.py` for 
 Limits are named constants so a hostile export cannot make a loader run for long or grow large.
 """
 
+import hashlib
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from importer.core.redact import looks_sensitive
+from importer.core.text import printable
 
 MAX_CONTACT_POINTS = 10_000
 MAX_POLICY_DEPTH = 20
@@ -49,8 +53,8 @@ class ContactPoint(BaseModel):
     fields_set: list[str] = []  # names of settings that hold a value
     redacted: list[str] = []  # the subset Grafana returned as [REDACTED] (a secret is stored)
     other_fields: int = 0  # settings left out because their name was not a plain identifier
-    options: dict[str, str] = {}  # plain non-secret values (enum, number, boolean)
-    labels: dict[str, str] = {}  # short text such as a Slack recipient
+    options: dict[str, str] = {}  # values of a known type: a boolean, an integer in range, an enum
+    dropped_options: list[str] = []  # option fields whose value was not of the expected type
     url_host: str = ""  # host of a non-secret url field; never a path, query or credentials
     templates: dict[str, str] = {}  # template field -> default | empty | custom
     disable_resolve_message: bool = False
@@ -145,6 +149,18 @@ class NotificationExport(BaseModel):
     datasources: list[DataSource] = []
     rule_groups: list[PromRuleGroup] = []
     problems: list[str] = []
+
+
+def safe_ref(text: str, limit: int = MAX_NAME) -> str:
+    """The text, or a stable reference when it looks like an address, URL or token.
+
+    The same text always gives the same reference, so a policy that names a contact point still
+    finds it after the name was replaced.
+    """
+    shown = printable(text, 10_000)
+    if looks_sensitive(shown):
+        return "redacted-" + hashlib.sha256(text.encode()).hexdigest()[:12]
+    return shown[:limit]
 
 
 def as_dict(value: Any) -> dict[str, Any]:

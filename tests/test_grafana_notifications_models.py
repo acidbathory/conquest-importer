@@ -9,7 +9,7 @@ import pytest
 from importer.sources.grafana.models import load_rules
 from importer.sources.grafana.notifications import schema
 from importer.sources.grafana.notifications.contact_points import (
-    contact_points_from_payload,
+    read_contact_points,
     sanitize_contact_point,
 )
 from importer.sources.grafana.notifications.loader import load_export
@@ -101,7 +101,7 @@ def test_no_value_of_any_field_survives_except_the_safe_kinds(type_name: str) ->
     assert SECRET not in text
     secure = schema.secure_fields(type_name)
     assert secure <= set(cp.fields_set)
-    assert not (secure & set(cp.options) | secure & set(cp.labels))
+    assert not secure & set(cp.options)
 
 
 def test_redacted_values_are_recorded_by_name_only() -> None:
@@ -172,21 +172,11 @@ def test_email_addresses_are_kept_for_email_only() -> None:
     other = sanitize_contact_point(
         {"name": "x", "type": "slack", "settings": {"recipient": "a@example.com"}}
     )
-    assert other.addresses == [] and other.labels == {}
+    assert other.addresses == []
     assert "a@example.com" not in other.model_dump_json()
     assert "addresses" in type(mail).model_fields
     assert type(mail).model_fields["addresses"].json_schema_extra == {"sensitive": True}
     assert "a@example.com" not in repr(mail)
-
-
-def test_a_label_that_looks_like_a_token_is_dropped() -> None:
-    ok = sanitize_contact_point(
-        {"name": "s", "type": "slack", "settings": {"recipient": "#alerts"}}
-    )
-    assert ok.labels == {"recipient": "#alerts"}
-    for bad in ("0123456789abcdef0123456789abcdef", "a=b", "x@y.z", "https://x.example"):
-        cp = sanitize_contact_point({"name": "s", "type": "slack", "settings": {"recipient": bad}})
-        assert cp.labels == {}
 
 
 def test_template_fields_are_classified_not_copied() -> None:
@@ -246,7 +236,7 @@ def test_nesting_bomb_in_settings_is_bounded() -> None:
 
 
 def test_export_shape_groups_receivers_under_one_name() -> None:
-    found = contact_points_from_payload(
+    found = read_contact_points(
         [
             {
                 "name": "team",
@@ -262,7 +252,7 @@ def test_export_shape_groups_receivers_under_one_name() -> None:
 
 def test_a_fan_out_of_receivers_is_capped() -> None:
     payload = [{"name": "t", "receivers": [{"type": "email"}] * 50_000}]
-    assert len(contact_points_from_payload(payload)) == 10_000
+    assert len(read_contact_points(payload)) == 10_000
 
 
 # --- matchers and the policy tree ---
