@@ -500,3 +500,10 @@ def test_simplified_routing_receiver_is_screened_like_the_policy_receivers() -> 
     ex = export([email("ops@example.com", "o@example.com")], {"receiver": "Ops"})
     c = run(ex, [monitor("A", 1)], rules=[rule])
     assert len(workflows(c)) == 1 and C.R_UNKNOWN_RECEIVER not in c.reasons
+
+
+def test_problems_found_when_the_export_was_read_reach_the_report() -> None:
+    ex = export([email("Ops")], ROOT)
+    ex.problems.append("mute timings were NOT read: the file is not JSON")
+    c = run(ex, [monitor("A", 1)])
+    assert "mute timings were NOT read" in render_report(c)

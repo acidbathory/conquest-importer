@@ -70,6 +70,7 @@ class Conversion:
     reasons: list[str] = field(default_factory=list)
     violations: list[str] = field(default_factory=list)
     mute_plans: dict[str, MutingPlan] = field(default_factory=dict)
+    export_problems: list[str] = field(default_factory=list)  # what the read side could not read
     unused_mute_timings: int = 0
     unused_map_entries: int = 0
     expired_schedules: int = 0
@@ -114,6 +115,7 @@ def _add(into: list[str], items: Sequence[str]) -> None:
 def convert_notifications(inputs: Inputs) -> Conversion:
     result = Conversion()
     result.points = _points(inputs)
+    result.export_problems = list(inputs.export.problems)
     by_receiver: dict[str, list[Point]] = {}
     for point in result.points:
         by_receiver.setdefault(point.cp.name, []).append(point)

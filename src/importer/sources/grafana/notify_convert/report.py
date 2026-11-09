@@ -176,6 +176,13 @@ def render_report(c: Conversion) -> str:
             *(f"- {md_cell(v, 300)}" for v in c.violations),
             "",
         ]
+    if c.export_problems:
+        lines += [
+            "## Problems reading the export (the plans below may be incomplete)",
+            "",
+            *_cut([f"- {md_cell(p, 300)}" for p in c.export_problems], "problems"),
+            "",
+        ]
     lines += [
         *_secrets(c),
         *_points(c),
