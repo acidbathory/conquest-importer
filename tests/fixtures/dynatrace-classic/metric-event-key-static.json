@@ -1,0 +1,42 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-metric-event-0001",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "Disk usage above 90 percent",
+        "queryDefinition": {
+          "type": "METRIC_KEY",
+          "metricKey": "builtin:host.disk.usedPct",
+          "aggregation": "AVG",
+          "entityFilter": {
+            "dimensionKey": "dt.entity.host",
+            "conditions": []
+          },
+          "dimensionFilter": []
+        },
+        "modelProperties": {
+          "type": "STATIC_THRESHOLD",
+          "threshold": 90,
+          "alertCondition": "ABOVE",
+          "alertOnNoData": false,
+          "violatingSamples": 3,
+          "samples": 5,
+          "dealertingSamples": 5
+        },
+        "eventTemplate": {
+          "title": "Disk usage above 90 percent",
+          "description": "The {metricname} on {entityname} is {alert_condition} {threshold}.",
+          "eventType": "RESOURCE",
+          "davisMerge": true,
+          "metadata": []
+        },
+        "eventEntityDimensionKey": "dt.entity.host"
+      }
+    }
+  ],
+  "totalCount": 1,
+  "pageSize": 500
+}

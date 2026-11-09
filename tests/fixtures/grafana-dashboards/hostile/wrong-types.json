@@ -1,0 +1,30 @@
+{
+  "uid": 12345,
+  "title": ["a", "list"],
+  "schemaVersion": [41],
+  "tags": "one,two",
+  "links": {"not": "a list"},
+  "time": "now-6h",
+  "templating": "a string instead of an object",
+  "annotations": {"list": "not a list"},
+  "__inputs": [5, {"name": 1, "pluginId": 2, "type": "datasource"}, {"name": "DS_X", "pluginId": "prometheus", "type": "datasource"}],
+  "__elements": {"E1": "not a model", "E2": {"type": "stat", "targets": "nope"}},
+  "panels": [
+    {"id": "one", "type": ["stat"], "title": {"x": 1}, "gridPos": [0, 0, 12, 4], "targets": {"A": {"expr": "up"}}},
+    {"id": 2.5, "type": "timeseries", "title": 7, "gridPos": {"x": "left", "y": null, "w": [], "h": {}},
+     "datasource": 12, "fieldConfig": ["defaults"], "options": "none", "transformations": "merge", "links": 3,
+     "targets": [
+       {"refId": ["A"], "expr": {"query": "up"}, "datasource": [1], "hide": "true", "legendFormat": 9},
+       {"refId": "B", "expr": "up{job=\"x\"}", "datasource": {"uid": ["u"], "type": {"t": 1}}},
+       {"refId": "C", "expr": "up", "panelId": "not a number", "format": {"f": 1}},
+       {"refId": "D", "expr": null}
+     ]},
+    {"id": 3, "type": "row", "title": null, "collapsed": "yes", "panels": "none"},
+    {"id": 4, "type": "row", "title": "r", "collapsed": false, "panels": [{"id": 5, "type": "stat", "title": "inside", "targets": [{"refId": "A", "expr": "up"}]}, 17, null]},
+    {"id": 6, "type": "graph", "libraryPanel": {"uid": "E2"}, "title": "from elements"},
+    {"id": 7, "type": "graph", "libraryPanel": "text"},
+    {"id": 8, "type": "text", "options": {"content": ["not text"], "mode": 5}},
+    {"id": 1e400, "type": "stat", "gridPos": {"x": 1e308, "y": -1e308, "w": 1e-300, "h": 0}}
+  ],
+  "rows": "also not a list"
+}

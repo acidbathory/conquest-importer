@@ -1,0 +1,139 @@
+{
+  "uid": "../../etc/passwd",
+  "title": "\"; resource \"null_resource\" \"pwn\" { provisioner \"local-exec\" { command = \"id\" } } #",
+  "tags": [
+    "${var.secret}",
+    "<script>alert(1)</script>",
+    "x\u0000y",
+    7,
+    null
+  ],
+  "schemaVersion": "forty-one",
+  "refresh": {
+    "not": "a string"
+  },
+  "time": {
+    "from": "now-9999999999y",
+    "to": "yesterday"
+  },
+  "templating": {
+    "list": [
+      "not an object",
+      {
+        "name": "x' OR 1=1 --",
+        "type": "query",
+        "query": 42,
+        "current": "oops",
+        "regex": "(a+)+$"
+      },
+      {
+        "name": "dup",
+        "type": "custom",
+        "query": "a,b"
+      },
+      {
+        "name": "dup",
+        "type": "custom",
+        "query": "c,d"
+      }
+    ]
+  },
+  "annotations": [
+    {
+      "name": "list instead of object"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "'} DROP TABLE Metric; SELECT * FROM Metric WHERE x = '",
+      "gridPos": {
+        "x": -5,
+        "y": -1,
+        "w": 99999,
+        "h": 0
+      },
+      "datasource": "${DS_EVIL}",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"a\\\"} or vector(1) # \n\"}",
+          "legendFormat": "{{instance}}' AS evil, `x`"
+        },
+        "not a target",
+        {
+          "refId": "A",
+          "expr": 12345
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(a[5m])) by (le, `x`, \"y\")"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "type": "text",
+      "title": "‮evil‬ \u001b[31mred\u001b[0m",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 3
+      },
+      "options": {
+        "mode": "html",
+        "content": "<img src=x onerror=alert(1)>\n[click](javascript:alert(1))\n{{7*7}} ${jndi:ldap://x} $(id)"
+      }
+    },
+    {
+      "id": 3,
+      "type": "row",
+      "title": "outer",
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 4,
+          "type": "row",
+          "title": "inner row inside a row",
+          "collapsed": true,
+          "panels": [
+            {
+              "id": 5,
+              "type": "row",
+              "title": "and again",
+              "panels": [
+                {
+                  "id": 6,
+                  "type": "stat",
+                  "title": "deep",
+                  "targets": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "piechart",
+      "title": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "libraryPanel": {
+        "uid": "missing",
+        "name": "does not exist"
+      }
+    },
+    {
+      "id": 8,
+      "type": "unknown-plugin-panel",
+      "title": 12345,
+      "targets": "nope"
+    },
+    null,
+    [
+      "array instead of panel"
+    ]
+  ]
+}

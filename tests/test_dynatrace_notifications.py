@@ -71,10 +71,10 @@ def test_slack_and_pagerduty_are_manual_destinations_with_secret_steps() -> None
     ("action", "service", "nr_type"),
     [
         ("dynatrace.jira:jira-create-issue", "jira", "JIRA"),
-        ("dynatrace.msteams:send-message", "ms teams", "WEBHOOK"),
-        ("dynatrace.servicenow:create-incident", "servicenow", "SERVICE_NOW"),
+        ("dynatrace.msteams:send-message", "ms teams", "MICROSOFT_TEAMS"),
+        ("dynatrace.servicenow:create-incident", "servicenow", "SERVICE_NOW_APP"),
         ("dynatrace.automations:http-function", "http request", "WEBHOOK"),
-        ("dynatrace.opsgenie:create-alert", "opsgenie", ""),
+        ("dynatrace.opsgenie:create-alert", "opsgenie", "WEBHOOK"),
         ("dynatrace.automations:run-javascript", "other", ""),
     ],
 )
@@ -98,7 +98,7 @@ def test_entity_tags_become_issue_filter_predicates() -> None:
     assert plan.workflow is not None
     (pred,) = plan.workflow.predicates
     assert (pred.attribute, pred.operator, pred.values) == (
-        "tags.team",
+        "accumulations.tag.team",
         "EXACTLY_MATCHES",
         ["payments", "core"],
     )
@@ -107,7 +107,7 @@ def test_entity_tags_become_issue_filter_predicates() -> None:
         "core",
     ]
     tf = notifications_terraform([plan])
-    assert 'attribute = "tags.team"' in tf and '"payments", "core"' in tf
+    assert 'attribute = "accumulations.tag.team"' in tf and '"payments", "core"' in tf
     assert "enabled               = false" in tf
 
 
@@ -266,3 +266,43 @@ def test_cli_rejects_an_unknown_source(tmp_path: Path) -> None:
         app, ["convert-notifications", "--source", "gcp", "--out", str(tmp_path)]
     )
     assert res.exit_code == 1 and "cloudwatch or dynatrace" in res.output
+
+
+def test_teams_is_its_own_destination_with_the_app_install_steps() -> None:
+    (plan,) = davis_plans(
+        [davis({"t": {"action": "dynatrace.msteams:send-message", "input": {}}})], "P:"
+    )
+    (manual,) = plan.manual_destinations
+    text = " ".join(manual.steps)
+    assert manual.nr_type == "MICROSOFT_TEAMS"
+    assert "Install the New Relic app in Microsoft Teams" in text
+    assert "security code" in text and "team id" in text and "channel id" in text
+    assert "webhook" not in text.lower()
+
+
+def test_servicenow_prefers_the_application_and_says_who_installs_it() -> None:
+    (plan,) = davis_plans(
+        [davis({"t": {"action": "dynatrace.servicenow:create-incident", "input": {}}})], "P:"
+    )
+    (manual,) = plan.manual_destinations
+    assert manual.nr_type == "SERVICE_NOW_APP"
+    assert any(
+        "ServiceNow administrator installs the New Relic application" in s for s in manual.steps
+    )
+
+
+def test_opsgenie_goes_to_a_webhook_that_needs_a_vendor_payload_template() -> None:
+    (plan,) = davis_plans(
+        [davis({"t": {"action": "dynatrace.opsgenie:create-alert", "input": {}}})], "P:"
+    )
+    (manual,) = plan.manual_destinations
+    assert manual.nr_type == "WEBHOOK"
+    assert any("vendor payload template is required" in s for s in manual.steps)
+
+
+@pytest.mark.parametrize("service", ["victorops", "xmatters"])
+def test_the_vendor_webhook_services_have_steps(service: str) -> None:
+    from importer.sources.dynatrace.notifications import SERVICES
+
+    nr_type, steps = SERVICES[service]
+    assert nr_type == "WEBHOOK" and any("vendor payload template" in s for s in steps)

@@ -1,0 +1,70 @@
+{
+  "apiVersion": "dashboard.grafana.app/v2beta1",
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "../../../etc/shadow",
+    "annotations": {"grafana.app/folder": "'; DROP TABLE folders; --"}
+  },
+  "spec": {
+    "title": "\"}}} resource \"null_resource\" \"x\" { provisioner \"local-exec\" { command = \"id\" } } ${var.secret} {{7*7}}",
+    "tags": 5,
+    "variables": [
+      {"kind": "QueryVariable", "spec": {"name": "x' OR 1=1 --", "multi": "yes", "query": {"kind": "DataQuery", "group": "prometheus", "spec": {"expr": 12345}}}},
+      {"kind": "CustomVariable", "spec": {"name": "dup", "query": {"nested": "object"}}},
+      {"kind": "CustomVariable", "spec": {"name": "dup"}},
+      {"kind": "NotAKind", "spec": "text"},
+      "not an object",
+      null
+    ],
+    "annotations": [
+      {"kind": "AnnotationQuery", "spec": {"name": "<img src=x onerror=alert(1)>", "enable": "false", "query": "not an object"}},
+      7
+    ],
+    "elements": {
+      "evil|name": {
+        "kind": "Panel",
+        "spec": {
+          "id": "not a number",
+          "title": "<script>alert(1)</script>",
+          "data": {"kind": "QueryGroup", "spec": {"queries": [
+            {"kind": "PanelQuery", "spec": {"refId": "A", "hidden": "maybe", "query": {"kind": "DataQuery", "group": "prometheus", "datasource": {"name": "prom\u0000main"}, "spec": {"expr": "up{job=~\"$job\"} or vector(1) #\n"}}}},
+            {"kind": "PanelQuery", "spec": "text"},
+            null
+          ], "transformations": [{"kind": 5}, "bad", 5]}},
+          "vizConfig": {"kind": "VizConfig", "group": ["timeseries"], "spec": {"options": [], "fieldConfig": "none"}}
+        }
+      },
+      "ok": {
+        "kind": "Panel",
+        "spec": {
+          "id": 2,
+          "title": "fine",
+          "data": {"kind": "QueryGroup", "spec": {"queries": [
+            {"kind": "PanelQuery", "spec": {"refId": "A", "query": {"kind": "DataQuery", "group": "prometheus", "spec": {"expr": "sum(up)"}}}}
+          ]}},
+          "vizConfig": {"kind": "VizConfig", "group": "stat", "spec": {}}
+        }
+      },
+      "lib": {"kind": "LibraryPanel", "spec": {"libraryPanel": {"uid": ["not", "a", "string"]}}},
+      "unplaced": {"kind": "Panel", "spec": {"title": "not in the layout", "vizConfig": {"group": "text"}}},
+      "weird": 42
+    },
+    "layout": {
+      "kind": "TabsLayout",
+      "spec": {"tabs": [
+        {"kind": "TabsLayoutTab", "spec": {"title": "\u001b[31mtab\u001b[0m‮", "layout": {
+          "kind": "AutoGridLayout",
+          "spec": {"maxColumnCount": 1e308, "items": [
+            {"kind": "AutoGridLayoutItem", "spec": {"element": {"kind": "ElementReference", "name": "ok"}}},
+            {"kind": "AutoGridLayoutItem", "spec": {"element": {"name": "does-not-exist"}}},
+            {"kind": "AutoGridLayoutItem", "spec": {"element": {"name": "evil|name"}}},
+            {"kind": "AutoGridLayoutItem", "spec": {"element": {"name": "lib"}}},
+            "junk"
+          ]}
+        }}},
+        "not a tab",
+        {"kind": "TabsLayoutTab", "spec": {"layout": {"kind": "UnknownLayout", "spec": {}}}}
+      ]}
+    }
+  }
+}

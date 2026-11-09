@@ -1,0 +1,99 @@
+{
+  "_comment": "Dynatrace metric key to New Relic signal. status: documented (a New Relic page names the attribute), verified (seen arriving on live data), unverified (inferred from the research note, section 4.2), none (known to have no New Relic signal). Every row below is unverified: no tenant or New Relic account was used to confirm any of them. select is a trusted NRQL expression read from this file, never from an export.",
+  "prerequisites": [
+    {"prefix": "builtin:host.", "text": "install the New Relic infrastructure agent on the hosts; Dynatrace collects host metrics with OneAgent"},
+    {"prefix": "dt.host.", "text": "install the New Relic infrastructure agent on the hosts; Dynatrace collects host metrics with OneAgent"},
+    {"prefix": "builtin:process.", "text": "install the New Relic infrastructure agent with process monitoring enabled; Dynatrace collects process metrics with OneAgent"},
+    {"prefix": "builtin:tech.", "text": "install the matching New Relic agent or on-host integration for the technology; Dynatrace collects these with OneAgent"},
+    {"prefix": "builtin:service.", "text": "instrument the services with a New Relic APM agent; Dynatrace derives service metrics from OneAgent traces"},
+    {"prefix": "dt.service.", "text": "instrument the services with a New Relic APM agent; Dynatrace derives service metrics from OneAgent traces"},
+    {"prefix": "builtin:apps.", "text": "add the New Relic browser or mobile agent; Dynatrace collects these with its RUM agent"},
+    {"prefix": "builtin:kubernetes.", "text": "install the New Relic Kubernetes integration"},
+    {"prefix": "builtin:containers.", "text": "install the New Relic Kubernetes integration or the infrastructure agent with container monitoring"},
+    {"prefix": "builtin:cloud.", "text": "enable the New Relic cloud integration for that provider; Dynatrace reads these from the cloud provider's API"},
+    {"prefix": "ext:cloud.", "text": "enable the New Relic cloud integration for that provider; Dynatrace reads these from the cloud provider's API"},
+    {"prefix": "ext:", "text": "enable the matching New Relic integration for the technology; this is a Dynatrace extension metric"},
+    {"prefix": "calc:", "text": "this is a calculated metric defined in Dynatrace from OneAgent data; rebuild it from the underlying data in New Relic"},
+    {"prefix": "func:", "text": "this is a calculated metric defined in Dynatrace from OneAgent data; rebuild it from the underlying data in New Relic"}
+  ],
+  "default_prerequisite": "send the same metric to New Relic with the OpenTelemetry exporter or the agent API (a custom metric keeps the name the code gives it), or install the New Relic agent that collects the data; Dynatrace built-in metrics come from OneAgent",
+  "metrics": [
+    {
+      "keys": ["builtin:host.cpu.usage", "dt.host.cpu.usage"],
+      "event": "SystemSample",
+      "attribute": "cpuPercent",
+      "unit_factor": 1,
+      "unit": "percent",
+      "dimensions": {"dt.entity.host": "hostname"},
+      "default_aggregation": "average",
+      "status": "unverified",
+      "evidence": "research note section 4.2: cpuPercent appears in a New Relic query example; equivalence of the definition is unverified"
+    },
+    {
+      "keys": ["builtin:host.mem.usage", "dt.host.memory.usage"],
+      "event": "SystemSample",
+      "attribute": "memoryUsedPercent",
+      "unit_factor": 1,
+      "unit": "percent",
+      "dimensions": {"dt.entity.host": "hostname"},
+      "default_aggregation": "average",
+      "status": "unverified",
+      "evidence": "research note section 4.2: attribute name and equivalence unverified"
+    },
+    {
+      "keys": ["builtin:host.disk.usedPct"],
+      "event": "StorageSample",
+      "attribute": "diskUsedPercent",
+      "unit_factor": 1,
+      "unit": "percent",
+      "dimensions": {"dt.entity.host": "hostname"},
+      "default_aggregation": "average",
+      "status": "unverified",
+      "evidence": "research note section 4.2: StorageSample exists; the attribute name is unverified. The disk dimension has no mapped attribute, so a split by disk stays manual"
+    },
+    {
+      "keys": ["builtin:service.response.time", "dt.service.request.response_time"],
+      "event": "Transaction",
+      "attribute": "duration",
+      "unit_factor": 1e-06,
+      "unit": "seconds (Dynatrace reports microseconds)",
+      "dimensions": {"dt.entity.service": "appName"},
+      "default_aggregation": "average",
+      "status": "unverified",
+      "evidence": "research note section 4.2: the unit of both sides is unverified"
+    },
+    {
+      "keys": ["builtin:service.requestCount.server"],
+      "event": "Transaction",
+      "select": "count(*)",
+      "unit_factor": 1,
+      "unit": "requests",
+      "dimensions": {"dt.entity.service": "appName"},
+      "default_aggregation": "count",
+      "status": "unverified",
+      "evidence": "research note section 4.2: needs a New Relic APM agent; the aggregation of the Dynatrace condition is not applied"
+    },
+    {
+      "keys": ["builtin:service.errors.total.count"],
+      "event": "Transaction",
+      "select": "filter(count(*), WHERE error IS true)",
+      "unit_factor": 1,
+      "unit": "requests",
+      "dimensions": {"dt.entity.service": "appName"},
+      "default_aggregation": "count",
+      "status": "unverified",
+      "evidence": "research note section 5.2: filter(count(*), WHERE <failure>) gives 0 instead of no data; the error attribute is unverified"
+    },
+    {
+      "keys": ["builtin:service.errors.total.rate"],
+      "event": "Transaction",
+      "select": "percentage(count(*), WHERE error IS true)",
+      "unit_factor": 1,
+      "unit": "percent",
+      "dimensions": {"dt.entity.service": "appName"},
+      "default_aggregation": "average",
+      "status": "unverified",
+      "evidence": "research note section 4.2: unverified"
+    }
+  ]
+}

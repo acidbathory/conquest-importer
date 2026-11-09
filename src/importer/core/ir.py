@@ -188,6 +188,29 @@ class Notification(BaseModel):
     handles: list[str] = []  # e.g. @pagerduty-x; channels must be set up manually
 
 
+class EmitOptions(BaseModel):
+    """Optional New Relic condition settings a source or a person can ask for.
+
+    Every field defaults to "not set", which reproduces the earlier output byte for byte; the
+    emitters fall back to the defaults in emit/common.py (EmitDefaults). Bounds are checked at
+    emission, so a value New Relic would reject becomes a "not emitted" reason.
+    """
+
+    aggregation_method: Literal["EVENT_FLOW", "EVENT_TIMER", "CADENCE"] | None = None
+    aggregation_timer_seconds: int | None = None  # EVENT_TIMER only
+    fill_option: Literal["NONE", "STATIC", "LAST_VALUE"] | None = None
+    fill_value: float | None = None  # with fill_option STATIC
+    slide_by_seconds: int | None = None
+    violation_time_limit_seconds: int | None = None
+    title_template: str | None = None  # untrusted: escaped on output
+    runbook_url: str | None = None  # untrusted: escaped on output
+    ignore_on_expected_termination: bool | None = None
+    # wrap a log or APM count in filter(count(*), WHERE ...) so an empty window gives 0, not NULL
+    # (docs/research/count-null-empty-window.md); None follows EmitDefaults.null_safe_count
+    null_safe_count: bool | None = None
+    null_safe_scope: list[str] = []  # filter keys that stay in the outer WHERE (the entity)
+
+
 class IRMonitor(BaseModel):
     source_system: str
     source_id: int
@@ -203,3 +226,12 @@ class IRMonitor(BaseModel):
     reasons: list[str] = []
     remediation: list[str] = []  # specific manual steps; see core/remediation.py for generic ones
     unmapped: dict[str, Any] = Field(default_factory=dict)
+    emit: EmitOptions | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_emit(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        """Saved IR keeps its old shape: `emit` appears only when options were set."""
+        data: dict[str, Any] = handler(self)
+        if data.get("emit") is None:
+            data.pop("emit", None)
+        return data

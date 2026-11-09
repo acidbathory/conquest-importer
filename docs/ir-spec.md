@@ -20,6 +20,7 @@ Source JSON -> source models -> [translate] -> IRMonitor -> [emit] -> NerdGraph 
 | `confidence` | `exact`, `approximate`, `manual`, `unsupported` |
 | `reasons` | Why the confidence is below exact. Every downgrade must add a reason |
 | `unmapped` | Source fields and options we did not translate. Kept so nothing is silently dropped |
+| `emit` | Optional New Relic condition settings, left out of the saved IR when unset: `aggregation_method` (EVENT_FLOW, EVENT_TIMER, CADENCE), `aggregation_timer_seconds`, `fill_option` and `fill_value`, `slide_by_seconds`, `violation_time_limit_seconds`, `title_template`, `runbook_url`, `ignore_on_expected_termination`, and `null_safe_count` with `null_safe_scope`. Unset means the emitter default in `core/emit/common.py` (`EmitDefaults`), which reproduces the earlier output byte for byte. Bounds are checked at emission and a value New Relic would reject becomes a "not emitted" reason |
 
 ## Confidence rules
 - **exact:** converted with no caveats. Still subject to the global notes in the report.
@@ -66,6 +67,14 @@ Input is the JSON from `gcloud alpha monitoring policies list --format=json`. On
 - **Log-match conditions** with plain terms become a count of `Log` events. Severity ranges (`severity>=ERROR`) become a list of levels. OR and regular expressions stay manual.
 - **Absence, MQL, PromQL, SQL, ratio and forecast** conditions are manual with steps. Notification channels are listed, never migrated.
 
+## Notification and muting IR
+
+Defined in `core/notification_ir.py` and `core/muting_ir.py`.
+
+- **Destinations.** `NrDestination` is one destination plus the one channel that uses it, for any of the 14 New Relic types (`DestinationType`). `SPECS` holds, per type, the channel type (SERVICE_NOW has channel SERVICENOW_INCIDENTS, JIRA has JIRA_CLASSIC), the destination and channel property keys with required flags, the allowed auth kinds (none, basic, token, custom header, OAuth), whether a script may create it, and the manual steps a person must do (Slack OAuth, installing the New Relic app in Teams, installing the ServiceNow application, the AWS side of EventBridge). Unknown properties are refused. A secret field holds a `SecretRef` (a name), never a value; Terraform shows `var.<name>` as a sensitive variable and NerdGraph needs the value passed in. Plans carry these in `typed_destinations`, after the email and webhook `destinations` in the index space of a workflow.
+- **Workflows.** `PlannedWorkflow` has predicates (use `tag_predicate` for entity tags: `accumulations.tag.NAME`), and optional `notification_triggers`, `muting_rules_handling` and up to two `enrichments`. `workflow_violations` and `plan_violations` report what New Relic would reject: an issue filter over 4,096 characters, more than two enrichments, a channel used twice in a workflow, a destination index that does not exist, more than 1,000 workflows.
+- **Muting rules.** `MutingRule` has a group of conditions (attribute, operator, values; at most 20 conditions and 500 values) and an optional schedule: local start and end time, IANA time zone, daily, weekly or monthly repeat, weekdays, and an end date or a repeat count. Terraform (`newrelic_alert_muting_rule`) and NerdGraph are emitted by `core/emit/muting.py`. Rules are disabled by default.
+
 ## Dashboards
 The dashboard IR is `core/dashboard_ir.py` (`IRDashboard`, `IRWidget`, `Series`, ...). The emitters are `core/emit/dashboard.py` (NerdGraph and Terraform). Fields marked "new" were added for the Dynatrace and Grafana translators; each is optional, and a dashboard that does not use them serialises and emits exactly as before. `tests/test_dashboard_ir_byte_identity.py` proves it with the AWS and GCP fixture folders and with 120 generated dashboards whose hashes come from the emitters before the change; that holds for widget heights up to 12 and for any text in labels and filter values.
 
@@ -103,3 +112,11 @@ Limits and the provider.
 - `apply` (`core/apply_dashboards.py`) replaces the account placeholder in widget queries only. An `nrql` variable with no `account_ids` is written with the placeholder, so `with_account` must replace it before such a payload is sent.
 
 Serialisation. The new fields are left out of `model_dump_json` while they hold their default (`OmitDefaults`), and load back with defaults, so IR files written before the change still load and dashboards that do not use the fields write the same bytes.
+
+### Round 2 rules for the notification and muting IR
+
+- **Secret names** are logical names: upper case, at least one underscore, 3 to 40 characters, not shaped like a key (AWS `AKIA`/`ASIA`, `sk-`, `ghp_`, `glsa_`, `NRAK`, Dynatrace `dt0`, long unbroken runs). Terraform variables are always `nr_secret_<lower case name>`, declared only for the destinations whose blocks are emitted. Plaintext in a secret property (Teams `securityCode`), a key-shaped value in an auth user, prefix, header key or channel property, and an invalid typed email address are refused when `NrDestination` is built. The models do not echo input in validation errors. `apply_notifications` scrubs the supplied secret values from API errors.
+- **Resource addresses** use a hash of the plan topic. A second plan with the same topic gets a different hash, so addresses stay unique; a topic that occurs once keeps its old address. `notifications_terraform_result` returns the text and `plan_violations`.
+- **Muting operators** `ANY`, `IS_BLANK` and `IS_NOT_BLANK` take no values. The Terraform emitter refuses them (the provider needs one value). The NerdGraph emitter emits them with `values: []`; that is UNVERIFIED against a live account.
+- **`apply_notifications(..., include_needs_review=False)`** skips plans marked `needs_review` and lists them in `ApplyResult.skipped_review`; other plans are created. A CloudWatch topic with a Lambda, SQS or Firehose subscription is `needs_review` (it has a manual EventBridge destination), so it is skipped without the flag even if it also has email or https channels.
+- **Condition options** are range-checked before any arithmetic on them. A timer without EVENT_TIMER, a non-finite fill value and a `null_safe_scope` that covers every filter are refused.

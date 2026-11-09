@@ -1,0 +1,45 @@
+{
+  "items": [
+    "not an object",
+    42,
+    null,
+    {
+      "objectId": "HOSTILE-no-schema",
+      "value": {}
+    },
+    {
+      "objectId": "HOSTILE-value-list",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "value": [
+        1,
+        2
+      ]
+    },
+    {
+      "objectId": 7,
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "value": {}
+    },
+    {
+      "objectId": "HOSTILE-missing-parts",
+      "schemaId": "builtin:anomaly-detection.metric-events",
+      "value": {
+        "enabled": true
+      }
+    },
+    {
+      "objectId": "HOSTILE-wrong-types",
+      "schemaId": "builtin:davis.anomaly-detectors",
+      "value": {
+        "analyzer": "text"
+      }
+    },
+    {
+      "suppression": "DONT_DETECT_PROBLEMS",
+      "type": "PLANNED",
+      "name": "Older Config API shape without a schema id"
+    }
+  ],
+  "totalCount": 9,
+  "pageSize": 500
+}

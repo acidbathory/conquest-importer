@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-logevent-0001",
+      "schemaId": "builtin:logmonitoring.log-events",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "summary": "Payment gateway timeout",
+        "query": "matchesPhrase(content, \"gateway timeout\") AND status=\"ERROR\"",
+        "eventTemplate": {
+          "title": "Gateway timeouts",
+          "description": "",
+          "eventType": "ERROR",
+          "davisMerge": true,
+          "metadata": []
+        }
+      }
+    },
+    {
+      "objectId": "INVENTED-logmetric-0001",
+      "schemaId": "builtin:logmonitoring.schemaless-log-metric",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "key": "log.payment_errors",
+        "query": "status=\"ERROR\" AND dt.entity.host=*",
+        "measure": "OCCURRENCE",
+        "dimensions": [
+          "dt.entity.host"
+        ]
+      }
+    }
+  ],
+  "totalCount": 2,
+  "pageSize": 500
+}

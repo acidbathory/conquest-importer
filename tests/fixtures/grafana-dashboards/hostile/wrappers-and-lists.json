@@ -1,0 +1,12 @@
+[
+  {"dashboard": {"dashboard": {"dashboard": {"dashboard": {"panels": []}}}}},
+  {"apiVersion": "dashboard.grafana.app/v1", "kind": "Dashboard", "spec": {"apiVersion": "dashboard.grafana.app/v1", "kind": "Dashboard", "spec": {"panels": []}}},
+  {"items": [{"title": "inside items", "panels": []}], "metadata": {"continue": "abc"}},
+  {"dashboards": "not a list", "title": "has a title but no panels or schema"},
+  "plain text",
+  17,
+  null,
+  [],
+  {"title": "search result entry", "uid": "abc", "type": "dash-db", "url": "/d/abc", "folderTitle": "x"},
+  {"title": "valid but empty", "schemaVersion": 39}
+]

@@ -1,0 +1,38 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-notification-0003",
+      "schemaId": "builtin:problem.notifications",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "type": "SLACK",
+        "displayName": "Slack critical",
+        "alertingProfile": "INVENTED-profile-0002",
+        "slackNotification": {
+          "url": "MASKED",
+          "channel": "#dynatrace-critical",
+          "message": "{ProblemTitle} ({State})"
+        }
+      }
+    },
+    {
+      "objectId": "INVENTED-notification-0004",
+      "schemaId": "builtin:problem.notifications",
+      "scope": "environment",
+      "value": {
+        "enabled": false,
+        "type": "PAGER_DUTY",
+        "displayName": "PagerDuty platform",
+        "alertingProfile": "INVENTED-profile-0002",
+        "pagerDutyNotification": {
+          "account": "acme",
+          "serviceName": "platform",
+          "serviceApiKey": "MASKED"
+        }
+      }
+    }
+  ],
+  "totalCount": 2,
+  "pageSize": 500
+}

@@ -1,0 +1,68 @@
+{
+  "items": [
+    {
+      "objectId": "INVENTED-maint-0002",
+      "schemaId": "builtin:alerting.maintenance-window",
+      "scope": "environment",
+      "value": {
+        "enabled": true,
+        "generalProperties": {
+          "name": "Migration freeze",
+          "maintenanceType": "UNPLANNED",
+          "suppression": "DONT_DETECT_PROBLEMS",
+          "disableSyntheticMonitorExecution": true
+        },
+        "schedule": {
+          "scheduleType": "ONCE",
+          "onceRecurrence": {
+            "startTime": "2026-12-01T22:00:00",
+            "endTime": "2026-12-02T02:00:00",
+            "timeZone": "UTC"
+          }
+        },
+        "filters": [
+          {
+            "entityType": "HOST",
+            "entityId": "HOST-32D0DB4904B28FB3"
+          },
+          {
+            "managementZones": [
+              "-189204438944455158"
+            ],
+            "entityTags": [
+              "env:prod",
+              "tier:db"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "suppression": "DONT_DETECT_PROBLEMS",
+      "type": "PLANNED",
+      "name": "Old config API window",
+      "schedule": {
+        "recurrenceType": "ONCE",
+        "start": "2021-05-11 13:41",
+        "end": "2021-05-11 14:41",
+        "zoneId": "Europe/Vienna"
+      },
+      "suppressSynthMonExec": true,
+      "scope": {
+        "matches": [
+          {
+            "tagCombination": "AND",
+            "tags": [
+              {
+                "key": "deldel1",
+                "context": "CONTEXTLESS"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "totalCount": 2,
+  "pageSize": 500
+}

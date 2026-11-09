@@ -98,7 +98,8 @@ Workflows are created disabled.
 
 | Not migrated | Why | Fix |
 |---|---|---|
-| SMS, Lambda, SQS, mobile push, Firehose | No New Relic equivalent | Use email, webhook, Slack or PagerDuty |
+| SMS, mobile push | No New Relic equivalent | Use email, webhook, Slack or PagerDuty |
+| Lambda, SQS, Firehose | Reached through a New Relic EventBridge destination, which needs steps in AWS | The plan lists them as a manual EventBridge destination: associate the partner event source with an event bus and add a rule that targets the function, queue or stream |
 | Plain `http` endpoints | Not secure | Put the endpoint behind https |
 | Unconfirmed subscriptions | Not active in AWS | Confirm or delete them, then re-run |
 
@@ -147,6 +148,68 @@ a role for CloudWatch Logs to write to it, and one subscription filter per log g
 metric stream, it is generated and never deployed, because it needs your license key. AWS allows
 two subscription filters per log group, so a group that already has two needs one removed first.
 `importer ingest-logs-setup --log-group /my/group` generates the same thing for groups you choose.
+
+## Grafana dashboards
+
+No dashboard is built in New Relic yet. Two commands read Grafana dashboards and say how much of
+them could convert; they are offline apart from the read, and nothing is created anywhere. The
+reading and the plan are described here; the conversion comes next.
+
+- **Read:** `importer extract-grafana-dashboards --out <folder>` reads dashboards, folders and
+  library panels from a Grafana stack with `GET` calls on four fixed paths (`/api/search`,
+  `/api/dashboards/uid/{uid}`, `/api/folders`, `/api/library-elements`). It uses `GRAFANA_URL` and
+  `GRAFANA_SA_TOKEN` under the same host rule as `extract-grafana`; the token needs to read
+  dashboards, folders and library panels, which the alert-only token may not. The `/apis`
+  dashboard API is not used. These paths have not been run against a live stack yet.
+- **What is written:** `dashboards/dashboard-<hash>.json` (one per dashboard; the exact uid is
+  recorded inside), `folders.json` and `library-panels.json`, in a new folder (mode 0700, files
+  0600) that appears only when the run finishes; a stopped run leaves nothing. The files are
+  dashboard JSON with credentials removed first: values under keys such as `password`,
+  `secureJsonData`, `token`, `authorization`, `headers`, `basicAuth*`, URL user info, `?token=`
+  style query values, bearer values and token-shaped words. The number removed is printed. This is
+  a safety net: a secret typed into a title or description is only caught if it looks like one of
+  those patterns, so review the files before sharing.
+- **Shapes read:** the classic JSON, the same object under `spec` of a v1 resource, and the v2
+  resource (`elements` with a Grid, Rows, Tabs or AutoGrid layout), as a file, a list, an API
+  response or a folder. Old schemas are read as stored (`rows` with `span`, string data source
+  names, old `hide` values). A dashboard that cannot be read is listed with a fixed reason and the
+  others load. Limits, which cut the input and say so rather than stop the run: 10,000 panels per
+  dashboard, 200 nested levels, 5,000 dashboards and 10,000 files (the first ones are kept). A
+  dashboard whose uid repeats an earlier one is left out once and noted; plan files written by
+  `plan-grafana-dashboards` are skipped. A UTF-8 byte order mark is accepted.
+- **Plan:** `importer plan-grafana-dashboards --in <folder> --out <folder>` writes `report.md` and
+  `plan.json`. Every panel is placed at a tier, or stays manual with one specific reason:
+  - T1: a Prometheus selector with matchers and an optional `avg`, `sum`, `min` or `max` (what the
+    alert converter reads); a LogQL count. A regex matcher is T1 only in the forms the alert
+    converter accepts (plain words, a prefix or suffix, alternatives of plain words). Any other
+    regex (`.*`, `.+`, `(?i)`, anchors, `a|`) needs `RLIKE`, which is not verified in New Relic, so
+    the query stays manual.
+  - T2: also `rate`, `irate`, `increase`, `histogram_quantile` over `_bucket` series, `topk`, and
+    LogQL `rate`.
+  - T3: also arithmetic between those terms and numbers, and `count`, when every term is grouped
+    by the same labels. A variable as a group-by label stays manual.
+  - A panel is never placed above what it depends on. It is manual if it uses a variable that
+    stays manual, a time override (`timeShift`, `timeFrom`, which act like `offset`), or a
+    transformation. A stat or table with value mappings, field overrides, a unit that rescales the
+    value, or a reducer other than the latest value is placed one tier lower, and manual if it was
+    at T3. Instant queries, a table format, a query interval and legend text around labels are
+    noted on the panel.
+  - Panels of type gauge, bar gauge, bar chart, heatmap, histogram and logs have a New Relic widget
+    that the importer cannot create yet; they are counted separately ("with extra widget types").
+    State timeline, status history, alert list, geomap and the other types in the report have no
+    widget at all.
+- **Also reported:** panel types and data sources; variables (convert, drop, manual); variables
+  used but not defined and defined but not used; annotations (dropped), links, rows, repeats.
+- **Manual, with steps:** transformations, library panels missing from the export, other data
+  sources (CloudWatch, SQL, Elasticsearch, InfluxDB, Azure Monitor and so on), server-side
+  expressions, comparisons, vector matching, `offset`, subqueries, `*_over_time`, `label_replace`,
+  nested aggregation, raw counters, LogQL parser stages, and variables that are ad hoc, nested or
+  use a regex with lookahead.
+- **What the tiers do not say:** whether the metric exists in New Relic, whether names match, or
+  whether the chart looks the same. The query classification reuses the alert translator's own
+  PromQL and LogQL handlers and will be replaced by the real conversion.
+- **Sequence:** `importer extract-grafana-dashboards --out out/gd`, then `importer
+  plan-grafana-dashboards --in out/gd --out out/gd-plan`.
 
 ## Not handled at all
 
@@ -308,16 +371,18 @@ the converter was built from scrubbed copies of three real objects and a few han
   dynatrace --topics out/dynatrace --out out/dynatrace/notifications` writes one plan per Davis
   workflow, a report and Terraform. Email recipients become email destinations and channels (the
   addresses are in the plan and Terraform only, not the report). Slack, PagerDuty, Jira,
-  Teams, ServiceNow and HTTP tasks become manual entries with the closest New Relic destination
+  Teams (MICROSOFT_TEAMS, after the New Relic app is installed in Teams), ServiceNow
+  (SERVICE_NOW_APP), Opsgenie (a webhook that needs a vendor payload template) and HTTP tasks
+  become manual entries with the closest New Relic destination
   type and the steps for the secret or sign-in; anything else is manual with a reason. Entity tags
-  on the trigger become issue-filter predicates (`tags.<name>`, unverified in New Relic) and a
+  on the trigger become issue-filter predicates (`accumulations.tag.<name>`, unverified in New Relic) and a
   disabled workflow is planned only when there is such a filter; Davis categories, a custom
   filter, the severity threshold and notify-on-close are notes. Every plan is marked as needing
   review. `apply-notifications` creates a planned workflow with its destinations only when you
   add `--include-needs-review` to `--apply`; its dry run prints how many plans need review. A plan
   with destinations but no workflow (no mappable filter) gets its destinations and channels only
-  through `notifications.tf`; `apply-notifications` creates nothing for it. `tags.NAME` is
-  unverified in New Relic. `matchesValue()` and `in()` may ignore case or match inside arrays in
+  through `notifications.tf`; `apply-notifications` creates nothing for it.
+  `accumulations.tag.NAME` is unverified in a live account. `matchesValue()` and `in()` may ignore case or match inside arrays in
   Dynatrace (UNVERIFIED, from memory), so a converted condition carries a note.
 - **Service level plans for SLOs:** `importer plan-service-levels --in out/dynatrace --out
   out/dynatrace/service-levels` writes one plan per SLO with the target, the period (only 1, 7 or
@@ -399,5 +464,137 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   grafana --in out/grafana --out out/grafana/alerts`, then `importer report out/grafana --source
   grafana` (the report reads `alerts/` inside the folder you give it).
 - **Behind a TLS-inspecting proxy:** set `SSL_CERT_FILE` to the corporate root certificate file.
+
+### Grafana notifications and data path (read side and plans)
+
+Status: the read side and pure plans exist and are tested offline. Nothing is created in New
+Relic from them yet; wiring them into the notification plan is the next wave.
+
+- **Read:** `importer extract-grafana-notifications --out <new folder>` reads contact points,
+  the notification policy tree, mute timings, templates, the data source list (type and uid
+  only) and the rules that Mimir or Loki rulers hold. It sends only GET requests, never with a
+  query string, so contact points are never decrypted and every stored secret arrives as
+  `[REDACTED]`. Secret values, header values, URL paths and queries, and template text are not
+  written; email addresses are written to `contact-points.json` only. Option values are kept
+  only when they have the type the schema table gives them (a boolean, an integer in range,
+  one of a list); free text such as a Slack channel or a Jira project is not kept. Rule files
+  keep the expression and the labels (a value that looks like an address, URL or token is
+  replaced with a placeholder) and drop annotations. Files are readable by the owner only,
+  and a failed run leaves no folder. Use a folder other than the one `extract-grafana` wrote.
+- **Contact points:** each of the 24 integration types has a verdict. Converts: `email` (EMAIL)
+  and `webhook` (WEBHOOK, with a warning that the receiver gets the New Relic payload and that
+  the HTTP method, credentials, signing, TLS and custom payload are manual). Webhook template (a
+  WEBHOOK destination and a payload written by hand, 12 types): oncall, prometheus-alertmanager,
+  opsgenie, victorops, discord, googlechat, telegram, webex, sensugo, kafka, wecom in robot
+  mode, dingding. Manual step (6): slack, pagerduty, teams, jira, pushover, sns. No equivalent
+  (4, plus wecom in app mode): threema, LINE, mqtt, wechat. The destination names follow the
+  New Relic reference note; none was tested on a live account.
+- **Notification policies:** the tree is flattened with Alertmanager's rules (first match wins
+  unless `continue`, anchored regular expressions, a missing label is the empty string, mute
+  and active intervals are not inherited). A matcher on a label of the rule, `alertname` or
+  `grafana_folder` is decided now, and so is one on a label the query is known not to have.
+  Labels Grafana adds to every alert instance (`__alert_rule_uid__`,
+  `__alert_rule_namespace_uid__`, `datasource_uid`, `ref_id`; the list is from memory and
+  UNVERIFIED) are decided only when the rule carries their value, and are otherwise reported,
+  never read as empty. Labels in the query's `by (...)` become tag predicates on the issue.
+  A tree that was cut by a size limit or a bad route is saved as cut, and every rule is then
+  reported as undecidable. Anything that cannot be
+  decided (a bare selector with an unknown label set, a template in a rule label, a regular
+  expression a filter cannot say, an earlier route that cannot be negated) is listed, never
+  guessed. Regular expressions run only when a parser shows they are in a small safe subset;
+  anything with nested repeats (even a harmless address pattern such as `(\d{1,3}\.){3}`),
+  backreferences, lookaround, or forms that Go's RE2 reads differently is reported as
+  undecidable. Over-rejection is intended. Group wait, group interval and repeat interval are lost.
+- **Mute timings:** a time range with weekdays or days 1 to 28 of the month, a time zone, and
+  years convert to muting schedules (clock times and recurrence). Negative days, days 29 to 31,
+  months without a year, a run of months across the year end, a time zone that is not in the
+  time zone database (`Local` included), an interval that would need more than 200 schedules,
+  and a mute timing that combines days of the month with weekdays are reported. Behaviour at
+  daylight saving changes is UNVERIFIED. Active time intervals are reported, not
+  converted.
+- **Templates:** only Grafana's default templates map to a fixed Handlebars body. A custom
+  template is reported and never translated.
+- **Rule files:** Prometheus, Mimir and Loki rule groups (JSON; `rules.yml` needs
+  `yq -o=json` first because PyYAML is not a dependency) become rule objects the Grafana
+  translator can read (annotations are dropped). An alert with one top-level comparison against a number gets the same
+  query, reduce and threshold nodes as a Grafana rule; others stay data source-managed.
+- **Data path:** `importer plan-grafana-datapath --region us|eu|jp --out <new folder>` writes
+  a Prometheus remote write block, Alloy snippets for dual write and for OTLP, the naming
+  consequences, and the NRQL a data check would run. The license key is a placeholder or the
+  name of an environment variable, never a value. `importer check-grafana-data` asks New Relic
+  (read-only) whether the metric or logs behind each converted condition arrive and which
+  attributes they carry; it exits with code 2 when a condition would be blind.
+- **Not verified on a live account:** destination behaviour, the metric names and attributes
+  Prometheus data gets in New Relic, and the workflow predicate operators on list attributes.
+
+### Dynatrace classic (metric events and Davis detectors)
+
+`importer extract-dynatrace-classic --out <folder>` reads Settings 2.0 objects from a Dynatrace
+tenant (read-only GET requests for a fixed list of schema ids; `DYNATRACE_ENV_URL` and
+`DYNATRACE_API_TOKEN` in `.env`), and `--source dynatrace-classic` converts them. A Platform host
+(`https://<tenant>.apps.dynatrace.com`, bearer token) is read through the classic Environment API
+proxy first and through the Platform settings service when the proxy answers 404 for a schema; a
+classic SaaS host (`https://<tenant>.live.dynatrace.com`, API token) uses `/api/v2/settings`.
+Nothing here has been run against a tenant that holds these objects: the converter was built from
+the schema tables in the Dynatrace documentation (21 docs-derived fixtures) and hand-made objects.
+Every row of the metric map is unverified. Notification objects are reduced at read time (type,
+name, enabled flag, profile id), so no secret, webhook URL or recipient is exported.
+
+- **Converts (approximate):**
+  - A metric event (`builtin:anomaly-detection.metric-events`) with a static threshold, on a metric
+    key or on a selector, whose metric is in the metric map. `violatingSamples` out of `samples`
+    one-minute samples becomes a breach that lasts `violatingSamples` minutes in every window;
+    when `violatingSamples` is below `samples` this is stricter than Dynatrace and a note says so.
+    `queryOffset` moves the aggregation delay only (`max(120 s, offset)`); an offset over 20 minutes
+    is manual because New Relic's aggregation delay is at most 1200 s. `alertOnNoData` becomes loss of signal.
+    `dealertingSamples` has no equivalent and is noted. A disabled event is converted (all
+    conditions are created disabled) with a note.
+  - `AUTO_ADAPTIVE_THRESHOLD` and `SEASONAL_BASELINE` become a baseline condition in the direction
+    of `alertCondition`. The sensitivity (`signalFluctuation`, `tolerance`) has no principled
+    conversion: the band is fixed at 3 standard deviations and a note says to tune it.
+  - A selector with one or more metrics, `:avg :min :max :sum :count :median :percentile(n)
+    :value :last`, `:splitBy` (FACET), `:filter` with `eq ne prefix suffix contains existsKey and
+    not` (WHERE) and `or` only as direct `eq` tests on one dimension (an IN list), `+ - * /` between metrics of the same New Relic event, `:rate(1m)` (as a
+    sum), and `:default`, `:sort`, `:limit`, `:names`, `:parents`, `:setUnit`, `:smooth` (noted,
+    not applied). The parser is strict and linear-time; anything else makes the event manual.
+  - Dimension and entity-name filters, when the dimension is in the metric map for the metric and
+    the value is a name. A value that looks like a Dynatrace entity id (`HOST-0123456789ABCDEF`) is
+    manual: New Relic has names, so the id must be resolved first. Splitting by an entity dimension
+    works, and the facet labels change from ids to names (a note says so). A threshold on a metric
+    with a unit conversion survives `*` or `/` by a constant only; `+` and `-` are manual.
+  - Event types that open a problem (`ERROR`, `AVAILABILITY`, `SLOWDOWN`, `RESOURCE`,
+    `CUSTOM_ALERT`). `INFO`, `CUSTOM_ANNOTATION`, `CUSTOM_DEPLOYMENT` and `CUSTOM_CONFIGURATION`
+    open no problem and are manual. `davisMerge` is ignored and noted.
+  - A Davis detector (`builtin:davis.anomaly-detectors`) with a static threshold over
+    `timeseries avg|min|max|sum(metric)` and an optional `by:{...}`.
+- **Data prerequisite:** a converted condition watches a New Relic signal that exists only when an
+  agent, integration or exporter sends it. Each conversion says which one (the infrastructure
+  agent for host metrics, an APM agent for service metrics, a cloud integration, or the same
+  metric through OpenTelemetry). A metric with no row in the map, or a row with status `none`, is
+  manual and gives that message.
+- **Manual, with steps:** a management zone, tag, entity-id or regular-expression filter; a
+  metric with no map row; `:fold`, `:delta`, `:rollup`, `:timeshift`, `:partition`, `:histogram`,
+  `:merge`, `:toUnit`, an entity selector or a series filter; several metrics in one selector;
+  baseline and records-mode detectors; any other DQL; `OUTSIDE` on a static threshold.
+- **Listed, not converted:** alerting profiles, problem notifications, maintenance windows,
+  management zones and the built-in anomaly detection settings are manual items, one per object,
+  with the steps for each. Their conversion (workflows, destinations, muting rules) comes later.
+- **A metric map of your own:** the shipped map has seven rows, all unverified. Write a JSON file
+  with the same layout, check it with `importer validate-dynatrace-map FILE`, and name it in
+  `IMPORTER_DYNATRACE_METRIC_MAP` when you convert.
+- **The rate:** `importer summarize-dynatrace-classic --alerts <out>/alerts` prints the conversion
+  rate and, on its own line, how many rows only list an alerting profile, notification, maintenance
+  window, management zone or built-in setting. Those rows count as not converted; the line shows
+  the rate without them.
+- **Checks:** `importer check-dynatrace-metrics --alerts <out>/alerts --nr-account-id <id>` asks
+  New Relic (read-only count queries, with the condition's own filters) whether the signal behind
+  each converted condition has data.
+  Exit 2 means at least one has none, so the condition could never fire.
+- **Sequence:** `importer extract-dynatrace-classic --out out/dynatrace-classic`, then `importer
+  convert --source dynatrace-classic --in out/dynatrace-classic --out out/dynatrace-classic/alerts`,
+  then read `out/dynatrace-classic/alerts/report.md`. A duration limit is UNVERIFIED: the New Relic
+  pages disagree (2 hours for an alert event, 24 hours in the emitter), and a Dynatrace window of
+  60 samples is 1 hour, inside both. The HTML report (`importer report`) has no
+  profile for this source yet.
 
 Azure and other platforms are planned; see the [roadmap](../README.md#roadmap).
