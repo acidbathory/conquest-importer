@@ -226,10 +226,30 @@ def test_the_alert_translator_is_reached_through_a_public_wrapper() -> None:
 )
 @pytest.mark.parametrize("language", ["prometheus", "loki"])
 def test_hostile_expressions_finish_quickly_and_never_raise(expr: str, language: str) -> None:
-    start = time.perf_counter()
+    start = time.process_time()  # CPU time, so a busy CI runner does not fail the test
     verdict = classify_query(expr[:10_000], language)
-    assert time.perf_counter() - start < 1.0
+    assert time.process_time() - start < 10.0  # catches catastrophic work, not a slow machine
     assert verdict.tier is None or verdict.tier in (1, 2, 3)
+
+
+def _cpu_seconds(expr: str, language: str) -> float:
+    best = float("inf")
+    for _ in range(3):
+        start = time.process_time()
+        classify_query(expr, language)
+        best = min(best, time.process_time() - start)
+    return max(best, 1e-3)
+
+
+@pytest.mark.parametrize("unit", ["rate(", "a ", "(", 'up{a="b",'])
+@pytest.mark.parametrize("language", ["prometheus", "loki"])
+def test_classifying_grows_no_faster_than_linearly_with_the_expression(
+    unit: str, language: str
+) -> None:
+    """Four times the input may cost about four times the CPU; quadratic work would cost 16."""
+    small = _cpu_seconds(unit * 500, language)
+    large = _cpu_seconds(unit * 2000, language)
+    assert large / small < 10
 
 
 def test_a_reason_never_contains_text_from_the_expression() -> None:

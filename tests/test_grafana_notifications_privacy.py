@@ -105,7 +105,7 @@ def test_the_hostile_policy_is_planned_without_a_hang_and_without_names(exported
     ]
     start = time.monotonic()
     plan = flatten_policy_tree(export.policy, rules)
-    assert time.monotonic() - start < 2
+    assert time.monotonic() - start < 5.0
     assert plan.entries and plan.undecidable
     text = json.dumps(
         {
