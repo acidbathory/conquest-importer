@@ -1,0 +1,420 @@
+{
+ "newrelic_alert_muting_rule": {
+  "attrs": {
+   "account_id": "OC",
+   "action_on_muting_rule_window_ended": "OC",
+   "description": "O",
+   "enabled": "R",
+   "id": "OC",
+   "name": "R"
+  },
+  "blocks": {
+   "condition": {
+    "attrs": {
+     "operator": "R"
+    },
+    "blocks": {
+     "conditions": {
+      "attrs": {
+       "attribute": "R",
+       "operator": "R",
+       "values": "R"
+      },
+      "blocks": {},
+      "max": 0,
+      "min": 1,
+      "nesting": "list"
+     }
+    },
+    "max": 1,
+    "min": 1,
+    "nesting": "list"
+   },
+   "schedule": {
+    "attrs": {
+     "end_repeat": "O",
+     "end_time": "O",
+     "repeat": "O",
+     "repeat_count": "O",
+     "start_time": "O",
+     "time_zone": "R",
+     "weekly_repeat_days": "O"
+    },
+    "blocks": {},
+    "max": 1,
+    "min": 0,
+    "nesting": "list"
+   }
+  }
+ },
+ "newrelic_alert_policy": {
+  "attrs": {
+   "account_id": "OC",
+   "channel_ids": "O",
+   "entity_guid": "C",
+   "id": "OC",
+   "incident_preference": "O",
+   "name": "R"
+  },
+  "blocks": {}
+ },
+ "newrelic_notification_channel": {
+  "attrs": {
+   "account_id": "OC",
+   "active": "O",
+   "destination_id": "R",
+   "id": "OC",
+   "name": "R",
+   "product": "R",
+   "status": "C",
+   "type": "R"
+  },
+  "blocks": {
+   "property": {
+    "attrs": {
+     "display_value": "O",
+     "key": "R",
+     "label": "O",
+     "value": "R"
+    },
+    "blocks": {},
+    "max": 0,
+    "min": 1,
+    "nesting": "set"
+   },
+   "timeouts": {
+    "attrs": {
+     "create": "O",
+     "update": "O"
+    },
+    "blocks": {},
+    "max": 0,
+    "min": 0,
+    "nesting": "single"
+   }
+  }
+ },
+ "newrelic_notification_destination": {
+  "attrs": {
+   "account_id": "OC",
+   "active": "O",
+   "guid": "C",
+   "id": "OC",
+   "last_sent": "C",
+   "name": "R",
+   "status": "C",
+   "type": "R"
+  },
+  "blocks": {
+   "auth_basic": {
+    "attrs": {
+     "password": "R",
+     "user": "R"
+    },
+    "blocks": {},
+    "max": 1,
+    "min": 0,
+    "nesting": "list"
+   },
+   "auth_custom_header": {
+    "attrs": {
+     "key": "R",
+     "value": "R"
+    },
+    "blocks": {},
+    "max": 0,
+    "min": 0,
+    "nesting": "list"
+   },
+   "auth_token": {
+    "attrs": {
+     "prefix": "O",
+     "token": "R"
+    },
+    "blocks": {},
+    "max": 1,
+    "min": 0,
+    "nesting": "list"
+   },
+   "property": {
+    "attrs": {
+     "display_value": "O",
+     "key": "R",
+     "label": "O",
+     "value": "R"
+    },
+    "blocks": {},
+    "max": 0,
+    "min": 1,
+    "nesting": "set"
+   },
+   "scope": {
+    "attrs": {
+     "id": "R",
+     "type": "R"
+    },
+    "blocks": {},
+    "max": 1,
+    "min": 0,
+    "nesting": "list"
+   },
+   "secure_url": {
+    "attrs": {
+     "prefix": "R",
+     "secure_suffix": "R"
+    },
+    "blocks": {},
+    "max": 1,
+    "min": 0,
+    "nesting": "list"
+   },
+   "timeouts": {
+    "attrs": {
+     "create": "O",
+     "update": "O"
+    },
+    "blocks": {},
+    "max": 0,
+    "min": 0,
+    "nesting": "single"
+   }
+  }
+ },
+ "newrelic_nrql_alert_condition": {
+  "attrs": {
+   "account_id": "OC",
+   "aggregation_delay": "O",
+   "aggregation_method": "O",
+   "aggregation_timer": "O",
+   "aggregation_window": "OC",
+   "baseline_direction": "O",
+   "close_violations_on_expiration": "O",
+   "description": "O",
+   "enabled": "O",
+   "entity_guid": "C",
+   "evaluation_delay": "O",
+   "expiration_duration": "O",
+   "fill_option": "O",
+   "fill_value": "O",
+   "id": "OC",
+   "ignore_on_expected_termination": "O",
+   "name": "R",
+   "open_violation_on_expiration": "O",
+   "policy_id": "R",
+   "runbook_url": "O",
+   "signal_seasonality": "O",
+   "slide_by": "O",
+   "target_entity": "O",
+   "title_template": "O",
+   "type": "O",
+   "violation_time_limit": "OC",
+   "violation_time_limit_seconds": "O"
+  },
+  "blocks": {
+   "critical": {
+    "attrs": {
+     "disable_event_creation": "O",
+     "disable_health_status_reporting": "O",
+     "duration": "O",
+     "operator": "O",
+     "threshold": "R",
+     "threshold_duration": "O",
+     "threshold_occurrences": "O",
+     "time_function": "O"
+    },
+    "blocks": {
+     "prediction": {
+      "attrs": {
+       "predict_by": "O",
+       "prefer_prediction_violation": "O"
+      },
+      "blocks": {},
+      "max": 1,
+      "min": 0,
+      "nesting": "set"
+     }
+    },
+    "max": 1,
+    "min": 0,
+    "nesting": "list"
+   },
+   "nrql": {
+    "attrs": {
+     "data_account_id": "OC",
+     "evaluation_offset": "O",
+     "query": "R",
+     "since_value": "O"
+    },
+    "blocks": {},
+    "max": 1,
+    "min": 1,
+    "nesting": "list"
+   },
+   "outlier_configuration": {
+    "attrs": {},
+    "blocks": {
+     "dbscan": {
+      "attrs": {
+       "epsilon": "R",
+       "evaluation_group_facet": "O",
+       "minimum_points": "R"
+      },
+      "blocks": {},
+      "max": 1,
+      "min": 1,
+      "nesting": "list"
+     }
+    },
+    "max": 1,
+    "min": 0,
+    "nesting": "list"
+   },
+   "term": {
+    "attrs": {
+     "disable_event_creation": "O",
+     "disable_health_status_reporting": "O",
+     "duration": "O",
+     "operator": "O",
+     "priority": "O",
+     "threshold": "R",
+     "threshold_duration": "O",
+     "threshold_occurrences": "O",
+     "time_function": "O"
+    },
+    "blocks": {
+     "prediction": {
+      "attrs": {
+       "predict_by": "O",
+       "prefer_prediction_violation": "O"
+      },
+      "blocks": {},
+      "max": 1,
+      "min": 0,
+      "nesting": "set"
+     }
+    },
+    "max": 2,
+    "min": 0,
+    "nesting": "set"
+   },
+   "timeouts": {
+    "attrs": {
+     "create": "O"
+    },
+    "blocks": {},
+    "max": 0,
+    "min": 0,
+    "nesting": "single"
+   },
+   "warning": {
+    "attrs": {
+     "disable_event_creation": "O",
+     "disable_health_status_reporting": "O",
+     "duration": "O",
+     "operator": "O",
+     "threshold": "R",
+     "threshold_duration": "O",
+     "threshold_occurrences": "O",
+     "time_function": "O"
+    },
+    "blocks": {
+     "prediction": {
+      "attrs": {
+       "predict_by": "O",
+       "prefer_prediction_violation": "O"
+      },
+      "blocks": {},
+      "max": 1,
+      "min": 0,
+      "nesting": "set"
+     }
+    },
+    "max": 1,
+    "min": 0,
+    "nesting": "list"
+   }
+  }
+ },
+ "newrelic_workflow": {
+  "attrs": {
+   "account_id": "OC",
+   "destinations_enabled": "O",
+   "enabled": "O",
+   "enrichments_enabled": "O",
+   "guid": "C",
+   "id": "OC",
+   "last_run": "C",
+   "muting_rules_handling": "R",
+   "name": "R",
+   "workflow_id": "C"
+  },
+  "blocks": {
+   "destination": {
+    "attrs": {
+     "channel_id": "R",
+     "name": "C",
+     "notification_triggers": "OC",
+     "type": "C",
+     "update_original_message": "OC"
+    },
+    "blocks": {},
+    "max": 0,
+    "min": 1,
+    "nesting": "set"
+   },
+   "enrichments": {
+    "attrs": {},
+    "blocks": {
+     "nrql": {
+      "attrs": {
+       "account_id": "C",
+       "enrichment_id": "C",
+       "name": "R",
+       "type": "C"
+      },
+      "blocks": {
+       "configuration": {
+        "attrs": {
+         "query": "R"
+        },
+        "blocks": {},
+        "max": 0,
+        "min": 1,
+        "nesting": "list"
+       }
+      },
+      "max": 0,
+      "min": 1,
+      "nesting": "list"
+     }
+    },
+    "max": 1,
+    "min": 0,
+    "nesting": "set"
+   },
+   "issues_filter": {
+    "attrs": {
+     "filter_id": "C",
+     "name": "R",
+     "type": "R"
+    },
+    "blocks": {
+     "predicate": {
+      "attrs": {
+       "attribute": "R",
+       "operator": "R",
+       "values": "R"
+      },
+      "blocks": {},
+      "max": 0,
+      "min": 0,
+      "nesting": "list"
+     }
+    },
+    "max": 1,
+    "min": 1,
+    "nesting": "set"
+   }
+  }
+ }
+}

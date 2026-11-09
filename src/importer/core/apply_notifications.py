@@ -5,17 +5,24 @@ already exists is skipped (nothing is updated), workflows are created DISABLED, 
 created is returned for the manifest even when a later step fails, so a partial run can be undone.
 """
 
+from collections.abc import Mapping
+
+from pydantic import SecretStr
+
 from importer.core.apply import ApplyResult, NewRelicAPIError, NewRelicClient
+from importer.core.emit.common import CannotEmit
 from importer.core.emit.notifications import (
     CREATE_CHANNEL,
     CREATE_DESTINATION,
     CREATE_WORKFLOW,
-    channel_input,
-    destination_input,
+    all_destinations,
+    nr_channel_input,
+    nr_destination_input,
     workflow_input,
 )
 from importer.core.manifest import CreatedObject
-from importer.core.notification_ir import NotificationPlan
+from importer.core.notification_ir import NotificationPlan, workflow_violations
+from importer.core.secrets import redact
 
 WORKFLOW_SEARCH = (
     "query($accountId: Int!, $name: String!) { actor { account(id: $accountId) "
@@ -30,26 +37,53 @@ def workflow_exists(client: NewRelicClient, account_id: int, name: str) -> bool:
 
 
 def _error_text(error: object) -> str:
-    return str(error)[:300]
+    return str(error)[:300]  # the caller redacts secrets before it is shown
 
 
 def apply_notifications(
-    client: NewRelicClient, account_id: int, plans: list[NotificationPlan]
+    client: NewRelicClient,
+    account_id: int,
+    plans: list[NotificationPlan],
+    secrets: Mapping[str, str] | None = None,
+    include_needs_review: bool = False,
 ) -> ApplyResult:
+    """Create every plan. `secrets` maps a secret name to its value; a destination that needs a
+    secret that is not in it is reported as failed before anything is created for its plan.
+
+    A plan marked needs_review is skipped and listed in `skipped_review` unless
+    `include_needs_review` is true; the other plans are created either way.
+    """
     result = ApplyResult()
+    supplied = secrets or {}
+    client.add_secrets(list(supplied.values()))
+    hidden = [SecretStr(v) for v in supplied.values() if v]
     for plan in plans:
         wf = plan.workflow
         if wf is None:
             continue
+        if plan.needs_review and not include_needs_review:
+            result.skipped_review.append(wf.name)
+            continue
         if workflow_exists(client, account_id, wf.name):
             result.skipped_existing.append(wf.name)
             continue
+        dests = all_destinations(plan)
+        try:
+            inputs = [nr_destination_input(d, supplied) for d in dests]
+            for d in dests:
+                nr_channel_input(d, "0")  # the same checks, before the first write
+            problems = workflow_violations(plan)
+            if problems:
+                raise CannotEmit(problems[0])
+        except CannotEmit as exc:
+            result.failed.append((wf.name, redact(str(exc), hidden)))
+            continue
         channel_ids: list[str] = []
         try:
-            for dest in plan.destinations:
+            for dest, destination in zip(dests, inputs, strict=True):
                 data = client.run(
                     CREATE_DESTINATION,
-                    {"accountId": account_id, "destination": destination_input(dest)},
+                    {"accountId": account_id, "destination": destination},
                     is_write=True,
                 )["aiNotificationsCreateDestination"]
                 if data.get("error") or not data.get("destination"):
@@ -60,7 +94,7 @@ def apply_notifications(
                 )
                 data = client.run(
                     CREATE_CHANNEL,
-                    {"accountId": account_id, "channel": channel_input(dest, destination_id)},
+                    {"accountId": account_id, "channel": nr_channel_input(dest, destination_id)},
                     is_write=True,
                 )["aiNotificationsCreateChannel"]
                 if data.get("error") or not data.get("channel"):
@@ -80,7 +114,7 @@ def apply_notifications(
                 CreatedObject(kind="workflow", id=str(data["workflow"]["id"]), name=wf.name)
             )
         except NewRelicAPIError as exc:
-            result.failed.append((wf.name, str(exc)))
+            result.failed.append((wf.name, redact(str(exc), hidden)))
             continue
         result.created.append(wf.name)
     return result

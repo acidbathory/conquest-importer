@@ -45,6 +45,8 @@ ACTION_LABELS = (
     ("msteams", "ms teams"),
     ("servicenow", "servicenow"),
     ("opsgenie", "opsgenie"),
+    ("victorops", "victorops"),
+    ("xmatters", "xmatters"),
     ("http", "http request"),
 )
 
