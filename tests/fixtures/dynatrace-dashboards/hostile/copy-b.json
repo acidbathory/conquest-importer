@@ -1,0 +1,1 @@
+{"version": 21, "variables": [], "tiles": {"1": {"type": "data", "title": "same", "query": "timeseries avg(m)", "visualization": "lineChart"}}, "layouts": {"1": {"x": 0, "y": 0, "w": 24, "h": 6}}}

@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from importer.core.ids import MAX_INPUT_BYTES
 
@@ -48,12 +48,14 @@ class Unreadable(BaseModel):
 
 
 class Layout(BaseModel):
+    """A grid position. Values outside a sane range make the whole layout None."""
+
     model_config = ConfigDict(frozen=True)
 
-    x: int = 0
-    y: int = 0
-    w: int = 1
-    h: int = 1
+    x: int = Field(default=0, ge=0, le=10_000)
+    y: int = Field(default=0, ge=0, le=100_000)
+    w: int = Field(default=1, ge=1, le=10_000)
+    h: int = Field(default=1, ge=1, le=100_000)
 
 
 class Tile(BaseModel):

@@ -4,7 +4,8 @@ Three things need handling and none of them stops the conversion:
 - a spacer (an empty tile or a bare rule) is dropped;
 - a link into the Dynatrace interface (`/ui/...`, a `*.apps.dynatrace.com` address or a
   `dt-url.net` short link) does not resolve in New Relic and must be removed or rewritten;
-- an image served from `dt-cdn.net` depends on Dynatrace's content network.
+- an image served from `dt-cdn.net` depends on Dynatrace's content network;
+- a link with a script scheme (`javascript:`) is flagged so it is not carried over.
 """
 
 import re
@@ -18,6 +19,7 @@ IMAGE = re.compile(r"!\[[^\]\n]{0,200}\]\(\s*<?([^)\s>]+)")
 DYNATRACE_LINK_HOSTS = ("dt-url.net",)
 DYNATRACE_UI_SUFFIX = ".apps.dynatrace.com"
 IMAGE_HOSTS = ("dt-cdn.net",)
+UNSAFE_SCHEMES = ("javascript:", "data:", "vbscript:")
 MAX_LINKS = 500  # links examined per tile
 
 
@@ -43,6 +45,8 @@ def read_markdown(content: str) -> tuple[Verdict, str, list[str]]:
     links = LINK.findall(content)[:MAX_LINKS]
     if any(_is_dynatrace_link(u) for u in links):
         flags.append("dynatrace-link")
+    if any(u.lower().startswith(UNSAFE_SCHEMES) for u in links):
+        flags.append("unsafe-link")
     if any(_host(u) in IMAGE_HOSTS for u in IMAGE.findall(content)[:MAX_LINKS]):
         flags.append("image")
     return Verdict.CONVERT, "keep", flags
