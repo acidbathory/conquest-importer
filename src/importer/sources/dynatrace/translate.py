@@ -235,14 +235,19 @@ def _window(schedule: dict[str, Any], lookback: int) -> tuple[int, list[str]]:
     return max(MIN_WINDOW_SECONDS, window), notes
 
 
+def action_label(action: str) -> str:
+    """A fixed label for a task action (never the action text itself)."""
+    lowered = action.lower()
+    return next((name for part, name in ACTION_LABELS if part in lowered), "other")
+
+
 def _labels(tasks: dict[str, DtTask]) -> list[str]:
     """Fixed labels for the notify actions, in order and without repeats."""
     labels: list[str] = []
     for task in tasks.values():
         if task.action == DQL_ACTION:
             continue
-        action = task.action.lower()
-        label = next((name for part, name in ACTION_LABELS if part in action), "other")
+        label = action_label(task.action)
         if label not in labels:
             labels.append(label)
     return labels
@@ -320,14 +325,21 @@ def _scheduled(wf: DtWorkflow, key: str, schedule: dict[str, Any]) -> IRMonitor:
     )
 
 
+def davis_config(wf: DtWorkflow) -> dict[str, Any] | None:
+    """The Davis problem trigger's settings (its `value`), or None for any other trigger."""
+    event = wf.trigger.get("eventTrigger")
+    config = event.get("triggerConfiguration") if isinstance(event, dict) else None
+    if not isinstance(config, dict) or config.get("type") != "davis-problem":
+        return None
+    value = config.get("value")
+    return value if isinstance(value, dict) else {}
+
+
 def _route(wf: DtWorkflow, key: str) -> IRMonitor:
-    trigger = wf.trigger
-    schedule = trigger.get("schedule")
-    event = trigger.get("eventTrigger")
+    schedule = wf.trigger.get("schedule")
     if isinstance(schedule, dict):
         return _scheduled(wf, key, schedule)
-    config = event.get("triggerConfiguration") if isinstance(event, dict) else None
-    if isinstance(config, dict) and config.get("type") == "davis-problem":
+    if davis_config(wf) is not None:
         return _monitor(key, "workflow", wf.title, Confidence.MANUAL, [DAVIS_REASON])
     raise _Fail(OTHER_TRIGGER)
 

@@ -41,7 +41,7 @@ from importer.core.ir import Confidence, IRMonitor
 from importer.core.manifest import CreatedObject, Kind, Manifest, load_manifest, save_manifest
 from importer.core.migration_summary import Kind as AssetKind
 from importer.core.migration_summary import Summary, load_summary
-from importer.core.notification_ir import NotificationPlan, build_plan
+from importer.core.notification_ir import NotificationPlan, build_plan, plan_json
 from importer.core.report import build_report, md_cell
 from importer.core.report_html import PROFILES, render_report
 from importer.core.rollback import rollback
@@ -72,6 +72,9 @@ from importer.sources.dynatrace.extract import api_token as dynatrace_api_token
 from importer.sources.dynatrace.extract import environment_url as dynatrace_env_url
 from importer.sources.dynatrace.extract import extract as extract_dynatrace
 from importer.sources.dynatrace.extract import http_getter as dynatrace_getter
+from importer.sources.dynatrace.models import load_workflows as load_dynatrace_workflows
+from importer.sources.dynatrace.notifications import davis_plans
+from importer.sources.dynatrace.notifications import render_report as dynatrace_notification_report
 from importer.sources.gcp import data_check as gcp_data
 from importer.sources.gcp.extract import GcpError, access_token, http_getter
 from importer.sources.gcp.extract import extract as extract_gcp
@@ -620,11 +623,35 @@ def apply_dashboards_command(
         _partial_failure()
 
 
+def _convert_dynatrace_notifications(export: Path, out: Path, prefix: str) -> None:
+    try:
+        plans = davis_plans(load_dynatrace_workflows(export), prefix)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    (out / "notification-plans").mkdir(parents=True, exist_ok=True)
+    for n, plan in enumerate(plans, start=1):
+        (out / "notification-plans" / f"topic-{n:04d}.json").write_text(plan_json(plan))
+    (out / "report.md").write_text(dynatrace_notification_report(plans))
+    (out / "notifications.tf").write_text(TERRAFORM_HEADER + "\n" + notifications_terraform(plans))
+    made = sum(p.workflow is not None for p in plans)
+    typer.echo(
+        f"Read {len(plans)} Davis problem workflows, planned {made} New Relic workflows; "
+        f"every plan needs review. See {out / 'report.md'}"
+    )
+
+
 @app.command("convert-notifications")
 def convert_notifications(
     topics: Annotated[
-        Path, typer.Option("--topics", help="Folder of exported SNS topics (extract-cloudwatch)")
+        Path,
+        typer.Option(
+            "--topics",
+            help="Folder of exported SNS topics (extract-cloudwatch), or the Dynatrace export "
+            "folder (extract-dynatrace) with --source dynatrace",
+        ),
     ] = Path("out/cloudwatch/notifications"),
+    source: Annotated[str, typer.Option(help="cloudwatch or dynatrace")] = "cloudwatch",
     alerts: Annotated[
         Path, typer.Option("--alerts", help="Output folder of `convert` (has ir/)")
     ] = Path("out/cw"),
@@ -635,7 +662,15 @@ def convert_notifications(
 
     One workflow per topic routes the converted conditions that used it. Offline and read-only.
     Email and https subscriptions migrate; everything else is reported with a reason.
+    With --source dynatrace it plans one set per Davis problem workflow instead (--alerts is not
+    used); every such plan needs review.
     """
+    if source not in ("cloudwatch", "dynatrace"):
+        typer.echo("Error: --source must be cloudwatch or dynatrace", err=True)
+        raise typer.Exit(code=1)
+    if source == "dynatrace":
+        _convert_dynatrace_notifications(topics, out, prefix)
+        return
     try:
         raw_topics = load_topics(topics)
         monitors = [
@@ -659,9 +694,7 @@ def convert_notifications(
         topic = translate_topic(raw)
         plan = build_plan(topic, routes.get(topic.source_key, []), prefix)
         plans.append(plan)
-        (out / "notification-plans" / f"topic-{n:04d}.json").write_text(
-            plan.model_dump_json(indent=2) + "\n"
-        )
+        (out / "notification-plans" / f"topic-{n:04d}.json").write_text(plan_json(plan))
         status = "workflow planned" if plan.workflow else "no workflow"
         lines += [
             f"## {md_cell(printable(topic.name, 80))}",
