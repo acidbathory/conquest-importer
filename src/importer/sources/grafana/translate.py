@@ -128,7 +128,7 @@ R_COMPARE_AND_NODE = (
     "two cannot be one New Relic threshold"
 )
 R_COMPARE_NEVER = (
-    "promql expression `{query} == {value}` keeps only series whose value is {value}, and the "
+    "promql expression `{query} == {value:g}` keeps only series whose value is {value:g}, and the "
     "rule's own threshold is not met by that value, so this Grafana rule can never fire"
 )
 R_COUNTER_NAME = (
