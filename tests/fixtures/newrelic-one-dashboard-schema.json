@@ -1,0 +1,1342 @@
+{
+ "_comment": "Names only, from terraform providers schema -json for newrelic_one_dashboard (provider 3.100.1); widget types limited to those the IR emits.",
+ "attributes": {
+  "account_id": {
+   "required": false
+  },
+  "description": {
+   "required": false
+  },
+  "guid": {
+   "required": false
+  },
+  "id": {
+   "required": false
+  },
+  "name": {
+   "required": true
+  },
+  "permalink": {
+   "required": false
+  },
+  "permissions": {
+   "required": false
+  }
+ },
+ "blocks": {
+  "page": {
+   "attributes": {
+    "description": {
+     "required": false
+    },
+    "guid": {
+     "required": false
+    },
+    "name": {
+     "required": true
+    }
+   },
+   "blocks": {
+    "widget_area": {
+     "attributes": {
+      "column": {
+       "required": true
+      },
+      "facet_show_other_series": {
+       "required": false
+      },
+      "height": {
+       "required": false
+      },
+      "id": {
+       "required": false
+      },
+      "ignore_time_range": {
+       "required": false
+      },
+      "legend_enabled": {
+       "required": false
+      },
+      "refresh_rate": {
+       "required": false
+      },
+      "row": {
+       "required": true
+      },
+      "title": {
+       "required": true
+      },
+      "width": {
+       "required": false
+      },
+      "y_axis_left_max": {
+       "required": false
+      },
+      "y_axis_left_min": {
+       "required": false
+      }
+     },
+     "blocks": {
+      "chart_styles": {
+       "attributes": {
+        "line_interpolation": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "gradient": {
+         "attributes": {
+          "enabled": {
+           "required": true
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "colors": {
+       "attributes": {
+        "color": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "color": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "data_format": {
+       "attributes": {
+        "format": {
+         "required": false
+        },
+        "name": {
+         "required": true
+        },
+        "precision": {
+         "required": false
+        },
+        "type": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "initial_sorting": {
+       "attributes": {
+        "direction": {
+         "required": true
+        },
+        "name": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "nrql_query": {
+       "attributes": {
+        "account_id": {
+         "required": false
+        },
+        "query": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "null_values": {
+       "attributes": {
+        "null_value": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "null_value": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "tooltip": {
+       "attributes": {
+        "mode": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "units": {
+       "attributes": {
+        "unit": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "series_name": {
+           "required": false
+          },
+          "unit": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      }
+     }
+    },
+    "widget_bar": {
+     "attributes": {
+      "column": {
+       "required": true
+      },
+      "facet_show_other_series": {
+       "required": false
+      },
+      "filter_current_dashboard": {
+       "required": false
+      },
+      "height": {
+       "required": false
+      },
+      "id": {
+       "required": false
+      },
+      "ignore_time_range": {
+       "required": false
+      },
+      "legend_enabled": {
+       "required": false
+      },
+      "linked_entity_guids": {
+       "required": false
+      },
+      "refresh_rate": {
+       "required": false
+      },
+      "row": {
+       "required": true
+      },
+      "title": {
+       "required": true
+      },
+      "width": {
+       "required": false
+      },
+      "y_axis_left_max": {
+       "required": false
+      },
+      "y_axis_left_min": {
+       "required": false
+      }
+     },
+     "blocks": {
+      "chart_styles": {
+       "attributes": {
+        "line_interpolation": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "gradient": {
+         "attributes": {
+          "enabled": {
+           "required": true
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "colors": {
+       "attributes": {
+        "color": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "color": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "data_format": {
+       "attributes": {
+        "format": {
+         "required": false
+        },
+        "name": {
+         "required": true
+        },
+        "precision": {
+         "required": false
+        },
+        "type": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "initial_sorting": {
+       "attributes": {
+        "direction": {
+         "required": true
+        },
+        "name": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "nrql_query": {
+       "attributes": {
+        "account_id": {
+         "required": false
+        },
+        "query": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "null_values": {
+       "attributes": {
+        "null_value": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "null_value": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "units": {
+       "attributes": {
+        "unit": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "series_name": {
+           "required": false
+          },
+          "unit": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      }
+     }
+    },
+    "widget_billboard": {
+     "attributes": {
+      "column": {
+       "required": true
+      },
+      "critical": {
+       "required": false
+      },
+      "facet_show_other_series": {
+       "required": false
+      },
+      "height": {
+       "required": false
+      },
+      "id": {
+       "required": false
+      },
+      "ignore_time_range": {
+       "required": false
+      },
+      "legend_enabled": {
+       "required": false
+      },
+      "refresh_rate": {
+       "required": false
+      },
+      "row": {
+       "required": true
+      },
+      "title": {
+       "required": true
+      },
+      "warning": {
+       "required": false
+      },
+      "width": {
+       "required": false
+      },
+      "y_axis_left_max": {
+       "required": false
+      },
+      "y_axis_left_min": {
+       "required": false
+      }
+     },
+     "blocks": {
+      "billboard_settings": {
+       "attributes": {},
+       "blocks": {
+        "grid_options": {
+         "attributes": {
+          "columns": {
+           "required": false
+          },
+          "label": {
+           "required": false
+          },
+          "value": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        },
+        "link": {
+         "attributes": {
+          "new_tab": {
+           "required": false
+          },
+          "title": {
+           "required": false
+          },
+          "url": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        },
+        "visual": {
+         "attributes": {
+          "alignment": {
+           "required": false
+          },
+          "display": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "chart_styles": {
+       "attributes": {
+        "line_interpolation": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "gradient": {
+         "attributes": {
+          "enabled": {
+           "required": true
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "colors": {
+       "attributes": {
+        "color": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "color": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "data_format": {
+       "attributes": {
+        "format": {
+         "required": false
+        },
+        "name": {
+         "required": true
+        },
+        "precision": {
+         "required": false
+        },
+        "type": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "initial_sorting": {
+       "attributes": {
+        "direction": {
+         "required": true
+        },
+        "name": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "nrql_query": {
+       "attributes": {
+        "account_id": {
+         "required": false
+        },
+        "query": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "null_values": {
+       "attributes": {
+        "null_value": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "null_value": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "units": {
+       "attributes": {
+        "unit": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "series_name": {
+           "required": false
+          },
+          "unit": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      }
+     }
+    },
+    "widget_line": {
+     "attributes": {
+      "column": {
+       "required": true
+      },
+      "facet_show_other_series": {
+       "required": false
+      },
+      "height": {
+       "required": false
+      },
+      "id": {
+       "required": false
+      },
+      "ignore_time_range": {
+       "required": false
+      },
+      "is_label_visible": {
+       "required": false
+      },
+      "legend_enabled": {
+       "required": false
+      },
+      "refresh_rate": {
+       "required": false
+      },
+      "row": {
+       "required": true
+      },
+      "title": {
+       "required": true
+      },
+      "width": {
+       "required": false
+      },
+      "y_axis_left_max": {
+       "required": false
+      },
+      "y_axis_left_min": {
+       "required": false
+      },
+      "y_axis_left_zero": {
+       "required": false
+      }
+     },
+     "blocks": {
+      "chart_styles": {
+       "attributes": {
+        "line_interpolation": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "gradient": {
+         "attributes": {
+          "enabled": {
+           "required": true
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "colors": {
+       "attributes": {
+        "color": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "color": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "data_format": {
+       "attributes": {
+        "format": {
+         "required": false
+        },
+        "name": {
+         "required": true
+        },
+        "precision": {
+         "required": false
+        },
+        "type": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "initial_sorting": {
+       "attributes": {
+        "direction": {
+         "required": true
+        },
+        "name": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "nrql_query": {
+       "attributes": {
+        "account_id": {
+         "required": false
+        },
+        "query": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "null_values": {
+       "attributes": {
+        "null_value": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "null_value": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "threshold": {
+       "attributes": {
+        "from": {
+         "required": false
+        },
+        "name": {
+         "required": false
+        },
+        "severity": {
+         "required": false
+        },
+        "to": {
+         "required": false
+        }
+       },
+       "blocks": {}
+      },
+      "tooltip": {
+       "attributes": {
+        "mode": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "units": {
+       "attributes": {
+        "unit": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "series_name": {
+           "required": false
+          },
+          "unit": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "y_axis_right": {
+       "attributes": {
+        "y_axis_right_max": {
+         "required": false
+        },
+        "y_axis_right_min": {
+         "required": false
+        },
+        "y_axis_right_series": {
+         "required": false
+        },
+        "y_axis_right_zero": {
+         "required": false
+        }
+       },
+       "blocks": {}
+      }
+     }
+    },
+    "widget_markdown": {
+     "attributes": {
+      "column": {
+       "required": true
+      },
+      "facet_show_other_series": {
+       "required": false
+      },
+      "height": {
+       "required": false
+      },
+      "id": {
+       "required": false
+      },
+      "ignore_time_range": {
+       "required": false
+      },
+      "legend_enabled": {
+       "required": false
+      },
+      "refresh_rate": {
+       "required": false
+      },
+      "row": {
+       "required": true
+      },
+      "text": {
+       "required": true
+      },
+      "title": {
+       "required": true
+      },
+      "width": {
+       "required": false
+      },
+      "y_axis_left_max": {
+       "required": false
+      },
+      "y_axis_left_min": {
+       "required": false
+      }
+     },
+     "blocks": {
+      "chart_styles": {
+       "attributes": {
+        "line_interpolation": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "gradient": {
+         "attributes": {
+          "enabled": {
+           "required": true
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "colors": {
+       "attributes": {
+        "color": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "color": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "data_format": {
+       "attributes": {
+        "format": {
+         "required": false
+        },
+        "name": {
+         "required": true
+        },
+        "precision": {
+         "required": false
+        },
+        "type": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "initial_sorting": {
+       "attributes": {
+        "direction": {
+         "required": true
+        },
+        "name": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "null_values": {
+       "attributes": {
+        "null_value": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "null_value": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "units": {
+       "attributes": {
+        "unit": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "series_name": {
+           "required": false
+          },
+          "unit": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      }
+     }
+    },
+    "widget_pie": {
+     "attributes": {
+      "column": {
+       "required": true
+      },
+      "facet_show_other_series": {
+       "required": false
+      },
+      "filter_current_dashboard": {
+       "required": false
+      },
+      "height": {
+       "required": false
+      },
+      "id": {
+       "required": false
+      },
+      "ignore_time_range": {
+       "required": false
+      },
+      "legend_enabled": {
+       "required": false
+      },
+      "linked_entity_guids": {
+       "required": false
+      },
+      "refresh_rate": {
+       "required": false
+      },
+      "row": {
+       "required": true
+      },
+      "title": {
+       "required": true
+      },
+      "width": {
+       "required": false
+      },
+      "y_axis_left_max": {
+       "required": false
+      },
+      "y_axis_left_min": {
+       "required": false
+      }
+     },
+     "blocks": {
+      "chart_styles": {
+       "attributes": {
+        "line_interpolation": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "gradient": {
+         "attributes": {
+          "enabled": {
+           "required": true
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "colors": {
+       "attributes": {
+        "color": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "color": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "data_format": {
+       "attributes": {
+        "format": {
+         "required": false
+        },
+        "name": {
+         "required": true
+        },
+        "precision": {
+         "required": false
+        },
+        "type": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "initial_sorting": {
+       "attributes": {
+        "direction": {
+         "required": true
+        },
+        "name": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "nrql_query": {
+       "attributes": {
+        "account_id": {
+         "required": false
+        },
+        "query": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "null_values": {
+       "attributes": {
+        "null_value": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "null_value": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "units": {
+       "attributes": {
+        "unit": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "series_name": {
+           "required": false
+          },
+          "unit": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      }
+     }
+    },
+    "widget_table": {
+     "attributes": {
+      "column": {
+       "required": true
+      },
+      "facet_show_other_series": {
+       "required": false
+      },
+      "filter_current_dashboard": {
+       "required": false
+      },
+      "height": {
+       "required": false
+      },
+      "id": {
+       "required": false
+      },
+      "ignore_time_range": {
+       "required": false
+      },
+      "legend_enabled": {
+       "required": false
+      },
+      "linked_entity_guids": {
+       "required": false
+      },
+      "refresh_rate": {
+       "required": false
+      },
+      "row": {
+       "required": true
+      },
+      "title": {
+       "required": true
+      },
+      "width": {
+       "required": false
+      },
+      "y_axis_left_max": {
+       "required": false
+      },
+      "y_axis_left_min": {
+       "required": false
+      }
+     },
+     "blocks": {
+      "chart_styles": {
+       "attributes": {
+        "line_interpolation": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "gradient": {
+         "attributes": {
+          "enabled": {
+           "required": true
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "colors": {
+       "attributes": {
+        "color": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "color": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "data_format": {
+       "attributes": {
+        "format": {
+         "required": false
+        },
+        "name": {
+         "required": true
+        },
+        "precision": {
+         "required": false
+        },
+        "type": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "initial_sorting": {
+       "attributes": {
+        "direction": {
+         "required": true
+        },
+        "name": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "nrql_query": {
+       "attributes": {
+        "account_id": {
+         "required": false
+        },
+        "query": {
+         "required": true
+        }
+       },
+       "blocks": {}
+      },
+      "null_values": {
+       "attributes": {
+        "null_value": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "null_value": {
+           "required": false
+          },
+          "series_name": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      },
+      "threshold": {
+       "attributes": {
+        "column_name": {
+         "required": false
+        },
+        "from": {
+         "required": false
+        },
+        "severity": {
+         "required": false
+        },
+        "to": {
+         "required": false
+        }
+       },
+       "blocks": {}
+      },
+      "units": {
+       "attributes": {
+        "unit": {
+         "required": false
+        }
+       },
+       "blocks": {
+        "series_overrides": {
+         "attributes": {
+          "series_name": {
+           "required": false
+          },
+          "unit": {
+           "required": false
+          }
+         },
+         "blocks": {}
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "variable": {
+   "attributes": {
+    "default_values": {
+     "required": false
+    },
+    "is_multi_selection": {
+     "required": false
+    },
+    "name": {
+     "required": true
+    },
+    "replacement_strategy": {
+     "required": true
+    },
+    "title": {
+     "required": true
+    },
+    "type": {
+     "required": true
+    }
+   },
+   "blocks": {
+    "item": {
+     "attributes": {
+      "title": {
+       "required": false
+      },
+      "value": {
+       "required": true
+      }
+     },
+     "blocks": {}
+    },
+    "nrql_query": {
+     "attributes": {
+      "account_ids": {
+       "required": false
+      },
+      "query": {
+       "required": true
+      }
+     },
+     "blocks": {}
+    },
+    "options": {
+     "attributes": {
+      "excluded": {
+       "required": false
+      },
+      "ignore_time_range": {
+       "required": false
+      },
+      "show_apply_action": {
+       "required": false
+      }
+     },
+     "blocks": {}
+    }
+   }
+  }
+ }
+}
