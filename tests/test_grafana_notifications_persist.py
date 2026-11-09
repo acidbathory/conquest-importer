@@ -3,6 +3,7 @@
 import json
 import os
 import stat
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -234,11 +235,9 @@ def test_the_command_summary_says_when_the_policy_tree_was_cut(
     assert result.exit_code == 0 and "policy tree was cut" in result.output
 
 
-def test_the_command_help_says_what_is_written_and_what_is_not() -> None:
-    from typer.testing import CliRunner
-
-    from importer.cli import app
-
-    text = CliRunner().invoke(app, ["extract-grafana-notifications", "--help"]).output
+def test_the_command_help_says_what_is_written_and_what_is_not(
+    help_text: Callable[..., str],
+) -> None:
+    text = help_text("extract-grafana-notifications", "--help")
     for phrase in ("What is written", "rule annotations", "owner only", "Nothing is written if"):
-        assert " ".join(phrase.split()) in " ".join(text.split())
+        assert " ".join(phrase.split()) in text

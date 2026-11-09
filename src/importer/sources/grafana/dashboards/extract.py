@@ -29,6 +29,7 @@ from typing import Any
 import httpx
 
 from importer.core.ids import MAX_INPUT_BYTES, source_id
+from importer.core.json_depth import check_depth
 from importer.core.safe_http import ReadBudget, error_message, read_body, scrub
 from importer.sources.grafana.dashboards.common import mapping, sequence, text
 from importer.sources.grafana.dashboards.models import MAX_DASHBOARDS, MAX_LIBRARY
@@ -71,6 +72,7 @@ def _allowed(path: str, params: dict[str, str]) -> bool:
 def _decode(response: httpx.Response, token: str, budget: ReadBudget) -> Any:
     body = read_body(response, _Fatal, SERVICE, budget)
     try:
+        check_depth(body)
         parsed = json.loads(body)
     except (ValueError, RecursionError):  # also JSON nested deeper than the parser allows
         parsed = None

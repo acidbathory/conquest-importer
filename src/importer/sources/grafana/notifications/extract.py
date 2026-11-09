@@ -29,6 +29,7 @@ from pydantic import BaseModel
 
 from importer.core import safe_http
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.json_depth import TooDeepError, check_depth
 from importer.sources.grafana.extract import (
     TOKEN_LIKE,
     Getter,
@@ -88,8 +89,9 @@ def _decode(response: httpx.Response, token: str, budget: safe_http.ReadBudget) 
     body = safe_http.read_body(response, GrafanaError, SERVICE, budget)
     nested = False
     try:
+        check_depth(body)
         parsed = json.loads(body)
-    except RecursionError:
+    except (TooDeepError, RecursionError):
         parsed, valid, nested = None, False, True
     except ValueError:
         parsed, valid = None, False

@@ -25,6 +25,7 @@ from typing import Any
 import httpx
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.json_depth import check_depth
 from importer.core.text import printable
 
 ENV_URL = re.compile(r"https://[a-z0-9]+\.apps\.dynatrace\.com")
@@ -113,8 +114,9 @@ def _decode(response: httpx.Response, token: str) -> dict[str, Any]:
     body = _read(response)
     valid = True
     try:
+        check_depth(body)
         parsed = json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):
         parsed, valid = None, False
     status = response.status_code
     if status >= 300:  # redirects are not followed, so 3xx is a failure too

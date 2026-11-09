@@ -18,6 +18,7 @@ from urllib.parse import quote, quote_plus
 
 import httpx
 
+from importer.core.json_depth import TooDeepError, check_depth
 from importer.core.text import printable
 
 BEARER = re.compile(r"Bearer[:\s]+\S+", re.IGNORECASE)
@@ -101,15 +102,20 @@ def decode_json(
 ) -> dict[str, Any]:
     """The response as a JSON object; any status of 300 or more raises `error`."""
     body = read_body(response, error, service, budget)
-    valid = True
+    valid, nested = True, False
     try:
+        check_depth(body)
         parsed = json.loads(body)
-    except ValueError:
+    except TooDeepError:
+        parsed, valid, nested = None, False, True
+    except (ValueError, RecursionError):
         parsed, valid = None, False
     status = response.status_code
     if status >= 300:  # redirects are not followed, so 3xx is a failure too
         detail = scrub(error_message(parsed), token)
         raise error(f"{service} returned {status}" + (f": {detail}" if detail else ""))
+    if nested:
+        raise error(f"{service} sent a response nested too deeply to read")
     if not valid:
         raise error(f"{service} returned a body that is not JSON")
     if not isinstance(parsed, dict):

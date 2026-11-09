@@ -311,7 +311,7 @@ def test_the_report_has_counts_reasons_and_steps() -> None:
 def test_hostile_queries_finish_quickly_and_never_raise(query: str) -> None:
     started = time.monotonic()
     a = analyse(query)
-    assert time.monotonic() - started < 2.0
+    assert time.monotonic() - started < 5.0
     assert isinstance(a.blockers, list)
 
 

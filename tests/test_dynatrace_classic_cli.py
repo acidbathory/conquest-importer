@@ -1,6 +1,7 @@
 """The documented sequence for the Dynatrace classic source, run end to end through the CLI."""
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
@@ -62,9 +63,8 @@ def test_extract_then_convert_then_read_the_report(
     assert (alerts / "main.tf").read_text().count("newrelic_nrql_alert_condition") >= 5
 
 
-def test_convert_lists_the_source_in_its_help() -> None:
-    result = CliRunner().invoke(app, ["convert", "--help"])
-    assert "dynatrace-classic" in result.output
+def test_convert_lists_the_source_in_its_help(help_text: Callable[..., str]) -> None:
+    assert "dynatrace-classic" in help_text("convert", "--help")
 
 
 def test_the_summary_shows_listed_only_rows_on_their_own_line(tmp_path: Path) -> None:
