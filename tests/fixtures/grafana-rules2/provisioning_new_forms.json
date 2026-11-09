@@ -1,0 +1,928 @@
+[
+  {
+    "uid": "r2-rate",
+    "title": "r2-counter-rate",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "sum by (service) (rate(http_requests_total{env=\"prod\"}[5m]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  2
+                ]
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "5m",
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {
+      "team": "payments",
+      "severity": "critical"
+    },
+    "annotations": {
+      "summary": "Request rate is high",
+      "runbook_url": "https://runbooks.example.com/request-rate"
+    }
+  },
+  {
+    "uid": "r2-increase",
+    "title": "r2-counter-increase",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "sum(increase(orders_total[10m]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  100
+                ]
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "0s",
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  },
+  {
+    "uid": "r2-ratio-counters",
+    "title": "r2-error-ratio",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "sum(rate(errors_total[5m])) / sum(rate(requests_total[5m]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  0.05
+                ]
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "5m",
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  },
+  {
+    "uid": "r2-ratio-gauges",
+    "title": "r2-memory-percent",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "avg(mem_used) / avg(mem_total) * 100",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  90
+                ]
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "5m",
+    "noDataState": "OK",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  },
+  {
+    "uid": "r2-absent",
+    "title": "r2-payments-absent",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "absent(up{job=\"payments\"})",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  0
+                ]
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "10m",
+    "noDataState": "Alerting",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  },
+  {
+    "uid": "r2-absent-over-time",
+    "title": "r2-heartbeat-absent-over-time",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 900,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "absent_over_time(heartbeat_total[15m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  0
+                ]
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "0s",
+    "noDataState": "Alerting",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  },
+  {
+    "uid": "r2-classic",
+    "title": "r2-classic-single",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "avg(node_cpu_busy)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "classic_conditions",
+          "refId": "B",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  80
+                ]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "A"
+                ]
+              },
+              "reducer": {
+                "type": "avg",
+                "params": []
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "5m",
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  },
+  {
+    "uid": "r2-resample",
+    "title": "r2-resample-then-reduce",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "avg(queue_depth)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "R",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "resample",
+          "expression": "A",
+          "window": "1m",
+          "downsampler": "mean",
+          "upsampler": "fillna",
+          "refId": "R",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "R",
+          "reducer": "mean",
+          "refId": "B",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  100
+                ]
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "5m",
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  },
+  {
+    "uid": "r2-ratio-filters",
+    "title": "r2-error-ratio-one-metric",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "sum(rate(requests_total{code=\"500\"}[5m])) / sum(rate(requests_total[5m]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  0.05
+                ]
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "5m",
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  },
+  {
+    "uid": "r2-up-compare",
+    "title": "r2-up-compared-in-query",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "up{job=\"payments\"} == 0",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  0
+                ]
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "5m",
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  },
+  {
+    "uid": "r2-gauge-rate",
+    "title": "r2-rate-of-a-gauge",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "sum(rate(queue_depth[5m]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "refId": "B",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "threshold",
+          "expression": "B",
+          "refId": "C",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  1
+                ]
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "5m",
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  },
+  {
+    "uid": "r2-math-two",
+    "title": "r2-math-over-two-queries",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "M",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "sum(errors_total)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "Q",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "sum(requests_total)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "M",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "math",
+          "expression": "$A / $Q",
+          "refId": "M",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "5m",
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  },
+  {
+    "uid": "r2-classic-two",
+    "title": "r2-classic-two-conditions",
+    "folderUID": "rules2-folder",
+    "ruleGroup": "rules2-group",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prom-1",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "avg(cpu)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-1"
+          }
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "model": {
+          "type": "classic_conditions",
+          "refId": "B",
+          "conditions": [
+            {
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  80
+                ]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "A"
+                ]
+              },
+              "reducer": {
+                "type": "avg",
+                "params": []
+              }
+            },
+            {
+              "evaluator": {
+                "type": "lt",
+                "params": [
+                  5
+                ]
+              },
+              "operator": {
+                "type": "or"
+              },
+              "query": {
+                "params": [
+                  "A"
+                ]
+              },
+              "reducer": {
+                "type": "max",
+                "params": []
+              }
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          }
+        }
+      }
+    ],
+    "for": "5m",
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "isPaused": true,
+    "labels": {},
+    "annotations": {}
+  }
+]
