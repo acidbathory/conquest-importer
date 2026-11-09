@@ -1,0 +1,41 @@
+{
+  "groups": [
+    {
+      "name": "payments",
+      "interval": "1m",
+      "rules": [
+        {
+          "alert": "PaymentsDown",
+          "expr": "absent(up{job=\"payments\"})",
+          "for": "5m",
+          "labels": {"severity": "critical", "team": "payments"},
+          "annotations": {
+            "summary": "Payments is not reporting",
+            "runbook_url": "https://runbooks.example.com/payments-down"
+          }
+        },
+        {
+          "alert": "PaymentsErrorRate",
+          "expr": "sum(rate(payments_errors_total{env=\"prod\"}[5m])) > 2",
+          "for": "10m",
+          "labels": {"severity": "warning"},
+          "annotations": {"description": "Error rate is high"}
+        },
+        {
+          "alert": "QueueDeep",
+          "expr": "avg by (queue) (queue_depth{queue=~\"orders|billing\"}) >= 1000",
+          "for": "2m"
+        },
+        {
+          "alert": "LatencyP95",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(req_duration_seconds_bucket[5m]))) > 1.5",
+          "for": "5m"
+        },
+        {
+          "record": "job:payments_errors:rate5m",
+          "expr": "sum(rate(payments_errors_total[5m]))"
+        }
+      ]
+    }
+  ]
+}

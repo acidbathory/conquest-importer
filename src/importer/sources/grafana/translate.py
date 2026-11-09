@@ -25,6 +25,7 @@ from importer.core.ir import (
     Confidence,
     CountFilter,
     CountSignal,
+    HeartbeatSignal,
     IRMonitor,
     MetricSignal,
     MetricTerm,
@@ -40,6 +41,7 @@ from importer.core.ir import (
     Threshold,
 )
 from importer.sources.grafana.models import GfNode, GrafanaRule
+from importer.sources.grafana.notifications.promrules import split_comparison
 
 MIN_WINDOW_SECONDS = 60
 MAX_EXPRESSION = 10_000
@@ -112,6 +114,10 @@ R_REDUCE_MODE = (
 )
 R_RECORD = "recording rule: it writes a metric and has no alert condition"
 R_DS_MANAGED = "data source-managed rule (Mimir or Loki ruler), not a Grafana-managed rule"
+R_NO_COMPARISON = (
+    "data source-managed rule: the query has no comparison against a number, so there is no "
+    "threshold to convert"
+)
 R_NO_NODE = "grafana pipeline: the condition does not point at a node of the rule"
 R_SHAPE = "grafana pipeline is not one query, an optional reduce and one threshold"
 R_MATH = "grafana pipeline has a math expression"
@@ -235,6 +241,10 @@ N_NODATA_KEEP = "on no data Grafana keeps the last state, which has no equivalen
 N_ERROR_STATE = (
     "when the query fails Grafana sets the error state; New Relic has no query-error state, "
     "so it may differ"
+)
+N_RULE_FILE = (
+    "this rule comes from a Prometheus-style rule file (Mimir or Loki ruler); the threshold is "
+    "the comparison in its query, and the rule has no Grafana pipeline"
 )
 N_ROUTING = "notifications (contact points and notification policies) must be configured manually"
 
@@ -416,6 +426,8 @@ class _Built:
     metric: MetricSignal | None = None
     count: CountSignal | None = None
     notes: list[str] = field(default_factory=list)
+    threshold: Threshold | None = None  # a form that fixes its own threshold (absent)
+    heartbeat: HeartbeatSignal | None = None
 
 
 def _looked_back(ctx: _Ctx) -> str:
@@ -618,19 +630,12 @@ def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, GfNode, list[str]]:
     return step, reducer, condition, notes
 
 
-def _threshold(node: GfNode) -> tuple[Threshold, bool]:
-    """The threshold, and whether the rule also had a recovery threshold."""
-    conditions = node.model.get("conditions")
-    if not isinstance(conditions, list) or len(conditions) != 1:
-        raise _Fail(R_SHAPE)
-    condition = _mapping(conditions[0])
-    evaluator = _mapping(condition.get("evaluator"))
-    kind = evaluator.get("type")
+def _make_threshold(kind: object, params: object) -> Threshold:
+    """The critical threshold for an evaluator type and its parameters."""
     if kind in RANGE_KINDS:
         raise _Fail(R_RANGE)
     if not isinstance(kind, str) or kind not in OPERATORS:
         raise _Fail(R_OPERATOR)
-    params = evaluator.get("params")
     if not (
         isinstance(params, list)
         and len(params) == 1
@@ -639,23 +644,34 @@ def _threshold(node: GfNode) -> tuple[Threshold, bool]:
         and math.isfinite(params[0])
     ):
         raise _Fail(R_VALUE)
-    threshold = Threshold(
-        severity=Severity.CRITICAL, operator=OPERATORS[kind], value=float(params[0])
-    )
+    return Threshold(severity=Severity.CRITICAL, operator=OPERATORS[kind], value=float(params[0]))
+
+
+def _threshold(node: GfNode) -> tuple[Threshold, bool]:
+    """The threshold, and whether the rule also had a recovery threshold."""
+    conditions = node.model.get("conditions")
+    if not isinstance(conditions, list) or len(conditions) != 1:
+        raise _Fail(R_SHAPE)
+    condition = _mapping(conditions[0])
+    evaluator = _mapping(condition.get("evaluator"))
+    threshold = _make_threshold(evaluator.get("type"), evaluator.get("params"))
     return threshold, bool(condition.get("unloadEvaluator"))
 
 
-def _datasource_type(node: GfNode) -> tuple[str, bool]:
+def _kind_of(declared: object, uid: str, expr: str) -> tuple[str, bool]:
     """The data source type and whether it had to be inferred (it is not in every read)."""
-    declared = _mapping(node.model.get("datasource")).get("type")
     if isinstance(declared, str) and declared:
         return declared.lower(), False
-    uid = node.datasourceUid.lower()
     for hint, kind in UID_HINTS:
-        if hint in uid:
+        if hint in uid.lower():
             return kind, True
-    flat = str(node.model.get("expr", "")).replace(" ", "")
+    flat = expr.replace(" ", "")
     return ("loki" if re.search(r"(?<![\w:])\{", flat) else "prometheus"), True
+
+
+def _datasource_type(node: GfNode) -> tuple[str, bool]:
+    declared = _mapping(node.model.get("datasource")).get("type")
+    return _kind_of(declared, node.datasourceUid, str(node.model.get("expr", "")))
 
 
 def _instant(query: GfNode) -> bool:
@@ -668,13 +684,41 @@ def _range_seconds(query: GfNode) -> int | None:
     return seconds if ok else None
 
 
-def _built(query: GfNode, reducer: str) -> tuple[_Built, bool]:
+@dataclass
+class _Plan:
+    """What a rule asks, whatever shape it was read in: one query, how to read it, one test."""
+
+    kind: str  # the data source type
+    inferred: bool
+    expr: str
+    ctx: _Ctx
+    threshold: Threshold | None  # None: the query itself must fix it (absent)
+    recovery: bool = False
+    notes: list[str] = field(default_factory=list)
+
+
+def _grafana_plan(rule: GrafanaRule) -> _Plan:
+    query, reducer, threshold_node, notes = _pipeline(rule)
+    threshold, recovery = _threshold(threshold_node)
     kind, inferred = _datasource_type(query)
-    handler = HANDLERS.get(kind)
-    if handler is None:
-        raise _Fail(R_DATASOURCE.format(label=OTHER_DATASOURCES.get(kind, "unknown")))
     ctx = _Ctx(reducer, _instant(query), _range_seconds(query))
-    return handler(str(query.model.get("expr", "")), ctx), inferred
+    return _Plan(kind, inferred, str(query.model.get("expr", "")), ctx, threshold, recovery, notes)
+
+
+def _rule_file_plan(rule: GrafanaRule) -> _Plan:
+    """A Prometheus-style rule: the comparison with a number in the query is the threshold."""
+    comparison = split_comparison(rule.expr)
+    expr = comparison.query if comparison else rule.expr
+    threshold = _make_threshold(comparison.operator, [comparison.value]) if comparison else None
+    kind, inferred = _kind_of(None, "", expr)
+    return _Plan(kind, inferred, expr, _Ctx("last", True, None), threshold)
+
+
+def _built(plan: _Plan) -> _Built:
+    handler = HANDLERS.get(plan.kind)
+    if handler is None:
+        raise _Fail(R_DATASOURCE.format(label=OTHER_DATASOURCES.get(plan.kind, "unknown")))
+    return handler(plan.expr, plan.ctx)
 
 
 # --- windows and states ---
@@ -736,19 +780,30 @@ def _text(value: Any) -> str:
 # --- one rule ---
 
 
+def _plan(rule: GrafanaRule) -> _Plan:
+    if rule.datasource_managed:
+        if not rule.expr:
+            raise _Fail(R_DS_MANAGED)
+        return _rule_file_plan(rule)
+    return _grafana_plan(rule)
+
+
 def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
     if rule.unreadable:
         raise _Fail(R_UNREADABLE)
     if rule.record is not None:
         raise _Fail(R_RECORD)
-    if rule.datasource_managed:
-        raise _Fail(R_DS_MANAGED)
-    query, reducer, threshold_node, pipeline_notes = _pipeline(rule)
-    threshold, recovery = _threshold(threshold_node)
-    built, inferred = _built(query, reducer)
+    plan = _plan(rule)
+    built = _built(plan)
+    threshold = built.threshold or plan.threshold
+    if threshold is None:
+        raise _Fail(R_NO_COMPARISON)
+    recovery, pipeline_notes, inferred = plan.recovery, plan.notes, plan.inferred
     window, duration, window_notes = _windows(rule, built.window)
     no_data, state_notes = _states(rule, duration)
     notes = [N_INFERRED] if inferred else []
+    if rule.expr:
+        notes.append(N_RULE_FILE)
     notes += built.notes + pipeline_notes
     if built.kind is SignalKind.LOG and threshold.operator in EMPTY_SENSITIVE:
         notes.append(N_COUNT_EMPTY)
