@@ -62,9 +62,9 @@ def test_the_pending_period_and_the_range_are_both_kept() -> None:
     assert t.N_COUNTER in m.reasons and any("300s window" in r for r in m.reasons)
 
 
-def test_a_rate_with_no_sum_says_each_series_is_combined() -> None:
+def test_a_rate_with_no_sum_is_manual_because_the_total_is_another_test() -> None:
     m = prom("rate(errors_total[5m])", params=[1])
-    assert m.confidence is Confidence.APPROXIMATE and t.N_PER_SERIES in m.reasons
+    assert m.confidence is Confidence.MANUAL and m.reasons == [t.R_COUNTER_UNAGG]
 
 
 @pytest.mark.parametrize("suffix", ["_total", "_count", "_bucket"])

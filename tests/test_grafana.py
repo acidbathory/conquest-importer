@@ -417,8 +417,9 @@ def test_identical_copies_that_were_merged_are_counted_in_a_note() -> None:
 @pytest.mark.parametrize(
     ("expr", "fragment"),
     [
-        ("rate(x[5m])", "does not end in _total"),
-        ("increase(x[5m])", "does not end in _total"),
+        ("sum(rate(x[5m]))", "does not end in _total"),
+        ("sum(increase(x[5m]))", "does not end in _total"),
+        ("rate(x_total[5m])", "without sum()"),
         ("irate(x[5m])", "promql uses rate"),
         ("delta(x[5m])", "promql uses rate"),
         ("avg_over_time(x[5m])", "promql uses an _over_time"),

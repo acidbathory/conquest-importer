@@ -229,7 +229,7 @@
         },
         "model": {
           "refId": "A",
-          "expr": "avg(mem_used) / avg(mem_total) * 100",
+          "expr": "avg(mem_used) / avg(mem_limit) * 100",
           "datasource": {
             "type": "prometheus",
             "uid": "prom-1"

@@ -21,7 +21,7 @@ register(SOURCE)
 # reasons of the PromQL forms (counters, ratios, absence, comparisons); anchored to their wording
 register_taxonomy(
     Category.UNSUPPORTED_QUERY,
-    r"^promql (?:counter (?:function|rate|range)|ratio:|absent\(\) returns 1"
+    r"^promql (?:counter (?:function|rate|range)|equality or inequality|ratio:|absent\(\) returns 1"
     r"|expression compares inside the query)",
 )
 register_taxonomy(Category.MANUAL_FOLLOWUP, r"^grafana origin:")

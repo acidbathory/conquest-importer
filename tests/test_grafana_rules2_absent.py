@@ -120,7 +120,7 @@ def test_other_absent_shapes_keep_the_absent_reason(expr: str) -> None:
 
 
 def test_up_equal_to_zero_is_an_ordinary_metric_condition_not_absence() -> None:
-    m = file_rule('up{job="payments"} == 0', for_seconds=60)
+    m = file_rule('avg(up{job="payments"}) == 0', for_seconds=60)
     assert m.signal.kind is SignalKind.METRIC
     assert m.thresholds[0].operator is Operator.EQUALS and m.thresholds[0].value == 0
 

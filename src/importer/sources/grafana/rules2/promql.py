@@ -30,14 +30,18 @@ from importer.core.ir import (
 )
 from importer.sources.grafana.translate import (
     BODY,
+    COUNTER_SUFFIXES,
+    EMPTY_SENSITIVE,
     EXACT_AGGREGATES,
     N_ABSENT,
     N_COUNTER,
+    N_COUNTER_EMPTY,
     N_METRIC,
     N_NEGATION,
-    N_PER_SERIES,
     N_RATE_DIVISION,
+    N_RATE_SAMPLES,
     N_RATIO_ZERO,
+    PROM_COUNTER,
     PROM_MATCHER,
     PROM_NOT_SIMPLE,
     PROM_SELECTOR,
@@ -48,6 +52,7 @@ from importer.sources.grafana.translate import (
     R_COUNTER_NAME,
     R_COUNTER_RANGE,
     R_COUNTER_REDUCER,
+    R_COUNTER_UNAGG,
     R_RATIO_AGG,
     R_RATIO_SHAPE,
     RANGE_SECONDS,
@@ -64,7 +69,7 @@ from importer.sources.grafana.translate import (
     time_window,
 )
 
-COUNTER_SUFFIXES = ("_total", "_count", "_bucket")  # what New Relic stores as a delta count
+COUNT_SUFFIXES = ("_total", "_count", "_bucket")  # what New Relic stores as a delta count
 SELECTOR = rf"([A-Za-z_:][A-Za-z0-9_:]*)\s*(?:\{{({BODY})\}})?"
 RANGE = r"\[\s*(\d+)\s*([smh])\s*\]"
 COUNTER_CALL = re.compile(rf"\s*(rate|increase)\s*\(\s*{SELECTOR}\s*{RANGE}\s*\)\s*")
@@ -141,9 +146,11 @@ def _in_name(masked: str, index: int) -> bool:
 
 def _check_counter(operand: _Operand, ctx: Ctx) -> int:
     """The range in seconds of a counter operand that converts; else raise the reason."""
-    if operand.aggregator not in (None, "sum"):
+    if operand.aggregator is None:
+        raise Fail(R_COUNTER_UNAGG)
+    if operand.aggregator != "sum":
         raise Fail(R_COUNTER_AGG.format(agg=operand.aggregator))
-    if not operand.name.endswith(COUNTER_SUFFIXES):
+    if not operand.name.endswith(COUNT_SUFFIXES):
         raise Fail(R_COUNTER_NAME)
     reducer = looked_back(ctx)
     if reducer != "last":
@@ -152,6 +159,14 @@ def _check_counter(operand: _Operand, ctx: Ctx) -> int:
     if seconds < MIN_RANGE or seconds % 60:
         raise Fail(R_COUNTER_RANGE.format(seconds=seconds))
     return seconds
+
+
+def _counter_notes(ctx: Ctx) -> list[str]:
+    """Notes every counter form carries: the two-sample rule and the idle counter."""
+    notes = [N_RATE_SAMPLES]
+    if ctx.threshold is not None and ctx.threshold.operator in EMPTY_SENSITIVE:
+        notes.append(N_COUNTER_EMPTY)
+    return notes
 
 
 def _term(name: str) -> MetricTerm:
@@ -177,8 +192,7 @@ def _counter_form(expr: str, ctx: Ctx) -> Built | None:
     if operand.function == "rate":
         division = BinOp(op="/", left=Ref(name="a"), right=Num(value=float(seconds)))
         notes.append(N_RATE_DIVISION.format(seconds=seconds))
-    if operand.aggregator is None:
-        notes.append(N_PER_SERIES)
+    notes += _counter_notes(ctx)
     if any(m.negate for m in operand.matches):
         notes.append(N_NEGATION)
     metric = MetricSignal(
@@ -220,10 +234,16 @@ def _same_shape(left: _Operand, right: _Operand) -> bool:
     ) == (right.aggregator, right.group_by, right.matches, right.function, right.seconds)
 
 
-def _ratio_window(left: _Operand, ctx: Ctx) -> tuple[Aggregation, int | None, list[str]]:
-    """Aggregation, fixed window and notes of the shared side of a ratio."""
+def _ratio_window(
+    left: _Operand, right: _Operand, ctx: Ctx
+) -> tuple[Aggregation, int | None, list[str]]:
+    """Aggregation, fixed window and notes of a ratio; both sides are checked the same way."""
     if left.function:
-        return Aggregation.SUM, _check_counter(left, ctx), [N_COUNTER]
+        seconds = _check_counter(left, ctx)
+        _check_counter(right, ctx)
+        return Aggregation.SUM, seconds, [N_COUNTER, *_counter_notes(ctx)]
+    if any(side.name.endswith(COUNTER_SUFFIXES) for side in (left, right)):
+        raise Fail(PROM_COUNTER)
     if left.aggregator in ("min", "max"):
         raise Fail(R_RATIO_AGG.format(agg=left.aggregator))
     reducer = looked_back(ctx)
@@ -242,7 +262,7 @@ def _ratio_form(expr: str, ctx: Ctx) -> Built | None:
         return None
     if not _same_shape(left, right):
         raise Fail(R_RATIO_SHAPE)
-    aggregation, fixed, notes = _ratio_window(left, ctx)
+    aggregation, fixed, notes = _ratio_window(left, right, ctx)
     ratio: Expr = BinOp(op="/", left=Ref(name="a"), right=Ref(name="b"))
     if parts[2] != 1.0:
         ratio = BinOp(op="*", left=ratio, right=Num(value=parts[2]))

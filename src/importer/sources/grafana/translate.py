@@ -154,6 +154,14 @@ R_MATH_QUERIES = (
     "grafana pipeline has a math expression that combines {count} queries, and a New Relic "
     "condition reads one query"
 )
+R_COUNTER_UNAGG = (
+    "promql counter rate without sum(): Prometheus tests each series on its own, and a New "
+    "Relic total over every series is a different test"
+)
+R_PER_SERIES_TEST = (
+    "promql equality or inequality test on a selector with no aggregation tests each series, "
+    "which one New Relic aggregation cannot"
+)
 R_NO_NODE = "grafana pipeline: the condition does not point at a node of the rule"
 R_SHAPE = "grafana pipeline is not one query, an optional reduce and one threshold"
 R_MATH = "grafana pipeline has a math expression"
@@ -314,6 +322,19 @@ N_CLASSIC = (
 N_RESAMPLE = (
     "a resample step was ignored: New Relic sets the step with the aggregation window, so the "
     "values may differ"
+)
+N_ANY_SERIES = (
+    "the rule fires when any series crosses the threshold; the maximum (or minimum) of all "
+    "series over the window is used for that, so it may differ"
+)
+N_COUNTER_EMPTY = (
+    "if no row arrives in a window the condition is not evaluated, so a counter that has "
+    "stopped may not fire a below or equal test; use loss of signal for that, it may differ"
+)
+N_RATE_SAMPLES = (
+    "Prometheus needs at least two samples inside the range to return a value, while New "
+    "Relic divides the one change per interval it has by the range; when the scrape interval "
+    "is longer than the range the values differ (not confirmed against live data)"
 )
 N_ROUTING = "notifications (contact points and notification policies) must be configured manually"
 
@@ -505,6 +526,7 @@ class Built:
     threshold: Threshold | None = None  # a form that fixes its own threshold (absent)
     heartbeat: HeartbeatSignal | None = None
     minimum_duration: int = 0  # seconds the query itself asks the condition to last
+    per_series: bool = False  # a bare selector: Prometheus tests each series on its own
 
 
 def looked_back(ctx: Ctx) -> str:
@@ -585,7 +607,7 @@ def _prometheus(expr: str, ctx: Ctx) -> Built:
         scope=[tag_filter(m) for m in matches],
         group_by=[nrql_attribute(g) for g in group_by],
     )
-    return Built(SignalKind.METRIC, fixed, metric=metric, notes=notes)
+    return Built(SignalKind.METRIC, fixed, metric=metric, notes=notes, per_series=not aggregator)
 
 
 # --- Loki ---
@@ -953,6 +975,24 @@ def _plan(rule: GrafanaRule) -> _Plan:
     return _grafana_plan(rule)
 
 
+ANY_SERIES = {
+    Operator.ABOVE: Aggregation.MAX,
+    Operator.ABOVE_OR_EQUALS: Aggregation.MAX,
+    Operator.BELOW: Aggregation.MIN,
+    Operator.BELOW_OR_EQUALS: Aggregation.MIN,
+}
+
+
+def _any_series(metric: MetricSignal, threshold: Threshold) -> None:
+    """A rule-file test on a bare selector fires when any series crosses: max() or min()."""
+    aggregation = ANY_SERIES.get(threshold.operator)
+    if aggregation is None:
+        raise Fail(R_PER_SERIES_TEST)
+    metric.aggregation = aggregation
+    for term in metric.terms.values():
+        term.space_aggregation = aggregation
+
+
 def _rule_notes(rule: GrafanaRule, plan: _Plan) -> list[str]:
     """Notes about the rule's own settings, in the order they are shown."""
     notes = [N_INFERRED] if plan.inferred else []
@@ -986,6 +1026,9 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
     threshold = built.threshold or plan.threshold
     if threshold is None:
         raise Fail(R_NO_COMPARISON)
+    if rule.expr and built.per_series and built.metric:
+        _any_series(built.metric, threshold)
+        built.notes.append(N_ANY_SERIES)
     window, duration, window_notes = _windows(rule, built.window, built.minimum_duration)
     no_data, state_notes = _states(rule, duration, built.kind is SignalKind.HEARTBEAT)
     notes = _rule_notes(rule, plan) + built.notes + plan.notes

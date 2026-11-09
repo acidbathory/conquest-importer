@@ -16,6 +16,27 @@ NRQL_LIMITS = (
 
 RULES: list[Rule] = [
     (
+        re.compile(r"^promql counter rate without sum"),
+        "PromQL counter rate without sum",
+        [
+            "Prometheus tests each series on its own, so one busy series fires the rule. A "
+            "New Relic total over all series would hide it. Either wrap the rate in "
+            "`sum by (label) (...)` in Grafana so the grouping is explicit, or write a "
+            "condition with a FACET on the series label (`SELECT sum(metric) / 300 FROM "
+            "Metric FACET label`) and check it against the Grafana panel.",
+        ],
+    ),
+    (
+        re.compile(r"^promql equality or inequality test"),
+        "PromQL equality test on a bare selector",
+        [
+            "A test such as `up == 0` fires for each series that has that value. One New "
+            "Relic aggregation (average, minimum or maximum) cannot tell the same. Use "
+            "`min(...)` or `max(...)` with a below or above test, or write a condition with "
+            "a FACET on the series label and an equals threshold.",
+        ],
+    ),
+    (
         re.compile(r"^promql counter function on a metric"),
         "PromQL counter name",
         [

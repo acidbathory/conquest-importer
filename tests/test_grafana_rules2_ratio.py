@@ -35,17 +35,17 @@ def test_a_ratio_of_counter_rates_is_the_ratio_of_the_sums() -> None:
 
 
 def test_a_percentage_of_gauge_averages_keeps_the_factor() -> None:
-    m = prom("avg(mem_used) / avg(mem_total) * 100", params=[90])
+    m = prom("avg(mem_used) / avg(mem_limit) * 100", params=[90])
     assert m.confidence is Confidence.APPROXIMATE
-    assert nrql_for(m) == "SELECT average(mem_used) / average(mem_total) * 100 FROM Metric"
-    rows = [{"mem_used": u, "mem_total": 200.0} for u in (170.0, 190.0)]
+    assert nrql_for(m) == "SELECT average(mem_used) / average(mem_limit) * 100 FROM Metric"
+    rows = [{"mem_used": u, "mem_limit": 200.0} for u in (170.0, 190.0)]
     assert evaluate(nrql_for(m), rows) == {(): pytest.approx(90.0)}
     assert m.signal.metric and isinstance(m.signal.metric.expression, BinOp)
 
 
 def test_a_leading_factor_is_the_same_percentage() -> None:
-    m = prom("100 * avg(mem_used) / avg(mem_total)", params=[90])
-    assert nrql_for(m) == "SELECT average(mem_used) / average(mem_total) * 100 FROM Metric"
+    m = prom("100 * avg(mem_used) / avg(mem_limit)", params=[90])
+    assert nrql_for(m) == "SELECT average(mem_used) / average(mem_limit) * 100 FROM Metric"
 
 
 def test_grouping_and_labels_are_shared_by_both_sides() -> None:

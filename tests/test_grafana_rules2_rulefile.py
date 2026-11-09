@@ -40,7 +40,7 @@ def comparable(monitor: IRMonitor) -> tuple[object, ...]:
     ("expr", "operator", "evaluator", "value"),
     [
         ('avg by (queue) (queue_depth{queue=~"orders|billing"})', ">=", "gte", 1000),
-        ("queue_depth", ">", "gt", 5),
+        ("avg(queue_depth)", ">", "gt", 5),
         ('avg(temperature{room="a"})', "<", "lt", 2.5),
         ("avg(queue_depth)", "==", "eq", 0),
     ],
