@@ -253,7 +253,9 @@ def parse_object(raw: object) -> SettingsObject:
     base = {k: _text(raw, k) for k in ("objectId", "schemaId", "scope")}
     value = raw.get("value")
     if not base["schemaId"]:
-        return SettingsObject(**base, problem="the item has no schemaId (not a Settings 2.0 object)")
+        return SettingsObject(
+            **base, problem="the item has no schemaId (not a Settings 2.0 object)"
+        )
     if not isinstance(value, dict):
         return SettingsObject(**base, problem="the item has no value object")
     kept, problem = _checked(base["schemaId"], value)
@@ -287,7 +289,9 @@ def _read(file: Path) -> Any:
     except RecursionError:
         raise ValueError(f"{file.name} is nested too deeply to read") from None
     except json.JSONDecodeError as exc:
-        raise ValueError(f"{file.name} is not valid JSON ({exc.msg} at line {exc.lineno})") from None
+        raise ValueError(
+            f"{file.name} is not valid JSON ({exc.msg} at line {exc.lineno})"
+        ) from None
 
 
 def load_objects(path: Path) -> list[SettingsObject]:
