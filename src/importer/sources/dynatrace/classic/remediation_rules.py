@@ -10,7 +10,12 @@ import re
 
 from importer.core.remediation import Rule, register_rules
 
-METRIC_MAP = "src/importer/sources/dynatrace/classic/metric_map.json"
+MAP_HOW = (
+    "write a JSON file with the same layout as the map this tool ships (a `metrics` list of "
+    "rows with `keys`, `event`, `attribute`, `unit_factor`, `dimensions`, `default_aggregation` "
+    "and `status`), check it with `importer validate-dynatrace-map FILE`, and name it in the "
+    "environment variable IMPORTER_DYNATRACE_METRIC_MAP when you convert"
+)
 
 
 def _rule(pattern: str, title: str, *steps: str) -> Rule:
@@ -44,8 +49,8 @@ RULES: list[Rule] = [
         "A converted condition on a metric that never reaches New Relic never fires. The reason "
         "says what must be installed or sent (an agent, an integration, or the same metric "
         "through OpenTelemetry).",
-        "Once the data arrives, find its event and attribute in the data explorer, add a row "
-        f"to the metric map ({METRIC_MAP}) with status unverified, convert again, and run "
+        "Once the data arrives, find its event and attribute in the data explorer, then "
+        f"{MAP_HOW}. Give the row status unverified, convert again, and run "
         "`importer check-dynatrace-metrics`. Mark the row verified only after you have seen "
         "the values match Dynatrace.",
     ),
@@ -57,7 +62,7 @@ RULES: list[Rule] = [
         "`dimensions` of the metric's row in the metric map, then convert again.",
     ),
     _rule(
-        r"^the metrics live on different new relic events|^arithmetic over metrics with a unit",
+        r"^the metrics live on different new relic events|^arithmetic (over|around) ",
         "Metrics cannot share one condition",
         "One NRQL condition reads one event type, so a ratio of metrics from different events "
         "(host and service data, for example) cannot be one condition. Pick the metric that "
@@ -66,7 +71,8 @@ RULES: list[Rule] = [
         "sides to the same unit first.",
     ),
     _rule(
-        r"^(the event is limited to a management zone|an entity filter|dimension filter operator"
+        r"^(the event is limited to a management zone|an entity filter|a filter on an entity id"
+        r"|dimension filter operator"
         r"|a filter value)",
         "Filter that New Relic cannot express",
         "A management zone is a set of entities built by rules in Dynatrace. Reproduce its "
@@ -81,7 +87,7 @@ RULES: list[Rule] = [
         "Samples or window out of range",
         "Dynatrace evaluates one-minute samples; the importer maps `violatingSamples` minutes "
         "to the breach duration. A value of zero, more violating samples than the sliding "
-        "window, an offset over 60 minutes, or a duration over 24 hours cannot be created.",
+        "window, an offset over 20 minutes, or a duration over 24 hours cannot be created.",
         "Pick a duration between 1 minute and 24 hours and create the condition by hand.",
     ),
     _rule(
@@ -175,7 +181,7 @@ RULES: list[Rule] = [
         "Metric name mapping not confirmed",
         "The New Relic name for this metric is taken from a mapping file, not from live data. "
         "Run the query in the data explorer, compare the values with the Dynatrace chart, and "
-        f"set the row's status in the metric map ({METRIC_MAP}).",
+        f"set the row's status in your map file: {MAP_HOW}.",
     ),
     _rule(
         r"^\d+ of \d+ violating samples",
@@ -185,7 +191,7 @@ RULES: list[Rule] = [
         "series must alert, lower the duration or use the signal-gap fill options by hand.",
     ),
     _rule(
-        r"^(dealertingsamples|the query offset of|missing data counts as)",
+        r"^(dealertingsamples|the query offset of|missing data counts as|davismerge is ignored)",
         "Timing differs from Dynatrace",
         "Recovery, the evaluation offset and missing-data handling work differently. Check "
         "the condition's close behaviour and its loss-of-signal setting after you enable it.",
@@ -199,13 +205,22 @@ RULES: list[Rule] = [
         "expect weak signal for the first days while New Relic learns.",
     ),
     _rule(
-        r"^(default\(|the sort is not applied|the series limit is not applied|rate per minute"
-        r"|the added |setunit only|smooth\(|the metric map gives a fixed expression"
+        r"^(the :(count|median|value|last)|default\(|the sort is not applied"
+        r"|the series limit is not applied|rate per minute|the added |setunit only|smooth\("
+        r"|the metric map gives a fixed expression|splitting by an entity dimension"
         r"|entity filter conditions|a case-insensitive|a like filter)",
         "Selector detail not applied",
         "The reason lists a detail of the Dynatrace selector or filter that the converted "
         "condition does not reproduce. Compare the New Relic chart with the Dynatrace one "
         "before you enable the condition.",
+    ),
+    _rule(
+        r"^the event type \w+ does not open a problem",
+        "Event type that opens no problem",
+        "Informational Dynatrace events (annotations, deployments, configuration changes) do not "
+        "open problems and do not page anyone, so an alert condition is the wrong target.",
+        "Record the same information in New Relic as a change-tracking marker or a deployment "
+        "marker, and keep an alert condition only for events that open problems.",
     ),
     _rule(
         r"^the dynatrace (metric event|detector) was disabled",

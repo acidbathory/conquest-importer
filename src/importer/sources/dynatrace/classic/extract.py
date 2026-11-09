@@ -26,7 +26,7 @@ from typing import Any
 import httpx
 
 from importer.core.ids import MAX_INPUT_BYTES
-from importer.core.safe_http import ReadBudget, get_json, is_plain_token
+from importer.core.safe_http import ReadBudget, decode_json, is_plain_token
 from importer.sources.dynatrace.classic import models
 
 PLATFORM_HOST = re.compile(r"https://[a-z0-9]+\.apps\.dynatrace\.com")
@@ -42,7 +42,7 @@ MAX_PAGES = 100  # per schema
 MAX_TOTAL_PAGES = 400  # across every schema in one run
 MAX_OBJECTS = 20_000  # per schema
 SERVICE = "Dynatrace"
-NOT_FOUND = re.compile(r"returned 404")
+MAX_PAGE_KEY = 2000
 FALLBACK_WARNING = (
     "some schemas were read through /platform/settings/v1, which was asked for scope "
     "environment only; entity-scoped overrides (one host or service) are not in the export"
@@ -53,13 +53,29 @@ Getter = Callable[[str, dict[str, str]], dict[str, Any]]
 
 
 class ClassicError(Exception):
-    """Reading from Dynatrace failed; the message is safe to show."""
+    """Reading from Dynatrace failed; the message is safe to show.
+
+    `status` is the HTTP status of the response, when there was one; code decides on it, never
+    on the message text (the text can carry whatever the server said).
+    """
+
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
+
+
+def host_kind(url: str) -> str | None:
+    """ "platform" or "classic" for a tenant address, else None. One trailing slash is allowed,
+    stripped once; the rest must match a pattern from start to end."""
+    host = url[:-1] if url.endswith("/") else url
+    if PLATFORM_HOST.fullmatch(host):
+        return "platform"
+    return "classic" if CLASSIC_HOST.fullmatch(host) else None
 
 
 def is_env_url(url: str) -> bool:
     """True for https://<tenant id>.apps.dynatrace.com or .live.dynatrace.com, no path."""
-    host = url.removesuffix("/")
-    return PLATFORM_HOST.fullmatch(host) is not None or CLASSIC_HOST.fullmatch(host) is not None
+    return host_kind(url) is not None
 
 
 def api_token() -> str:
@@ -82,14 +98,16 @@ def environment_url() -> str:
     return os.environ.get("DYNATRACE_ENV_URL", "").strip()
 
 
-def _check_url(env_url: str) -> str:
-    host = env_url.removesuffix("/")
-    if not is_env_url(host):
+def _check_url(env_url: str) -> tuple[str, str]:
+    """The host (one trailing slash removed, once) and its kind. Everything that depends on the
+    kind, the header scheme and the paths, uses this one result."""
+    kind = host_kind(env_url)
+    if kind is None:
         raise ValueError(
             "DYNATRACE_ENV_URL must look like https://<tenant id>.apps.dynatrace.com "
             "(or https://<tenant id>.live.dynatrace.com for a classic tenant)"
         )
-    return host
+    return (env_url[:-1] if env_url.endswith("/") else env_url), kind
 
 
 @contextmanager
@@ -98,10 +116,11 @@ def http_getter(
 ) -> Iterator[Getter]:
     """A Getter for one tenant that reuses a connection pool and closes it when the block ends.
 
-    It refuses any URL that does not start with the tenant host. `transport` is for tests.
+    A platform token (bearer) is sent only to a Platform host and an API token only to a classic
+    host. It refuses any URL that does not start with the tenant host. `transport` is for tests.
     """
-    host = _check_url(env_url)
-    scheme = "Api-Token" if CLASSIC_HOST.fullmatch(host) else "Bearer"
+    host, kind = _check_url(env_url)
+    scheme = "Api-Token" if kind == "classic" else "Bearer"
     budget = ReadBudget()
     with httpx.Client(
         timeout=60,
@@ -113,7 +132,18 @@ def http_getter(
         def get(url: str, params: dict[str, str]) -> dict[str, Any]:
             if not url.startswith(host + "/"):
                 raise ClassicError("refused a request to a host that is not the configured tenant")
-            return get_json(client, url, params, token, ClassicError, SERVICE, budget)
+            budget.check_time(ClassicError, SERVICE)
+            try:
+                with client.stream("GET", url, params=params) as response:
+                    status = response.status_code
+                    try:
+                        return decode_json(response, token, ClassicError, SERVICE, budget)
+                    except ClassicError as exc:
+                        raise ClassicError(str(exc), status if status >= 300 else None) from None
+            except (httpx.HTTPError, httpx.InvalidURL) as exc:
+                raise ClassicError(f"could not reach {SERVICE}: {type(exc).__name__}") from None
+            except RecursionError:
+                raise ClassicError(f"{SERVICE} sent a response nested too deeply to read") from None
 
         yield get
 
@@ -154,9 +184,16 @@ def _list_schema(
     items: list[dict[str, Any]] = []
     params = _first_params(schema, platform_style=platform_style)
     key_name = "page-key" if platform_style else "nextPageKey"
-    for _ in range(MAX_PAGES):
+    for number in range(MAX_PAGES):
         pages.spend()
-        page = get(url, params)
+        try:
+            page = get(url, params)
+        except ClassicError as exc:
+            if number and exc.status == 404:  # page 1 was read: the list is not "not found"
+                raise ClassicError(
+                    "a later page of a list was not found; the list is incomplete"
+                ) from None
+            raise
         found = page.get("items")
         if not isinstance(found, list):
             raise ClassicError(f"{SERVICE} returned a response with no `items` list")
@@ -166,6 +203,8 @@ def _list_schema(
         key = page.get("nextPageKey")
         if not isinstance(key, str) or not key:
             return items
+        if len(key) > MAX_PAGE_KEY:
+            raise ClassicError(f"{SERVICE} sent a page key longer than {MAX_PAGE_KEY} characters")
         params = {key_name: key}
     raise ClassicError(f"more than {MAX_PAGES} pages of one schema; stopped")
 
@@ -185,10 +224,10 @@ def _minimise(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def _read_schema(
-    get: Getter, host: str, schema: str, pages: PageBudget, result: ExtractResult
+    get: Getter, host: str, kind: str, schema: str, pages: PageBudget, result: ExtractResult
 ) -> list[dict[str, Any]] | None:
     """The objects of one schema, or None when no path knows it (a 404 on every path)."""
-    if CLASSIC_HOST.fullmatch(host):
+    if kind == "classic":
         paths = [(CLASSIC_PATH, False)]
     else:
         paths = [(PRIMARY_PATH, False), (FALLBACK_PATH, True)]
@@ -196,7 +235,7 @@ def _read_schema(
         try:
             items = _list_schema(get, host + path, schema, pages, platform_style=platform_style)
         except ClassicError as exc:
-            if NOT_FOUND.search(str(exc)):
+            if exc.status == 404 and not exc.args[0].startswith("a later page"):
                 continue
             raise
         if platform_style and FALLBACK_WARNING not in result.warnings:
@@ -216,13 +255,13 @@ def _write(out: Path, schema: str, items: list[dict[str, Any]]) -> None:
 
 def extract(get: Getter, env_url: str, out: Path) -> ExtractResult:
     """Write settings/<schema>.json under `out` (a new or empty folder)."""
-    host = _check_url(env_url)
+    host, kind = _check_url(env_url)
     if out.exists() and any(out.iterdir()):
         raise ValueError(f"{out} already has files; pass a new folder")
     result = ExtractResult()
     pages = PageBudget(MAX_TOTAL_PAGES)
     for schema in models.READ_SCHEMAS:
-        items = _read_schema(get, host, schema, pages, result)
+        items = _read_schema(get, host, kind, schema, pages, result)
         if items is None:
             result.warnings.append(
                 f"{schema}: returned 404 on every settings path; the tenant has none of these "
@@ -231,4 +270,9 @@ def extract(get: Getter, env_url: str, out: Path) -> ExtractResult:
             continue
         result.counts[schema] = len(items)
         _write(out, schema, [_minimise(i) for i in items])
+    if not result.counts:
+        raise ClassicError(
+            "no schema could be read: every request answered 404. Check DYNATRACE_ENV_URL and "
+            "that the token has the settings read scopes"
+        )
     return result

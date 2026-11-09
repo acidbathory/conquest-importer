@@ -8,6 +8,7 @@ loaded, so a typo fails at load time and not when a condition is emitted.
 """
 
 import json
+import os
 import re
 from collections.abc import Iterable
 from functools import lru_cache
@@ -20,6 +21,7 @@ from importer.core.emit.nrql import identifier
 from importer.core.ids import MAX_INPUT_BYTES
 
 MAP_PATH = Path(__file__).with_name("metric_map.json")
+MAP_ENV = "IMPORTER_DYNATRACE_METRIC_MAP"
 SELECT = re.compile(r"[A-Za-z0-9_.,()*= ]{1,200}")
 
 Status = Literal["documented", "verified", "unverified", "none"]
@@ -122,7 +124,11 @@ def _check_unique(rows: Iterable[MapEntry]) -> None:
 def load_metric_map(path: Path | None = None) -> MetricMap:
     """Read and check a metric map file (the shipped one by default)."""
     file = path or MAP_PATH
-    if file.stat().st_size > MAX_INPUT_BYTES:
+    try:
+        too_big = file.stat().st_size > MAX_INPUT_BYTES
+    except OSError:
+        raise MapError(f"the metric map {file.name} cannot be read") from None
+    if too_big:
         raise MapError(f"{file.name} is too large")
     try:
         data = json.loads(file.read_text())
@@ -145,11 +151,23 @@ def shipped_map() -> MetricMap:
     return load_metric_map()
 
 
+@lru_cache(maxsize=8)
+def _user_map(path: str) -> MetricMap:
+    return load_metric_map(Path(path))
+
+
+def active_map() -> MetricMap:
+    """The map named by IMPORTER_DYNATRACE_METRIC_MAP (checked as strictly as the shipped one),
+    otherwise the shipped map. The variable is read at each call."""
+    named = os.environ.get(MAP_ENV, "").strip()
+    return _user_map(named) if named else shipped_map()
+
+
 def lookup(key: str) -> MapEntry | None:
-    """The shipped map's row for a Dynatrace metric key, or None."""
-    return shipped_map().find(key)
+    """The active map's row for a Dynatrace metric key, or None."""
+    return active_map().find(key)
 
 
 def prerequisite(key: str) -> str:
     """What must be installed or sent so the metric exists in New Relic."""
-    return shipped_map().prerequisite(key)
+    return active_map().prerequisite(key)

@@ -70,7 +70,10 @@ def _profile(value: dict[str, Any]) -> str:
 
 def _notification(value: dict[str, Any]) -> str:
     kind = _one_of(value.get("type"), NOTIFICATION_TYPES)
-    state = "enabled" if value.get("enabled") is not False else "disabled"
+    flag = value.get("enabled")
+    state = "state unknown"
+    if isinstance(flag, bool):
+        state = "enabled" if flag else "disabled"
     return (
         f"problem notification is not converted (type {kind}, {state}): recreate it as a New "
         "Relic destination and workflow; secrets, URLs and recipients are not exported"

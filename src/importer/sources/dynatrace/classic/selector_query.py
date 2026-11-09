@@ -111,8 +111,17 @@ NOTED = {
 }
 RATE_NOTE = (
     "rate per minute is read as the sum over each one-minute window; New Relic stores "
-    "counts per interval, so check the converted query against the Dynatrace chart"
+    "counts per interval, so check the converted query against the Dynatrace chart; if the "
+    "metric is a gauge, the per-minute value is not the sum over the window"
 )
+AGGREGATE_NOTES = {
+    "count": "the :count aggregation counts events that have the attribute, not the values in a "
+    "time slot",
+    "median": "the :median aggregation becomes percentile 50; a median alias is not confirmed",
+    "value": "the :value aggregation becomes latest(), the last value in the window",
+    "last": "the :last aggregation becomes latest(), the last value in the window",
+    "lastReal": "the :lastReal aggregation becomes latest(), the last value in the window",
+}
 
 
 def _text(arg: Arg, what: str) -> str:
@@ -133,6 +142,8 @@ def _simple(name: str) -> Callable[[SeriesSpec, tuple[Arg, ...]], None]:
         if args:
             raise SelectorError(f"{name} takes no arguments")
         _aggregation(spec, AGGREGATES[name])
+        if name in AGGREGATE_NOTES:
+            spec.notes.append(AGGREGATE_NOTES[name])
 
     return handler
 
@@ -153,7 +164,8 @@ def _percentile(spec: SeriesSpec, args: tuple[Arg, ...]) -> None:
 
 
 def _split_by(spec: SeriesSpec, args: tuple[Arg, ...]) -> None:
-    spec.group_by = [_text(a, "splitBy") for a in args]
+    names = [_text(a, "splitBy") for a in args]
+    spec.group_by = list(dict.fromkeys(names))  # a repeated dimension is split once
 
 
 def _default(spec: SeriesSpec, args: tuple[Arg, ...]) -> None:
@@ -183,7 +195,10 @@ def _filter_term(call: Call) -> list[DimFilter]:
     """A filter call as a list of tests that must all hold."""
     name, args = call.name, call.args
     if name == "and":
-        return [t for a in args for t in _filter_term(_call(a))]
+        tests = [t for a in args for t in _filter_term(_call(a))]
+        if not args or not tests:
+            raise SelectorError("an empty and filter is not supported")
+        return tests
     if name == "or":
         return [_any_of(args)]
     if name == "not":
@@ -213,16 +228,17 @@ def _call(arg: Arg) -> Call:
 
 
 def _any_of(args: tuple[Arg, ...]) -> DimFilter:
-    tests = [t for a in args for t in _filter_term(_call(a))]
-    first = tests[0] if tests else None
-    if (
-        first is None
-        or first.kind != "eq"
-        or any(t.kind != "eq" or t.key != first.key or t.negate for t in tests)
-        or first.negate
-    ):
-        raise SelectorError("an or filter across different dimensions or tests is not supported")
-    return DimFilter(first.key, "eq", tuple(v for t in tests for v in t.values), False)
+    """`or` of direct `eq` calls on one dimension is an IN; nothing else keeps its meaning."""
+    tests: list[DimFilter] = []
+    for arg in args:
+        call = _call(arg)
+        found = _filter_term(call) if call.name == "eq" else []
+        if len(found) != 1:
+            raise SelectorError("an or filter is supported only over eq tests on one dimension")
+        tests.append(found[0])
+    if not tests or any(t.key != tests[0].key for t in tests):
+        raise SelectorError("an or filter is supported only over eq tests on one dimension")
+    return DimFilter(tests[0].key, "eq", tuple(v for t in tests for v in t.values), False)
 
 
 def _negated(args: tuple[Arg, ...]) -> DimFilter:
@@ -295,7 +311,11 @@ def _walk(node: Expr, terms: list[SeriesSpec]) -> QExpr:
     if isinstance(node, Series):
         terms.append(_series_spec(node))
         return ERef(len(terms) - 1)
-    return EOp(node.op, _walk(node.left, terms), _walk(node.right, terms))
+    left = _walk(node.left, terms)
+    right = _walk(node.right, terms)
+    if node.op == "/" and right == ENum(0.0):
+        raise SelectorError("a division by zero is not supported")
+    return EOp(node.op, left, right)
 
 
 def _same_shape(terms: list[SeriesSpec]) -> None:

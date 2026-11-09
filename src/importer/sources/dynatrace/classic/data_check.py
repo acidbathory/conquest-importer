@@ -12,7 +12,7 @@ from importer.core.data_check import Check, Status, first_number, has_blind_cond
 from importer.core.data_check import render as render_checks
 from importer.core.emit.common import CannotEmit, nrql_for
 from importer.core.emit.nrql import identifier
-from importer.core.ir import Confidence, IRMonitor, MetricTerm, SignalKind
+from importer.core.ir import Confidence, IRMonitor, MetricTerm, NrTarget, SignalKind
 from importer.core.text import printable
 from importer.sources.dynatrace.classic.metric_map import lookup
 
@@ -27,17 +27,34 @@ NO_DATA = (
 )
 
 
-def _count_query(term: MetricTerm, hours: int) -> str:
-    """A count of the term's signal; a fixed expression is counted as rows of its event."""
+def _count_monitor(monitor: IRMonitor, label: str, term: MetricTerm) -> IRMonitor:
+    """A copy of the monitor whose query counts one term's signal, with the same scope."""
     target = term.nr_target
-    if target is None:
+    metric = monitor.signal.metric
+    if target is None or metric is None:
         raise CannotEmit("a term has no New Relic target")
     attribute = target.attribute
     if attribute is None:  # a select was built from the map; the map still knows the attribute
         row = lookup(term.metric)
         attribute = row.attribute if row else None
-    what = f"count({identifier(attribute)})" if attribute else "count(*)"
-    return f"SELECT {what} FROM {identifier(target.event)} SINCE {int(hours)} hours ago"  # noqa: S608
+    select = f"count({identifier(attribute)})" if attribute else "count(*)"
+    counted = MetricTerm(
+        metric=term.metric,
+        space_aggregation=term.space_aggregation,
+        nr_target=NrTarget(event=target.event, select=select),
+    )
+    signal = metric.model_copy(
+        update={"terms": {label: counted}, "expression": None, "group_by": []}
+    )
+    return monitor.model_copy(
+        update={"signal": monitor.signal.model_copy(update={"metric": signal})}
+    )
+
+
+def _count_query(monitor: IRMonitor, label: str, term: MetricTerm, hours: int) -> str:
+    """A count of the term's signal where the condition's own filters apply, so a filtered
+    condition is not called healthy because other rows of the event exist."""
+    return f"{nrql_for(_count_monitor(monitor, label, term))} SINCE {int(hours)} hours ago"
 
 
 def check_monitor(client: NewRelicClient, account_id: int, monitor: IRMonitor, hours: int) -> Check:
@@ -49,7 +66,9 @@ def check_monitor(client: NewRelicClient, account_id: int, monitor: IRMonitor, h
         return Check(name, Status.NOT_CHECKED, 0, None, "not a metric condition: no query was made")
     try:
         nrql = nrql_for(monitor)
-        queries = {label: _count_query(term, hours) for label, term in metric.terms.items()}
+        queries = {
+            label: _count_query(monitor, label, term, hours) for label, term in metric.terms.items()
+        }
     except (CannotEmit, ValueError) as exc:
         return Check(name, Status.NOT_CHECKED, 0, None, printable(str(exc), 120))
     counts = {

@@ -17,6 +17,7 @@ from importer.sources.dynatrace.classic.extract import (
     extract,
     http_getter,
 )
+from importer.sources.dynatrace.classic.metric_map import MapError, load_metric_map
 
 MAX_HOURS = 168
 
@@ -89,6 +90,23 @@ def check_command(
         raise typer.Exit(code=2)
 
 
+def validate_map_command(
+    path: Annotated[Path, typer.Argument(help="A metric map JSON file")],
+) -> None:
+    """Check a metric map file as strictly as the one this tool ships.
+
+    Name it in IMPORTER_DYNATRACE_METRIC_MAP to use it when you convert. Offline.
+    """
+    try:
+        loaded = load_metric_map(path)
+    except (MapError, OSError) as exc:
+        typer.echo(f"Error: metric map: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    unverified = sum(1 for row in loaded.metrics if row.status != "verified")
+    typer.echo(f"The metric map is valid: {len(loaded.metrics)} rows, {unverified} not verified.")
+
+
 def register(app: typer.Typer) -> None:
     app.command("extract-dynatrace-classic")(extract_command)
     app.command("check-dynatrace-metrics")(check_command)
+    app.command("validate-dynatrace-map")(validate_map_command)

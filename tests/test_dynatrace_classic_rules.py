@@ -60,6 +60,8 @@ EXAMPLES: dict[str, str] = {
     "Davis detects these problems automatically",
     "Settings schema not read": "settings schema is not converted: 'builtin:x' is not one of the "
     "schemas this source reads",
+    "Event type that opens no problem": "the event type INFO does not open a problem in Dynatrace "
+    "(it is informational), so it is not a paging condition",
     "The data must reach New Relic": "data prerequisite: install the New Relic infrastructure "
     "agent on the hosts",
     "Metric name mapping not confirmed": "metric name mapping is unverified for "

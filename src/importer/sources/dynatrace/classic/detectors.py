@@ -27,6 +27,9 @@ from importer.sources.dynatrace.classic.windows import sample_window
 
 SOURCE_TYPE = "davis anomaly detector"
 MAX_QUERY = 2000
+MAX_NUMBER = 10**15  # a threshold; larger is not a real measurement
+MAX_COUNT = 10**9  # samples and windows
+MAX_NUMBER_TEXT = 40
 STATIC = "StaticThresholdAnomalyDetectionAnalyzer"
 BASELINE_ANALYZERS = (
     "AutoAdaptiveAnomalyDetectionAnalyzer",
@@ -70,9 +73,14 @@ def _number(inputs: dict[str, object], key: str, *, required: bool = True) -> fl
         return None
     if isinstance(raw, bool):
         raise Fail(f"detector input {key} is not a number")
+    # checked before float(): a 400-digit integer overflows it, and no real input is this large
+    if isinstance(raw, int) and abs(raw) > MAX_NUMBER:
+        raise Fail(f"detector input {key} is out of range")
+    if isinstance(raw, str) and len(raw) > MAX_NUMBER_TEXT:
+        raise Fail(f"detector input {key} is not a number")
     try:
         number = float(raw)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         raise Fail(f"detector input {key} is not a number") from None
     return finite(number, f"detector input {key}")
 
@@ -83,6 +91,8 @@ def _count(inputs: dict[str, object], key: str, *, required: bool = True) -> int
         return None
     if number != int(number):
         raise Fail(f"detector input {key} is not a whole number")
+    if abs(number) > MAX_COUNT:
+        raise Fail(f"detector input {key} is out of range")
     return int(number)
 
 
@@ -96,7 +106,7 @@ def _series(inputs: dict[str, object]) -> SeriesSpec:
     if match is None:
         raise Fail(NOT_SIMPLE)
     func, metric, dims = match.groups()
-    names = [d.strip() for d in (dims or "").split(",") if d.strip()]
+    names = list(dict.fromkeys(d.strip() for d in (dims or "").split(",") if d.strip()))
     if any(DIMENSION.fullmatch(d) is None for d in names):
         raise Fail(NOT_SIMPLE)
     return SeriesSpec(metric, aggregate=AGGREGATES[func], group_by=names, aggregated=True)

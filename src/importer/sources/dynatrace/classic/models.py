@@ -9,9 +9,9 @@ here, so a secret, a webhook URL or a recipient address never survives past the 
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, FiniteFloat, ValidationError
+from pydantic import BaseModel, BeforeValidator, ConfigDict, FiniteFloat, ValidationError
 
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.text import printable
@@ -72,6 +72,16 @@ READ_SCHEMAS = (
 NOTIFICATION_KEEP = ("enabled", "type", "displayName", "alertingProfile")
 
 
+def _not_a_bool(value: Any) -> Any:
+    """A JSON true or false is not a count; pydantic would read it as 1 or 0."""
+    if isinstance(value, bool):
+        raise ValueError("a boolean is not a number")
+    return value
+
+
+Count = Annotated[int, BeforeValidator(_not_a_bool)]
+
+
 class EntityCondition(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -103,7 +113,7 @@ class QueryDefinition(BaseModel):
     aggregation: str = ""
     metricSelector: str = ""
     managementZone: str | None = None
-    queryOffset: int | None = None
+    queryOffset: Count | None = None
     entityFilter: EntityFilter = EntityFilter()
     dimensionFilter: list[DimensionFilter] = []
 
@@ -117,9 +127,9 @@ class ModelProperties(BaseModel):
     tolerance: FiniteFloat | None = None
     alertCondition: str = ""
     alertOnNoData: bool = False
-    violatingSamples: int
-    samples: int
-    dealertingSamples: int | None = None
+    violatingSamples: Count
+    samples: Count
+    dealertingSamples: Count | None = None
 
 
 class EventTemplate(BaseModel):
@@ -158,7 +168,7 @@ class Analyzer(BaseModel):
 class ExecutionSettings(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    queryOffset: int | None = None
+    queryOffset: Count | None = None
 
 
 class DetectorValue(BaseModel):
@@ -223,7 +233,13 @@ def describe(exc: ValidationError) -> str:
 
 def reduce_notification(value: dict[str, Any]) -> dict[str, Any]:
     """Keep type, name, enabled flag and profile id; drop every secret, URL and recipient."""
-    return {k: value[k] for k in NOTIFICATION_KEEP if isinstance(value.get(k), str | bool)}
+    kept: dict[str, Any] = {}
+    for key in NOTIFICATION_KEEP:
+        found = value.get(key)
+        # the flag is kept only as a real boolean: the text "false" is not read as enabled
+        if isinstance(found, bool) if key == "enabled" else isinstance(found, str):
+            kept[key] = found
+    return kept
 
 
 def _text(raw: dict[str, Any], key: str) -> str:

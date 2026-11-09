@@ -5,8 +5,6 @@ cannot. Every other object is an inventory row. An object that could not be read
 manual item that carries the loader's problem text. `translate` never raises for an object.
 """
 
-from collections import Counter
-
 from importer.core.ir import Confidence, IRMonitor
 from importer.core.text import printable
 from importer.sources.dynatrace.classic import models
@@ -20,11 +18,27 @@ UNREADABLE = "the settings object could not be read: {problem}"
 NAME_LIMIT = 80
 
 
-def object_key(obj: SettingsObject, index: int, seen: Counter[str]) -> str:
-    """The object id; a repeat gets '#2', '#3'. Without an id the position stands in."""
-    base = obj.objectId or f"{obj.schemaId or 'object'}/{index}"
-    seen[base] += 1
-    return base if seen[base] == 1 else f"{base}#{seen[base]}"
+class Keys:
+    """Hands out unique keys: the object id, then 'id#2', 'id#3'... skipping any key in use."""
+
+    def __init__(self) -> None:
+        self.used: set[str] = set()
+        self.next_suffix: dict[str, int] = {}
+
+    def take(self, base: str) -> str:
+        suffix = self.next_suffix.get(base, 1)
+        key = base
+        while key in self.used:
+            suffix += 1
+            key = f"{base}#{suffix}"
+        self.used.add(key)
+        self.next_suffix[base] = suffix
+        return key
+
+
+def object_key(obj: SettingsObject, index: int, keys: Keys) -> str:
+    """The object id, made unique. Without an id the position stands in."""
+    return keys.take(obj.objectId or f"{obj.schemaId or 'object'}/{index}")
 
 
 def _convert(obj: SettingsObject, key: str) -> IRMonitor:
@@ -44,5 +58,5 @@ def _convert(obj: SettingsObject, key: str) -> IRMonitor:
 
 
 def translate(objects: list[SettingsObject]) -> list[IRMonitor]:
-    seen: Counter[str] = Counter()
-    return [_convert(obj, object_key(obj, i, seen)) for i, obj in enumerate(objects)]
+    keys = Keys()
+    return [_convert(obj, object_key(obj, i, keys)) for i, obj in enumerate(objects)]

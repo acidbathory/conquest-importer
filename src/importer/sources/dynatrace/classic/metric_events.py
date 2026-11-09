@@ -22,6 +22,7 @@ from importer.sources.dynatrace.classic.common import Fail, finite, monitor, sho
 from importer.sources.dynatrace.classic.models import (
     DimensionFilter,
     EntityCondition,
+    EventTemplate,
     MetricEventValue,
     ModelProperties,
     QueryDefinition,
@@ -137,6 +138,25 @@ def _window(mp: ModelProperties, qd: QueryDefinition) -> SampleWindow:
     )
 
 
+NO_PROBLEM_TYPES = frozenset(
+    {"INFO", "CUSTOM_ANNOTATION", "CUSTOM_DEPLOYMENT", "CUSTOM_CONFIGURATION"}
+)
+MERGE_NOTE = (
+    "davisMerge is ignored: Davis merges events into problems, and New Relic correlates "
+    "alert events by a different method"
+)
+
+
+def _event_type(template: EventTemplate) -> list[str]:
+    """Notes about the event template; manual for a type that opens no problem."""
+    if template.eventType in NO_PROBLEM_TYPES:
+        raise Fail(
+            f"the event type {template.eventType} does not open a problem in Dynatrace "
+            "(it is informational), so it is not a paging condition"
+        )
+    return [MERGE_NOTE] if template.davisMerge is not None else []
+
+
 def _model(mp: ModelProperties) -> tuple[Operator | None, BaselineSpec | None]:
     """The static operator or the baseline for the model type; manual when neither applies."""
     if mp.type in BASELINES:
@@ -159,6 +179,7 @@ def _model(mp: ModelProperties) -> tuple[Operator | None, BaselineSpec | None]:
 
 def _convert(value: MetricEventValue, key: str, name: str) -> IRMonitor:
     mp, qd = value.modelProperties, value.queryDefinition
+    template_notes = _event_type(value.eventTemplate)
     operator, baseline = _model(mp)
     window = _window(mp, qd)
     terms, expression = _terms(qd)
@@ -178,7 +199,7 @@ def _convert(value: MetricEventValue, key: str, name: str) -> IRMonitor:
         reasons += BASELINE_NOTES
         if qd.type == "METRIC_KEY":
             reasons.append(KEY_BASELINE_NOTE)
-    reasons += filter_notes + built.notes
+    reasons += filter_notes + template_notes + built.notes
     signal = Signal(
         kind=SignalKind.METRIC,
         raw_query=name,

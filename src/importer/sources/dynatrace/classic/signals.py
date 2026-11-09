@@ -6,6 +6,7 @@ only from the map file (checked as identifiers when it loads) and from `identifi
 at emit time; values from the export are checked here for characters NRQL cannot carry.
 """
 
+import re
 from dataclasses import dataclass
 from typing import Literal
 
@@ -22,11 +23,12 @@ from importer.core.ir import (
     TagFilter,
 )
 from importer.sources.dynatrace.classic.common import Fail, finite, shown
-from importer.sources.dynatrace.classic.metric_map import MapEntry, MetricMap, shipped_map
+from importer.sources.dynatrace.classic.metric_map import MapEntry, MetricMap, active_map
 from importer.sources.dynatrace.classic.selector_query import (
     Aggregate,
     DimFilter,
     ENum,
+    EOp,
     ERef,
     QExpr,
     SeriesSpec,
@@ -50,6 +52,20 @@ STATUS_NOTES = {
         "metric name mapping comes from documentation for {key} and has not been seen on live data"
     ),
 }
+ENTITY_ID = re.compile(r"[A-Z_]+-[0-9A-F]{16}")
+ENTITY_PREFIX = "dt.entity."
+ENTITY_ID_REASON = (
+    "a filter on an entity id cannot be matched: New Relic has names, not Dynatrace ids; "
+    "resolve the id to a name first"
+)
+ENTITY_SPLIT_NOTE = (
+    "splitting by an entity dimension gives names in New Relic where Dynatrace shows entity "
+    "ids, so the facet labels change from entity ids to names"
+)
+SCALE_REASON = (
+    "arithmetic around a metric with a unit conversion is not supported (only multiplying or "
+    "dividing by a constant keeps the unit)"
+)
 LIKE_NOTE = (
     "a LIKE filter is used for a prefix, suffix or contains test; whether it ignores case is "
     "not confirmed"
@@ -82,6 +98,29 @@ def _attribute(dimension: str, entries: list[MapEntry]) -> str:
     if len(attributes) != 1:
         raise Fail(f"the metrics map dimension {shown(dimension)} to different attributes")
     return attributes[0]
+
+
+def _check_entity_ids(filters: list[DimFilter]) -> None:
+    for flt in filters:
+        if flt.key.startswith(ENTITY_PREFIX) and any(ENTITY_ID.fullmatch(v) for v in flt.values):
+            raise Fail(ENTITY_ID_REASON)
+
+
+def _threshold_factor(entries: list[MapEntry], expression: QExpr | None) -> float:
+    """How a Dynatrace threshold becomes a New Relic one, given the unit conversion."""
+    factor = entries[0].unit_factor
+    if expression is None or all(e.unit_factor == 1 for e in entries):
+        return factor
+    if len(entries) > 1 or not isinstance(expression, EOp):
+        raise Fail(SCALE_REASON)
+    left, right = expression.left, expression.right
+    if expression.op in "*/" and isinstance(left, ERef) and isinstance(right, ENum):
+        return factor  # metric * k, metric / k
+    if expression.op == "*" and isinstance(left, ENum) and isinstance(right, ERef):
+        return factor  # k * metric
+    if expression.op == "/" and isinstance(left, ENum) and isinstance(right, ERef):
+        return 1 / factor  # k / metric
+    raise Fail(SCALE_REASON)
 
 
 def _safe_value(value: str) -> str:
@@ -176,11 +215,12 @@ def build_signal(
     mapping: MetricMap | None = None,
 ) -> Built:
     """The metric signal for one or more terms that share a split and filters."""
-    mapping = mapping or shipped_map()
+    mapping = mapping or active_map()
     entries = [entry_for(t.key, mapping) for t in terms]
     if len({e.event for e in entries}) > 1:
         raise Fail("the metrics live on different New Relic events and cannot share one condition")
     first = terms[0]
+    _check_entity_ids([*first.filters, *extra])
     group_by = [_attribute(d, entries) for d in first.group_by]
     scope = [tag_filter(f, _attribute(f.key, entries)) for f in [*first.filters, *extra]]
     metric_terms: dict[str, MetricTerm] = {}
@@ -195,6 +235,9 @@ def build_signal(
         )
     if len(terms) > 1 and any(e.unit_factor != 1 for e in entries):
         raise Fail("arithmetic over metrics with a unit conversion is not supported")
+    factor = _threshold_factor(entries, expression)
+    if any(d.startswith(ENTITY_PREFIX) for d in first.group_by):
+        notes.append(ENTITY_SPLIT_NOTE)
     if any(f.kind != "eq" for f in [*first.filters, *extra]):
         notes.append(LIKE_NOTE)
     notes += _status_notes(entries, [t.key for t in terms], mapping)
@@ -205,4 +248,4 @@ def build_signal(
         scope=scope,
         group_by=group_by,
     )
-    return Built(signal, entries[0].unit_factor, notes)
+    return Built(signal, factor, notes)

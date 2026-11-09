@@ -2,6 +2,7 @@
 
 import math
 import re
+import unicodedata
 
 from importer.core.emit.common import MAX_AGGREGATION_WINDOW_SECONDS, MAX_DURATION_SECONDS
 from importer.core.ids import source_id
@@ -26,9 +27,20 @@ def shown(text: str, limit: int = SHOWN_LIMIT) -> str:
     Metric keys, dimension keys, schema ids and enum values are plain names. Anything else (a
     quote, a control character, markup, a long run) is not repeated in a reason at all.
     """
+    if not text:
+        return "<an empty value>"
     if len(text) > limit or SAFE_NAME.fullmatch(text) is None:
         return "<a name with unusual characters>"
     return repr(text)
+
+
+HIDDEN = {"Cc", "Cf", "Zl", "Zp", "Cs", "Co", "Cn"}  # controls, bidi and zero-width, separators
+
+
+def clean_name(text: str, limit: int = 120) -> str:
+    """A display name without control, bidirectional or zero-width characters, and capped."""
+    kept = "".join(c for c in text if unicodedata.category(c) not in HIDDEN)
+    return kept.strip()[:limit]
 
 
 def finite(value: float, what: str) -> float:
@@ -62,9 +74,9 @@ def monitor(
     return IRMonitor(
         source_system=SOURCE,
         source_id=source_id(key),
-        source_key=key,
+        source_key=clean_name(key, 200),
         source_type=source_type,
-        name=name,
+        name=clean_name(name),
         signal=signal or Signal(kind=SignalKind.UNKNOWN, raw_query=name),
         confidence=confidence,
         reasons=reasons,

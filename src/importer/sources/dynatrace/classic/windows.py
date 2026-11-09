@@ -15,7 +15,8 @@ from importer.sources.dynatrace.classic.common import Fail, check_limits
 
 SAMPLE_SECONDS = 60
 DEFAULT_DELAY_SECONDS = 120
-MAX_OFFSET_MINUTES = 60
+MAX_OFFSET_MINUTES = 20  # New Relic's aggregation delay is at most 1200 s
+DEFAULT_DEALERTING = 5  # the Dynatrace default; a note is only useful for another value
 
 
 @dataclass
@@ -41,7 +42,10 @@ def _offset(minutes: int | None) -> tuple[int, list[str]]:
             raise Fail("the query offset is negative")
         return DEFAULT_DELAY_SECONDS, []
     if minutes > MAX_OFFSET_MINUTES:
-        raise Fail(f"query offset {minutes} minutes is over the supported maximum of 60")
+        raise Fail(
+            f"query offset {minutes} minutes is over the maximum of {MAX_OFFSET_MINUTES} that "
+            "New Relic's aggregation delay of 1200 seconds allows"
+        )
     delay = max(DEFAULT_DELAY_SECONDS, minutes * SAMPLE_SECONDS)
     return delay, [
         f"the query offset of {minutes} minutes becomes an aggregation delay of {delay}s: New "
@@ -69,7 +73,7 @@ def sample_window(
             "breaks every second minute opens the Dynatrace event and never opens the New "
             "Relic one",
         )
-    if dealerting is not None:
+    if dealerting is not None and dealerting != DEFAULT_DEALERTING:
         notes.append(
             f"dealertingSamples {dealerting} has no equivalent: New Relic closes the alert "
             "event when the data stops breaching"
