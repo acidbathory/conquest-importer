@@ -26,12 +26,16 @@ from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.text import printable
 
 PROJECT_ID = re.compile(r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$")
-API = "https://monitoring.googleapis.com/v3"
+API = "https://monitoring.googleapis.com"
+# the dashboards API is v1; everything else here is v3
+API_VERSIONS = {"dashboards": "v1"}
+DEFAULT_VERSION = "v3"
 # key in the response -> path below projects/<id>
 READ_PATHS = {
     "alertPolicies": "alertPolicies",
     "notificationChannels": "notificationChannels",
     "uptimeCheckConfigs": "uptimeCheckConfigs",
+    "dashboards": "dashboards",
 }
 MAX_PAGES = 100
 
@@ -93,7 +97,8 @@ def http_getter(token: str) -> Iterator[Getter]:
 
 
 def _list_all(get: Getter, project: str, key: str) -> list[dict[str, Any]]:
-    url = f"{API}/projects/{project}/{READ_PATHS[key]}"
+    version = API_VERSIONS.get(key, DEFAULT_VERSION)
+    url = f"{API}/{version}/projects/{project}/{READ_PATHS[key]}"
     items: list[dict[str, Any]] = []
     params: dict[str, str] = {"pageSize": "100"}
     for _ in range(MAX_PAGES):
@@ -139,11 +144,12 @@ class ExtractResult:
     conditions: int = 0
     channels: int = 0
     uptime_checks: int = 0
+    dashboards: int = 0
     warnings: list[str] = field(default_factory=list)
 
 
 def extract(get: Getter, project: str, out: Path) -> ExtractResult:
-    """Write policies/, channels/ and uptime-checks/ under `out` (a new or empty folder)."""
+    """Write policies/, channels/, uptime-checks/ and dashboards/ under a new or empty `out`."""
     if not PROJECT_ID.match(project):
         raise ValueError("--project must be a Google Cloud project id such as my-project-123")
     if out.exists() and any(out.iterdir()):
@@ -156,6 +162,7 @@ def extract(get: Getter, project: str, out: Path) -> ExtractResult:
     for key, summarise in (
         ("notificationChannels", _channel_summary),
         ("uptimeCheckConfigs", _uptime_summary),
+        ("dashboards", dict),  # layout and queries only, no secrets: kept whole
     ):
         try:
             optional[key] = [summarise(i) for i in _list_all(get, project, key)]
@@ -164,10 +171,12 @@ def extract(get: Getter, project: str, out: Path) -> ExtractResult:
             optional[key] = []
     result.channels = len(optional["notificationChannels"])
     result.uptime_checks = len(optional["uptimeCheckConfigs"])
+    result.dashboards = len(optional["dashboards"])
     for folder, name, data in (
         ("policies", "policies.json", policies),
         ("channels", "channels.json", optional["notificationChannels"]),
         ("uptime-checks", "uptime-checks.json", optional["uptimeCheckConfigs"]),
+        ("dashboards", "dashboards.json", optional["dashboards"]),
     ):
         text = json.dumps(data, indent=2) + "\n"
         if len(text) > MAX_INPUT_BYTES:

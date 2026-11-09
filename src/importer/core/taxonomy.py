@@ -33,7 +33,7 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
             r"|ratio conditions|trigger on several|not one of the google cloud service metrics"
             r"|uptime check|davis problem notification workflow|workflow trigger is a"
             r"|workflow tasks are not|workflow tasks run on|slo is not converted automatically"
-            r"|longer than one hour, the longest count window"
+            r"|longer than one hour, the longest count window|dashboard widget type"
         ),
     ),
     # Before the approximation rule: the Metric Streams note says "assumed".
@@ -58,7 +58,7 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
         re.compile(
             r"formula|metric math|query|expression|scope|search syntax|rollup|service check"
             r"|unit conversion|statistic|characters|has no metric|dimension|filter|aligner|reducer"
-            r"|second-stage|alignment period"
+            r"|second-stage|alignment period|queries in widgets"
         ),
     ),
     (
@@ -66,7 +66,7 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
         re.compile(
             r"configured manually|must be confirmed|not migrated|template variables"
             r"|not exported|one-time oauth|has no new relic destination"
-            r"|channel is not in the export"
+            r"|channel is not in the export|widget has no content"
             r"|the dynatrace trigger was inactive|slo criteria: target|the workflow was a draft"
         ),
     ),

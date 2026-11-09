@@ -220,6 +220,33 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"(mql|promql|ratio|sql) queries in widgets"),
+        "Dashboard query in another language",
+        [
+            "Write the chart's query in NRQL over the matching `gcp.` metrics (a ratio is one "
+            "query that divides two sums), or build it in the New Relic query builder, and add "
+            "it to the dashboard as a chart.",
+        ],
+    ),
+    (
+        re.compile(r"dashboard widget type"),
+        "Dashboard widget type not converted",
+        [
+            "Rebuild the widget by hand. A logs panel becomes a table or chart over `Log` (the "
+            "logs must be forwarded); an alert chart or incident list becomes an issues widget "
+            "or a link to the alerts page; a section header or collapsible group becomes a "
+            "markdown widget.",
+        ],
+    ),
+    (
+        re.compile(r"widget has no (query|content)|widget query is not recognised"),
+        "Widget without a usable query",
+        [
+            "Open the widget in Cloud Monitoring and note what it shows. If it matters, "
+            "recreate it in New Relic from the metric it reads; if it is empty, leave it out.",
+        ],
+    ),
+    (
         re.compile(r"notification channels must be configured manually"),
         "Notification channels",
         [

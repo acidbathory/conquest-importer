@@ -217,16 +217,23 @@ def _seconds(value: object) -> int:
     return int(text[:-1]) if text.endswith("s") and text[:-1].isdigit() else 0
 
 
-def _counter_window(aligner: str, period: int) -> tuple[int, float, str]:
+def _counter_window(aligner: str, period: int, *, chart: bool) -> tuple[int, float, str]:
     """Window, threshold scale and note for a counter: New Relic stores one change per poll."""
     window = max(period, POLL_SECONDS)
     # a rate is per second, so the total over the window is rate x window; a delta scales
     scale = float(window) if aligner == "ALIGN_RATE" else window / period
-    note = (
-        "a counter metric: New Relic stores the change in each 5 minute polling interval, "
-        f"so the window is {window}s and the threshold is rescaled by {scale:g} "
-        "(Google compares a rate or change per alignment period)"
-    )
+    first = "a counter metric: New Relic stores the change in each 5 minute polling interval, "
+    if chart:
+        note = (
+            first + f"so the chart sums the change per {window}s window "
+            "(Google showed a rate or change per alignment period; divide by "
+            f"{scale:g} to compare values)"
+        )
+    else:
+        note = (
+            first + f"so the window is {window}s and the threshold is rescaled by {scale:g} "
+            "(Google compares a rate or change per alignment period)"
+        )
     return window, scale, note
 
 
@@ -300,7 +307,11 @@ def _first_aggregation(body: dict[str, object]) -> tuple[dict[str, object], str]
     if isinstance(aggregations, list) and len(aggregations) > 1:
         raise _Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
     first = aggregations[0] if isinstance(aggregations, list) and aggregations else {}
-    agg = first if isinstance(first, dict) else {}
+    return check_aligner(first if isinstance(first, dict) else {})
+
+
+def check_aligner(agg: dict[str, object]) -> tuple[dict[str, object], str]:
+    """The aggregation stage and its aligner; manual when the aligner is not mapped."""
     aligner = str(agg.get("perSeriesAligner", ""))
     if aligner not in ALIGNERS:
         raise _Fail(Confidence.MANUAL, f"aligner {aligner!r} is not supported")
@@ -322,24 +333,21 @@ def _group_labels(agg: dict[str, object]) -> tuple[list[str], list[str]]:
     return labels, notes
 
 
-def _metric_condition(
-    body: dict[str, object],
-) -> tuple[MetricSignal, int, int, float, list[str]]:
-    notes: list[str] = []
-    if body.get("denominatorFilter"):
-        raise _Fail(Confidence.MANUAL, "ratio conditions (denominator filter) are not supported")
-    if body.get("forecastOptions"):
-        raise _Fail(Confidence.MANUAL, "forecast conditions are not supported")
-    trigger = body.get("trigger")
-    if isinstance(trigger, dict) and (trigger.get("percent") or int(trigger.get("count", 1)) > 1):
-        raise _Fail(Confidence.MANUAL, "a trigger on several time series is not supported")
-    metric_type, scope, scope_notes = _metric_scope(body)
-    agg, aligner = _first_aggregation(body)
+def metric_series(
+    metric_type: str,
+    scope: list[TagFilter],
+    agg: dict[str, object],
+    aligner: str,
+    period: int,
+    *,
+    chart: bool = False,
+) -> tuple[MetricSignal, int, float, list[str]]:
+    """The signal for one metric with its aggregation: signal, window, scale and notes.
+
+    Shared by alert conditions and dashboard charts (`chart` words the counter note for a chart).
+    """
     aggregation, counter = ALIGNERS[aligner]
-    group_by, reducer_notes = _reducer(agg, aggregation, aligner)
-    notes += reducer_notes
-    period = _seconds(agg.get("alignmentPeriod"))
-    duration = _seconds(body.get("duration"))
+    group_by, notes = _reducer(agg, aggregation, aligner)
     if period < 60 or period % 60:
         raise _Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
     name = nr_metric_name(metric_type)
@@ -351,7 +359,7 @@ def _metric_condition(
         )
     scale = 1.0
     if counter:
-        period, scale, note = _counter_window(aligner, period)
+        period, scale, note = _counter_window(aligner, period, chart=chart)
         notes.append(note)
     notes += _name_notes(name, aligner, uses_labels=bool(scope or group_by))
     term = MetricTerm(
@@ -362,6 +370,24 @@ def _metric_condition(
     signal = MetricSignal(
         terms={"a": term}, aggregation=aggregation, scope=scope, group_by=group_by
     )
+    return signal, period, scale, notes
+
+
+def _metric_condition(
+    body: dict[str, object],
+) -> tuple[MetricSignal, int, int, float, list[str]]:
+    if body.get("denominatorFilter"):
+        raise _Fail(Confidence.MANUAL, "ratio conditions (denominator filter) are not supported")
+    if body.get("forecastOptions"):
+        raise _Fail(Confidence.MANUAL, "forecast conditions are not supported")
+    trigger = body.get("trigger")
+    if isinstance(trigger, dict) and (trigger.get("percent") or int(trigger.get("count", 1)) > 1):
+        raise _Fail(Confidence.MANUAL, "a trigger on several time series is not supported")
+    metric_type, scope, scope_notes = _metric_scope(body)
+    agg, aligner = _first_aggregation(body)
+    period = _seconds(agg.get("alignmentPeriod"))
+    duration = _seconds(body.get("duration"))
+    signal, period, scale, notes = metric_series(metric_type, scope, agg, aligner, period)
     window, note = _whole_windows(duration, period)
     _check_limits(period, window)
     if note:

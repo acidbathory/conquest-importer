@@ -21,7 +21,7 @@ from importer.core.ir import Confidence
 from importer.core.report import md_cell
 
 ACCOUNT_PLACEHOLDER = "ACCOUNT_ID_PLACEHOLDER"
-RESOURCE_PREFIXES = {"cloudwatch": "cw_dashboard"}
+RESOURCE_PREFIXES = {"cloudwatch": "cw_dashboard", "gcp": "gcp_dashboard"}
 
 MUTATION = (
     "mutation CreateDashboard($accountId: Int!, $dashboard: DashboardInput!) {\n"

@@ -433,12 +433,12 @@ def extract_gcp_command(
     project: Annotated[str, typer.Option(help="Google Cloud project id to read")],
     out: Annotated[Path, typer.Option(help="New folder for the export")] = Path("out/gcp"),
 ) -> None:
-    """Read alert policies, notification channels and uptime checks from a Google Cloud project.
+    """Read alert policies, channels, uptime checks and dashboards from a Google Cloud project.
 
-    Read-only: lists alertPolicies, notificationChannels and uptimeCheckConfigs through the Cloud
-    Monitoring API. Credentials come from GOOGLE_OAUTH_ACCESS_TOKEN or `gcloud auth login`; they
-    are never stored. Channels are saved as type and name only. The export can contain project
-    ids and resource names: review it before sharing.
+    Read-only: lists alertPolicies, notificationChannels, uptimeCheckConfigs and dashboards
+    through the Cloud Monitoring API. Credentials come from GOOGLE_OAUTH_ACCESS_TOKEN or
+    `gcloud auth login`; they are never stored. Channels are saved as type and name only. The
+    export can contain project ids and resource names: review it before sharing.
     """
     try:
         with http_getter(access_token()) as get:
@@ -449,12 +449,20 @@ def extract_gcp_command(
     typer.echo(
         f"Read project {result.project}: {result.policies} alert policies "
         f"({result.conditions} conditions), {result.channels} notification channels, "
-        f"{result.uptime_checks} uptime checks."
+        f"{result.uptime_checks} uptime checks, {result.dashboards} dashboards."
     )
     for warning in result.warnings:
         typer.echo(f"  Could not read {printable(warning, 200)}", err=True)
     typer.echo("Next:")
     typer.echo(f"  importer convert --source gcp --in {out / 'policies'} --out out/gcp-alerts")
+    typer.echo(
+        f"  importer convert-dashboards --source gcp --in {out / 'dashboards'} --out out/gcp-dash"
+    )
+    typer.echo(
+        f"  importer convert-gcp-notifications --channels {out / 'channels'} "
+        "--alerts out/gcp-alerts --out out/gcp-notifications"
+    )
+    typer.echo(f"  importer convert-gcp-uptime --checks {out / 'uptime-checks'}")
 
 
 @app.command("extract-dynatrace")
