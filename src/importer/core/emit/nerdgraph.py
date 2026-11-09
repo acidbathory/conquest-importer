@@ -8,11 +8,14 @@ from typing import Any
 
 from importer.core.emit.common import (
     aggregation_delay,
+    aggregation_timer,
     aggregation_window,
     condition_name,
     emittable_window,
+    fill_settings,
     nrql_for,
     source_description,
+    streaming_method,
 )
 from importer.core.ir import IRMonitor
 
@@ -37,6 +40,40 @@ BASELINE_MUTATION = (
 )
 
 
+def _signal(monitor: IRMonitor) -> dict[str, Any]:
+    method = streaming_method(monitor)
+    signal: dict[str, Any] = {
+        "aggregationWindow": aggregation_window(monitor),
+        "aggregationMethod": method,
+    }
+    if method == "EVENT_TIMER":
+        signal["aggregationTimer"] = aggregation_timer(monitor)  # the timer replaces the delay
+    else:
+        signal["aggregationDelay"] = aggregation_delay(monitor)
+    fill = fill_settings(monitor)
+    if fill is not None:
+        signal["fillOption"] = fill[0]
+        if fill[1] is not None:
+            signal["fillValue"] = fill[1]
+    options = monitor.emit
+    if options is not None and options.slide_by_seconds is not None:
+        signal["slideBy"] = options.slide_by_seconds
+    return signal
+
+
+def _text_settings(monitor: IRMonitor) -> dict[str, Any]:
+    """Settings that are present only when the monitor asks for them."""
+    options = monitor.emit
+    if options is None:
+        return {}
+    wanted = {
+        "violationTimeLimitSeconds": options.violation_time_limit_seconds,
+        "titleTemplate": options.title_template,
+        "runbookUrl": options.runbook_url,
+    }
+    return {key: value for key, value in wanted.items() if value is not None}
+
+
 def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
     window = emittable_window(monitor)
     condition: dict[str, Any] = {
@@ -44,11 +81,7 @@ def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
         "description": source_description(monitor),
         "enabled": False,  # imported disabled; a human enables after review
         "nrql": {"query": nrql_for(monitor)},
-        "signal": {
-            "aggregationWindow": aggregation_window(monitor),
-            "aggregationMethod": "EVENT_FLOW",
-            "aggregationDelay": aggregation_delay(monitor),
-        },
+        "signal": _signal(monitor),
         "valueFunction": "SINGLE_VALUE",
         "terms": [
             {
@@ -68,12 +101,18 @@ def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
         condition["baselineDirection"] = baseline.direction.upper()
         for term in condition["terms"]:
             term["operator"] = "ABOVE"
+    condition.update(_text_settings(monitor))
     if monitor.no_data.notify and monitor.no_data.timeout_minutes:
         condition["expiration"] = {
             "expirationDuration": monitor.no_data.timeout_minutes * 60,
             "openViolationOnExpiration": True,
             "closeViolationsOnExpiration": False,
         }
+        options = monitor.emit
+        if options is not None and options.ignore_on_expected_termination is not None:
+            condition["expiration"]["ignoreOnExpectedTermination"] = (
+                options.ignore_on_expected_termination
+            )
     return {
         "query": BASELINE_MUTATION if baseline is not None else MUTATION,
         "variables": {

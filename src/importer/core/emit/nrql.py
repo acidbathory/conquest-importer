@@ -148,10 +148,26 @@ def _filter_clause(kind: SignalKind, f: CountFilter) -> str:
     return _match_clause(identifier(attribute_for(kind, f.key)), f)
 
 
-def _count_nrql(kind: SignalKind, signal: CountSignal) -> str:
-    query = f"SELECT count(*) FROM {COUNT_EVENTS[kind]}"  # noqa: S608 - constant event names
-    if signal.filters:
-        query += " WHERE " + " AND ".join(_filter_clause(kind, f) for f in signal.filters)
+def _count_nrql(
+    kind: SignalKind, signal: CountSignal, null_safe: bool = False, scope: list[str] | None = None
+) -> str:
+    """count(*) of the matching rows. With `null_safe`, the filters move inside filter(), so a
+    window with no match returns 0 instead of NULL; filters named in `scope` identify the entity
+    and stay in the outer WHERE, which is what ties the signal to it."""
+    event = COUNT_EVENTS[kind]
+    keys = {f.key for f in signal.filters}
+    if null_safe and not keys.issuperset(scope or []):
+        raise ValueError("null-safe count scope names a filter that does not exist")
+    outer = [f for f in signal.filters if f.key in (scope or [])] if null_safe else signal.filters
+    inner = [f for f in signal.filters if f not in outer]
+    select = "count(*)"
+    if inner:
+        select = (
+            "filter(count(*), WHERE " + " AND ".join(_filter_clause(kind, f) for f in inner) + ")"
+        )
+    query = f"SELECT {select} FROM {event}"  # noqa: S608 - constant event names
+    if outer:
+        query += " WHERE " + " AND ".join(_filter_clause(kind, f) for f in outer)
     return query + _facet(kind, signal.group_by)
 
 
@@ -167,12 +183,17 @@ def _heartbeat_nrql(signal: HeartbeatSignal) -> str:
     return query + _facet(SignalKind.HEARTBEAT, signal.group_by)
 
 
-def build_nrql(monitor: IRMonitor) -> str:
+def build_nrql(monitor: IRMonitor, null_safe_default: bool = False) -> str:
+    """The condition's NRQL. `null_safe_default` is what a log or APM count does when the
+    monitor's own emit options do not say (see EmitDefaults.null_safe_count)."""
     sig = monitor.signal
     if sig.kind == SignalKind.METRIC and sig.metric:
         return _metric_nrql(sig.metric)
     if sig.kind in COUNT_EVENTS and sig.count:
-        return _count_nrql(sig.kind, sig.count)
+        options = monitor.emit
+        flag = options.null_safe_count if options is not None else None
+        scope = options.null_safe_scope if options is not None else []
+        return _count_nrql(sig.kind, sig.count, null_safe_default if flag is None else flag, scope)
     if sig.kind == SignalKind.HEARTBEAT and sig.heartbeat:
         return _heartbeat_nrql(sig.heartbeat)
     raise ValueError(f"cannot build NRQL for signal kind {sig.kind.value}")
