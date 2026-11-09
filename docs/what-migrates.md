@@ -184,4 +184,31 @@ accepts the JSON of `gcloud alpha monitoring policies list --format=json`.
   [the verification note](research/gcp-metric-names-verified.md), including one metric (VM CPU
   utilization) that did not arrive in New Relic.
 
+### Dynatrace (phase 0)
+
+`importer extract-dynatrace --out <folder>` reads workflows and SLOs from a Dynatrace Platform
+tenant (read-only; `DYNATRACE_ENV_URL` and `DYNATRACE_API_TOKEN` in `.env`), and `--source
+dynatrace` converts them. Nothing here has been run against a tenant that has workflows or SLOs:
+the converter was built from scrubbed copies of three real objects and a few hand-made ones.
+
+- **Converts (approximate):** a scheduled workflow with one `execute-dql-query` task of the form
+  `fetch logs[, from:now() - Nm|Nh] | filter field == "value" [and ...] | summarize n = count()`,
+  and notify tasks gated by `result("task")["records"][0]["n"] > N` (also `>=`, `<`, `<=`). It
+  becomes a New Relic count of `Log` events with that threshold and a window equal to the
+  schedule interval (one hour at most).
+- **Caveats on a converted workflow:** the logs must be forwarded to New Relic and the attribute
+  names must match them; the mapping of `loglevel` to `level` is not confirmed. Dynatrace ran the
+  query on a schedule and New Relic evaluates continuously. A below condition may not fire on an
+  empty result. Notification tasks are listed but not converted. An inactive trigger is noted and
+  the condition is created disabled.
+- **Manual, with steps:** any other DQL (metrics, several summaries, joins, other functions),
+  other task layouts, schedules longer than one hour, manual and non-Davis event triggers, Davis
+  problem workflows (these are notification routes: recreate the destination, channel and a
+  workflow filtered on issue priority or tags) and every SLO (the criteria are listed; rebuild as
+  a New Relic service level).
+- **Not done:** classic alerting profiles and problem notifications, anomaly detectors,
+  dashboards, service level creation, and any check that the converted query returns data.
+- **Report:** `importer report <run folder> --source dynatrace`.
+- **Behind a TLS-inspecting proxy:** set `SSL_CERT_FILE` to the corporate root certificate file.
+
 Azure and other platforms are planned; see the [roadmap](../README.md#roadmap).

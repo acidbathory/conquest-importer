@@ -1,0 +1,41 @@
+{
+  "description": "Hand-made test object, shaped like the real exports.",
+  "id": "00000000-0000-0000-0000-000000000003",
+  "isDeployed": true,
+  "schemaVersion": 4,
+  "tasks": {
+    "page": {
+      "action": "dynatrace.pagerduty:create-event",
+      "input": {
+        "summary": "x"
+      },
+      "predecessors": []
+    },
+    "post": {
+      "action": "dynatrace.slack:slack-send-message",
+      "input": {
+        "channel": "#example",
+        "message": "x"
+      },
+      "predecessors": []
+    }
+  },
+  "title": "example-problem-slack",
+  "trigger": {
+    "eventTrigger": {
+      "filterQuery": "event.kind == \"DAVIS_PROBLEM\"",
+      "isActive": true,
+      "triggerConfiguration": {
+        "type": "davis-problem",
+        "value": {
+          "categories": {
+            "error": true
+          }
+        }
+      }
+    }
+  },
+  "triggerType": "Event",
+  "type": "STANDARD",
+  "version": 1
+}

@@ -22,6 +22,7 @@ from importer.sources import REGISTRY
 FIXTURES: dict[str, list[str]] = {
     "cloudwatch": ["tests/fixtures/cloudwatch", "tests/fixtures/cloudwatch-real"],
     "gcp": ["tests/fixtures/gcp"],
+    "dynatrace": ["tests/fixtures/dynatrace"],
 }
 TOP = 10
 

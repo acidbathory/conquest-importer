@@ -11,11 +11,12 @@ FIXTURES = Path(__file__).parent / "fixtures"
 SAMPLE_INPUT = {
     "cloudwatch": FIXTURES / "cloudwatch-real",
     "gcp": FIXTURES / "gcp",
+    "dynatrace": FIXTURES / "dynatrace",
 }
 
 
 def test_every_source_is_registered_and_has_a_sample_input() -> None:
-    assert sorted(REGISTRY) == ["cloudwatch", "gcp"]
+    assert sorted(REGISTRY) == ["cloudwatch", "dynatrace", "gcp"]
     assert sorted(SAMPLE_INPUT) == sorted(REGISTRY)
 
 

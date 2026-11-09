@@ -173,6 +173,15 @@ def test_a_google_cloud_report_uses_google_wording_and_a_command_that_exists() -
     assert "Workload Identity Federation" in html
 
 
+def test_a_dynatrace_report_uses_dynatrace_wording() -> None:
+    assets = [Asset("alarm", "w", "workflow", Confidence.APPROXIMATE)]
+    html = render_report(
+        Summary(assets, None), aws_account="abc12345", nr_account=7, source="dynatrace"
+    )
+    assert "Dynatrace tenant abc12345" in html and "Workflows and SLOs" in html
+    assert "AWS" not in html and "CloudWatch" not in html and "Google" not in html
+
+
 def test_the_default_report_is_still_the_aws_one() -> None:
     html = render_report(Summary([], None), aws_account="123456789012")
     assert "AWS account 123456789012" in html and "importer migrate" in html
