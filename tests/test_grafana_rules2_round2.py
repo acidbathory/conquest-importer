@@ -159,3 +159,24 @@ def test_a_range_function_says_prometheus_needs_two_samples(expr: str) -> None:
 def test_a_gauge_ratio_has_neither_counter_note() -> None:
     m = prom("avg(a) / avg(b)", kind="lt")
     assert t.N_RATE_SAMPLES not in m.reasons and t.N_COUNTER_EMPTY not in m.reasons
+
+
+# a label named metricName would be read as New Relic's own metric-name attribute
+
+
+@pytest.mark.parametrize(
+    "expr",
+    [
+        'avg(cpu_usage{metricName="x"})',
+        "avg by (metricName) (cpu_usage)",
+        'sum(rate(a_total{metricName="x"}[5m]))',
+    ],
+)
+def test_metric_name_label_is_manual(expr: str) -> None:
+    m = prom(expr)
+    assert m.confidence is Confidence.MANUAL and m.reasons == [t.PROM_RESERVED]
+
+
+def test_metric_name_label_in_absent_is_manual() -> None:
+    m = file_rule('absent(up{metricName="x"})')
+    assert m.confidence is Confidence.MANUAL and m.reasons == [t.PROM_RESERVED]

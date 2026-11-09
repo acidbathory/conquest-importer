@@ -356,7 +356,8 @@ RULES: list[Rule] = [
             "The metric or label name has a character NRQL does not accept as an attribute "
             "name (a colon, from a recording rule, for example). Find how the name arrives in "
             "New Relic with a query in the data explorer and write the condition with that "
-            "name.",
+            "name. A label called `metricName` collides with the attribute New Relic keeps the "
+            "metric name in; rename the label at the source and write the condition by hand.",
         ],
     ),
     (

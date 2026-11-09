@@ -194,6 +194,11 @@ PROM_COUNTER = "promql metric name looks like a counter (_total, _count, _sum or
 PROM_NAME = (
     "promql metric or label name cannot be an NRQL attribute name (a character NRQL rejects)"
 )
+PROM_RESERVED = (
+    "promql metric or label name 'metricName' is the attribute New Relic keeps the metric name "
+    "in, so a filter or grouping on it would test the wrong thing"
+)
+RESERVED_ATTRIBUTES = frozenset({"metricName"})
 LOKI_NOT_SIMPLE = "logql expression is not a count_over_time of a stream selector with line filters"
 LOKI_MATCHER = (
     "logql label matcher is not supported (only = and != with a string, and =~ or !~ with "
@@ -425,6 +430,8 @@ def parse_matchers(body: str, fail: str, not_simple: str, *, absent_ok: bool) ->
 
 
 def tag_filter(m: Match) -> TagFilter:
+    if m.key in RESERVED_ATTRIBUTES:
+        raise Fail(PROM_RESERVED)
     if m.kind == "absent":
         return TagFilter(key=m.key, absent=True)
     if m.kind == "in":
@@ -457,6 +464,8 @@ def _labels(text: str | None) -> list[str]:
 
 
 def nrql_attribute(name: str) -> str:
+    if name in RESERVED_ATTRIBUTES:
+        raise Fail(PROM_RESERVED)
     try:
         return identifier(name).strip("`")
     except ValueError:
