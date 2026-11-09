@@ -107,6 +107,20 @@ GRAFANA_CHECKLIST = (
     "Review each condition, then enable them one at a time. Nothing has been tried against a "
     "live New Relic account.",
 )
+DYNATRACE_CLASSIC_CHECKLIST = (
+    "The metric events and anomaly detectors were converted using the metric map, and every row "
+    "of it is unverified. Check each Dynatrace metric key against the New Relic metric that "
+    "carries the same data, then send that data to New Relic; converted conditions return "
+    "nothing until it arrives. Run <code>importer check-dynatrace-metrics</code> to see which "
+    "have data.",
+    "Alerting profiles and notification integrations are not conditions. Recreate each "
+    "notification as a destination and attach a workflow; secrets in the integrations were not "
+    "read.",
+    "Anything marked manual used a filter, a transformation or a detector the importer does not "
+    "map (tags, entity ids, management zones, regular expressions). Each lists its steps.",
+    "Review each condition, then enable them one at a time. Nothing has been tried against a "
+    "Dynatrace tenant or a live New Relic account.",
+)
 PROFILES: dict[str, Profile] = {
     "cloudwatch": Profile(
         account_label="AWS account",
@@ -145,6 +159,19 @@ PROFILES: dict[str, Profile] = {
         names_word="workflow",
         create_command=_apply_create,
         checklist=DYNATRACE_CHECKLIST,
+    ),
+    "dynatrace-classic": Profile(
+        account_label="Dynatrace tenant",
+        read_phrase="Your Dynatrace classic alerting settings (metric events, anomaly "
+        "detectors and notification integrations) were read and converted.",
+        source_phrase="your Dynatrace tenant",
+        alarm_title=("Metric events and anomaly detectors", "metric events and detectors"),
+        share_label="Share of metric events and anomaly detectors converted",
+        unit_sentence="One metric event or one anomaly detector setting is one asset. "
+        "Workflows, SLOs and dashboards are not read by this source, so they are not counted.",
+        names_word="setting",
+        create_command=_apply_create,
+        checklist=DYNATRACE_CLASSIC_CHECKLIST,
     ),
     "grafana": Profile(
         account_label="Grafana stack",

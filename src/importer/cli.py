@@ -25,7 +25,7 @@ from importer.core.apply_dashboards import apply_dashboards, load_dashboard_plan
 from importer.core.apply_notifications import apply_notifications
 from importer.core.dashboard_ir import IRDashboard
 from importer.core.dashboard_report import build_dashboard_report
-from importer.core.doctor import passed, render, run_checks
+from importer.core.doctor import DOCTOR_SOURCES, passed, render, run_checks
 from importer.core.dotenv import load_dotenv_file
 from importer.core.emit.common import CannotEmit, emit_defaults_replaced
 from importer.core.emit.dashboard import (
@@ -204,12 +204,12 @@ def doctor(
     region: Annotated[str, typer.Option(help="AWS region to check")] = "us-east-1",
     profile: Annotated[str | None, typer.Option(help="AWS profile name")] = None,
     source: Annotated[
-        str, typer.Option(help="cloudwatch, gcp or dynatrace: which sign-in to check")
+        str, typer.Option(help=f"{', '.join(DOCTOR_SOURCES)}: which sign-in to check")
     ] = "cloudwatch",
 ) -> None:
     """Check that the tools and sign-in a run needs are in place. Read-only."""
-    if source not in ("cloudwatch", "gcp", "dynatrace"):
-        typer.echo("Error: --source must be cloudwatch, gcp or dynatrace", err=True)
+    if source not in DOCTOR_SOURCES:
+        typer.echo(f"Error: --source must be one of {', '.join(DOCTOR_SOURCES)}", err=True)
         raise typer.Exit(code=1)
     try:
         checks = run_checks(region, profile, source=source)
@@ -1327,7 +1327,7 @@ def report_command(
     nr_account_id: Annotated[int | None, typer.Option(help="Shown in the header")] = None,
     region: Annotated[str, typer.Option(help="Shown in the header")] = "",
     source: Annotated[
-        str, typer.Option(help="cloudwatch, gcp, dynatrace or grafana")
+        str, typer.Option(help=", ".join(PROFILES) + ": which wording to use")
     ] = "cloudwatch",
 ) -> None:
     """Write the post-migration HTML report: what migrated, what did not, and how to fix it.

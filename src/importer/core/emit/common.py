@@ -61,8 +61,12 @@ EMITTABLE_KINDS = (SignalKind.METRIC, SignalKind.LOG, SignalKind.APM, SignalKind
 MAX_NAME_LENGTH = 128
 MIN_AGGREGATION_WINDOW_SECONDS = 30
 MAX_AGGREGATION_WINDOW_SECONDS = 3600
-SOURCE_LABELS = {"cloudwatch": "CloudWatch alarm", "gcp": "Google Cloud alert policy"}
-RESOURCE_PREFIXES = {"cloudwatch": "cw", "gcp": "gcp"}
+SOURCE_LABELS = {
+    "cloudwatch": "CloudWatch alarm",
+    "gcp": "Google Cloud alert policy",
+    "dynatrace-classic": "Dynatrace classic alerting object",
+}
+RESOURCE_PREFIXES = {"cloudwatch": "cw", "gcp": "gcp", "dynatrace-classic": "dtc"}
 
 
 def condition_name(name: str) -> str:
