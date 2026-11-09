@@ -189,19 +189,27 @@ AWS CloudWatch is the supported platform. Google Cloud is in progress: `importer
   reducers as alerts) and text widgets (as markdown). Mosaic, grid, column and row layouts are
   placed on New Relic's 12-column grid. Every other widget (logs panel, alert chart, incident
   list, MQL, PromQL, ratio and SQL queries, uptime and custom metrics) stays as a "Not migrated"
-  placeholder with a reason and steps. Dashboards are created private. Counter metrics show the
-  change per 5 minute window, not a rate. Never run against a real export: the fixtures are
-  hand-made.
+  placeholder with a reason and steps. Dashboards are created private. Stacked bar charts are
+  shown as area charts (New Relic bar charts have no time axis). A counter metric is charted as
+  the sum of the 5 minute changes in each bucket (for a scorecard, over the whole time range),
+  not as a rate; the widget's notes give the divisor. A scorecard with a group-by shows one value
+  per group. Widgets that overlap in the source, or run out of the 12 columns, are moved down and
+  the dashboard says how many. Never run against a real export: the fixtures are hand-made.
 - **Notification channels:** `importer convert-gcp-notifications --channels <export>/channels
   --alerts <converted run> --out <folder>` writes one section per set of channels (one workflow
   to create by hand per set), the converted conditions that used it, and the steps for each
   channel type (email, webhook with token or basic authentication, Slack with its one-time OAuth,
   PagerDuty; SMS, Pub/Sub and mobile have no New Relic destination). Nothing is created
-  automatically: the export deliberately holds no addresses, URLs or secrets.
+  automatically: the export deliberately holds no label values (addresses, URLs, tokens). A
+  channel or check name that looks like an address, a URL or a token (contains `@`, `://`, `?`,
+  `key=value`, or a long hex or base64-looking run) is replaced by the resource id in the
+  export, plans and reports; other names are kept as written, so do not put secrets in names.
 - **Uptime checks:** `importer convert-gcp-uptime --checks <export>/uptime-checks --out <folder>`
-  lists each check with its path, period, the closest New Relic run frequency and the monitor to
-  create (ping or scripted for HTTP; TCP and group checks have no direct monitor). The host is not
-  exported. Uptime-check alerts stay manual and point at this list.
+  lists each check with its path (query string and fragment removed, token-like segments
+  masked), its period, the shortest New Relic run frequency that does not run more often than
+  Google did (capped at 60 minutes, which the row says when Google ran it less often), and the
+  monitor to create (ping or scripted for HTTP; TCP and group checks have no direct monitor). A
+  period that cannot be read is shown as unknown, with no frequency. The host is not exported. Uptime-check alerts stay manual and point at this list.
 - **Not done yet:** SLOs, log sinks and log-based metrics.
 - **Report:** `importer report <run folder> --source gcp` writes the same report with Google
   Cloud wording.

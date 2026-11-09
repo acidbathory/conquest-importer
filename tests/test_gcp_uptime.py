@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from typer.testing import CliRunner
@@ -33,19 +34,44 @@ def test_one_report_row_per_check_with_path_period_and_steps(tmp_path: Path) -> 
 
 
 @pytest.mark.parametrize(
-    ("period", "word"),
+    ("period", "frequency"),
     [
         ("60s", "every minute"),
-        ("300s", "5 minutes"),
-        ("600s", "10 minutes"),
-        ("900s", "15 minutes"),
-        ("120s", "5 minutes"),  # no 2 minute frequency: rounded up
-        ("", "5 minutes"),
+        ("300s", "every 5 minutes"),
+        ("600s", "every 10 minutes"),
+        ("900s", "every 15 minutes"),
+        ("120s", "every 5 minutes (Google ran it every 120s)"),  # rounded up, never more often
+        ("3600s", "every 60 minutes"),
+        (
+            "7200s",
+            "every 60 minutes (Google ran it every 7200s; the slowest New Relic frequency "
+            "is 60 minutes)",
+        ),
     ],
 )
-def test_the_period_maps_to_the_nearest_run_frequency_not_below(period: str, word: str) -> None:
+def test_the_period_maps_to_a_frequency_never_more_often_than_google(
+    period: str, frequency: str
+) -> None:
     plan = plan_check({"kind": "http", "period": period, "displayName": "x"})
-    assert word in plan.frequency
+    assert plan.frequency == frequency
+
+
+@pytest.mark.parametrize(
+    "period",
+    ["", None, -60, 0, "0s", "2h", "10m", "1.5s", "60", " 60s", "60S", "\u00b2s", "\u0663s"],
+)
+def test_a_period_that_cannot_be_read_gives_no_frequency(period: Any) -> None:
+    plan = plan_check({"kind": "http", "period": period, "displayName": "x"})
+    assert plan.frequency == "period unknown: choose the frequency yourself"
+
+
+def test_the_report_says_the_period_is_unknown(tmp_path: Path) -> None:
+    source = tmp_path / "in"
+    source.mkdir()
+    check = {"name": "projects/p/uptimeCheckConfigs/1", "kind": "http", "period": "2h"}
+    (source / "uptime-checks.json").write_text(json.dumps([check]))
+    report = (run(tmp_path, source) / "report.md").read_text()
+    assert "period unknown" in report and "every 5 minutes" not in report
 
 
 @pytest.mark.parametrize(

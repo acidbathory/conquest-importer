@@ -4,7 +4,9 @@ Only the GET endpoints in READ_PATHS can run, with a project id that matched PRO
 user text becomes a URL path segment or an operation name. The access token comes from the
 environment (GOOGLE_OAUTH_ACCESS_TOKEN) or from `gcloud auth print-access-token`; this code never
 stores it. The export holds the same JSON `convert --source gcp` reads. Notification channels are
-written as type and name only, because their labels hold email addresses and webhook URLs.
+written as type and name only, because their labels hold email addresses and webhook URLs. A
+display name or URL path that looks like an address, URL or token is replaced (the resource id
+tail stands in; the path loses its query and fragment).
 
 Exports can contain project ids and resource names: review them before sharing.
 """
@@ -23,7 +25,8 @@ from typing import Any
 import httpx
 
 from importer.core.ids import MAX_INPUT_BYTES
-from importer.core.safe_http import get_json, is_plain_token
+from importer.core.redact import safe_name, safe_path
+from importer.core.safe_http import ReadBudget, get_json, is_plain_token
 
 PROJECT_ID = re.compile(r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$")
 API = "https://monitoring.googleapis.com"
@@ -51,6 +54,8 @@ class GcpError(Exception):
 
 def access_token() -> str:
     token = os.environ.get("GOOGLE_OAUTH_ACCESS_TOKEN", "").strip() or _gcloud_token()
+    if not token:
+        raise GcpError("no access token was returned; run `gcloud auth login` and try again")
     if not is_plain_token(token):
         raise GcpError(
             "the Google access token must be plain ASCII text with no spaces; check that it was "
@@ -87,10 +92,13 @@ def http_getter(token: str, transport: httpx.BaseTransport | None = None) -> Ite
     (see core/safe_http.py). `transport` is for tests.
     """
     headers = {"Authorization": f"Bearer {token}"}
-    with httpx.Client(timeout=60, headers=headers, transport=transport) as client:
+    budget = ReadBudget()  # bytes and time for everything read through this getter
+    with httpx.Client(
+        timeout=60, headers=headers, transport=transport, follow_redirects=False
+    ) as client:
 
         def get(url: str, params: dict[str, str]) -> dict[str, Any]:
-            return get_json(client, url, params, token, GcpError, SERVICE)
+            return get_json(client, url, params, token, GcpError, SERVICE, budget)
 
         yield get
 
@@ -125,12 +133,18 @@ def _list_all(get: Getter, project: str, key: str, budget: PageBudget) -> list[d
     raise GcpError(f"more than {MAX_PAGES} pages of {key}; stopped")
 
 
+def _shown(item: dict[str, Any]) -> str:
+    """The display name, or the resource id tail when the name looks like an address or token."""
+    tail = str(item.get("name", "")).rsplit("/", 1)[-1]
+    return safe_name(str(item.get("displayName", "")), tail, 100)
+
+
 def _channel_summary(channel: dict[str, Any]) -> dict[str, Any]:
     """Keep what is needed to plan destinations; drop labels (addresses, URLs) and secrets."""
     return {
         "name": channel.get("name", ""),
         "type": channel.get("type", ""),
-        "displayName": channel.get("displayName", ""),
+        "displayName": _shown(channel),
         "enabled": channel.get("enabled", True),
     }
 
@@ -139,10 +153,10 @@ def _uptime_summary(check: dict[str, Any]) -> dict[str, Any]:
     http = check.get("httpCheck") if isinstance(check.get("httpCheck"), dict) else {}
     return {
         "name": check.get("name", ""),
-        "displayName": check.get("displayName", ""),
+        "displayName": _shown(check),
         "period": check.get("period", ""),
         "kind": "http" if http else ("tcp" if "tcpCheck" in check else "other"),
-        "path": http.get("path", "") if http else "",
+        "path": safe_path(str(http.get("path", ""))) if http else "",
         "monitoredResource": check.get("monitoredResource", {}).get("type", "")
         if isinstance(check.get("monitoredResource"), dict)
         else "",

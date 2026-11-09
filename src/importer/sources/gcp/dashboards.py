@@ -2,11 +2,12 @@
 
 Like the alert translator this never raises on odd input: a widget it cannot convert is labelled
 and kept, so the report shows what was lost. Metric filters and aggregations go through the same
-helpers as alert conditions (`_metric_scope`, `check_aligner`, `metric_series`), so metric and
+helpers as alert conditions (`metric_scope`, `check_aligner`, `metric_series`), so metric and
 label naming rules live in one place. Charts and scorecards over a time series filter convert;
 text widgets become markdown; everything else is a failed widget with a reason.
 """
 
+import math
 from typing import Any
 
 from importer.core.dashboard_ir import (
@@ -22,22 +23,27 @@ from importer.core.text import printable
 from importer.sources.gcp.dashboard_models import MAX_WIDGETS, GcpDashboard
 from importer.sources.gcp.translate import (
     POLL_SECONDS,
-    _Fail,
-    _metric_scope,
-    _seconds,
+    Fail,
     check_aligner,
+    metric_scope,
     metric_series,
+    seconds,
 )
 
 MAX_TITLE = 200
+MAX_KEY = 10_000  # keys are not cut to the title length, so long names stay distinct
 MAX_DATASETS = 20
 MAX_SECONDS = 86400
 DEFAULT_ROW_HEIGHT = 3
+# Bar charts have no time axis in New Relic, so stacked bars are shown as an area chart.
 PLOT_TYPES = {
     "LINE": Visualization.LINE,
     "STACKED_AREA": Visualization.AREA,
-    "STACKED_BAR": Visualization.BAR,
+    "STACKED_BAR": Visualization.AREA,
 }
+BAR_NOTE = "stacked bars are shown as an area chart over time"
+GROUP_NOTE = "a scorecard with a group-by shows one value per group, not a single number"
+READ_FAILED = "widget could not be read"
 QUERY_REASONS = {
     "timeSeriesQueryLanguage": "MQL queries in widgets are not converted",
     "prometheusQuery": "PromQL queries in widgets are not converted",
@@ -58,7 +64,9 @@ def _int(value: object, default: int, low: int = 0, high: int = 10_000) -> int:
     """An integer from a JSON number or a numeric string (the API sends int64 as text)."""
     if isinstance(value, bool):
         return default
-    if isinstance(value, str) and value.isdigit():
+    if (isinstance(value, str) and value.isascii() and value.isdecimal()) or (
+        isinstance(value, float) and math.isfinite(value)
+    ):
         value = int(value)
     return min(max(value, low), high) if isinstance(value, int) else default
 
@@ -87,13 +95,43 @@ def _mosaic(layout: dict[str, Any]) -> list[Placed]:
         scale = 12 / columns
         x, y = _int(tile.get("xPos"), 0), _int(tile.get("yPos"), 0)
         w, h = _int(tile.get("width"), columns // 2 or 1), _int(tile.get("height"), 4)
-        placed.append(
-            (
-                widget,
-                _layout(int(x * scale) + 1, y // 2 + 1, round(w * scale), max(2, round(h / 2))),
-            )
-        )
+        left, right = round(x * scale), round((x + w) * scale)  # edges, so neighbours still touch
+        top, bottom = y // 2, -(-(y + h) // 2)
+        placed.append((widget, _layout(left + 1, top + 1, right - left, bottom - top)))
     return placed
+
+
+def _overlaps(a: Layout, b: Layout) -> bool:
+    return (
+        a.column < b.column + b.width
+        and b.column < a.column + a.width
+        and a.row < b.row + b.height
+        and b.row < a.row + a.height
+    )
+
+
+def pack(placed: list[Placed]) -> tuple[list[Placed], int]:
+    """Reading order, with any widget that overlaps an earlier one moved down below it.
+
+    Returns the widgets and how many were moved. Each pass moves a widget past at least one more
+    box, so the loop ends after at most one pass per box already placed.
+    """
+    taken: list[Layout] = []
+    out: list[Placed] = []
+    moved = 0
+    for widget, layout in sorted(placed, key=lambda p: (p[1].row, p[1].column)):
+        row = layout.row
+        for _ in range(len(taken) + 1):
+            hit = [t for t in taken if _overlaps(t, layout.model_copy(update={"row": row}))]
+            if not hit:
+                break
+            row = max(t.row + t.height for t in hit)
+        if row != layout.row:
+            moved += 1
+            layout = layout.model_copy(update={"row": row})
+        taken.append(layout)
+        out.append((widget, layout))
+    return out, moved
 
 
 def _grid(layout: dict[str, Any]) -> list[Placed]:
@@ -151,18 +189,18 @@ def _series(query: object, notes: set[str]) -> Series | str:
     if not isinstance(body, dict):
         return UNKNOWN_QUERY
     try:
-        metric_type, scope, scope_notes = _metric_scope(body)
+        metric_type, scope, scope_notes = metric_scope(body)
         if body.get("secondaryAggregation"):
-            raise _Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
+            raise Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
         raw = body.get("aggregation")
         agg, aligner = check_aligner(raw if isinstance(raw, dict) else {})
-        period = _seconds(agg.get("alignmentPeriod")) or POLL_SECONDS
+        period = seconds(agg.get("alignmentPeriod")) or POLL_SECONDS
         if period > MAX_SECONDS:
-            raise _Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
+            raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
         signal, period, _scale, signal_notes = metric_series(
             metric_type, scope, agg, aligner, period, chart=True
         )
-    except _Fail as fail:
+    except Fail as fail:
         return fail.reason
     if period < POLL_SECONDS:
         notes.add(POLL_NOTE)
@@ -219,8 +257,12 @@ def _chart(
     plot = next((p for s, p in found if isinstance(s, Series)), None)
     viz = Visualization.BILLBOARD if scorecard else PLOT_TYPES.get(str(plot), Visualization.LINE)
     reasons = sorted(notes)
-    if not scorecard and plot and str(plot) not in PLOT_TYPES:
-        reasons.append(f"plot type {printable(str(plot), 30)!r} is not supported; shown as a line")
+    if not scorecard and str(plot) == "STACKED_BAR":
+        reasons.append(BAR_NOTE)
+    elif not scorecard and plot and str(plot) not in PLOT_TYPES:
+        reasons.append("this plot type is not supported; shown as a line")
+    if scorecard and any(s.signal.group_by for s in series):
+        reasons.append(GROUP_NOTE)
     if scorecard:
         reasons += [
             f"{printable(k, 20)} is not migrated"
@@ -274,15 +316,22 @@ def translate_widget(widget: dict[str, Any], layout: Layout) -> IRWidget:
         return _chart(body, title, layout, kind, scorecard=kind == "scorecard")
     if kind == "text":
         return _text(body, title, layout)
-    shown = printable(kind, 30)
-    return _failed(title, layout, kind, [f"dashboard widget type {shown!r} is not supported"])
+    return _failed(title, layout, kind, ["dashboard widget type is not supported"])
+
+
+def _safe_widget(widget: dict[str, Any], layout: Layout) -> IRWidget:
+    try:
+        return translate_widget(widget, layout)
+    except Exception:
+        return _failed("widget", layout, "unknown", [READ_FAILED])
 
 
 def translate_dashboard(dashboard: GcpDashboard) -> IRDashboard:
     key, layout = dashboard.layout
-    placed = LAYOUTS[key](layout) if key else []
-    skipped = max(len(placed) - MAX_WIDGETS, 0)
-    widgets = [translate_widget(w, lay) for w, lay in placed[:MAX_WIDGETS]]
+    laid = LAYOUTS[key](layout) if key else []
+    skipped = max(len(laid) - MAX_WIDGETS, 0)
+    placed, moved = pack(laid[:MAX_WIDGETS])
+    widgets = [_safe_widget(w, lay) for w, lay in placed]
     failed = sum(w.kind == WidgetKind.UNSUPPORTED for w in widgets)
     reasons = ["layout is approximated from Cloud Monitoring's grid"]
     if not widgets:
@@ -294,12 +343,17 @@ def translate_dashboard(dashboard: GcpDashboard) -> IRDashboard:
         confidence = Confidence.APPROXIMATE
         if failed:
             reasons.append(f"{failed} of {len(widgets)} widgets not converted")
+    if moved:
+        reasons.append(
+            f"{moved} widgets overlapped in the source layout or did not fit 12 columns and "
+            "were moved down"
+        )
     if skipped:
         reasons.append(f"{skipped} widgets over the limit of {MAX_WIDGETS} were not converted")
     fallback = dashboard.name.rsplit("/", 1)[-1] or "dashboard"
     return IRDashboard(
         source_system="gcp",
-        source_key=printable(dashboard.name or dashboard.displayName or fallback, MAX_TITLE),
+        source_key=printable(dashboard.name or dashboard.displayName or "dashboard", MAX_KEY),
         name=printable(dashboard.displayName or fallback, MAX_TITLE),
         widgets=widgets,
         confidence=confidence,
@@ -308,4 +362,15 @@ def translate_dashboard(dashboard: GcpDashboard) -> IRDashboard:
 
 
 def translate_dashboards(dashboards: list[GcpDashboard]) -> list[IRDashboard]:
-    return [translate_dashboard(d) for d in dashboards]
+    """Translate all; a repeated source key gets `#2`, `#3` so each dashboard has its own file."""
+    out: list[IRDashboard] = []
+    used: set[str] = set()
+    for dashboard in dashboards:
+        translated = translate_dashboard(dashboard)
+        key, n = translated.source_key, 1
+        while translated.source_key in used:
+            n += 1
+            translated = translated.model_copy(update={"source_key": f"{key}#{n}"})
+        used.add(translated.source_key)
+        out.append(translated)
+    return out

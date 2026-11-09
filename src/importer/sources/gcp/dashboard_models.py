@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from importer.core.ids import MAX_INPUT_BYTES
 
@@ -22,6 +22,11 @@ class GcpDashboard(BaseModel):
 
     name: str = ""
     displayName: str = ""
+
+    @field_validator("name", "displayName", mode="before")
+    @classmethod
+    def _null_is_empty(cls, value: object) -> object:
+        return "" if value is None else value
 
     @property
     def layout(self) -> tuple[str, dict[str, Any]]:

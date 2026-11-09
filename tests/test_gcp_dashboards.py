@@ -81,20 +81,39 @@ def test_a_scorecard_becomes_a_billboard() -> None:
     assert any("spark" in r for r in w.reasons)
 
 
-@pytest.mark.parametrize(("title", "text"), [("Runbook", "step one"), ("Note", "hello")])
-def test_text_widgets_become_markdown(title: str, text: str) -> None:
-    w = widget("Ops overview" if title == "Runbook" else "Grid dashboard", title)
+@pytest.mark.parametrize(
+    ("dash", "title", "text", "confidence", "reasons"),
+    [
+        ("Ops overview", "Runbook", "step one", Confidence.EXACT, []),
+        (
+            "Grid dashboard",
+            "Note",
+            "hello",
+            Confidence.APPROXIMATE,
+            ["raw text is shown as markdown"],
+        ),
+    ],
+)
+def test_text_widgets_become_markdown(
+    dash: str, title: str, text: str, confidence: Confidence, reasons: list[str]
+) -> None:
+    w = widget(dash, title)
     assert w.kind is WidgetKind.MARKDOWN and text in (w.text or "")
-    assert w.confidence is Confidence.EXACT or "raw" in " ".join(w.reasons)
+    assert (w.confidence, w.reasons) == (confidence, reasons)
+
+
+def test_a_failed_widget_keeps_its_source_type_for_the_report() -> None:
+    assert widget("Ops overview", "Errors").source_type == "logsPanel"
+    assert widget("Ops overview", "Open alerts").source_type == "alertChart"
 
 
 @pytest.mark.parametrize(
     ("title", "reason"),
     [
-        ("Errors", "logsPanel"),
+        ("Errors", "dashboard widget type is not supported"),
         ("MQL chart", "MQL"),
         ("Error ratio", "ratio"),
-        ("Open alerts", "alertChart"),
+        ("Open alerts", "dashboard widget type is not supported"),
         ("Uptime", "uptime check"),
         ("Custom metric", "not one of the google cloud service metrics"),
     ],
@@ -196,11 +215,17 @@ def test_the_widget_count_is_capped() -> None:
 
 
 @pytest.mark.parametrize(
-    "body", ["[1, 2]", '{"dashboards": "x"}', '{"displayName": 5}', "not json"]
+    ("body", "message"),
+    [
+        ("[1, 2]", r"d\.json: expected a dashboard"),
+        ('{"dashboards": "x"}', r"d\.json: expected a dashboard"),
+        ('{"displayName": 5}', r"displayName"),
+        ("not json", r"Expecting value"),
+    ],
 )
-def test_bad_files_raise_a_value_error(body: str, tmp_path: Path) -> None:
+def test_bad_files_raise_a_value_error(body: str, message: str, tmp_path: Path) -> None:
     (tmp_path / "d.json").write_text(body)
-    with pytest.raises(ValueError, match=r"."):
+    with pytest.raises(ValueError, match=message):
         load_dashboards(tmp_path)
 
 

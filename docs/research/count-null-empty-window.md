@@ -23,7 +23,7 @@ Every claim carries one of three labels:
   detects it. DOCS (via the Grafana note).
 - What an empty (NULL) window does to a condition: with the default gap handling, an empty window
   resets the threshold-duration timer. DOCS (via the Grafana note, citing the gap-filling
-  documentation). The importer does not set a fill option. REPO `core/emit/nerdgraph.py` 43-55
+  documentation). The importer does not set a fill option. REPO `core/emit/nerdgraph.py:47-51`
   builds `signal` with only `aggregationWindow`, `aggregationMethod` (`EVENT_FLOW`) and
   `aggregationDelay`.
 
@@ -31,10 +31,10 @@ Every claim carries one of three labels:
 
 | File:line | Builds | Signal kind | Who produces that kind |
 |---|---|---|---|
-| `src/importer/core/emit/nrql.py:145` (`_count_nrql`) | `SELECT count(*) FROM Log` or `Transaction` with a `WHERE` of the filters, plus `FACET` | LOG, APM (`COUNT_EVENTS`, line 33) | REPO: CloudWatch log metric filters (`sources/cloudwatch/translate.py:598`), GCP log-match conditions (`sources/gcp/translate.py:546`), Dynatrace scheduled DQL checks (`sources/dynatrace/translate.py:312`). No source sets APM today (REPO: grep for `SignalKind.APM` finds only the emitter). |
-| `src/importer/core/emit/nrql.py:153` (`_heartbeat_nrql`) | `SELECT count(*) FROM <event> WHERE metricName = '...'` | HEARTBEAT | REPO: GCP metric-absence conditions (`sources/gcp/translate.py`, `_absence_condition`). |
+| `src/importer/core/emit/nrql.py:145` (`_count_nrql`) | `SELECT count(*) FROM Log` or `Transaction` with a `WHERE` of the filters, plus `FACET` | LOG, APM (`COUNT_EVENTS`, line 33) | REPO: CloudWatch log metric filters (`sources/cloudwatch/translate.py:598`), GCP log-match conditions (`sources/gcp/translate.py:549`), Dynatrace scheduled DQL checks (`sources/dynatrace/translate.py:312`). No source sets APM today (REPO: grep for `SignalKind.APM` finds only the emitter). |
+| `src/importer/core/emit/nrql.py:153` (`_heartbeat_nrql`) | `SELECT count(*) FROM <event> WHERE metricName = '...'` | HEARTBEAT | REPO: GCP metric-absence conditions (`sources/gcp/translate.py:535`, built by `_absence_condition` at line 416). |
 
-Callers of the text: `build_nrql` (`nrql.py:163-172`), used by the NerdGraph and Terraform
+Callers of the text: `build_nrql` (`nrql.py:163-170`, reached through `nrql_for`, `common.py:68`), used by the NerdGraph and Terraform
 emitters. Dashboards are not involved: they use `_metric_nrql` only (REPO). `sources/gcp/data_check.py:76-79` runs the LOG query with `SINCE n hours ago` and reads the
 number with `or 0`, so it already treats NULL and 0 alike (REPO).
 

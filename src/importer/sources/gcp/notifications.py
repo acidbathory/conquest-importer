@@ -8,7 +8,9 @@ and the steps. The plan reuses the shared notification IR, so a later change tha
 would flow through `build_plan` and `apply-notifications` unchanged.
 """
 
+import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -16,11 +18,15 @@ from importer.core.emit.notifications import converted_condition_names
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.ir import IRMonitor
 from importer.core.notification_ir import IRTopic, NotificationPlan, build_plan
+from importer.core.redact import safe_name
 from importer.core.report import md_cell
-from importer.core.text import printable
 
 CHANNELS_FILE = "channels.json"
 MAX_CHANNELS = 10000
+MAX_NAMED = 5  # channels named in a plan's topic text
+RESOURCE = re.compile(r"^projects/[a-z][a-z0-9-]{0,40}/notificationChannels/[A-Za-z0-9_-]{1,40}$")
+KIND = re.compile(r"^[a-z_]{1,30}$")
+SAFE_TAIL = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
 
 EMAIL = "email channel: the address is not exported, create an email destination and enter it"
 WEBHOOK_BEARER = (
@@ -36,7 +42,7 @@ PAGERDUTY = (
     "pagerduty channel: the service key is not exported, create a PagerDuty destination and "
     "enter the key again"
 )
-NO_DESTINATION = "channel type {kind!r} has no New Relic destination"
+NO_DESTINATION = "channel type has no New Relic destination"  # no channel text: see reasons_for
 NOT_EXPORTED = "channel is not in the export, so its type is unknown"
 
 # Google channel type -> the reason it cannot be created automatically
@@ -55,8 +61,7 @@ CHANNEL_TYPES = {
 
 def reasons_for(kind: str) -> list[str]:
     """Why a channel of this Google type needs a person. Always at least one reason."""
-    template = CHANNEL_TYPES.get(kind, NO_DESTINATION)
-    return [template.format(kind=printable(kind, 30))]
+    return [CHANNEL_TYPES.get(kind, NO_DESTINATION)]
 
 
 def load_channels(path: Path) -> dict[str, dict[str, Any]]:
@@ -92,8 +97,13 @@ def channel_sets(
 
 def _display(handle: str, channels: dict[str, dict[str, Any]]) -> str:
     channel = channels.get(handle)
-    shown = str(channel.get("displayName") or handle) if channel else handle
-    return printable(shown, 60)
+    if RESOURCE.match(handle):
+        fallback = handle
+    else:
+        tail = handle.rsplit("/", 1)[-1]
+        fallback = tail if SAFE_TAIL.match(tail) else "unknown channel"
+    shown = str(channel.get("displayName", "")) if channel else ""
+    return safe_name(shown, fallback)
 
 
 def plan_set(
@@ -110,13 +120,15 @@ def plan_set(
         kind = str(channel.get("type", "")) if channel else ""
         found = [NOT_EXPORTED] if channel is None else reasons_for(kind)
         reasons += found
-        shown = md_cell(_display(handle, channels), 60)
-        suffix = f" ({md_cell(kind, 30)})" if channel else ""
-        lines += [f"- {shown}{suffix}: {md_cell(r, 160)}" for r in found]
-    name = " + ".join(_display(h, channels) for h in handles)
+        label = md_cell(_display(handle, channels), 60)
+        suffix = f" ({kind if KIND.match(kind) else 'unrecognised type'})" if channel else ""
+        lines += [f"- {label}{suffix}: {md_cell(r, 160)}" for r in found]
+    shown = [_display(h, channels) for h in handles[:MAX_NAMED]]
+    more = len(handles) - MAX_NAMED
+    name = " + ".join(shown) + (f" and {more} more" if more > 0 else "")
     topic = IRTopic(
         source_system="gcp",
-        source_key="|".join(handles),
+        source_key="set:" + hashlib.sha256("|".join(handles).encode()).hexdigest()[:16],
         name=name,
         channels=[],
         unsupported=reasons,
@@ -128,14 +140,19 @@ def write_outputs(
     channels: dict[str, dict[str, Any]], monitors: list[IRMonitor], out: Path, prefix: str
 ) -> int:
     """Write one plan file per channel set and a report. Returns the number of sets."""
+    if out.exists() and any(out.iterdir()):
+        # old plan files would be read by apply-notifications as if they were current
+        raise ValueError(f"{out} already has files; pass a new folder")
     routes, unrouted = channel_sets(monitors, converted_condition_names(monitors))
     (out / "notification-plans").mkdir(parents=True, exist_ok=True)
     lines = [
         "# Google Cloud notification report",
         "",
-        "Addresses, URLs and secrets are not exported, so nothing here can be created "
-        "automatically. Each section is one workflow to create by hand: a workflow with an "
-        "issue filter on the condition names listed, sending to the destinations described.",
+        "Channel labels (addresses, URLs, tokens) are not exported, so nothing here can be "
+        "created automatically. Channel names that look like an address, a URL or a token are "
+        "shown as the resource id instead. Each section is one workflow to create by hand: a "
+        "workflow with an issue filter on the condition names listed, sending to the "
+        "destinations described.",
         "",
     ]
     for n, (handles, conditions) in enumerate(sorted(routes.items()), start=1):

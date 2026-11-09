@@ -64,7 +64,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"uptime check inventory \(http\)"),
+        re.compile(r"^uptime check inventory \(http\)"),
         "Uptime check (HTTP)",
         [
             "Create a Synthetics ping monitor for the check's URL (the host is in the Google "
@@ -73,7 +73,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"uptime check inventory \(tcp\)"),
+        re.compile(r"^uptime check inventory \(tcp\)"),
         "Uptime check (TCP)",
         [
             "New Relic Synthetics has no TCP-only monitor that this tool knows of (not "
@@ -83,7 +83,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"uptime check inventory \(other\)"),
+        re.compile(r"^uptime check inventory \(other\)"),
         "Uptime check (other kind)",
         [
             "This check is not a plain HTTP or TCP check (for example a group check). Look at "
@@ -156,7 +156,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"email channel: the address is not exported"),
+        re.compile(r"^email channel: the address is not exported"),
         "Email channel",
         [
             "Create an email destination in New Relic (Alerts, Destinations) with the address "
@@ -165,7 +165,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"webhook channel: the url and token"),
+        re.compile(r"^webhook channel: the url and token"),
         "Webhook channel with a token",
         [
             "Create a webhook destination with the URL, and add the token as a custom header "
@@ -174,7 +174,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"webhook channel: the url, user name and password"),
+        re.compile(r"^webhook channel: the url, user name and password"),
         "Webhook channel with basic authentication",
         [
             "Create a webhook destination with the URL and basic authentication, entering the "
@@ -183,7 +183,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"slack channel: connecting slack"),
+        re.compile(r"^slack channel: connecting slack"),
         "Slack channel",
         [
             "In New Relic, create a Slack destination; it opens a one-time OAuth in Slack that a "
@@ -192,7 +192,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"pagerduty channel: the service key"),
+        re.compile(r"^pagerduty channel: the service key"),
         "PagerDuty channel",
         [
             "Create a PagerDuty destination in New Relic with the service key from the PagerDuty "
@@ -201,7 +201,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"has no new relic destination"),
+        re.compile(r"^channel type has no new relic destination"),
         "Channel type without a New Relic destination",
         [
             "New Relic has no destination for this kind of channel (SMS, Pub/Sub, Google mobile "
@@ -211,7 +211,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"channel is not in the export"),
+        re.compile(r"^channel is not in the export"),
         "Channel missing from the export",
         [
             "The policy names a channel that channels.json does not list (deleted, or the "
@@ -229,7 +229,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"dashboard widget type"),
+        re.compile(r"^dashboard widget type is not supported"),
         "Dashboard widget type not converted",
         [
             "Rebuild the widget by hand. A logs panel becomes a table or chart over `Log` (the "
@@ -239,7 +239,9 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"widget has no (query|content)|widget query is not recognised"),
+        re.compile(
+            r"^(text )?widget (has no (query|content)|query is not recognised|could not be read)"
+        ),
         "Widget without a usable query",
         [
             "Open the widget in Cloud Monitoring and note what it shows. If it matters, "

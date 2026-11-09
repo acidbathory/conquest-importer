@@ -6,19 +6,22 @@ automatically. One report row and one plan entry per check.
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.core.redact import safe_name, safe_path
 from importer.core.remediation import steps_for
 from importer.core.report import md_cell
 from importer.core.text import printable
 
 CHECKS_FILE = "uptime-checks.json"
 MAX_CHECKS = 10000
-# New Relic run frequencies in minutes, as in the monitor editor (not confirmed against the API)
+# New Relic run frequencies in minutes, as in the monitor editor (not confirmed against the API);
+# the slowest is the last
 FREQUENCIES = (1, 5, 10, 15, 30, 60)
 
 REASONS = {
@@ -37,25 +40,44 @@ class UptimePlan(BaseModel):
     reason: str
 
 
-def frequency_for(period: str) -> str:
-    """The shortest New Relic run frequency that is not faster than the Google period."""
-    seconds = int(period[:-1]) if period.endswith("s") and period[:-1].isdigit() else 300
-    minutes = max(1, -(-seconds // 60))
+UNKNOWN_PERIOD = "period unknown: choose the frequency yourself"
+PERIOD = re.compile(r"[0-9]{1,9}s")
+
+
+def frequency_for(period: object) -> str:
+    """The shortest New Relic run frequency that does not run more often than Google did.
+
+    A period that is not a whole number of seconds with an `s` (missing, `2h`, `1.5s`, ...) gives
+    no frequency: guessing one would pass for the real value.
+    """
+    text = period if isinstance(period, str) else ""
+    if not PERIOD.fullmatch(text) or int(text[:-1]) == 0:
+        return UNKNOWN_PERIOD
+    seconds = int(text[:-1])
+    minutes = -(-seconds // 60)
     chosen = next((f for f in FREQUENCIES if f >= minutes), FREQUENCIES[-1])
-    text = "every minute" if chosen == 1 else f"every {chosen} minutes"
-    note = "" if chosen * 60 == seconds else f" (Google ran it every {printable(period, 12)})"
-    return text + note
+    shown = "every minute" if chosen == 1 else f"every {chosen} minutes"
+    if minutes > FREQUENCIES[-1]:
+        return (
+            f"{shown} (Google ran it every {seconds}s; the slowest New Relic frequency is "
+            f"{FREQUENCIES[-1]} minutes)"
+        )
+    return shown if chosen * 60 == seconds else f"{shown} (Google ran it every {seconds}s)"
+
+
+def _tail(check: dict[str, Any]) -> str:
+    return str(check.get("name", "")).rsplit("/", 1)[-1] or "unnamed"
 
 
 def plan_check(check: dict[str, Any]) -> UptimePlan:
     kind = str(check.get("kind", ""))
     kind = kind if kind in REASONS else "other"
     return UptimePlan(
-        name=printable(str(check.get("displayName") or check.get("name") or "unnamed"), 100),
+        name=safe_name(str(check.get("displayName", "")), _tail(check), 100),
         kind=kind,
-        path=printable(str(check.get("path", "")), 200),
-        period=printable(str(check.get("period", "")), 12),
-        frequency=frequency_for(str(check.get("period", ""))),
+        path=safe_path(str(check.get("path", ""))),
+        period=printable(raw if isinstance(raw := check.get("period"), str) else "", 12),
+        frequency=frequency_for(check.get("period")),
         reason=REASONS[kind],
     )
 
@@ -83,7 +105,9 @@ def write_outputs(checks: list[dict[str, Any]], out: Path) -> list[UptimePlan]:
     lines = [
         "# Google uptime check report",
         "",
-        "The host of each check is not exported. Take it from the Google check, then create the "
+        "The host of each check is not exported, and the path has no query string or fragment. "
+        "Names and paths that looked like an address, URL or token are masked. "
+        "Take the host from the Google check, then create the "
         "monitor named under Create in New Relic (Synthetic monitoring, Create monitor).",
         "",
         "| Check | Kind | URL path | Google period | Create | New Relic run frequency |",
@@ -97,7 +121,7 @@ def write_outputs(checks: list[dict[str, Any]], out: Path) -> list[UptimePlan]:
         }[p.kind]
         lines.append(
             f"| {md_cell(p.name, 60)} | {p.kind} | {md_cell(p.path or '/', 60)} | "
-            f"{md_cell(p.period or 'unknown', 12)} | {create} | {md_cell(p.frequency, 60)} |"
+            f"{md_cell(p.period or 'unknown', 12)} | {create} | {md_cell(p.frequency, 160)} |"
         )
     kinds = sorted({p.kind for p in plans})
     lines += ["", "## Steps", ""]

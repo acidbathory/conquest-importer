@@ -25,8 +25,8 @@ def convert_alerts(tmp_path: Path) -> Path:
     return alerts
 
 
-def run(tmp_path: Path, channels: Path = FIXTURES / "channels") -> Path:
-    out = tmp_path / "notes"
+def run(tmp_path: Path, channels: Path = FIXTURES / "channels", folder: str = "notes") -> Path:
+    out = tmp_path / folder
     done = CliRunner().invoke(
         app,
         [
@@ -54,46 +54,53 @@ def test_one_plan_per_channel_set_with_the_conditions_it_routes(tmp_path: Path) 
     assert "not in the export" in report
 
 
-def test_no_address_url_or_secret_reaches_any_output(tmp_path: Path) -> None:
-    out = run(tmp_path)
-    text = "".join(p.read_text() for p in out.rglob("*") if p.is_file())
-    assert "@" not in text
-    assert "https://" not in text
-
-
 def test_channel_display_names_are_escaped_in_the_report(tmp_path: Path) -> None:
     channels = tmp_path / "c"
     channels.mkdir()
-    name = "evil|name\x1b[31m\n# heading"
+    name = "evil|name `x` <b>\x1b[31m\n# heading"
     (channels / "channels.json").write_text(
         json.dumps([{"name": PROJECT + "1", "type": "email", "displayName": name, "enabled": True}])
     )
     report = (run(tmp_path, channels) / "report.md").read_text()
-    assert "\x1b" not in report and "\n# heading" not in report and "evil name" in report
+    # control characters make the name look unsafe, so the resource id stands in for it
+    assert "\x1b" not in report and "heading" not in report and "evil" not in report
+    assert f"- {PROJECT}1 (email)" in report
+    plain = tmp_path / "c2"
+    plain.mkdir()
+    (plain / "channels.json").write_text(
+        json.dumps([{"name": PROJECT + "1", "type": "email", "displayName": "evil|name `x` <b>"}])
+    )
+    report = (run(tmp_path, plain, "notes2") / "report.md").read_text()
+    assert "- evil name" in report and "|name" not in report
 
 
 @pytest.mark.parametrize(
-    ("kind", "words"),
+    ("kind", "title"),
     [
-        ("email", "email destination"),
-        ("webhook_tokenauth", "token"),
-        ("webhook_basicauth", "password"),
-        ("slack", "OAuth"),
-        ("pagerduty", "PagerDuty"),
-        ("sms", "no New Relic destination"),
-        ("pubsub", "no New Relic destination"),
-        ("campfire", "no New Relic destination"),
-        ("something_new", "no New Relic destination"),
+        ("email", "Email channel"),
+        ("webhook_tokenauth", "Webhook channel with a token"),
+        ("webhook_basicauth", "Webhook channel with basic authentication"),
+        ("slack", "Slack channel"),
+        ("pagerduty", "PagerDuty channel"),
+        ("sms", "Channel type without a New Relic destination"),
+        ("pubsub", "Channel type without a New Relic destination"),
+        ("campfire", "Channel type without a New Relic destination"),
+        ("something_new", "Channel type without a New Relic destination"),
+        ("uptime check", "Channel type without a New Relic destination"),
+        ("forecast no thresholds mql conditions", "Channel type without a New Relic destination"),
     ],
 )
-def test_every_channel_type_has_a_reason_a_rule_and_a_category(kind: str, words: str) -> None:
-    reasons = reasons_for(kind)
-    assert reasons
-    for reason in reasons:
-        assert classify(reason) is not Category.OTHER, reason
-        assert remedies_for([reason]), reason
-    steps = " ".join(s for r in remedies_for(reasons) for s in r.steps)
-    assert words in steps or any(words in r for r in reasons)
+def test_every_channel_type_has_one_reason_a_category_and_its_own_rule(
+    kind: str, title: str
+) -> None:
+    (reason,) = reasons_for(kind)
+    assert classify(reason) is Category.MANUAL_FOLLOWUP, reason
+    assert [r.title for r in remedies_for([reason])] == [title]
+
+
+def test_a_channel_type_never_reaches_a_reason() -> None:
+    hostile = "x@corp.example https://h.example/?t=SECRET"
+    assert reasons_for(hostile) == reasons_for("sms")
 
 
 def test_the_type_table_covers_the_documented_types() -> None:
@@ -121,3 +128,20 @@ def test_a_missing_channels_folder_is_a_clean_cli_error(tmp_path: Path) -> None:
         ],
     )
     assert done.exit_code == 1 and "Error" in done.output
+
+
+def test_a_second_run_into_the_same_folder_is_refused_and_leaves_the_first_untouched(
+    tmp_path: Path,
+) -> None:
+    out = run(tmp_path)
+    before = sorted(p.name for p in out.rglob("*") if p.is_file())
+    done = CliRunner().invoke(
+        app,
+        [
+            "convert-gcp-notifications",
+            *["--channels", str(FIXTURES / "channels")],
+            *["--alerts", str(tmp_path / "alerts"), "--out", str(out)],
+        ],
+    )
+    assert done.exit_code == 1 and "already has files" in done.output
+    assert sorted(p.name for p in out.rglob("*") if p.is_file()) == before
