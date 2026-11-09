@@ -27,7 +27,7 @@ from importer.core.dashboard_ir import IRDashboard
 from importer.core.dashboard_report import build_dashboard_report
 from importer.core.doctor import passed, render, run_checks
 from importer.core.dotenv import load_dotenv_file
-from importer.core.emit.common import CannotEmit
+from importer.core.emit.common import CannotEmit, emit_defaults_replaced
 from importer.core.emit.dashboard import (
     TERRAFORM_HEADER,
     dashboard_id,
@@ -35,13 +35,24 @@ from importer.core.emit.dashboard import (
     nerdgraph_dashboard,
 )
 from importer.core.emit.nerdgraph import nerdgraph_payload
-from importer.core.emit.notifications import converted_condition_names, notifications_terraform
-from importer.core.emit.terraform import terraform_file
+from importer.core.emit.notifications import (
+    all_destinations,
+    converted_condition_names,
+    notifications_terraform_result,
+    secret_names,
+)
+from importer.core.emit.terraform import INCIDENT_PREFERENCES, terraform_file
 from importer.core.ir import Confidence, IRMonitor
 from importer.core.manifest import CreatedObject, Kind, Manifest, load_manifest, save_manifest
 from importer.core.migration_summary import Kind as AssetKind
 from importer.core.migration_summary import Summary, load_summary
-from importer.core.notification_ir import NotificationPlan, build_plan, plan_json
+from importer.core.notification_ir import (
+    MUTING_HANDLING,
+    NotificationPlan,
+    build_plan,
+    plan_json,
+    plan_violations,
+)
 from importer.core.report import build_report, md_cell
 from importer.core.report_html import PROFILES, render_report
 from importer.core.rollback import rollback
@@ -122,6 +133,14 @@ def convert(
     source_system: Annotated[
         str, typer.Option("--source", help="Source platform: " + ", ".join(sorted(REGISTRY)))
     ] = "cloudwatch",
+    incident_preference: Annotated[
+        str | None,
+        typer.Option(
+            help="Incident preference of the Terraform policy: "
+            + ", ".join(INCIDENT_PREFERENCES)
+            + ". Default: none written (New Relic uses PER_POLICY)"
+        ),
+    ] = None,
 ) -> None:
     """Convert extracted alarms to IR, NerdGraph payloads, Terraform and a report.
 
@@ -131,6 +150,11 @@ def convert(
     if source_system not in REGISTRY:
         typer.echo(f"Error: --source must be one of {sorted(REGISTRY)}", err=True)
         raise typer.Exit(code=1)
+    if incident_preference is not None and incident_preference not in INCIDENT_PREFERENCES:
+        typer.echo(
+            f"Error: --incident-preference must be one of {list(INCIDENT_PREFERENCES)}", err=True
+        )
+        raise typer.Exit(code=1)
     try:
         monitors = REGISTRY[source_system].convert(source)
     except (OSError, ValueError) as exc:
@@ -139,7 +163,12 @@ def convert(
     if not monitors:
         typer.echo(f"No monitors or alarms found in {source}", err=True)
         raise typer.Exit(code=1)
+    changes = {"incident_preference": incident_preference} if incident_preference else {}
+    with emit_defaults_replaced(**changes):
+        _write_conversion(monitors, out, source_system)
 
+
+def _write_conversion(monitors: list[IRMonitor], out: Path, source_system: str) -> None:
     (out / "ir").mkdir(parents=True, exist_ok=True)
     (out / "nerdgraph").mkdir(parents=True, exist_ok=True)
     final: list[IRMonitor] = []
@@ -730,6 +759,11 @@ def apply_dashboards_command(
         _partial_failure()
 
 
+def _echo_violations(violations: list[str]) -> None:
+    for problem in violations:
+        typer.echo(f"Problem: {printable(problem, 200)}", err=True)
+
+
 def _convert_dynatrace_notifications(export: Path, out: Path, prefix: str) -> None:
     try:
         plans = davis_plans(load_dynatrace_workflows(export), prefix)
@@ -748,7 +782,9 @@ def _convert_dynatrace_notifications(export: Path, out: Path, prefix: str) -> No
     for n, plan in enumerate(plans, start=1):
         (folder / f"topic-{n:04d}.json").write_text(plan_json(plan))
     (out / "report.md").write_text(dynatrace_notification_report(plans))
-    (out / "notifications.tf").write_text(TERRAFORM_HEADER + "\n" + notifications_terraform(plans))
+    result = notifications_terraform_result(plans)
+    (out / "notifications.tf").write_text(TERRAFORM_HEADER + "\n" + result.text)
+    _echo_violations(result.violations)
     made = sum(p.workflow is not None for p in plans)
     typer.echo(
         f"Read {len(plans)} Davis problem workflows, planned {made} New Relic workflows; "
@@ -772,6 +808,21 @@ def convert_notifications(
     ] = Path("out/cw"),
     out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/notifications"),
     prefix: Annotated[str, typer.Option(help="Prefix for created object names")] = "Imported:",
+    muting_handling: Annotated[
+        str | None,
+        typer.Option(
+            help="What workflows do for muted issues: "
+            + ", ".join(sorted(MUTING_HANDLING))
+            + ". Default: NOTIFY_ALL_ISSUES"
+        ),
+    ] = None,
+    warn_https_payload: Annotated[
+        bool,
+        typer.Option(
+            "--warn-https-payload",
+            help="Add a note to https plans: New Relic sends its own payload, not the SNS envelope",
+        ),
+    ] = False,
 ) -> None:
     """Plan New Relic destinations, channels and workflows from exported SNS topics.
 
@@ -783,9 +834,20 @@ def convert_notifications(
     if source not in ("cloudwatch", "dynatrace"):
         typer.echo("Error: --source must be cloudwatch or dynatrace", err=True)
         raise typer.Exit(code=1)
-    if source == "dynatrace":
-        _convert_dynatrace_notifications(topics, out, prefix)
-        return
+    if muting_handling is not None and muting_handling not in MUTING_HANDLING:
+        typer.echo(f"Error: --muting-handling must be one of {sorted(MUTING_HANDLING)}", err=True)
+        raise typer.Exit(code=1)
+    changes = {"muting_rules_handling": muting_handling} if muting_handling else {}
+    with emit_defaults_replaced(**changes):
+        if source == "dynatrace":
+            _convert_dynatrace_notifications(topics, out, prefix)
+        else:
+            _convert_cloudwatch_notifications(topics, alerts, out, prefix, warn_https_payload)
+
+
+def _convert_cloudwatch_notifications(
+    topics: Path, alerts: Path, out: Path, prefix: str, warn_https_payload: bool
+) -> None:
     try:
         raw_topics = load_topics(topics)
         monitors = [
@@ -800,7 +862,7 @@ def convert_notifications(
     plans: list[NotificationPlan] = []
     lines = ["# Notification conversion report", ""]
     for n, raw in enumerate(raw_topics, start=1):
-        topic = translate_topic(raw)
+        topic = translate_topic(raw, warn_https_payload)
         plan = build_plan(topic, routes.get(topic.source_key, []), prefix)
         plans.append(plan)
         (out / "notification-plans" / f"topic-{n:04d}.json").write_text(plan_json(plan))
@@ -812,6 +874,7 @@ def convert_notifications(
             f"{len(routes.get(topic.source_key, []))} converted conditions used this topic.",
         ]
         lines += [f"- not migrated: {md_cell(printable(r, 120))}" for r in topic.unsupported]
+        lines += [f"- note: {md_cell(printable(w, 300))}" for w in topic.warnings]
         if not routes.get(topic.source_key):
             lines.append("- no converted condition used this topic, so no workflow is created")
         lines.append("")
@@ -821,8 +884,9 @@ def convert_notifications(
             f"- topic {md_cell(printable(arn, 100))} was not exported; its alarms get no workflow"
         )
     (out / "report.md").write_text("\n".join(lines) + "\n")
-    tf = TERRAFORM_HEADER + "\n" + notifications_terraform(plans)
-    (out / "notifications.tf").write_text(tf)
+    result = notifications_terraform_result(plans)
+    (out / "notifications.tf").write_text(TERRAFORM_HEADER + "\n" + result.text)
+    _echo_violations(result.violations)
     made = sum(p.workflow is not None for p in plans)
     typer.echo(f"Read {len(plans)} topics, planned {made} workflows. See {out / 'report.md'}")
 
@@ -922,15 +986,20 @@ def apply_notifications_command(
         bool,
         typer.Option(
             "--include-needs-review",
-            help="Also create plans marked needs_review (Dynatrace plans); a person checked them",
+            help="Also create plans marked needs_review (Dynatrace plans, and CloudWatch plans "
+            "with Lambda, SQS or Firehose subscriptions); a person checked them",
         ),
     ] = False,
 ) -> None:
     """Create the planned destinations, channels and (disabled) workflows in New Relic.
 
     Dry run by default; writing needs the same three guards as `apply`. A plan marked
-    needs_review (from Dynatrace) is created only with --include-needs-review, and only when it
-    has a workflow: a plan with destinations but no workflow creates nothing here.
+    needs_review (Dynatrace, or CloudWatch with Lambda, SQS or Firehose subscriptions) is skipped
+    and listed unless --include-needs-review is given, and only a plan with a workflow is created.
+
+    A destination that takes a secret (PagerDuty key, token, password) reads its value from the
+    environment variable that has the name of the secret in the plan. The values are never
+    printed, and a missing variable stops the run before the first write.
     """
     if account_id <= 0:
         typer.echo("Error: --account-id is required", err=True)
@@ -951,6 +1020,7 @@ def apply_notifications_command(
                 f"  {printable(plan.workflow.name, 50):50} {len(plan.destinations)} channels, "
                 f"{len(plan.workflow.condition_names)} conditions"
             )
+    _echo_violations(plan_violations(plans))
     review = [p for p in plans if p.needs_review]
     if review:
         typer.echo(f"{len(review)} plans need review")
@@ -960,18 +1030,19 @@ def apply_notifications_command(
     if not do_apply:
         typer.echo("\nDRY RUN: nothing was sent. Add --apply --confirm-account to create them.")
         return
-    if review and not include_needs_review:
-        typer.echo(
-            f"Error: {len(review)} plans need review; check them, then add --include-needs-review",
-            err=True,
-        )
-        raise typer.Exit(code=1)
     try:
         check_guards(account_id, confirm_account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS"))
         key = require_env("NEW_RELIC_API_KEY")
+        secrets = _secrets_from_environment(plans, include_needs_review)
         with NewRelicClient(key, region) as client:
             typer.echo(f"Account name: {printable(get_account_name(client, account_id))}")
-            result = apply_notifications(client, account_id, plans)
+            result = apply_notifications(
+                client,
+                account_id,
+                plans,
+                secrets=secrets,
+                include_needs_review=include_needs_review,
+            )
         _record(
             manifest or source / "manifest.json",
             account_id,
@@ -987,10 +1058,31 @@ def apply_notifications_command(
         f"\nCreated {len(result.created)}, already existed {len(result.skipped_existing)}, "
         f"failed {len(result.failed)}. Workflows are DISABLED."
     )
+    if result.skipped_review:
+        typer.echo(
+            f"Skipped {len(result.skipped_review)} plans that need review "
+            "(add --include-needs-review after checking them):"
+        )
+        for name in result.skipped_review:
+            typer.echo(f"  {printable(name, 80)}")
     for name, reason in result.failed:
         typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
     if result.failed:
         _partial_failure()
+
+
+def _secrets_from_environment(
+    plans: list[NotificationPlan], include_review: bool
+) -> dict[str, str]:
+    """Values for the secrets of the plans that will be created, read from the environment
+    variables that have the secret's name. Plans without typed destinations need none."""
+    names = {
+        name
+        for plan in plans
+        if plan.workflow is not None and (include_review or not plan.needs_review)
+        for name in secret_names(all_destinations(plan))
+    }
+    return {name: require_env(name).get_secret_value() for name in sorted(names)}
 
 
 @app.command("validate")

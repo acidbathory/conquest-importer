@@ -3,7 +3,10 @@
 import importlib
 import math
 import re
-from dataclasses import dataclass
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass, replace
+from typing import Any
 
 from importer.core.emit.nrql import build_nrql
 from importer.core.ir import Confidence, EmitOptions, IRMonitor, SignalKind, Threshold
@@ -31,6 +34,18 @@ EMIT_DEFAULTS = EmitDefaults()
 def emit_defaults() -> EmitDefaults:
     """Read at call time, so a test (or a later decision) can replace EMIT_DEFAULTS."""
     return EMIT_DEFAULTS
+
+
+@contextmanager
+def emit_defaults_replaced(**changes: Any) -> Iterator[EmitDefaults]:
+    """Use changed defaults for the emitters inside the block, then put the old ones back."""
+    global EMIT_DEFAULTS
+    saved = EMIT_DEFAULTS
+    EMIT_DEFAULTS = replace(saved, **changes)
+    try:
+        yield EMIT_DEFAULTS
+    finally:
+        EMIT_DEFAULTS = saved
 
 
 # A source "avg over the last 5 minutes" is evaluated as 1-minute windows that must breach
