@@ -315,17 +315,30 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^promql uses histogram_quantile"),
+        "PromQL histogram_quantile",
+        [
+            "histogram_quantile reads Prometheus `_bucket` counters. New Relic has "
+            "`bucketPercentile(metric, 95)` for that data in a query, but the documentation "
+            "does not list it among the functions an alert condition accepts, so it was not "
+            "converted and nothing was guessed. Run the query with bucketPercentile in the "
+            "query builder; if the condition editor accepts it, create the condition by "
+            "hand. If not, alert on a count of requests slower than the limit (the buckets "
+            "above it) divided by the total count, which is an ordinary ratio. `percentile()` "
+            "is for New Relic distribution metrics, not for Prometheus buckets.",
+        ],
+    ),
+    (
         re.compile(
-            r"^promql uses (?:offset|a subquery|vector matching|topk|histogram_quantile"
+            r"^promql uses (?:offset|a subquery|vector matching|topk"
             r"|without)"
         ),
         "PromQL feature with no alert-condition equivalent",
         [
-            "offset, subqueries, joins (on, ignoring, group_left), topk or bottomk, "
-            "histogram_quantile and without() cannot be used in a New Relic alert "
-            "condition. Express the same test in NRQL on New Relic data: `percentile()` "
-            "for histogram data, a FACET for grouping, and a second condition instead of "
-            "an offset comparison.",
+            "offset, subqueries, joins (on, ignoring, group_left), topk or bottomk "
+            "and without() cannot be used in a New Relic alert condition. Express the same "
+            "test in NRQL on New Relic data: a FACET for grouping, and a second condition "
+            "instead of an offset comparison.",
             NRQL_LIMITS,
         ],
     ),

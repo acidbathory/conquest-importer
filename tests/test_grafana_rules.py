@@ -65,7 +65,7 @@ MANUAL_REASONS = [
         "PromQL feature with no alert-condition equivalent",
     ),
     ("promql uses topk or bottomk", "PromQL feature with no alert-condition equivalent"),
-    ("promql uses histogram_quantile", "PromQL feature with no alert-condition equivalent"),
+    ("promql uses histogram_quantile", "PromQL histogram_quantile"),
     ("promql uses without()", "PromQL feature with no alert-condition equivalent"),
     ("promql uses a binary operator or comparison", "PromQL operator or comparison"),
     (
