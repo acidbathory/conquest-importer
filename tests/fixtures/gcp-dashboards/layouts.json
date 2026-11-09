@@ -1,0 +1,49 @@
+{
+  "dashboards": [
+    {
+      "name": "projects/demo-project-123/dashboards/00000000-0000-0000-0000-000000000002",
+      "displayName": "Grid dashboard",
+      "gridLayout": {
+        "columns": "2",
+        "widgets": [
+          {"title": "Note", "text": {"content": "hello", "format": "RAW"}},
+          {
+            "title": "Instance count",
+            "scorecard": {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"compute.googleapis.com/instance/uptime\"",
+                  "aggregation": {"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_MAX"}
+                }
+              }
+            }
+          },
+          {"xyChart": {"dataSets": []}}
+        ]
+      }
+    },
+    {
+      "name": "projects/demo-project-123/dashboards/00000000-0000-0000-0000-000000000003",
+      "displayName": "Column dashboard",
+      "columnLayout": {
+        "columns": [
+          {"weight": "2", "widgets": [{"title": "Left", "text": {"content": "l"}}]},
+          {"weight": "1", "widgets": [{"title": "Right top", "text": {"content": "r1"}}, {"title": "Right bottom", "text": {"content": "r2"}}]}
+        ]
+      }
+    },
+    {
+      "name": "projects/demo-project-123/dashboards/00000000-0000-0000-0000-000000000004",
+      "displayName": "Row dashboard",
+      "rowLayout": {
+        "rows": [
+          {"weight": "1", "widgets": [{"title": "A", "text": {"content": "a"}}, {"title": "B", "text": {"content": "b"}}]}
+        ]
+      }
+    },
+    {
+      "name": "projects/demo-project-123/dashboards/00000000-0000-0000-0000-000000000005",
+      "displayName": "Empty dashboard"
+    }
+  ]
+}

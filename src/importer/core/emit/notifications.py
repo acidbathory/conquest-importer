@@ -7,7 +7,10 @@ strings go through hcl_string().
 import hashlib
 from typing import Any
 
+from importer.core.emit.common import CannotEmit
+from importer.core.emit.nerdgraph import nerdgraph_payload
 from importer.core.emit.terraform import hcl_string
+from importer.core.ir import IRMonitor
 from importer.core.notification_ir import (
     ChannelKind,
     NotificationPlan,
@@ -37,6 +40,17 @@ CREATE_WORKFLOW = (
     "  aiWorkflowsCreateWorkflow(accountId: $accountId, createWorkflowData: $data) {\n"
     "    workflow { id name }\n    errors { type description }\n  }\n}"
 )
+
+
+def converted_condition_names(monitors: list[IRMonitor]) -> dict[int, str]:
+    """source_id -> the condition name used in New Relic, for monitors that can be emitted."""
+    names: dict[int, str] = {}
+    for m in monitors:
+        try:
+            names[m.source_id] = nerdgraph_payload(m)["variables"]["condition"]["name"]
+        except (CannotEmit, ValueError):
+            continue
+    return names
 
 
 def destination_input(dest: PlannedDestination) -> dict[str, Any]:

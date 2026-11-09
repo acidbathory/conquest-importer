@@ -129,7 +129,7 @@ def _load_verified() -> tuple[frozenset[str], frozenset[str]]:
 RECEIVED, NOT_RECEIVED = _load_verified()
 
 
-class _Fail(Exception):
+class Fail(Exception):
     def __init__(self, confidence: Confidence, reason: str) -> None:
         super().__init__(reason)
         self.confidence = confidence
@@ -145,7 +145,7 @@ def nr_metric_name(metric_type: str) -> str:
     """
     match = SERVICE_SEGMENT.match(metric_type)
     if match is None or not SAFE_PATH.match(match["path"]):
-        raise _Fail(Confidence.MANUAL, f"metric type {metric_type!r} is not a recognised name")
+        raise Fail(Confidence.MANUAL, f"metric type {metric_type!r} is not a recognised name")
     return f"gcp.{match['service']}.{match['path'].replace('/', '.')}"
 
 
@@ -188,7 +188,7 @@ def _valid_attribute(attribute: str, field: str) -> str:
     try:
         identifier(attribute)
     except ValueError:
-        raise _Fail(
+        raise Fail(
             Confidence.MANUAL, f"label {field!r} does not make a valid New Relic attribute name"
         ) from None
     return attribute
@@ -206,27 +206,37 @@ def _scope(terms: list[Term]) -> tuple[str, list[TagFilter], list[str]]:
         elif (label := _label_name(term.field)) and term.op == "=" and not term.negate:
             scope.append(TagFilter(key=label, value=term.value))
         else:
-            raise _Fail(Confidence.MANUAL, f"filter term on {term.field!r} is not supported")
+            raise Fail(Confidence.MANUAL, f"filter term on {term.field!r} is not supported")
     if not metric_type:
-        raise _Fail(Confidence.MANUAL, "the filter has no metric.type")
+        raise Fail(Confidence.MANUAL, "the filter has no metric.type")
     return metric_type, scope, notes
 
 
-def _seconds(value: object) -> int:
+def seconds(value: object) -> int:
     text = str(value or "")
-    return int(text[:-1]) if text.endswith("s") and text[:-1].isdigit() else 0
+    digits = text[:-1]
+    # isdecimal() alone accepts other scripts' digits that int() reads, and isdigit() accepts
+    # superscripts that int() rejects; require ASCII digits
+    return int(digits) if text.endswith("s") and digits.isascii() and digits.isdecimal() else 0
 
 
-def _counter_window(aligner: str, period: int) -> tuple[int, float, str]:
+def _counter_window(aligner: str, period: int, *, chart: bool) -> tuple[int, float, str]:
     """Window, threshold scale and note for a counter: New Relic stores one change per poll."""
     window = max(period, POLL_SECONDS)
     # a rate is per second, so the total over the window is rate x window; a delta scales
     scale = float(window) if aligner == "ALIGN_RATE" else window / period
-    note = (
-        "a counter metric: New Relic stores the change in each 5 minute polling interval, "
-        f"so the window is {window}s and the threshold is rescaled by {scale:g} "
-        "(Google compares a rate or change per alignment period)"
-    )
+    first = "a counter metric: New Relic stores the change in each 5 minute polling interval, "
+    if chart:
+        note = (
+            first + "so the chart adds up those changes over each bucket (over the whole time "
+            "range for a single value); Google showed a rate or change per alignment period, so "
+            f"divide by {scale:g} to compare with it"
+        )
+    else:
+        note = (
+            first + f"so the window is {window}s and the threshold is rescaled by {scale:g} "
+            "(Google compares a rate or change per alignment period)"
+        )
     return window, scale, note
 
 
@@ -243,7 +253,7 @@ def _reducer(
             )
         return group_by, notes
     if reducer != "REDUCE_NONE":
-        raise _Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
+        raise Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
     notes.append(
         "Google evaluates each time series on its own; the New Relic query combines them "
         "unless you facet by the resource id"
@@ -266,31 +276,31 @@ def _whole_windows(duration: int, period: int) -> tuple[int, str]:
 def _check_limits(period: int, window: int) -> None:
     """Manual when New Relic would refuse the window at emit time."""
     if period > MAX_AGGREGATION_WINDOW_SECONDS:
-        raise _Fail(
+        raise Fail(
             Confidence.MANUAL,
             f"aggregation window {period}s is over New Relic's limit of "
             f"{MAX_AGGREGATION_WINDOW_SECONDS}s",
         )
     if window > MAX_DURATION_SECONDS:
-        raise _Fail(
+        raise Fail(
             Confidence.MANUAL,
             f"duration {window}s is over New Relic's limit of {MAX_DURATION_SECONDS}s",
         )
 
 
-def _metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[str]]:
+def metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[str]]:
     """Metric type, label scope and notes from a condition's filter; manual when not collected."""
     try:
         metric_type, scope, notes = _scope(parse_filter(str(body.get("filter", ""))))
     except FilterError as err:
-        raise _Fail(Confidence.MANUAL, f"filter not supported: {err}") from err
+        raise Fail(Confidence.MANUAL, f"filter not supported: {err}") from err
     if metric_type.startswith("monitoring.googleapis.com/uptime_check/"):
-        raise _Fail(
+        raise Fail(
             Confidence.MANUAL,
             "an uptime check alert depends on the check itself, which is not migrated",
         )
     if metric_type.startswith(NOT_GOOGLE_SERVICE):
-        raise _Fail(Confidence.MANUAL, UNCOLLECTED)
+        raise Fail(Confidence.MANUAL, UNCOLLECTED)
     return metric_type, scope, notes
 
 
@@ -298,12 +308,16 @@ def _first_aggregation(body: dict[str, object]) -> tuple[dict[str, object], str]
     """The single aggregation stage of a condition and its aligner."""
     aggregations = body.get("aggregations")
     if isinstance(aggregations, list) and len(aggregations) > 1:
-        raise _Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
+        raise Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
     first = aggregations[0] if isinstance(aggregations, list) and aggregations else {}
-    agg = first if isinstance(first, dict) else {}
+    return check_aligner(first if isinstance(first, dict) else {})
+
+
+def check_aligner(agg: dict[str, object]) -> tuple[dict[str, object], str]:
+    """The aggregation stage and its aligner; manual when the aligner is not mapped."""
     aligner = str(agg.get("perSeriesAligner", ""))
     if aligner not in ALIGNERS:
-        raise _Fail(Confidence.MANUAL, f"aligner {aligner!r} is not supported")
+        raise Fail(Confidence.MANUAL, f"aligner {aligner!r} is not supported")
     return agg, aligner
 
 
@@ -322,26 +336,23 @@ def _group_labels(agg: dict[str, object]) -> tuple[list[str], list[str]]:
     return labels, notes
 
 
-def _metric_condition(
-    body: dict[str, object],
-) -> tuple[MetricSignal, int, int, float, list[str]]:
-    notes: list[str] = []
-    if body.get("denominatorFilter"):
-        raise _Fail(Confidence.MANUAL, "ratio conditions (denominator filter) are not supported")
-    if body.get("forecastOptions"):
-        raise _Fail(Confidence.MANUAL, "forecast conditions are not supported")
-    trigger = body.get("trigger")
-    if isinstance(trigger, dict) and (trigger.get("percent") or int(trigger.get("count", 1)) > 1):
-        raise _Fail(Confidence.MANUAL, "a trigger on several time series is not supported")
-    metric_type, scope, scope_notes = _metric_scope(body)
-    agg, aligner = _first_aggregation(body)
+def metric_series(
+    metric_type: str,
+    scope: list[TagFilter],
+    agg: dict[str, object],
+    aligner: str,
+    period: int,
+    *,
+    chart: bool = False,
+) -> tuple[MetricSignal, int, float, list[str]]:
+    """The signal for one metric with its aggregation: signal, window, scale and notes.
+
+    Shared by alert conditions and dashboard charts (`chart` words the counter note for a chart).
+    """
     aggregation, counter = ALIGNERS[aligner]
-    group_by, reducer_notes = _reducer(agg, aggregation, aligner)
-    notes += reducer_notes
-    period = _seconds(agg.get("alignmentPeriod"))
-    duration = _seconds(body.get("duration"))
+    group_by, notes = _reducer(agg, aggregation, aligner)
     if period < 60 or period % 60:
-        raise _Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
+        raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
     name = nr_metric_name(metric_type)
     if aligner.startswith("ALIGN_PERCENTILE_"):
         name += "." + "p" + aligner.rsplit("_", 1)[1]
@@ -351,7 +362,7 @@ def _metric_condition(
         )
     scale = 1.0
     if counter:
-        period, scale, note = _counter_window(aligner, period)
+        period, scale, note = _counter_window(aligner, period, chart=chart)
         notes.append(note)
     notes += _name_notes(name, aligner, uses_labels=bool(scope or group_by))
     term = MetricTerm(
@@ -362,6 +373,24 @@ def _metric_condition(
     signal = MetricSignal(
         terms={"a": term}, aggregation=aggregation, scope=scope, group_by=group_by
     )
+    return signal, period, scale, notes
+
+
+def _metric_condition(
+    body: dict[str, object],
+) -> tuple[MetricSignal, int, int, float, list[str]]:
+    if body.get("denominatorFilter"):
+        raise Fail(Confidence.MANUAL, "ratio conditions (denominator filter) are not supported")
+    if body.get("forecastOptions"):
+        raise Fail(Confidence.MANUAL, "forecast conditions are not supported")
+    trigger = body.get("trigger")
+    if isinstance(trigger, dict) and (trigger.get("percent") or int(trigger.get("count", 1)) > 1):
+        raise Fail(Confidence.MANUAL, "a trigger on several time series is not supported")
+    metric_type, scope, scope_notes = metric_scope(body)
+    agg, aligner = _first_aggregation(body)
+    period = seconds(agg.get("alignmentPeriod"))
+    duration = seconds(body.get("duration"))
+    signal, period, scale, notes = metric_series(metric_type, scope, agg, aligner, period)
     window, note = _whole_windows(duration, period)
     _check_limits(period, window)
     if note:
@@ -386,17 +415,17 @@ def _name_notes(
 
 def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, int, list[str]]:
     """A loss-of-signal check: heartbeat signal, aggregation window, duration and notes."""
-    metric_type, scope, scope_notes = _metric_scope(body)
+    metric_type, scope, scope_notes = metric_scope(body)
     agg, aligner = _first_aggregation(body)
     reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
     if reducer not in (*REDUCERS, "REDUCE_NONE"):
-        raise _Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
-    period = _seconds(agg.get("alignmentPeriod"))
+        raise Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
+    period = seconds(agg.get("alignmentPeriod"))
     if period < 60 or period % 60:
-        raise _Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
-    duration = _seconds(body.get("duration"))
+        raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
+    duration = seconds(body.get("duration"))
     if duration < 60:
-        raise _Fail(Confidence.MANUAL, f"duration {duration}s is not supported")
+        raise Fail(Confidence.MANUAL, f"duration {duration}s is not supported")
     name = nr_metric_name(metric_type)
     group_by, notes = _group_labels(agg)
     notes.append(ABSENCE_NOTE)
@@ -432,7 +461,7 @@ def _log_count(body: dict[str, object]) -> CountSignal:
     try:
         terms = parse_filter(str(body.get("filter", "")))
     except FilterError as err:
-        raise _Fail(Confidence.MANUAL, f"log filter not supported: {err}") from err
+        raise Fail(Confidence.MANUAL, f"log filter not supported: {err}") from err
     filters: list[CountFilter] = []
     for term in terms:
         if (
@@ -460,7 +489,7 @@ def _log_count(body: dict[str, object]) -> CountSignal:
                 )
             )
         else:
-            raise _Fail(
+            raise Fail(
                 Confidence.MANUAL, f"log filter comparison on {term.field!r} is not supported"
             )
     return CountSignal(filters=filters)
@@ -552,7 +581,7 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
             )
             value = float(str(body.get("thresholdValue", 0))) * scale
             thresholds = [Threshold(severity=severity, operator=operator, value=value)]
-    except _Fail as fail:
+    except Fail as fail:
         prefix = ABSENCE_PREFIX if cond.kind == ABSENCE_KIND else ""
         return failed(fail.confidence, prefix + fail.reason)
     return IRMonitor(

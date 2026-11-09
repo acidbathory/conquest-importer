@@ -25,9 +25,12 @@ def test_every_unconverted_alert_has_remediation(monitor: IRMonitor) -> None:
     assert monitor.remediation or steps_for(monitor.reasons), monitor.reasons
 
 
-def test_every_failed_widget_has_remediation() -> None:
-    src = DASHBOARD_REGISTRY["cloudwatch"]
-    dashboards: list[IRDashboard] = src.translate(src.load(FIXTURES / "cloudwatch-dashboards"))
+@pytest.mark.parametrize(
+    ("name", "folder"), [("cloudwatch", "cloudwatch-dashboards"), ("gcp", "gcp-dashboards")]
+)
+def test_every_failed_widget_has_remediation(name: str, folder: str) -> None:
+    src = DASHBOARD_REGISTRY[name]
+    dashboards: list[IRDashboard] = src.translate(src.load(FIXTURES / folder))
     for dash in dashboards:
         for w in dash.widgets:
             if w.confidence in (Confidence.MANUAL, Confidence.UNSUPPORTED):

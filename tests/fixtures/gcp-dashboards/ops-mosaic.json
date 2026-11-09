@@ -1,0 +1,151 @@
+{
+  "name": "projects/demo-project-123/dashboards/00000000-0000-0000-0000-000000000001",
+  "displayName": "Ops overview",
+  "etag": "0000",
+  "mosaicLayout": {
+    "columns": 48,
+    "tiles": [
+      {
+        "xPos": 0, "yPos": 0, "width": 24, "height": 16,
+        "widget": {
+          "title": "VM CPU by zone",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "LINE",
+                "legendTemplate": "${resource.labels.zone}",
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" resource.type=\"gce_instance\"",
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_MEAN",
+                      "crossSeriesReducer": "REDUCE_MEAN",
+                      "groupByFields": ["resource.label.zone"]
+                    }
+                  }
+                }
+              }
+            ],
+            "chartOptions": {"mode": "COLOR"}
+          }
+        }
+      },
+      {
+        "xPos": 24, "yPos": 0, "width": 24, "height": 16,
+        "widget": {
+          "title": "Disk reads",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "STACKED_AREA",
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"compute.googleapis.com/instance/disk/read_bytes_count\"",
+                    "aggregation": {"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_RATE"}
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 0, "yPos": 16, "width": 12, "height": 8,
+        "widget": {
+          "title": "Open messages",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "timeSeriesFilter": {
+                "filter": "metric.type=\"pubsub.googleapis.com/subscription/num_undelivered_messages\"",
+                "aggregation": {
+                  "alignmentPeriod": "300s",
+                  "perSeriesAligner": "ALIGN_MAX",
+                  "crossSeriesReducer": "REDUCE_SUM"
+                }
+              }
+            },
+            "sparkChartView": {"sparkChartType": "SPARK_LINE"}
+          }
+        }
+      },
+      {
+        "xPos": 12, "yPos": 16, "width": 12, "height": 8,
+        "widget": {"title": "Runbook", "text": {"content": "Page the on-call.\n\n* step one", "format": "MARKDOWN"}}
+      },
+      {
+        "xPos": 24, "yPos": 16, "width": 24, "height": 8,
+        "widget": {"title": "Errors", "logsPanel": {"filter": "severity>=ERROR", "resourceNames": ["projects/demo-project-123"]}}
+      },
+      {
+        "xPos": 0, "yPos": 24, "width": 16, "height": 8,
+        "widget": {
+          "title": "MQL chart",
+          "xyChart": {
+            "dataSets": [
+              {"timeSeriesQuery": {"timeSeriesQueryLanguage": "fetch gce_instance | metric 'compute.googleapis.com/instance/cpu/utilization' | mean"}}
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 16, "yPos": 24, "width": 16, "height": 8,
+        "widget": {
+          "title": "Error ratio",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilterRatio": {
+                    "numerator": {"filter": "metric.type=\"run.googleapis.com/request_count\" metric.label.response_code_class=\"5xx\""},
+                    "denominator": {"filter": "metric.type=\"run.googleapis.com/request_count\""}
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 32, "yPos": 24, "width": 16, "height": 8,
+        "widget": {"title": "Open alerts", "alertChart": {"name": "projects/demo-project-123/alertPolicies/1"}}
+      },
+      {
+        "xPos": 0, "yPos": 32, "width": 24, "height": 8,
+        "widget": {
+          "title": "Uptime",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\"",
+                    "aggregation": {"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_FRACTION_TRUE"}
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 24, "yPos": 32, "width": 24, "height": 8,
+        "widget": {
+          "title": "Custom metric",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"custom.googleapis.com/orders\"",
+                    "aggregation": {"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_MEAN"}
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

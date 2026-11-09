@@ -35,7 +35,7 @@ from importer.core.emit.dashboard import (
     nerdgraph_dashboard,
 )
 from importer.core.emit.nerdgraph import nerdgraph_payload
-from importer.core.emit.notifications import notifications_terraform
+from importer.core.emit.notifications import converted_condition_names, notifications_terraform
 from importer.core.emit.terraform import terraform_file
 from importer.core.ir import Confidence, IRMonitor
 from importer.core.manifest import CreatedObject, Kind, Manifest, load_manifest, save_manifest
@@ -80,6 +80,8 @@ from importer.sources.dynatrace.notifications import render_report as dynatrace_
 from importer.sources.dynatrace.service_levels import render_report as service_level_report
 from importer.sources.dynatrace.service_levels import service_level_plans, service_levels_terraform
 from importer.sources.gcp import data_check as gcp_data
+from importer.sources.gcp import notifications as gcp_notifications
+from importer.sources.gcp import uptime as gcp_uptime
 from importer.sources.gcp.extract import GcpError, access_token, http_getter
 from importer.sources.gcp.extract import extract as extract_gcp
 from importer.sources.gcp.link_terraform import link_terraform, services_for
@@ -493,12 +495,12 @@ def extract_gcp_command(
     project: Annotated[str, typer.Option(help="Google Cloud project id to read")],
     out: Annotated[Path, typer.Option(help="New folder for the export")] = Path("out/gcp"),
 ) -> None:
-    """Read alert policies, notification channels and uptime checks from a Google Cloud project.
+    """Read alert policies, channels, uptime checks and dashboards from a Google Cloud project.
 
-    Read-only: lists alertPolicies, notificationChannels and uptimeCheckConfigs through the Cloud
-    Monitoring API. Credentials come from GOOGLE_OAUTH_ACCESS_TOKEN or `gcloud auth login`; they
-    are never stored. Channels are saved as type and name only. The export can contain project
-    ids and resource names: review it before sharing.
+    Read-only: lists alertPolicies, notificationChannels, uptimeCheckConfigs and dashboards
+    through the Cloud Monitoring API. Credentials come from GOOGLE_OAUTH_ACCESS_TOKEN or
+    `gcloud auth login`; they are never stored. Channels are saved as type and name only. The
+    export can contain project ids and resource names: review it before sharing.
     """
     try:
         with http_getter(access_token()) as get:
@@ -509,12 +511,20 @@ def extract_gcp_command(
     typer.echo(
         f"Read project {result.project}: {result.policies} alert policies "
         f"({result.conditions} conditions), {result.channels} notification channels, "
-        f"{result.uptime_checks} uptime checks."
+        f"{result.uptime_checks} uptime checks, {result.dashboards} dashboards."
     )
     for warning in result.warnings:
         typer.echo(f"  Could not read {printable(warning, 200)}", err=True)
     typer.echo("Next:")
     typer.echo(f"  importer convert --source gcp --in {out / 'policies'} --out out/gcp-alerts")
+    typer.echo(
+        f"  importer convert-dashboards --source gcp --in {out / 'dashboards'} --out out/gcp-dash"
+    )
+    typer.echo(
+        f"  importer convert-gcp-notifications --channels {out / 'channels'} "
+        "--alerts out/gcp-alerts --out out/gcp-notifications"
+    )
+    typer.echo(f"  importer convert-gcp-uptime --checks {out / 'uptime-checks'}")
 
 
 @app.command("extract-dynatrace")
@@ -785,13 +795,7 @@ def convert_notifications(
     except (OSError, ValueError) as exc:
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
         raise typer.Exit(code=1) from None
-    names: dict[int, str] = {}
-    for m in monitors:
-        try:
-            names[m.source_id] = nerdgraph_payload(m)["variables"]["condition"]["name"]
-        except (CannotEmit, ValueError):
-            continue
-    routes = routing(monitors, names)
+    routes = routing(monitors, converted_condition_names(monitors))
     (out / "notification-plans").mkdir(parents=True, exist_ok=True)
     plans: list[NotificationPlan] = []
     lines = ["# Notification conversion report", ""]
@@ -847,6 +851,55 @@ def plan_service_levels_command(
     (out / "report.md").write_text(service_level_report(plans))
     (out / "service-levels.tf").write_text(service_levels_terraform(plans))
     typer.echo(f"Planned {len(plans)} service levels; all need review. See {out / 'report.md'}")
+
+
+@app.command("convert-gcp-notifications")
+def convert_gcp_notifications(
+    channels: Annotated[
+        Path, typer.Option("--channels", help="Folder with channels.json (extract-gcp)")
+    ] = Path("out/gcp/channels"),
+    alerts: Annotated[
+        Path, typer.Option("--alerts", help="Output folder of `convert --source gcp` (has ir/)")
+    ] = Path("out/gcp-alerts"),
+    out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/gcp-notifications"),
+    prefix: Annotated[str, typer.Option(help="Prefix for created object names")] = "Imported:",
+) -> None:
+    """Plan notification workflows from Google Cloud channels: routing and manual steps.
+
+    One section per set of channels, listing the converted conditions that used the set.
+    Addresses and secrets are not exported, so every channel is a manual step. Offline.
+    """
+    try:
+        known = gcp_notifications.load_channels(channels)
+        monitors = [
+            IRMonitor.model_validate_json(p.read_text())
+            for p in sorted((alerts / "ir").glob("*.json"))
+        ]
+        count = gcp_notifications.write_outputs(known, monitors, out, prefix)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"Read {len(known)} channels, {count} channel sets. See {out / 'report.md'}")
+
+
+@app.command("convert-gcp-uptime")
+def convert_gcp_uptime(
+    checks: Annotated[
+        Path, typer.Option("--checks", help="Folder with uptime-checks.json (extract-gcp)")
+    ] = Path("out/gcp/uptime-checks"),
+    out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/gcp-uptime"),
+) -> None:
+    """List Google uptime checks with the New Relic monitor to create for each. Offline.
+
+    One report row per check (path, period, run frequency) and the manual steps. The host is not
+    exported, so nothing is created automatically.
+    """
+    try:
+        plans = gcp_uptime.write_outputs(gcp_uptime.load_checks(checks), out)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"Read {len(plans)} uptime checks. See {out / 'report.md'}")
 
 
 @app.command("apply-notifications")

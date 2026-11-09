@@ -4,7 +4,9 @@ Only the GET endpoints in READ_PATHS can run, with a project id that matched PRO
 user text becomes a URL path segment or an operation name. The access token comes from the
 environment (GOOGLE_OAUTH_ACCESS_TOKEN) or from `gcloud auth print-access-token`; this code never
 stores it. The export holds the same JSON `convert --source gcp` reads. Notification channels are
-written as type and name only, because their labels hold email addresses and webhook URLs.
+written as type and name only, because their labels hold email addresses and webhook URLs. A
+display name or URL path that looks like an address, URL or token is replaced (the resource id
+tail stands in; the path loses its query and fragment).
 
 Exports can contain project ids and resource names: review them before sharing.
 """
@@ -23,17 +25,24 @@ from typing import Any
 import httpx
 
 from importer.core.ids import MAX_INPUT_BYTES
-from importer.core.text import printable
+from importer.core.redact import safe_name, safe_path
+from importer.core.safe_http import ReadBudget, get_json, is_plain_token
 
 PROJECT_ID = re.compile(r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$")
-API = "https://monitoring.googleapis.com/v3"
+API = "https://monitoring.googleapis.com"
+# the dashboards API is v1; everything else here is v3
+API_VERSIONS = {"dashboards": "v1"}
+DEFAULT_VERSION = "v3"
 # key in the response -> path below projects/<id>
 READ_PATHS = {
     "alertPolicies": "alertPolicies",
     "notificationChannels": "notificationChannels",
     "uptimeCheckConfigs": "uptimeCheckConfigs",
+    "dashboards": "dashboards",
 }
 MAX_PAGES = 100
+MAX_TOTAL_PAGES = 200  # across every list in one run
+SERVICE = "Google Cloud"
 
 # (url, params) -> response body as plain JSON
 Getter = Callable[[str, dict[str, str]], dict[str, Any]]
@@ -44,8 +53,15 @@ class GcpError(Exception):
 
 
 def access_token() -> str:
-    token = os.environ.get("GOOGLE_OAUTH_ACCESS_TOKEN", "").strip()
-    return token or _gcloud_token()
+    token = os.environ.get("GOOGLE_OAUTH_ACCESS_TOKEN", "").strip() or _gcloud_token()
+    if not token:
+        raise GcpError("no access token was returned; run `gcloud auth login` and try again")
+    if not is_plain_token(token):
+        raise GcpError(
+            "the Google access token must be plain ASCII text with no spaces; check that it was "
+            "pasted without a smart quote, a dash or a line break"
+        )
+    return token
 
 
 def _gcloud_token() -> str:
@@ -69,34 +85,43 @@ def _gcloud_token() -> str:
 
 
 @contextmanager
-def http_getter(token: str) -> Iterator[Getter]:
-    """A Getter that reuses one connection pool and closes it when the block ends."""
-    with httpx.Client(timeout=60, headers={"Authorization": f"Bearer {token}"}) as client:
+def http_getter(token: str, transport: httpx.BaseTransport | None = None) -> Iterator[Getter]:
+    """A Getter that reuses one connection pool and closes it when the block ends.
+
+    Redirects are not followed, a status of 300 or more is an error, and server text is scrubbed
+    (see core/safe_http.py). `transport` is for tests.
+    """
+    headers = {"Authorization": f"Bearer {token}"}
+    budget = ReadBudget()  # bytes and time for everything read through this getter
+    with httpx.Client(
+        timeout=60, headers=headers, transport=transport, follow_redirects=False
+    ) as client:
 
         def get(url: str, params: dict[str, str]) -> dict[str, Any]:
-            try:
-                response = client.get(url, params=params)
-            except httpx.HTTPError as exc:
-                raise GcpError(f"could not reach Google Cloud: {type(exc).__name__}") from exc
-            if response.status_code >= 400:
-                try:
-                    message = str(response.json().get("error", {}).get("message", ""))
-                except ValueError:
-                    message = ""
-                raise GcpError(
-                    f"Google Cloud returned {response.status_code}: {printable(message, 300)}"
-                )
-            body = response.json()
-            return body if isinstance(body, dict) else {}
+            return get_json(client, url, params, token, GcpError, SERVICE, budget)
 
         yield get
 
 
-def _list_all(get: Getter, project: str, key: str) -> list[dict[str, Any]]:
-    url = f"{API}/projects/{project}/{READ_PATHS[key]}"
+class PageBudget:
+    """Pages left for the whole run, shared by every list so the total is bounded."""
+
+    def __init__(self, pages: int) -> None:
+        self.left = pages
+
+    def spend(self) -> None:
+        if self.left <= 0:
+            raise GcpError(f"more than {MAX_TOTAL_PAGES} pages in total; stopped")
+        self.left -= 1
+
+
+def _list_all(get: Getter, project: str, key: str, budget: PageBudget) -> list[dict[str, Any]]:
+    version = API_VERSIONS.get(key, DEFAULT_VERSION)
+    url = f"{API}/{version}/projects/{project}/{READ_PATHS[key]}"
     items: list[dict[str, Any]] = []
     params: dict[str, str] = {"pageSize": "100"}
     for _ in range(MAX_PAGES):
+        budget.spend()
         page = get(url, params)
         found = page.get(key, [])
         if isinstance(found, list):
@@ -108,12 +133,18 @@ def _list_all(get: Getter, project: str, key: str) -> list[dict[str, Any]]:
     raise GcpError(f"more than {MAX_PAGES} pages of {key}; stopped")
 
 
+def _shown(item: dict[str, Any]) -> str:
+    """The display name, or the resource id tail when the name looks like an address or token."""
+    tail = str(item.get("name", "")).rsplit("/", 1)[-1]
+    return safe_name(str(item.get("displayName", "")), tail, 100)
+
+
 def _channel_summary(channel: dict[str, Any]) -> dict[str, Any]:
     """Keep what is needed to plan destinations; drop labels (addresses, URLs) and secrets."""
     return {
         "name": channel.get("name", ""),
         "type": channel.get("type", ""),
-        "displayName": channel.get("displayName", ""),
+        "displayName": _shown(channel),
         "enabled": channel.get("enabled", True),
     }
 
@@ -122,10 +153,10 @@ def _uptime_summary(check: dict[str, Any]) -> dict[str, Any]:
     http = check.get("httpCheck") if isinstance(check.get("httpCheck"), dict) else {}
     return {
         "name": check.get("name", ""),
-        "displayName": check.get("displayName", ""),
+        "displayName": _shown(check),
         "period": check.get("period", ""),
         "kind": "http" if http else ("tcp" if "tcpCheck" in check else "other"),
-        "path": http.get("path", "") if http else "",
+        "path": safe_path(str(http.get("path", ""))) if http else "",
         "monitoredResource": check.get("monitoredResource", {}).get("type", "")
         if isinstance(check.get("monitoredResource"), dict)
         else "",
@@ -139,35 +170,40 @@ class ExtractResult:
     conditions: int = 0
     channels: int = 0
     uptime_checks: int = 0
+    dashboards: int = 0
     warnings: list[str] = field(default_factory=list)
 
 
 def extract(get: Getter, project: str, out: Path) -> ExtractResult:
-    """Write policies/, channels/ and uptime-checks/ under `out` (a new or empty folder)."""
+    """Write policies/, channels/, uptime-checks/ and dashboards/ under a new or empty `out`."""
     if not PROJECT_ID.match(project):
         raise ValueError("--project must be a Google Cloud project id such as my-project-123")
     if out.exists() and any(out.iterdir()):
         raise ValueError(f"{out} already has files; pass a new folder")
     result = ExtractResult(project)
-    policies = _list_all(get, project, "alertPolicies")
+    budget = PageBudget(MAX_TOTAL_PAGES)
+    policies = _list_all(get, project, "alertPolicies", budget)
     result.policies = len(policies)
     result.conditions = sum(len(p.get("conditions", [])) for p in policies)
     optional: dict[str, list[dict[str, Any]]] = {}
     for key, summarise in (
         ("notificationChannels", _channel_summary),
         ("uptimeCheckConfigs", _uptime_summary),
+        ("dashboards", dict),  # layout and queries only, no secrets: kept whole
     ):
         try:
-            optional[key] = [summarise(i) for i in _list_all(get, project, key)]
+            optional[key] = [summarise(i) for i in _list_all(get, project, key, budget)]
         except GcpError as exc:
             result.warnings.append(f"{key}: {exc}")
             optional[key] = []
     result.channels = len(optional["notificationChannels"])
     result.uptime_checks = len(optional["uptimeCheckConfigs"])
+    result.dashboards = len(optional["dashboards"])
     for folder, name, data in (
         ("policies", "policies.json", policies),
         ("channels", "channels.json", optional["notificationChannels"]),
         ("uptime-checks", "uptime-checks.json", optional["uptimeCheckConfigs"]),
+        ("dashboards", "dashboards.json", optional["dashboards"]),
     ):
         text = json.dumps(data, indent=2) + "\n"
         if len(text) > MAX_INPUT_BYTES:

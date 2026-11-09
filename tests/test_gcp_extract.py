@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from importer.cli import app
 from importer.sources.gcp import extract as gx
+from importer.sources.gcp.dashboard_models import load_dashboards
 from importer.sources.gcp.extract import GcpError, extract
 from importer.sources.gcp.models import load_policies
 
@@ -17,6 +18,13 @@ POLICY = {
     "displayName": "cpu",
     "combiner": "OR",
     "conditions": [{"displayName": "c", "conditionThreshold": {}}],
+}
+
+
+DASHBOARD = {
+    "name": "projects/my-project/dashboards/d1",
+    "displayName": "Ops",
+    "gridLayout": {"widgets": [{"title": "n", "text": {"content": "hi"}}]},
 }
 
 
@@ -47,6 +55,8 @@ class Fake:
                     }
                 ]
             }
+        if url.endswith("dashboards"):
+            return {"dashboards": [DASHBOARD]}
         return {
             "uptimeCheckConfigs": [
                 {
@@ -63,7 +73,7 @@ class Fake:
         }
 
 
-def test_reads_all_pages_and_writes_three_folders(tmp_path: Path) -> None:
+def test_reads_all_pages_and_writes_the_folders(tmp_path: Path) -> None:
     fake = Fake()
     result = extract(fake, "my-project", tmp_path / "out")
     assert (result.policies, result.conditions, result.channels, result.uptime_checks) == (
@@ -126,3 +136,18 @@ def test_the_http_client_is_closed_when_the_block_ends() -> None:
     # a second use of the same context manager builds a fresh client and closes it too
     with gx.http_getter("token"):
         pass
+
+
+def test_dashboards_come_from_the_v1_api_and_round_trip_to_the_converter(tmp_path: Path) -> None:
+    fake = Fake()
+    result = extract(fake, "my-project", tmp_path / "out")
+    urls = [u for u, _ in fake.calls if u.endswith("dashboards")]
+    assert urls == ["https://monitoring.googleapis.com/v1/projects/my-project/dashboards"]
+    assert result.dashboards == 1
+    assert [d.displayName for d in load_dashboards(tmp_path / "out" / "dashboards")] == ["Ops"]
+
+
+def test_a_dashboard_failure_only_warns(tmp_path: Path) -> None:
+    result = extract(Fake(fail="dashboards"), "my-project", tmp_path / "out")
+    assert result.dashboards == 0 and result.policies == 2
+    assert any(w.startswith("dashboards:") for w in result.warnings)

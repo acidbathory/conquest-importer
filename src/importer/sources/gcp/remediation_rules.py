@@ -64,9 +64,39 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^uptime check inventory \(http\)"),
+        "Uptime check (HTTP)",
+        [
+            "Create a Synthetics ping monitor for the check's URL (the host is in the Google "
+            "check, not in the export) with the run frequency in the report. Use a scripted API "
+            "monitor instead if the Google check had content matchers or a required status.",
+        ],
+    ),
+    (
+        re.compile(r"^uptime check inventory \(tcp\)"),
+        "Uptime check (TCP)",
+        [
+            "New Relic Synthetics has no TCP-only monitor that this tool knows of (not "
+            "confirmed). If the service has an HTTP health endpoint, make a ping monitor on it. "
+            "Otherwise keep the TCP check in Google, or watch the service with an infrastructure "
+            "or network check.",
+        ],
+    ),
+    (
+        re.compile(r"^uptime check inventory \(other\)"),
+        "Uptime check (other kind)",
+        [
+            "This check is not a plain HTTP or TCP check (for example a group check). Look at "
+            "what it watches in Google and create a ping or scripted monitor per target, or "
+            "one monitor per member of the group.",
+        ],
+    ),
+    (
         re.compile(r"uptime check"),
         "Uptime check alert",
         [
+            "`importer convert-gcp-uptime` lists every uptime check with its path, period and "
+            "the monitor to create; do that first.",
             "The alert watches an uptime check, and uptime checks are not migrated. Recreate the "
             "check as a New Relic Synthetics monitor (a ping monitor for a URL, a scripted API "
             "monitor for a request with assertions), choosing the same locations.",
@@ -126,11 +156,106 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^email channel: the address is not exported"),
+        "Email channel",
+        [
+            "Create an email destination in New Relic (Alerts, Destinations) with the address "
+            "from the Google channel, then a channel for it, and add it to the workflow listed "
+            "in the notification report.",
+        ],
+    ),
+    (
+        re.compile(r"^webhook channel: the url and token"),
+        "Webhook channel with a token",
+        [
+            "Create a webhook destination with the URL, and add the token as a custom header "
+            "(Google does not return it, so take it from the receiving service). Then add the "
+            "channel to the workflow listed in the notification report.",
+        ],
+    ),
+    (
+        re.compile(r"^webhook channel: the url, user name and password"),
+        "Webhook channel with basic authentication",
+        [
+            "Create a webhook destination with the URL and basic authentication, entering the "
+            "user name and password again (Google does not return the password). Then add the "
+            "channel to the workflow listed in the notification report.",
+        ],
+    ),
+    (
+        re.compile(r"^slack channel: connecting slack"),
+        "Slack channel",
+        [
+            "In New Relic, create a Slack destination; it opens a one-time OAuth in Slack that a "
+            "Slack admin has to approve. Pick the same Slack channel, then add it to the "
+            "workflow listed in the notification report.",
+        ],
+    ),
+    (
+        re.compile(r"^pagerduty channel: the service key"),
+        "PagerDuty channel",
+        [
+            "Create a PagerDuty destination in New Relic with the service key from the PagerDuty "
+            "service (Google does not return it), then add it to the workflow listed in the "
+            "notification report.",
+        ],
+    ),
+    (
+        re.compile(r"^channel type has no new relic destination"),
+        "Channel type without a New Relic destination",
+        [
+            "New Relic has no destination for this kind of channel (SMS, Pub/Sub, Google mobile "
+            "app and the retired chat tools). Choose email, Slack, PagerDuty or a webhook that "
+            "reaches the same people, and add it to the workflow listed in the notification "
+            "report. A webhook can call a small receiver that forwards to Pub/Sub or SMS.",
+        ],
+    ),
+    (
+        re.compile(r"^channel is not in the export"),
+        "Channel missing from the export",
+        [
+            "The policy names a channel that channels.json does not list (deleted, or the "
+            "export could not read it). Decide whether the policy still needs a notification; "
+            "if so, create the destination by hand and add it to the workflow.",
+        ],
+    ),
+    (
+        re.compile(r"(mql|promql|ratio|sql) queries in widgets"),
+        "Dashboard query in another language",
+        [
+            "Write the chart's query in NRQL over the matching `gcp.` metrics (a ratio is one "
+            "query that divides two sums), or build it in the New Relic query builder, and add "
+            "it to the dashboard as a chart.",
+        ],
+    ),
+    (
+        re.compile(r"^dashboard widget type is not supported"),
+        "Dashboard widget type not converted",
+        [
+            "Rebuild the widget by hand. A logs panel becomes a table or chart over `Log` (the "
+            "logs must be forwarded); an alert chart or incident list becomes an issues widget "
+            "or a link to the alerts page; a section header or collapsible group becomes a "
+            "markdown widget.",
+        ],
+    ),
+    (
+        re.compile(
+            r"^(text )?widget (has no (query|content)|query is not recognised|could not be read)"
+        ),
+        "Widget without a usable query",
+        [
+            "Open the widget in Cloud Monitoring and note what it shows. If it matters, "
+            "recreate it in New Relic from the metric it reads; if it is empty, leave it out.",
+        ],
+    ),
+    (
         re.compile(r"notification channels must be configured manually"),
         "Notification channels",
         [
             "Recreate each channel as a New Relic destination and add it to a workflow. "
             "Secrets (tokens and passwords) are never returned by Google, so enter them again.",
+            "`importer convert-gcp-notifications` lists the channel sets, the conditions each "
+            "routes and the steps per channel.",
         ],
     ),
 ]
