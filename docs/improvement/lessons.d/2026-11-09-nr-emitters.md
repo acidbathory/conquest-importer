@@ -1,0 +1,11 @@
+## 2026-11-09: cycle `nr-emitters`
+
+| Defect | How it hid | Check that catches the class |
+|---|---|---|
+| A new field on the shared plan model changed the Google notification plan files | The Google writer dumps the whole model, so every new field with a default appears in the file. The AWS and Dynatrace writers drop defaults and showed nothing | `tests/test_emitter_byte_identity.py` pins the sha256 of every file the converters write for every fixture folder. It failed on the first new field. The plan models now drop new fields at their default in their own serializer, so the writer no longer matters |
+| The same applies to saved IR: a new optional field on `IRMonitor` would have added `"emit": null` to every `ir/*.json` | The IR is dumped whole | `IRMonitor` drops `emit` when it is unset; the same hash test covers `ir/` |
+| Defaults that change output are easy to flip by accident while adding an option | An option and its default are written in the same edit | Each default lives in one frozen `EmitDefaults` in `core/emit/common.py`. Flipping one changes the hash test, and the proposal lists the files that move |
+| An emitter limit that New Relic enforces (two terms, 30 s to 48 h loss of signal, 256 character title) was only discovered by the API error | The limits were not in the code | `check_limits` raises `CannotEmit` with fixed wording and `core/emit_limits_rules.py` gives each wording a remediation rule, so a person gets steps |
+| Terraform attributes written from memory can be wrong for the installed provider | The tests compared strings, not the schema | `tests/fixtures/provider-schema-extract.json` is taken from `terraform providers schema -json`; `tests/hcl_schema.py` checks emitted blocks for unknown or missing attributes and blocks |
+| A comment in generated Terraform could carry untrusted text | Reasons are built from source values | Reasons for objects that are not emitted use fixed wording and numbers only; names and values never go into a comment |
+| Item 3 (muting rules) was written and run in the same step | The fixer slipped on test-first | The tests failed to import before the module existed only for items 1, 2 and 4. For item 3 the tests were run after the code, so they have not been shown to fail without it |

@@ -98,7 +98,8 @@ Workflows are created disabled.
 
 | Not migrated | Why | Fix |
 |---|---|---|
-| SMS, Lambda, SQS, mobile push, Firehose | No New Relic equivalent | Use email, webhook, Slack or PagerDuty |
+| SMS, mobile push | No New Relic equivalent | Use email, webhook, Slack or PagerDuty |
+| Lambda, SQS, Firehose | Reached through a New Relic EventBridge destination, which needs steps in AWS | The plan lists them as a manual EventBridge destination: associate the partner event source with an event bus and add a rule that targets the function, queue or stream |
 | Plain `http` endpoints | Not secure | Put the endpoint behind https |
 | Unconfirmed subscriptions | Not active in AWS | Confirm or delete them, then re-run |
 
@@ -247,16 +248,18 @@ the converter was built from scrubbed copies of three real objects and a few han
   dynatrace --topics out/dynatrace --out out/dynatrace/notifications` writes one plan per Davis
   workflow, a report and Terraform. Email recipients become email destinations and channels (the
   addresses are in the plan and Terraform only, not the report). Slack, PagerDuty, Jira,
-  Teams, ServiceNow and HTTP tasks become manual entries with the closest New Relic destination
+  Teams (MICROSOFT_TEAMS, after the New Relic app is installed in Teams), ServiceNow
+  (SERVICE_NOW_APP), Opsgenie (a webhook that needs a vendor payload template) and HTTP tasks
+  become manual entries with the closest New Relic destination
   type and the steps for the secret or sign-in; anything else is manual with a reason. Entity tags
-  on the trigger become issue-filter predicates (`tags.<name>`, unverified in New Relic) and a
+  on the trigger become issue-filter predicates (`accumulations.tag.<name>`, unverified in New Relic) and a
   disabled workflow is planned only when there is such a filter; Davis categories, a custom
   filter, the severity threshold and notify-on-close are notes. Every plan is marked as needing
   review. `apply-notifications` creates a planned workflow with its destinations only when you
   add `--include-needs-review` to `--apply`; its dry run prints how many plans need review. A plan
   with destinations but no workflow (no mappable filter) gets its destinations and channels only
-  through `notifications.tf`; `apply-notifications` creates nothing for it. `tags.NAME` is
-  unverified in New Relic. `matchesValue()` and `in()` may ignore case or match inside arrays in
+  through `notifications.tf`; `apply-notifications` creates nothing for it.
+  `accumulations.tag.NAME` is unverified in a live account. `matchesValue()` and `in()` may ignore case or match inside arrays in
   Dynatrace (UNVERIFIED, from memory), so a converted condition carries a note.
 - **Service level plans for SLOs:** `importer plan-service-levels --in out/dynatrace --out
   out/dynatrace/service-levels` writes one plan per SLO with the target, the period (only 1, 7 or

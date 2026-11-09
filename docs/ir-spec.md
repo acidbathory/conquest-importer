@@ -20,6 +20,7 @@ Source JSON -> source models -> [translate] -> IRMonitor -> [emit] -> NerdGraph 
 | `confidence` | `exact`, `approximate`, `manual`, `unsupported` |
 | `reasons` | Why the confidence is below exact. Every downgrade must add a reason |
 | `unmapped` | Source fields and options we did not translate. Kept so nothing is silently dropped |
+| `emit` | Optional New Relic condition settings, left out of the saved IR when unset: `aggregation_method` (EVENT_FLOW, EVENT_TIMER, CADENCE), `aggregation_timer_seconds`, `fill_option` and `fill_value`, `slide_by_seconds`, `violation_time_limit_seconds`, `title_template`, `runbook_url`, `ignore_on_expected_termination`, and `null_safe_count` with `null_safe_scope`. Unset means the emitter default in `core/emit/common.py` (`EmitDefaults`), which reproduces the earlier output byte for byte. Bounds are checked at emission and a value New Relic would reject becomes a "not emitted" reason |
 
 ## Confidence rules
 - **exact:** converted with no caveats. Still subject to the global notes in the report.
@@ -65,3 +66,11 @@ Input is the JSON from `gcloud alpha monitoring policies list --format=json`. On
 - **Metric names** follow New Relic's documented rule (`gcp.<service>.<metric path>`). No suffix is added; Google's own counter names already end in `_count`. Names for Compute Engine and Pub/Sub are confirmed on live data (see `docs/research/gcp-metric-names-verified.md`), the rest are not. Counter conditions use a window of at least 300 seconds because New Relic polls every 5 minutes.
 - **Log-match conditions** with plain terms become a count of `Log` events. Severity ranges (`severity>=ERROR`) become a list of levels. OR and regular expressions stay manual.
 - **Absence, MQL, PromQL, SQL, ratio and forecast** conditions are manual with steps. Notification channels are listed, never migrated.
+
+## Notification and muting IR
+
+Defined in `core/notification_ir.py` and `core/muting_ir.py`.
+
+- **Destinations.** `NrDestination` is one destination plus the one channel that uses it, for any of the 14 New Relic types (`DestinationType`). `SPECS` holds, per type, the channel type (SERVICE_NOW has channel SERVICENOW_INCIDENTS, JIRA has JIRA_CLASSIC), the destination and channel property keys with required flags, the allowed auth kinds (none, basic, token, custom header, OAuth), whether a script may create it, and the manual steps a person must do (Slack OAuth, installing the New Relic app in Teams, installing the ServiceNow application, the AWS side of EventBridge). Unknown properties are refused. A secret field holds a `SecretRef` (a name), never a value; Terraform shows `var.<name>` as a sensitive variable and NerdGraph needs the value passed in. Plans carry these in `typed_destinations`, after the email and webhook `destinations` in the index space of a workflow.
+- **Workflows.** `PlannedWorkflow` has predicates (use `tag_predicate` for entity tags: `accumulations.tag.NAME`), and optional `notification_triggers`, `muting_rules_handling` and up to two `enrichments`. `workflow_violations` and `plan_violations` report what New Relic would reject: an issue filter over 4,096 characters, more than two enrichments, a channel used twice in a workflow, a destination index that does not exist, more than 1,000 workflows.
+- **Muting rules.** `MutingRule` has a group of conditions (attribute, operator, values; at most 20 conditions and 500 values) and an optional schedule: local start and end time, IANA time zone, daily, weekly or monthly repeat, weekdays, and an end date or a repeat count. Terraform (`newrelic_alert_muting_rule`) and NerdGraph are emitted by `core/emit/muting.py`. Rules are disabled by default.
