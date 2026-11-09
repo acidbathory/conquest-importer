@@ -233,7 +233,7 @@ def test_a_value_with_a_pipe_and_a_quote_reaches_nrql_escaped() -> None:
         'fetch logs | filter a == "b" | summarize n = avg(x)',
         'fetch logs | filter a != "b" | summarize n = count()',
         'fetch logs | filter a == "b" or c == "d" | summarize n = count()',
-        'fetch logs | filter contains(a, "b") | summarize n = count()',
+        'fetch logs | filter matchesPhrase(a, "b") | summarize n = count()',
         'fetch logs | filter a == "b" | join [fetch logs] , on:{a} | summarize n = count()',
         'fetch logs | filter a == "b" | summarize count()',
         'fetch logs, from:now() - 2d | filter a == "b" | summarize n = count()',

@@ -48,7 +48,10 @@ RULES: list[Rule] = [
         re.compile(r"dql query"),
         "DQL query not converted",
         [
-            "Only a log count with equality filters converts. Read the DQL in the workflow and "
+            'Only a log count converts, with filters of the form field == "v", contains(), '
+            "matchesValue() or in() joined by and, and one count() with no by: grouping. "
+            "A contains() text with %, * or _ stays manual (LIKE would read it as a wildcard). "
+            "Read the DQL in the workflow and "
             "rewrite it as NRQL over the matching New Relic data: logs as `FROM Log`, metrics "
             "as `FROM Metric` (the metric names differ; check them in the data explorer), "
             "then set the threshold and window from the workflow's comparison and schedule.",
