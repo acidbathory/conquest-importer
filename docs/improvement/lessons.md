@@ -3,6 +3,15 @@
 One entry per defect class. Each says what happened and the check that stops it coming back.
 New entries go on top.
 
+## 2026-11-09: cycle `dynatrace-phase1`
+
+| Defect | How it hid | Check that catches the class |
+|---|---|---|
+| A manual reason written with the words "not confirmed" was sorted as "unverified names" instead of "unsupported query" | The taxonomy is first-match over the whole sentence, and the test only covered the old reasons | `test_the_new_manual_reasons_are_unsupported_query`: every new reason has a category test. Next: one generic test that classifies every reason constant a source module defines |
+| A plan file written with extra fields would be read back by code that knew only the old model, which drops unknown fields | Pydantic ignores extra input, so the apply step would have built a workflow with the wrong filter | The new fields live on the shared plan model, with defaults, and the writer omits defaults, so one model reads and writes every plan. Byte-for-byte fixture test of the AWS output |
+| An adversarial test string that was in fact valid input | The test asserted "raises" for a 100,000-character string that is a legal (long) value | Speed tests assert the time bound, not the outcome, unless the case is known to be invalid |
+| The same count-query helper written a second time in a source package that may not import from another | `check-gcp-data` and the Dynatrace check need the same result type and report | The helper now lives in `core/data_check.py`. The Google module still has its own copy (owned by another thread); move it on the next merge |
+
 ## 2026-11-09: cycle `gcp-absence`
 
 | Defect | How it hid | Check that catches the class |

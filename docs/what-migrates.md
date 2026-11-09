@@ -191,7 +191,7 @@ accepts the JSON of `gcloud alpha monitoring policies list --format=json`.
   [the verification note](research/gcp-metric-names-verified.md), including one metric (VM CPU
   utilization) that did not arrive in New Relic.
 
-### Dynatrace (phase 0)
+### Dynatrace (phases 0 and 1)
 
 `importer extract-dynatrace --out <folder>` reads workflows and SLOs from a Dynatrace Platform
 tenant (read-only; `DYNATRACE_ENV_URL` and `DYNATRACE_API_TOKEN` in `.env`), and `--source
@@ -199,24 +199,53 @@ dynatrace` converts them. Nothing here has been run against a tenant that has wo
 the converter was built from scrubbed copies of three real objects and a few hand-made ones.
 
 - **Converts (approximate):** a scheduled workflow with one `execute-dql-query` task of the form
-  `fetch logs[, from:now() - Nm|Nh] | filter field == "value" [and ...] | summarize n = count()`,
-  and notify tasks gated by `result("task")["records"][0]["n"] > N` (also `>=`, `<`, `<=`). It
+  `fetch logs[, from:now() - Nm|Nh] | filter <test> [and <test> ...] | summarize n = count()`,
+  where a test is `field == "v"`, `contains(field, "v")`, `matchesValue(field, "v")`,
+  `matchesValue(field, {"a", "b"})`, `in(field, "a", "b")` or `in(field, array("a", "b"))`
+  (they become `=`, `LIKE '%v%'`, `=` and `IN`), and notify tasks gated by `result("task")["records"][0]["n"] > N` (also `>=`, `<`, `<=`). It
   becomes a New Relic count of `Log` events with that threshold. The window is the query's time
   range (the threshold counts that much log), or the schedule interval when the query has none;
   one hour at most, otherwise the workflow stays manual.
 - **Caveats on a converted workflow:** the logs must be forwarded to New Relic and the attribute
   names must match them; the mapping of `loglevel` to `level` is not confirmed. Dynatrace ran the
   query on a schedule and New Relic evaluates continuously. A below condition may not fire on an
-  empty result. Notification tasks are listed but not converted. An inactive trigger or a draft
+  empty result. `contains()` is case-sensitive in Dynatrace and how LIKE treats case in New
+  Relic was not checked, so a note says matches may differ. Notification tasks are listed but not converted. An inactive trigger or a draft
   (not deployed) workflow is noted and the condition is created disabled. A notify task that
   runs on a state other than OK keeps the workflow manual.
-- **Manual, with steps:** any other DQL (metrics, several summaries, joins, other functions),
+- **Manual, with steps:** any other DQL (metrics, several summaries, a `by:` grouping, a
+  `contains()` text with `%`, `*` or `_`, a `matchesValue()` with `*`, joins, other functions),
   other task layouts, schedules longer than one hour, manual and non-Davis event triggers, Davis
-  problem workflows (these are notification routes: recreate the destination, channel and a
-  workflow filtered on issue priority or tags) and every SLO (the criteria are listed; rebuild as
-  a New Relic service level).
+  problem workflows and every SLO. The last two now come with a plan, below.
+- **Notification plans for Davis problem workflows:** `importer convert-notifications --source
+  dynatrace --topics out/dynatrace --out out/dynatrace/notifications` writes one plan per Davis
+  workflow, a report and Terraform. Email recipients become email destinations and channels (the
+  addresses are in the plan and Terraform only, not the report). Slack, PagerDuty, Jira,
+  Teams, ServiceNow and HTTP tasks become manual entries with the closest New Relic destination
+  type and the steps for the secret or sign-in; anything else is manual with a reason. Entity tags
+  on the trigger become issue-filter predicates (`tags.<name>`, unverified in New Relic) and a
+  disabled workflow is planned only when there is such a filter; Davis categories, a custom
+  filter, the severity threshold and notify-on-close are notes. Every plan is marked as needing
+  review. `apply-notifications` creates a planned workflow with its destinations only when you
+  add `--include-needs-review` to `--apply`; its dry run prints how many plans need review. A plan
+  with destinations but no workflow (no mappable filter) gets its destinations and channels only
+  through `notifications.tf`; `apply-notifications` creates nothing for it. `tags.NAME` is
+  unverified in New Relic. `matchesValue()` and `in()` may ignore case or match inside arrays in
+  Dynatrace (UNVERIFIED, from memory), so a converted condition carries a note.
+- **Service level plans for SLOs:** `importer plan-service-levels --in out/dynatrace --out
+  out/dynatrace/service-levels` writes one plan per SLO with the target, the period (only 1, 7 or
+  28 days map; unverified) and notes, a report, and a commented-out `newrelic_service_level`
+  skeleton. The good and valid event queries are TODO: the indicator reads Dynatrace metrics
+  that do not exist in New Relic, and no data path is invented. A warning level is dropped with a
+  note. Nothing is created.
+- **Checks:** `importer doctor --source dynatrace` checks the token and tenant address offline
+  (no network call) and warns when `SSL_CERT_FILE` is not set. `importer check-dynatrace-data
+  --alerts out/dynatrace/alerts --nr-account-id <id>` asks New Relic whether matching `Log` events
+  exist for each converted condition (read-only). Exit 2 means a condition had no matching
+  events in the window; that is not proof it is broken, because the event may simply not have
+  occurred in those hours.
 - **Not done:** classic alerting profiles and problem notifications, anomaly detectors,
-  dashboards, service level creation, and any check that the converted query returns data.
+  dashboards, service level creation, and routing a converted condition to its notification plan.
 - **Sequence:** `importer extract-dynatrace --out out/dynatrace`, then `importer convert
   --source dynatrace --in out/dynatrace --out out/dynatrace/alerts`, then `importer report
   out/dynatrace --source dynatrace` (the report reads `alerts/` inside the folder you give it).

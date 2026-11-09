@@ -1,0 +1,1 @@
+{"TopicArn":"arn:aws:sns:us-east-1:123456789012:ops-alerts","Subscriptions":[{"Protocol":"email","Endpoint":"ops@example.com","SubscriptionArn":"arn:aws:sns:x:1:t:abc"},{"Protocol":"sms","Endpoint":"+15550100","SubscriptionArn":"arn:aws:sns:x:1:t:abc"},{"Protocol":"https","Endpoint":"https://h.example.com/x","SubscriptionArn":"arn:aws:sns:x:1:t:abc"}]}

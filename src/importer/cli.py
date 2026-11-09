@@ -41,7 +41,7 @@ from importer.core.ir import Confidence, IRMonitor
 from importer.core.manifest import CreatedObject, Kind, Manifest, load_manifest, save_manifest
 from importer.core.migration_summary import Kind as AssetKind
 from importer.core.migration_summary import Summary, load_summary
-from importer.core.notification_ir import NotificationPlan, build_plan
+from importer.core.notification_ir import NotificationPlan, build_plan, plan_json
 from importer.core.report import build_report, md_cell
 from importer.core.report_html import PROFILES, render_report
 from importer.core.rollback import rollback
@@ -67,11 +67,18 @@ from importer.sources.cloudwatch.models import load_alarms
 from importer.sources.cloudwatch.notifications import load_topics, routing, translate_topic
 from importer.sources.cloudwatch.streaming import streaming_inputs
 from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
+from importer.sources.dynatrace import data_check as dynatrace_data
 from importer.sources.dynatrace.extract import DynatraceError
 from importer.sources.dynatrace.extract import api_token as dynatrace_api_token
 from importer.sources.dynatrace.extract import environment_url as dynatrace_env_url
 from importer.sources.dynatrace.extract import extract as extract_dynatrace
 from importer.sources.dynatrace.extract import http_getter as dynatrace_getter
+from importer.sources.dynatrace.models import load_slos as load_dynatrace_slos
+from importer.sources.dynatrace.models import load_workflows as load_dynatrace_workflows
+from importer.sources.dynatrace.notifications import davis_plans
+from importer.sources.dynatrace.notifications import render_report as dynatrace_notification_report
+from importer.sources.dynatrace.service_levels import render_report as service_level_report
+from importer.sources.dynatrace.service_levels import service_level_plans, service_levels_terraform
 from importer.sources.gcp import data_check as gcp_data
 from importer.sources.gcp.extract import GcpError, access_token, http_getter
 from importer.sources.gcp.extract import extract as extract_gcp
@@ -160,13 +167,13 @@ def convert(
 def doctor(
     region: Annotated[str, typer.Option(help="AWS region to check")] = "us-east-1",
     profile: Annotated[str | None, typer.Option(help="AWS profile name")] = None,
-    source: Annotated[str, typer.Option(help="cloudwatch or gcp: which sign-in to check")] = (
-        "cloudwatch"
-    ),
+    source: Annotated[
+        str, typer.Option(help="cloudwatch, gcp or dynatrace: which sign-in to check")
+    ] = "cloudwatch",
 ) -> None:
     """Check that the tools and sign-in a run needs are in place. Read-only."""
-    if source not in ("cloudwatch", "gcp"):
-        typer.echo("Error: --source must be cloudwatch or gcp", err=True)
+    if source not in ("cloudwatch", "gcp", "dynatrace"):
+        typer.echo("Error: --source must be cloudwatch, gcp or dynatrace", err=True)
         raise typer.Exit(code=1)
     try:
         checks = run_checks(region, profile, source=source)
@@ -363,6 +370,38 @@ def gcp_link_terraform_command(
     typer.echo("Next: review it, set NEW_RELIC_API_KEY, then `terraform init && terraform apply`.")
 
 
+def _run_data_check[C](
+    alerts: Path,
+    nr_account_id: int,
+    nr_region: str,
+    hours: int,
+    out: Path | None,
+    check_all: Callable[[NewRelicClient, int, list[IRMonitor], int], list[C]],
+    render_report: Callable[[list[C], int], str],
+    has_blind: Callable[[list[C]], bool],
+) -> None:
+    """Shared body of the data checks: read the IR, ask New Relic, report, exit 2 if blind."""
+    if not nr_account_id or not 1 <= hours <= 168:
+        typer.echo("Error: --nr-account-id is required and --hours must be 1 to 168", err=True)
+        raise typer.Exit(code=1)
+    try:
+        monitors = [
+            IRMonitor.model_validate_json(p.read_text())
+            for p in sorted((alerts / "ir").glob("*.json"))
+        ]
+        with NewRelicClient(require_env("NEW_RELIC_API_KEY"), nr_region) as client:
+            checks = check_all(client, nr_account_id, monitors, hours)
+    except (NewRelicAPIError, ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    text = render_report(checks, hours)
+    typer.echo(text)
+    if out:
+        out.write_text(text)
+    if has_blind(checks):
+        raise typer.Exit(code=2)
+
+
 @app.command("check-gcp-data")
 def check_gcp_data_command(
     alerts: Annotated[Path, typer.Option(help="Output folder of `convert` (has ir/)")] = Path(
@@ -378,25 +417,43 @@ def check_gcp_data_command(
     A condition on a metric that never arrives would look healthy and never fire. Exits with
     code 2 if any converted condition has no data.
     """
-    if not nr_account_id or not 1 <= hours <= 168:
-        typer.echo("Error: --nr-account-id is required and --hours must be 1 to 168", err=True)
-        raise typer.Exit(code=1)
-    try:
-        monitors = [
-            IRMonitor.model_validate_json(p.read_text())
-            for p in sorted((alerts / "ir").glob("*.json"))
-        ]
-        with NewRelicClient(require_env("NEW_RELIC_API_KEY"), nr_region) as client:
-            checks = gcp_data.check_all(client, nr_account_id, monitors, hours)
-    except (NewRelicAPIError, ValueError, OSError) as exc:
-        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
-        raise typer.Exit(code=1) from None
-    text = gcp_data.render(checks, hours)
-    typer.echo(text)
-    if out:
-        out.write_text(text)
-    if gcp_data.has_blind_conditions(checks):
-        raise typer.Exit(code=2)
+    _run_data_check(
+        alerts,
+        nr_account_id,
+        nr_region,
+        hours,
+        out,
+        gcp_data.check_all,
+        gcp_data.render,
+        gcp_data.has_blind_conditions,
+    )
+
+
+@app.command("check-dynatrace-data")
+def check_dynatrace_data_command(
+    alerts: Annotated[Path, typer.Option(help="Output folder of `convert` (has ir/)")] = Path(
+        "out/dynatrace/alerts"
+    ),
+    nr_account_id: Annotated[int, typer.Option(help="New Relic account id to query")] = 0,
+    nr_region: Annotated[str, typer.Option(help="us or eu")] = "us",
+    hours: Annotated[int, typer.Option(help="How far back to look (1 to 168)")] = 24,
+    out: Annotated[Path | None, typer.Option(help="Also write the markdown report here")] = None,
+) -> None:
+    """Check that log events matching each converted Dynatrace condition reach New Relic.
+
+    Read-only. Exit code 2 means a condition had no matching events in the window. That is
+    not proof the condition is broken: the event may not have occurred in those hours.
+    """
+    _run_data_check(
+        alerts,
+        nr_account_id,
+        nr_region,
+        hours,
+        out,
+        dynatrace_data.check_all,
+        dynatrace_data.render_report,
+        dynatrace_data.has_blind_conditions,
+    )
 
 
 @app.command("improve-measure", hidden=True)
@@ -620,11 +677,43 @@ def apply_dashboards_command(
         _partial_failure()
 
 
+def _convert_dynatrace_notifications(export: Path, out: Path, prefix: str) -> None:
+    try:
+        plans = davis_plans(load_dynatrace_workflows(export), prefix)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    folder = out / "notification-plans"
+    if folder.is_dir() and any(folder.glob("topic-*.json")):
+        typer.echo(
+            f"Error: {folder} already has plans; apply-notifications would read stale ones. "
+            "Pass a new --out folder",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    folder.mkdir(parents=True, exist_ok=True)
+    for n, plan in enumerate(plans, start=1):
+        (folder / f"topic-{n:04d}.json").write_text(plan_json(plan))
+    (out / "report.md").write_text(dynatrace_notification_report(plans))
+    (out / "notifications.tf").write_text(TERRAFORM_HEADER + "\n" + notifications_terraform(plans))
+    made = sum(p.workflow is not None for p in plans)
+    typer.echo(
+        f"Read {len(plans)} Davis problem workflows, planned {made} New Relic workflows; "
+        f"every plan needs review. See {out / 'report.md'}"
+    )
+
+
 @app.command("convert-notifications")
 def convert_notifications(
     topics: Annotated[
-        Path, typer.Option("--topics", help="Folder of exported SNS topics (extract-cloudwatch)")
+        Path,
+        typer.Option(
+            "--topics",
+            help="Folder of exported SNS topics (extract-cloudwatch), or the Dynatrace export "
+            "folder (extract-dynatrace) with --source dynatrace",
+        ),
     ] = Path("out/cloudwatch/notifications"),
+    source: Annotated[str, typer.Option(help="cloudwatch or dynatrace")] = "cloudwatch",
     alerts: Annotated[
         Path, typer.Option("--alerts", help="Output folder of `convert` (has ir/)")
     ] = Path("out/cw"),
@@ -635,7 +724,15 @@ def convert_notifications(
 
     One workflow per topic routes the converted conditions that used it. Offline and read-only.
     Email and https subscriptions migrate; everything else is reported with a reason.
+    With --source dynatrace it plans one set per Davis problem workflow instead (--alerts is not
+    used); every such plan needs review.
     """
+    if source not in ("cloudwatch", "dynatrace"):
+        typer.echo("Error: --source must be cloudwatch or dynatrace", err=True)
+        raise typer.Exit(code=1)
+    if source == "dynatrace":
+        _convert_dynatrace_notifications(topics, out, prefix)
+        return
     try:
         raw_topics = load_topics(topics)
         monitors = [
@@ -659,9 +756,7 @@ def convert_notifications(
         topic = translate_topic(raw)
         plan = build_plan(topic, routes.get(topic.source_key, []), prefix)
         plans.append(plan)
-        (out / "notification-plans" / f"topic-{n:04d}.json").write_text(
-            plan.model_dump_json(indent=2) + "\n"
-        )
+        (out / "notification-plans" / f"topic-{n:04d}.json").write_text(plan_json(plan))
         status = "workflow planned" if plan.workflow else "no workflow"
         lines += [
             f"## {md_cell(printable(topic.name, 80))}",
@@ -685,6 +780,32 @@ def convert_notifications(
     typer.echo(f"Read {len(plans)} topics, planned {made} workflows. See {out / 'report.md'}")
 
 
+@app.command("plan-service-levels")
+def plan_service_levels_command(
+    source: Annotated[
+        Path, typer.Option("--in", help="Dynatrace export folder (extract-dynatrace)")
+    ] = Path("out/dynatrace"),
+    out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/service-levels"),
+) -> None:
+    """Plan New Relic service levels from Dynatrace SLOs. Offline and read-only.
+
+    Writes the target, period and notes for each SLO and leaves the good and valid event queries
+    as TODO: Dynatrace metrics do not exist in New Relic, so a person must choose the data.
+    """
+    try:
+        plans = service_level_plans(load_dynatrace_slos(source))
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    (out / "service-levels").mkdir(parents=True, exist_ok=True)
+    for n, plan in enumerate(plans, start=1):
+        text = plan.model_dump_json(indent=2) + "\n"
+        (out / "service-levels" / f"slo-{n:04d}.json").write_text(text)
+    (out / "report.md").write_text(service_level_report(plans))
+    (out / "service-levels.tf").write_text(service_levels_terraform(plans))
+    typer.echo(f"Planned {len(plans)} service levels; all need review. See {out / 'report.md'}")
+
+
 @app.command("apply-notifications")
 def apply_notifications_command(
     source: Annotated[
@@ -701,10 +822,19 @@ def apply_notifications_command(
     manifest: Annotated[
         Path | None, typer.Option(help="Record of what was created (default: <in>/manifest.json)")
     ] = None,
+    include_needs_review: Annotated[
+        bool,
+        typer.Option(
+            "--include-needs-review",
+            help="Also create plans marked needs_review (Dynatrace plans); a person checked them",
+        ),
+    ] = False,
 ) -> None:
     """Create the planned destinations, channels and (disabled) workflows in New Relic.
 
-    Dry run by default; writing needs the same three guards as `apply`.
+    Dry run by default; writing needs the same three guards as `apply`. A plan marked
+    needs_review (from Dynatrace) is created only with --include-needs-review, and only when it
+    has a workflow: a plan with destinations but no workflow creates nothing here.
     """
     if account_id <= 0:
         typer.echo("Error: --account-id is required", err=True)
@@ -725,9 +855,21 @@ def apply_notifications_command(
                 f"  {printable(plan.workflow.name, 50):50} {len(plan.destinations)} channels, "
                 f"{len(plan.workflow.condition_names)} conditions"
             )
+    review = [p for p in plans if p.needs_review]
+    if review:
+        typer.echo(f"{len(review)} plans need review")
+        bare = sum(p.workflow is None for p in review)
+        if bare:
+            typer.echo(f"{bare} plans have no workflow: nothing is created for them here")
     if not do_apply:
         typer.echo("\nDRY RUN: nothing was sent. Add --apply --confirm-account to create them.")
         return
+    if review and not include_needs_review:
+        typer.echo(
+            f"Error: {len(review)} plans need review; check them, then add --include-needs-review",
+            err=True,
+        )
+        raise typer.Exit(code=1)
     try:
         check_guards(account_id, confirm_account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS"))
         key = require_env("NEW_RELIC_API_KEY")

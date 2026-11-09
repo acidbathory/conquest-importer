@@ -9,13 +9,11 @@ safe to print. `translate` never raises.
 
 import math
 import re
-from dataclasses import dataclass
 from typing import Any
 
 from importer.core.ids import source_id
 from importer.core.ir import (
     Confidence,
-    CountFilter,
     CountSignal,
     IRMonitor,
     Occurrences,
@@ -25,6 +23,7 @@ from importer.core.ir import (
     SignalKind,
     Threshold,
 )
+from importer.sources.dynatrace.dql import CountQuery, DqlError, parse_dql
 from importer.sources.dynatrace.models import DtItem, DtSlo, DtTask, DtWorkflow
 
 DQL_ACTION = "dynatrace.automations:execute-dql-query"
@@ -48,14 +47,7 @@ ACTION_LABELS = (
     ("opsgenie", "opsgenie"),
     ("http", "http request"),
 )
-SECONDS_PER_UNIT = {"m": 60, "h": 3600}
 
-# the only DQL accepted: fetch logs[, from:now() - N(m|h)] | filter <field> == "<value>" [and ...]
-# | summarize <name> = count(). A value has no control characters and only the escapes \" and \\.
-FETCH = re.compile(r"fetch\s+logs(?:\s*,\s*from:\s*now\(\)\s*-\s*(\d+)\s*([mh]))?")
-TERM = r'([A-Za-z_][A-Za-z0-9_.]*)\s*==\s*"((?:[^"\\\x00-\x1f\x7f]|\\["\\])*)"'
-FILTER = re.compile(rf"filter\s+{TERM}(?:\s+(?:and|AND)\s+{TERM})*")
-SUMMARIZE = re.compile(r"summarize\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*count\(\)")
 CONDITION = re.compile(
     r'\{\{\s*result\("([^"]+)"\)\["records"\]\[0\]\["([^"]+)"\]\s*(>=|<=|>|<)\s*'
     r"(-?\d+(?:\.\d+)?)\s*\}\}"
@@ -71,7 +63,6 @@ OTHER_TRIGGER = (
 )
 SHAPE = "workflow tasks are not one DQL query plus notify tasks gated by a condition"
 STATES = "workflow tasks run on a state of the query task other than OK"
-NOT_NARROW = "DQL query is not the supported pattern (fetch logs, equality filters, one count)"
 BAD_THRESHOLD = (
     "the notify condition expression has a threshold that is not a usable number "
     "(a finite number, not below 0)"
@@ -109,69 +100,16 @@ class _Fail(Exception):
         self.reason = reason
 
 
-@dataclass(frozen=True)
-class _Count:
-    """What the narrow DQL pattern means: log filters, the summarize name, and the range."""
-
-    filters: list[CountFilter]
-    name: str
-    lookback_seconds: int
-
-
 def _key(identifier: str, name: str) -> str:
     """A stable key; exports can repeat an id (scrubbed copies do), so the name is part of it."""
     return f"{identifier}/{name}"
 
 
-def _split_pipes(query: str) -> list[str]:
-    """Split on `|` outside double-quoted strings."""
-    parts: list[str] = []
-    current: list[str] = []
-    quoted = escaped = False
-    for char in query:
-        if char == "|" and not quoted:
-            parts.append("".join(current).strip())
-            current = []
-            continue
-        current.append(char)
-        if escaped:
-            escaped = False
-        elif char == "\\" and quoted:
-            escaped = True
-        elif char == '"':
-            quoted = not quoted
-    parts.append("".join(current).strip())
-    return parts
-
-
-def _unescape(value: str) -> str:
-    """Undo the only two escapes the pattern allows (TERM rejects any other)."""
-    return re.sub(r'\\(["\\])', r"\1", value)
-
-
-def parse_dql(query: str) -> _Count:
-    """Parse the narrow log-count pattern, or raise _Fail with a fixed reason."""
-    parts = _split_pipes(query)
-    if len(parts) != 3:
-        raise _Fail(f"{NOT_NARROW}: it needs exactly a fetch, a filter and a summarize step")
-    fetch = FETCH.fullmatch(parts[0])
-    if fetch is None or (fetch[1] is not None and int(fetch[1]) == 0):
-        raise _Fail(f"{NOT_NARROW}: the first step is not fetch logs with an hour or minute range")
-    if not FILTER.fullmatch(parts[1]):
-        raise _Fail(
-            f'{NOT_NARROW}: the filter has a test other than field == "value" joined by and, '
-            "or a value with a control character or an escape other than a quote or backslash"
-        )
-    summarize = SUMMARIZE.fullmatch(parts[2])
-    if summarize is None:
-        raise _Fail(f"{NOT_NARROW}: the last step is not a single summarize name = count()")
-    filters = [
-        CountFilter(key=field, value=_unescape(value))
-        for field, value in re.findall(TERM, parts[1])
-    ]
-    amount, unit = fetch.groups()
-    seconds = int(amount) * SECONDS_PER_UNIT[unit] if amount else 0
-    return _Count(filters, summarize[1], seconds)
+def _count(query: str) -> CountQuery:
+    try:
+        return parse_dql(query)
+    except DqlError as error:
+        raise _Fail(error.reason) from None
 
 
 def _gate_ok(task: DtTask, query_task: str) -> bool:
@@ -235,14 +173,19 @@ def _window(schedule: dict[str, Any], lookback: int) -> tuple[int, list[str]]:
     return max(MIN_WINDOW_SECONDS, window), notes
 
 
+def action_label(action: str) -> str:
+    """A fixed label for a task action (never the action text itself)."""
+    lowered = action.lower()
+    return next((name for part, name in ACTION_LABELS if part in lowered), "other")
+
+
 def _labels(tasks: dict[str, DtTask]) -> list[str]:
     """Fixed labels for the notify actions, in order and without repeats."""
     labels: list[str] = []
     for task in tasks.values():
         if task.action == DQL_ACTION:
             continue
-        action = task.action.lower()
-        label = next((name for part, name in ACTION_LABELS if part in action), "other")
+        label = action_label(task.action)
         if label not in labels:
             labels.append(label)
     return labels
@@ -298,7 +241,7 @@ def _scheduled(wf: DtWorkflow, key: str, schedule: dict[str, Any]) -> IRMonitor:
     if len(queries) != 1:
         raise _Fail(f"{SHAPE}: it has {len(queries)} DQL tasks")
     name, task = queries[0]
-    count = parse_dql(str(task.input.get("query", "")))
+    count = _count(str(task.input.get("query", "")))
     operator, value = _threshold(wf.tasks, name, count.name)
     window, notes = _window(schedule, count.lookback_seconds)
     reasons = [BELOW_NOTE] if operator in (Operator.BELOW, Operator.BELOW_OR_EQUALS) else []
@@ -307,7 +250,7 @@ def _scheduled(wf: DtWorkflow, key: str, schedule: dict[str, Any]) -> IRMonitor:
         "workflow",
         wf.title,
         Confidence.APPROXIMATE,
-        [*reasons, *notes],
+        [*reasons, *notes, *count.notes],
         signal=Signal(
             kind=SignalKind.LOG,
             raw_query=wf.title,
@@ -320,14 +263,21 @@ def _scheduled(wf: DtWorkflow, key: str, schedule: dict[str, Any]) -> IRMonitor:
     )
 
 
+def davis_config(wf: DtWorkflow) -> dict[str, Any] | None:
+    """The Davis problem trigger's settings (its `value`), or None for any other trigger."""
+    event = wf.trigger.get("eventTrigger")
+    config = event.get("triggerConfiguration") if isinstance(event, dict) else None
+    if not isinstance(config, dict) or config.get("type") != "davis-problem":
+        return None
+    value = config.get("value")
+    return value if isinstance(value, dict) else {}
+
+
 def _route(wf: DtWorkflow, key: str) -> IRMonitor:
-    trigger = wf.trigger
-    schedule = trigger.get("schedule")
-    event = trigger.get("eventTrigger")
+    schedule = wf.trigger.get("schedule")
     if isinstance(schedule, dict):
         return _scheduled(wf, key, schedule)
-    config = event.get("triggerConfiguration") if isinstance(event, dict) else None
-    if isinstance(config, dict) and config.get("type") == "davis-problem":
+    if davis_config(wf) is not None:
         return _monitor(key, "workflow", wf.title, Confidence.MANUAL, [DAVIS_REASON])
     raise _Fail(OTHER_TRIGGER)
 

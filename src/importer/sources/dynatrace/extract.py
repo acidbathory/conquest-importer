@@ -49,6 +49,16 @@ class DynatraceError(Exception):
     """Reading from Dynatrace failed; the message is safe to show."""
 
 
+def is_plain_token(token: str) -> bool:
+    """True for non-empty ASCII text with no spaces or control characters."""
+    return bool(token) and token.isascii() and token.isprintable() and " " not in token
+
+
+def is_env_url(url: str) -> bool:
+    """True for https://<tenant id>.apps.dynatrace.com, with or without a trailing slash."""
+    return ENV_URL.fullmatch(url.removesuffix("/")) is not None
+
+
 def api_token() -> str:
     token = os.environ.get("DYNATRACE_API_TOKEN", "").strip()
     if not token:
@@ -56,7 +66,7 @@ def api_token() -> str:
             "DYNATRACE_API_TOKEN is not set. Create a platform token with the scopes "
             "automation:workflows:read and slo:slos:read and put it in .env"
         )
-    if not (token.isascii() and token.isprintable() and " " not in token):
+    if not is_plain_token(token):
         raise DynatraceError(
             "DYNATRACE_API_TOKEN must be plain ASCII text with no spaces; check that it was "
             "pasted without a smart quote, a dash or a line break"
@@ -239,7 +249,7 @@ def _write(folder: Path, name: str, data: list[dict[str, Any]]) -> None:
 def extract(get: Getter, env_url: str, out: Path) -> ExtractResult:
     """Write workflows/ and slos/ under `out` (a new or empty folder)."""
     host = env_url.removesuffix("/")
-    if not ENV_URL.fullmatch(host):
+    if not is_env_url(host):
         raise ValueError("DYNATRACE_ENV_URL must look like https://<tenant id>.apps.dynatrace.com")
     if out.exists() and any(out.iterdir()):
         raise ValueError(f"{out} already has files; pass a new folder")

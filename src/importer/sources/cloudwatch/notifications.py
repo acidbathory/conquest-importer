@@ -7,11 +7,10 @@ from typing import Any
 
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.ir import IRMonitor
-from importer.core.notification_ir import ChannelKind, IRChannel, IRTopic
+from importer.core.notification_ir import EMAIL_ADDRESS, ChannelKind, IRChannel, IRTopic
 from importer.core.text import printable
 from importer.sources.cloudwatch.extract import _SNS_TOPIC
 
-_EMAIL = re.compile(r"^[^@\s,;<>\"'\\]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$")
 _HTTPS = re.compile(r"^https://[^\s\"'<>\\]{1,2000}$")
 NO_EQUIVALENT = {"sms", "lambda", "sqs", "application", "firehose"}
 
@@ -44,7 +43,7 @@ def translate_topic(raw: dict[str, Any]) -> IRTopic:
         if str(sub.get("SubscriptionArn", "")) == "PendingConfirmation":
             unsupported.append(f"{protocol} subscription is not confirmed in AWS")
         elif protocol in ("email", "email-json"):
-            if _EMAIL.match(endpoint):
+            if EMAIL_ADDRESS.match(endpoint):
                 channels.append(IRChannel(kind=ChannelKind.EMAIL, target=endpoint))
             else:
                 unsupported.append("email subscription has an address that is not supported")

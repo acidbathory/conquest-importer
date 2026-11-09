@@ -15,12 +15,13 @@ RULES: list[Rule] = [
         [
             "This workflow sends a message when Davis opens a problem. It is a notification "
             "route, not an alert condition, so there is nothing to convert it to directly.",
-            "In New Relic create a destination for each channel the workflow used (email, "
-            "Slack, PagerDuty, Jira and so on), a notification channel on each destination, "
-            "and a workflow that sends issues to those channels.",
-            "Filter the New Relic workflow on issue priority or on tags, to match the "
-            "categories and entity tags the Dynatrace trigger filtered on. Enter tokens and "
-            "webhook URLs again; Dynatrace does not export them.",
+            "Run `importer convert-notifications --source dynatrace --topics <export folder>`. "
+            "It plans an email destination and channel for each recipient, a manual entry for "
+            "each Slack, PagerDuty, Jira, Teams, ServiceNow or HTTP task, and a disabled "
+            "workflow when the trigger's entity tags map to an issue filter. Review every plan.",
+            "Enter tokens, OAuth sign-ins and webhook URLs yourself; Dynatrace does not export "
+            "them. Davis categories, a custom filter and the severity threshold are not mapped: "
+            "choose a New Relic issue priority or condition filter by hand.",
         ],
     ),
     (
@@ -47,7 +48,10 @@ RULES: list[Rule] = [
         re.compile(r"dql query"),
         "DQL query not converted",
         [
-            "Only a log count with equality filters converts. Read the DQL in the workflow and "
+            'Only a log count converts, with filters of the form field == "v", contains(), '
+            "matchesValue() or in() joined by and, and one count() with no by: grouping. "
+            "A contains() text with %, * or _ stays manual (LIKE would read it as a wildcard). "
+            "Read the DQL in the workflow and "
             "rewrite it as NRQL over the matching New Relic data: logs as `FROM Log`, metrics "
             "as `FROM Metric` (the metric names differ; check them in the data explorer), "
             "then set the threshold and window from the workflow's comparison and schedule.",
@@ -77,6 +81,8 @@ RULES: list[Rule] = [
         re.compile(r"slo is not converted"),
         "SLO",
         [
+            "Run `importer plan-service-levels --in <export folder>` for a plan with the "
+            "target, period and notes of each SLO; the good and valid event queries stay TODO.",
             "In New Relic create a service level over the same data: open the service level "
             "page, choose the entity, and write the good-events and valid-events NRQL "
             "queries from the SLO's indicator (Dynatrace reports one indicator percentage; "

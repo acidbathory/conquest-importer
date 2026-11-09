@@ -13,6 +13,7 @@ from importer.core.ir import Confidence
 from importer.core.remediation import steps_for
 from importer.core.report import md_cell
 from importer.core.taxonomy import Category, classify
+from importer.sources.dynatrace.dql import NOT_NARROW
 from importer.sources.dynatrace.models import DtSlo, DtWorkflow
 from importer.sources.dynatrace.translate import translate, translate_workflow
 
@@ -201,7 +202,7 @@ def test_every_dynatrace_note_has_a_sensible_category() -> None:
         t.SHAPE: Category.UNSUPPORTED_FEATURE,
         t.STATES: Category.UNSUPPORTED_FEATURE,
         t.LONG_REASON.format(what="the schedule interval of 7200s"): Category.UNSUPPORTED_FEATURE,
-        t.NOT_NARROW: Category.UNSUPPORTED_QUERY,
+        NOT_NARROW: Category.UNSUPPORTED_QUERY,
         t.BAD_THRESHOLD: Category.UNSUPPORTED_QUERY,
     }
     assert {r: classify(r) for r in expected} == expected

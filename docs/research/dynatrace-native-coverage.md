@@ -552,3 +552,47 @@ Anomaly Detection app is the next place to look (UNVERIFIED).
 To build and verify the converter someone has to create alerting objects in this tenant (a write
 action that needs the owner's approval per session), or supply an export from a tenant that has
 them. Until then the JSON shapes in section 4 remain documentation, not observation.
+
+## Davis anomaly detector read-back: what one real object would settle
+
+Written 2026-11-09 offline. The live read above found no Davis anomaly detector and no settings schema
+for one on the owner's Platform tenant, so the detector shape in section 4.3 is still documentation, not
+observation. When the owner creates one detector in the Davis Anomaly Detection app (a static threshold on
+a host or service metric is enough; a second with a log query is better), these are the questions a
+read-back answers. Everything in the "Why it matters" column that is not marked is a plan, not a fact. No
+call below has been made; each is a read-only GET and needs the owner's approval for the session.
+
+### Where to look first (all UNVERIFIED, from memory)
+
+1. `GET /platform/settings/v1/schemas` and filter the ids for `davis`, `anomaly` and `detector`. The
+   section 4.3 id `builtin:davis.anomaly-detectors` returned 404 on this tenant, so the real id may differ.
+2. The Documents API (`GET /platform/document/v1/documents`): the live read showed 251 documents. A
+   detector may be stored as a document type or as an AI agent resource rather than as a settings object.
+   List the distinct `type` values and look for a new one after the detector is created.
+3. The app's own network call, if the owner is willing to copy one request from the browser developer tools
+   (URL and response shape only, never the token). This is the quickest route when 1 and 2 find nothing.
+
+### Questions the read-back settles
+
+| # | Question | Why it matters for the converter |
+|---|---|---|
+| 1 | Which API and id hold the detector (settings schema id, document type, or another service)? | Decides whether `extract-dynatrace` can read it with the existing token scopes or needs a new one. |
+| 2 | Is `source` a DQL string, and is it the whole query or only the metric? | A static threshold on `timeseries avg(dt.host.cpu.usage), by: {dt.entity.host}` has no New Relic metric of that name (section 6), so the query decides whether anything converts. |
+| 3 | Are the analyzer names exactly `dt.statistics.ui.anomaly_detection.StaticThresholdAnomalyDetectionAnalyzer` and its two siblings? | Section 4.3 took them from a vendor repository, not from the docs site. |
+| 4 | Which input keys carry the threshold, the alert condition (ABOVE, BELOW, OUTSIDE), the violating samples, the sliding window and the dealerting samples, and are their values strings or numbers? | The converter needs the exact keys and types to map them to a New Relic threshold and duration. The defaults (3 of 5 minutes, 5 to close) are from DOCS D10 only. |
+| 5 | How is "alert on missing data" stored, and what is its default? | A New Relic condition on a missing metric is a loss-of-signal setting, which behaves differently from a threshold. |
+| 6 | How does a records-mode detector (a log or event query) store the query and `alertIdentityFields`? | It is the only mode where a log count could convert, which is the one shape the log-count converter already handles. |
+| 7 | What does `eventTemplate.properties` hold: title, description, event type, and how are `{dims:...}` placeholders written? | Decides the New Relic condition name and description, and whether placeholders need removing. |
+| 8 | What is `executionSettings.actor`, and does the export contain a user or service-user id that must not be copied? | Possible personal data in an export. The scrubber would need a rule before a fixture is committed. |
+| 9 | Is the detector linked to a workflow, or does it only raise a Davis event that any Davis problem workflow can pick up? | Decides whether the converted condition can route to the notification plans from `convert-notifications --source dynatrace`, or whether that link must be made by hand. |
+| 10 | Does the object carry an `enabled` flag and a modification time? | Needed for the draft and inactive notes already used for workflows. |
+| 11 | What do the entity dimensions look like in the result (`dt.entity.host` ids), and is there a name field? | A New Relic condition needs a human-readable filter, not an entity id (see unknown 8 in section 9). |
+| 12 | Is a maintenance window or a management zone stored on the detector? | These have no direct New Relic condition field; they would be notes. |
+
+### After the read
+
+1. Save the response with names, ids and user ids replaced, as a new file in `tests/fixtures/dynatrace/`.
+2. Add a model and a translate step for the confirmed shape; keep every other detector shape manual.
+3. Re-run `importer improve-measure` and review the golden diff before approving it.
+4. Update this section and section 4.3 with what was observed, and change each UNVERIFIED mark to LIVE or
+   remove the claim.

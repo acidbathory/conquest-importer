@@ -1,0 +1,41 @@
+{
+  "topic": "ops-alerts",
+  "destinations": [
+    {
+      "kind": "email",
+      "name": "Imported: ops-alerts email 1",
+      "target": "ops@example.com"
+    },
+    {
+      "kind": "webhook",
+      "name": "Imported: ops-alerts webhook 2",
+      "target": "https://h.example.com/x"
+    }
+  ],
+  "workflow": {
+    "name": "Imported: ops-alerts",
+    "condition_names": [
+      "Hostile \"name\" ${evil} %{if true} withnewline",
+      "alb-5xx-any",
+      "alb-latency-p99",
+      "custom-app-queue-depth",
+      "dynamodb-throttled",
+      "ec2-cpu-anomaly",
+      "ec2-cpu-high",
+      "ec2-network-in",
+      "ec2-status-check-failed",
+      "ecs-service-cpu",
+      "lambda-duration-high",
+      "lambda-error-rate",
+      "lambda-errors",
+      "rds-connections-3-of-5",
+      "rds-cpu-high",
+      "rds-free-storage-low",
+      "sqs-oldest-message"
+    ],
+    "destination_indexes": [
+      0,
+      1
+    ]
+  }
+}
