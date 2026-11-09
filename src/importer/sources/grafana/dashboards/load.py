@@ -16,6 +16,7 @@ from importer.sources.grafana.dashboards.common import Found, mapping, sequence,
 from importer.sources.grafana.dashboards.models import (
     MAX_DASHBOARDS,
     MAX_FILES,
+    MAX_LIBRARY,
     U_BAD_JSON,
     U_INVALID,
     U_NOT_OBJECT,
@@ -29,7 +30,6 @@ from importer.sources.grafana.dashboards.v2 import read_v2
 
 LIBRARY_FILE = "library-panels.json"
 FOLDERS_FILE = "folders.json"
-MAX_LIBRARY = 5000
 FOLDER_ANNOTATION = "grafana.app/folder"
 UNWRAP_LIMIT = 3  # envelope, then wrapper, then body
 

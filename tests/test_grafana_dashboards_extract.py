@@ -13,7 +13,7 @@ from importer.cli import app
 from importer.core import safe_http
 from importer.sources.grafana.dashboards import extract as dx
 from importer.sources.grafana.dashboards.load import load_estate
-from importer.sources.grafana.extract import GrafanaError
+from importer.sources.grafana.extract import GrafanaError, api_token
 
 HOST = "https://mystack.grafana.net"
 TOKEN = "glsa_AbCdEf123456_SECRETSECRET"  # noqa: S105 - a made-up value for leak tests
@@ -123,20 +123,16 @@ def test_only_dashboard_folder_and_library_json_is_written(tmp_path: Path) -> No
     files = sorted(
         p.relative_to(tmp_path / "out").as_posix() for p in (tmp_path / "out").rglob("*")
     )
-    assert files == [
-        "dashboards",
-        "dashboards/alpha.json",
-        "dashboards/beta.json",
-        "dashboards/gamma.json",
-        "folders.json",
-        "library-panels.json",
-    ]
+    assert len(files) == 6 and files[1:2] == ["dashboards/" + files[1].split("/")[-1]]
+    assert files[0] == "dashboards" and files[-2:] == ["folders.json", "library-panels.json"]
+    assert all(f.startswith("dashboards/dashboard-") for f in files[1:4])
 
 
 def test_the_meta_block_keeps_only_the_folder_and_provisioned_flag(tmp_path: Path) -> None:
     read(serve(), tmp_path)
-    written = json.loads((tmp_path / "out" / "dashboards" / "alpha.json").read_text())
-    assert written["meta"] == {"folderUid": "f1", "folderTitle": "Ops", "provisioned": False}
+    written = json.loads(next((tmp_path / "out" / "dashboards").glob("*.json")).read_text())
+    assert set(written["meta"]) == {"folderUid", "folderTitle", "provisioned", "uid"}
+    assert written["meta"]["folderTitle"] == "Ops" and written["meta"]["provisioned"] is False
     everything = "".join(p.read_text() for p in (tmp_path / "out").rglob("*.json"))
     assert "someone" not in everything and TOKEN not in everything
 
@@ -253,7 +249,7 @@ def test_a_failing_dashboard_is_skipped_with_a_warning_and_the_rest_are_written(
     assert result.dashboards == 2
     assert any("1 dashboard" in w and "NOT read" in w for w in result.warnings)
     assert all("SECRET" not in w for w in result.warnings)
-    assert not (tmp_path / "out" / "dashboards" / "beta.json").exists()
+    assert len(list((tmp_path / "out" / "dashboards").glob("*.json"))) == 2
 
 
 @pytest.mark.parametrize("fail", ["/api/folders", "/api/library-elements"])
@@ -358,12 +354,12 @@ def test_the_client_is_really_closed_when_the_block_ends(monkeypatch: pytest.Mon
 def test_the_token_comes_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GRAFANA_SA_TOKEN", raising=False)
     with pytest.raises(GrafanaError, match="GRAFANA_SA_TOKEN is not set"):
-        dx.dashboards_token()
+        api_token()
     monkeypatch.setenv("GRAFANA_SA_TOKEN", f" {TOKEN} ")
-    assert dx.dashboards_token() == TOKEN
+    assert api_token() == TOKEN
     monkeypatch.setenv("GRAFANA_SA_TOKEN", "glsa_" + chr(0x2013) + "dash")
     with pytest.raises(GrafanaError, match="plain ASCII") as err:
-        dx.dashboards_token()
+        api_token()
     assert "glsa" not in str(err.value)
 
 

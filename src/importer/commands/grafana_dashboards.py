@@ -7,15 +7,11 @@ import typer
 
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.text import printable
-from importer.sources.grafana.dashboards.extract import (
-    dashboards_token,
-    extract_dashboards,
-    http_getter,
-)
+from importer.sources.grafana.dashboards.extract import extract_dashboards, http_getter
 from importer.sources.grafana.dashboards.load import load_estate
 from importer.sources.grafana.dashboards.plan import build_plan
 from importer.sources.grafana.dashboards.report import build_report, plan_json
-from importer.sources.grafana.extract import GrafanaError, grafana_url, validate_host
+from importer.sources.grafana.extract import GrafanaError, api_token, grafana_url, validate_host
 
 
 def register(app: typer.Typer) -> None:
@@ -38,12 +34,15 @@ def register(app: typer.Typer) -> None:
         Read-only: GET calls only, on a fixed list of paths. Set GRAFANA_URL
         (https://<stack>.grafana.net) and GRAFANA_SA_TOKEN (a service account token that can
         read dashboards, folders and library panels) in .env or the environment; the token is
-        never stored or printed. Writes dashboards/<uid>.json, folders.json and
-        library-panels.json under --out. Behind a corporate proxy that inspects TLS, set
+        never stored or printed. Writes dashboards/dashboard-<hash>.json, folders.json and
+        library-panels.json under --out (a new folder, mode 0700, files 0600, created only when
+        the run finishes). The files are dashboard JSON with passwords, tokens, headers and URL
+        user info removed first; the number removed is printed. Review them before sharing.
+        Behind a corporate proxy that inspects TLS, set
         SSL_CERT_FILE to a file with the corporate root certificate.
         """
         try:
-            token = dashboards_token()
+            token = api_token()
             base = validate_host(grafana_url(), allow_host)
             with http_getter(token, base, allow_host=allow_host) as get:
                 result = extract_dashboards(get, out)

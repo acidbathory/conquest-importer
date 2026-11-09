@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 MAX_DASHBOARDS = 5000
 MAX_FILES = 10_000
+MAX_LIBRARY = 5000  # library panels and folders read from an export
 MAX_PANELS = 10_000  # per dashboard; the rest are counted and left out
 MAX_DEPTH = 200  # nested rows or layouts; deeper levels are left out
 MAX_TARGETS = 200  # per panel
