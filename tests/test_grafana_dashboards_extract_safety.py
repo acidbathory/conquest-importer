@@ -8,6 +8,7 @@ import httpx
 import pytest
 
 from importer.sources.grafana.dashboards import extract as dx
+from importer.sources.grafana.dashboards import models
 from importer.sources.grafana.extract import GrafanaError
 from test_grafana_dashboards_extract import read, serve
 
@@ -179,7 +180,7 @@ def test_folders_that_fill_every_page_are_reported_like_dashboards(
 
 def test_the_real_page_and_size_limits_are_what_the_docs_say() -> None:
     assert (dx.MAX_PAGES, dx.PAGE_SIZE, dx.MAX_REQUESTS) == (20, 1000, 6000)
-    assert (dx.MAX_DASHBOARDS, dx.MAX_LIBRARY) == (5000, 5000)
+    assert (models.MAX_DASHBOARDS, models.MAX_LIBRARY) == (5000, 5000)
 
 
 def test_a_host_that_differs_only_after_normalising_is_refused(

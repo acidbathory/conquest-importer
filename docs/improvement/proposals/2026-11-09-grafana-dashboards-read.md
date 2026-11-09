@@ -212,3 +212,5 @@ slip against test-first for that part.
 The `__elements` wrapper shape; that `RLIKE` is RE2 (still the reason regexes stay manual); the
 "scaling unit" list (everything except none, short, string, locale, percent); that a `timeShift`
 cannot be expressed as `COMPARE WITH` in a widget.
+
+Round 2 gate: GATE PASSED (2474 passed, 24 skipped) on the final commit of this branch.
