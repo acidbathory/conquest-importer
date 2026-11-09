@@ -211,3 +211,34 @@ def test_receiver_and_interval_names_that_look_sensitive_become_stable_reference
     assert tree.root.receiver == tree.root.routes[0].receiver and tree.root.receiver.startswith(
         "redacted-"
     )
+
+
+def test_the_command_summary_says_when_the_policy_tree_was_cut(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from typer.testing import CliRunner
+
+    from importer.cli import app
+
+    monkeypatch.setenv("GRAFANA_URL", HOST)
+    monkeypatch.setenv("GRAFANA_SA_TOKEN", TOKEN)
+    monkeypatch.setattr(
+        "importer.commands.grafana_notifications.notifications_getter",
+        lambda t, b, allow_host=None: nx.notifications_getter(
+            t, b, httpx.MockTransport(serve(deep(MAX_POLICY_DEPTH + 5))), allow_host=allow_host
+        ),
+    )
+    result = CliRunner().invoke(
+        app, ["extract-grafana-notifications", "--out", str(tmp_path / "o")]
+    )
+    assert result.exit_code == 0 and "policy tree was cut" in result.output
+
+
+def test_the_command_help_says_what_is_written_and_what_is_not() -> None:
+    from typer.testing import CliRunner
+
+    from importer.cli import app
+
+    text = CliRunner().invoke(app, ["extract-grafana-notifications", "--help"]).output
+    for phrase in ("What is written", "rule annotations", "owner only", "Nothing is written if"):
+        assert " ".join(phrase.split()) in " ".join(text.split())

@@ -51,9 +51,16 @@ def _extract(
     Read-only: GET calls on a fixed list of paths, never with a query string, so contact points
     are never decrypted and Grafana returns [REDACTED] for every stored secret. Set GRAFANA_URL
     and GRAFANA_SA_TOKEN (a service account token that can read alert provisioning data and
-    data sources) in .env or the environment. Secret values, header values, URL paths and
-    template text are not written; email addresses are written to contact-points.json only.
-    Use a new folder, not the one `extract-grafana` wrote.
+    data sources) in .env or the environment.
+
+    What is written: contact point type, name, uid, the names of the settings that hold a value,
+    option values of a known type, the host of a non-secret URL, and for email the addresses
+    (contact-points.json only); the policy tree and mute timings; template names, a hash and
+    the names they define; data source type and uid; rule files with the expression and the
+    labels, where a value that looks like a secret is replaced. Not written: secret values,
+    header values, URL paths and queries, template text, rule annotations. Files are readable by
+    the owner only. Nothing is written if the run fails. Use a new folder, not the one
+    `extract-grafana` wrote.
     """
     try:
         token = grafana_api_token()
