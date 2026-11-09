@@ -24,7 +24,8 @@ RULES: list[Rule] = [
             r"violation time limit \d+s is outside|title template is \d+ characters|"
             r"runbook URL is not|slide-by \d+s must divide|fill option STATIC needs|"
             r"a fill value needs|ignore on expected termination needs|"
-            r"null-safe count scope names"
+            r"null-safe count scope (names|covers)|aggregation timer is only used|"
+            r"a fill value must be|muting operator \w+ takes no values"
         ),
         "Condition setting outside New Relic's limits",
         [

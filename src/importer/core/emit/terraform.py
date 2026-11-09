@@ -44,7 +44,10 @@ def header(incident_preference: str | None = None) -> str:
         return HEADER
     if incident_preference not in INCIDENT_PREFERENCES:
         raise ValueError(f"unknown incident preference {incident_preference!r}")
-    return _HEADER_START + f'  incident_preference = "{incident_preference}"\n}}\n'
+    return (
+        _HEADER_START.replace('  name = "Imported', '  name                = "Imported')
+        + f'  incident_preference = "{incident_preference}"\n}}\n'
+    )
 
 
 def hcl_string(value: str) -> str:
@@ -67,6 +70,12 @@ def hcl_string(value: str) -> str:
             out.append(ch)
     text = "".join(out).replace("${", "$${").replace("%{", "%%{")
     return f'"{text}"'
+
+
+def hcl_attrs(pairs: list[tuple[str, str]], indent: str) -> list[str]:
+    """`key = value` lines with the `=` signs aligned the way `terraform fmt` does."""
+    width = max((len(key) for key, _ in pairs), default=0)
+    return [f"{indent}{key.ljust(width)} = {value}" for key, value in pairs]
 
 
 def resource_block(monitor: IRMonitor) -> str:
@@ -118,35 +127,30 @@ def resource_block(monitor: IRMonitor) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _setting(name: str, value: str) -> str:
-    return f"  {name:<30} = {value}"
-
-
 def _optional_lines(monitor: IRMonitor) -> list[str]:
     """Settings present only when the monitor (or a changed default) asks for them."""
-    out: list[str] = []
+    pairs: list[tuple[str, str]] = []
     fill = fill_settings(monitor)
     if fill is not None:
-        out.append(_setting("fill_option", f'"{fill[0].lower()}"'))
+        pairs.append(("fill_option", f'"{fill[0].lower()}"'))
         if fill[1] is not None:
-            out.append(_setting("fill_value", f"{fill[1]:g}"))
+            pairs.append(("fill_value", f"{fill[1]:g}"))
     options = monitor.emit
-    if options is None:
-        return ["", *out] if out else out
-    if options.slide_by_seconds is not None:
-        out.append(_setting("slide_by", str(options.slide_by_seconds)))
-    if options.violation_time_limit_seconds is not None:
-        out.append(
-            _setting("violation_time_limit_seconds", str(options.violation_time_limit_seconds))
-        )
-    if options.title_template is not None:
-        out.append(_setting("title_template", hcl_string(options.title_template)))
-    if options.runbook_url is not None:
-        out.append(_setting("runbook_url", hcl_string(options.runbook_url)))
-    if options.ignore_on_expected_termination is not None:
-        flag = "true" if options.ignore_on_expected_termination else "false"
-        out.append(_setting("ignore_on_expected_termination", flag))
-    return ["", *out] if out else out
+    if options is not None:
+        if options.slide_by_seconds is not None:
+            pairs.append(("slide_by", str(options.slide_by_seconds)))
+        if options.violation_time_limit_seconds is not None:
+            pairs.append(
+                ("violation_time_limit_seconds", str(options.violation_time_limit_seconds))
+            )
+        if options.title_template is not None:
+            pairs.append(("title_template", hcl_string(options.title_template)))
+        if options.runbook_url is not None:
+            pairs.append(("runbook_url", hcl_string(options.runbook_url)))
+        if options.ignore_on_expected_termination is not None:
+            flag = "true" if options.ignore_on_expected_termination else "false"
+            pairs.append(("ignore_on_expected_termination", flag))
+    return ["", *hcl_attrs(pairs, "  ")] if pairs else []
 
 
 def terraform_file(monitors: list[IRMonitor], incident_preference: str | None = None) -> str:

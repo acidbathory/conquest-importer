@@ -1,6 +1,7 @@
 """Shared emitter rules: which IR monitors can be emitted, and how windows map to New Relic."""
 
 import importlib
+import math
 import re
 from dataclasses import dataclass
 
@@ -127,16 +128,27 @@ def _check_terms(thresholds: list[Threshold]) -> None:
         raise CannotEmit("two thresholds have the same severity; New Relic allows one of each")
 
 
+def check_expiration_seconds(seconds: int) -> None:
+    low, high = EXPIRATION_SECONDS
+    if not low <= seconds <= high:
+        raise CannotEmit(f"loss-of-signal timeout {seconds}s is outside 30s-48h")
+
+
 def _check_expiration(monitor: IRMonitor) -> None:
     minutes = monitor.no_data.timeout_minutes
     if monitor.no_data.notify and minutes:
-        low, high = EXPIRATION_SECONDS
-        if not low <= minutes * 60 <= high:
-            raise CannotEmit(f"loss-of-signal timeout {minutes * 60}s is outside 30s-48h")
+        check_expiration_seconds(minutes * 60)
 
 
 def _check_method(monitor: IRMonitor) -> None:
     method = streaming_method(monitor)
+    options = monitor.emit
+    if (
+        method != "EVENT_TIMER"
+        and options is not None
+        and options.aggregation_timer_seconds is not None
+    ):
+        raise CannotEmit("aggregation timer is only used with EVENT_TIMER")
     if method == "EVENT_TIMER":
         low, high = TIMER_SECONDS
         timer = aggregation_timer(monitor)
@@ -154,6 +166,8 @@ def _check_fill(monitor: IRMonitor) -> None:
     if fill is None:
         return
     option, value = fill
+    if value is not None and not math.isfinite(value):
+        raise CannotEmit("a fill value must be a finite number")
     if option == "STATIC" and value is None:
         raise CannotEmit("fill option STATIC needs a fill value")
     if option != "STATIC" and value is not None:
@@ -165,7 +179,8 @@ def _check_slide_by(monitor: IRMonitor, options: EmitOptions) -> None:
     if slide is None:
         return
     agg = aggregation_window(monitor)
-    if slide >= agg or agg % slide or slide < MIN_SLIDE_BY_SECONDS:
+    # range first: never divide by a value that has not been checked
+    if slide < MIN_SLIDE_BY_SECONDS or slide >= agg or agg % slide:
         raise CannotEmit(
             f"slide-by {slide}s must divide the {agg}s aggregation window and be smaller than "
             f"it (at least {MIN_SLIDE_BY_SECONDS}s)"

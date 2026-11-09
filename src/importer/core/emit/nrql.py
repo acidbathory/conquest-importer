@@ -160,6 +160,11 @@ def _count_nrql(
         raise ValueError("null-safe count scope names a filter that does not exist")
     outer = [f for f in signal.filters if f.key in (scope or [])] if null_safe else signal.filters
     inner = [f for f in signal.filters if f not in outer]
+    if null_safe and signal.filters and not inner:
+        raise ValueError(
+            "null-safe count scope covers every filter, so the count would still be NULL in an "
+            "empty window"
+        )
     select = "count(*)"
     if inner:
         select = (

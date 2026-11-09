@@ -127,8 +127,8 @@ def test_terraform_matches_the_provider_schema() -> None:
     )
     tf = muting_terraform([full, rule(schedule=None)])
     assert schema_errors(tf) == [] and resource_count(tf) == 2
-    assert 'weekly_repeat_days = ["MONDAY"]' in tf and "repeat_count" in tf
-    assert 'time_zone  = "Europe/Berlin"' in tf or 'time_zone = "Europe/Berlin"' in tf
+    assert 'weekly_repeat_days = ["MONDAY"]' in tf and "repeat_count       = 3" in tf
+    assert 'time_zone          = "Europe/Berlin"' in tf
     assert "enabled     = false" in tf
 
 

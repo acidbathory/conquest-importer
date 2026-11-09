@@ -7,9 +7,10 @@ field names follow New Relic's muting rule page and are UNVERIFIED against a liv
 
 from typing import Any
 
+from importer.core.emit.common import CannotEmit
 from importer.core.emit.nerdgraph import ACCOUNT_PLACEHOLDER
-from importer.core.emit.terraform import hcl_string
-from importer.core.muting_ir import MutingRule, MutingSchedule
+from importer.core.emit.terraform import hcl_attrs, hcl_string
+from importer.core.muting_ir import NO_VALUES, MutingRule, MutingSchedule
 
 MUTATION = (
     "mutation CreateMutingRule($accountId: Int!, $rule: AlertsMutingRuleInput!) {\n"
@@ -63,44 +64,59 @@ def muting_payload(rule: MutingRule) -> dict[str, Any]:
 
 
 def _schedule_block(schedule: MutingSchedule) -> str:
-    lines = [
-        f"    start_time = {hcl_string(schedule.start_time)}",
-        f"    end_time   = {hcl_string(schedule.end_time)}",
-        f"    time_zone  = {hcl_string(schedule.time_zone)}",
+    pairs = [
+        ("start_time", hcl_string(schedule.start_time)),
+        ("end_time", hcl_string(schedule.end_time)),
+        ("time_zone", hcl_string(schedule.time_zone)),
     ]
     if schedule.repeat is not None:
-        lines.append(f'    repeat     = "{schedule.repeat.value}"')
+        pairs.append(("repeat", f'"{schedule.repeat.value}"'))
     if schedule.end_repeat is not None:
-        lines.append(f"    end_repeat = {hcl_string(schedule.end_repeat)}")
+        pairs.append(("end_repeat", hcl_string(schedule.end_repeat)))
     if schedule.repeat_count is not None:
-        lines.append(f"    repeat_count = {schedule.repeat_count}")
+        pairs.append(("repeat_count", str(schedule.repeat_count)))
     if schedule.weekly_repeat_days:
         days = ", ".join(f'"{d.value}"' for d in schedule.weekly_repeat_days)
-        lines.append(f"    weekly_repeat_days = [{days}]")
-    return "\n  schedule {\n" + "\n".join(lines) + "\n  }\n"
+        pairs.append(("weekly_repeat_days", f"[{days}]"))
+    return "\n  schedule {\n" + "\n".join(hcl_attrs(pairs, "    ")) + "\n  }\n"
 
 
 def _rule_block(rule: MutingRule, n: int) -> str:
+    for c in rule.condition.conditions:
+        if c.operator in NO_VALUES:
+            raise CannotEmit(
+                f"muting operator {c.operator.value} takes no values, and the Terraform provider "
+                "needs at least one value; create this rule in NerdGraph or by hand"
+            )
     conditions = "".join(
-        f"\n    conditions {{\n      attribute = {hcl_string(c.attribute)}\n"
-        f'      operator  = "{c.operator.value}"\n'
-        f"      values    = [{', '.join(hcl_string(v) for v in c.values)}]\n    }}\n"
+        "\n    conditions {\n"
+        + "\n".join(
+            hcl_attrs(
+                [
+                    ("attribute", hcl_string(c.attribute)),
+                    ("operator", f'"{c.operator.value}"'),
+                    ("values", f"[{', '.join(hcl_string(v) for v in c.values)}]"),
+                ],
+                "      ",
+            )
+        )
+        + "\n    }\n"
         for c in rule.condition.conditions
     )
-    action = (
-        f'  action_on_muting_rule_window_ended = "{rule.action_on_window_ended}"\n'
-        if rule.action_on_window_ended
-        else ""
-    )
+    top = [
+        ("name", hcl_string(rule.name)),
+        ("description", hcl_string(rule.description)),
+        ("enabled", "true" if rule.enabled else "false"),
+    ]
+    if rule.action_on_window_ended:
+        top.append(("action_on_muting_rule_window_ended", f'"{rule.action_on_window_ended}"'))
     schedule = _schedule_block(rule.schedule) if rule.schedule is not None else ""
     return (
         f'resource "newrelic_alert_muting_rule" "m_{n}" {{\n'
-        f"  name        = {hcl_string(rule.name)}\n"
-        f"  description = {hcl_string(rule.description)}\n"
-        f"  enabled     = {'true' if rule.enabled else 'false'}\n"
-        f"{action}\n"
-        f'  condition {{\n    operator = "{rule.condition.operator}"\n{conditions}  }}\n'
-        f"{schedule}}}\n"
+        + "\n".join(hcl_attrs(top, "  "))
+        + "\n\n"
+        + f'  condition {{\n    operator = "{rule.condition.operator}"\n{conditions}  }}\n'
+        + f"{schedule}}}\n"
     )
 
 
