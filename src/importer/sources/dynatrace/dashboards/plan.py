@@ -68,6 +68,8 @@ def _platform(doc: Document, platform: PlatformDashboard) -> DashboardPlan:
         ref=printable(doc.ref, 120),
         name=printable(doc.name, 120),
         kind="platform",
+        app=printable(doc.app, 80),
+        private=doc.private,
         notes=notes,
         counts=count_tiles(tiles, variables),
         tiles=tiles,
@@ -77,7 +79,12 @@ def _platform(doc: Document, platform: PlatformDashboard) -> DashboardPlan:
 
 
 def plan_document(doc: Document) -> DashboardPlan:
-    base = {"ref": printable(doc.ref, 120), "name": printable(doc.name, 120)}
+    base = {
+        "ref": printable(doc.ref, 120),
+        "name": printable(doc.name, 120),
+        "app": printable(doc.app, 80),
+        "private": doc.private,
+    }
     if doc.kind == "platform" and doc.platform is not None:
         return _platform(doc, doc.platform)
     if doc.kind == "classic" and doc.classic is not None:
@@ -99,8 +106,9 @@ def plan_document(doc: Document) -> DashboardPlan:
     return DashboardPlan(**base, kind="unreadable", reasons=[reason])
 
 
-def plan_documents(documents: list[Document], copies_skipped: int = 0) -> DashboardPlans:
-    plans = DashboardPlans(copies_skipped=copies_skipped)
+def plan_documents(documents: list[Document], copies: list[str] | None = None) -> DashboardPlans:
+    copies = copies or []
+    plans = DashboardPlans(copies_skipped=len(copies), copy_names=copies[:50])
     for doc in documents:
         plan = plan_document(doc)
         plans.dashboards.append(plan)
@@ -161,6 +169,7 @@ def _per_dashboard(plans: DashboardPlans) -> list[str]:
         [
             md_cell(d.name),
             d.kind,
+            md_cell(d.app, 40),
             str(d.counts.data),
             str(d.counts.exact),
             str(d.counts.draft),
@@ -171,7 +180,17 @@ def _per_dashboard(plans: DashboardPlans) -> list[str]:
         for d in plans.dashboards
     ]
     return table(
-        ["Dashboard", "Kind", "Data", "Exact", "Draft", "Manual", "Markdown", "Variables e/d/m"],
+        [
+            "Dashboard",
+            "Kind",
+            "App",
+            "Data",
+            "Exact",
+            "Draft",
+            "Manual",
+            "Markdown",
+            "Variables e/d/m",
+        ],
         rows,
     )
 
@@ -227,8 +246,18 @@ def _steps(plans: DashboardPlans) -> list[str]:
     return lines
 
 
+def _copies(plans: DashboardPlans) -> list[str]:
+    if not plans.copy_names:
+        return []
+    shown = [f"- {md_cell(name, 200)}" for name in plans.copy_names]
+    more = plans.copies_skipped - len(plans.copy_names)
+    tail = [f"- and {more} more"] if more > 0 else []
+    return ["", "## Skipped copies (same content, different name or id)", "", *shown, *tail]
+
+
 def render_report(plans: DashboardPlans) -> str:
-    lines = ["# Dynatrace dashboard plan", "", *_summary(plans), "", "## By dashboard", ""]
+    lines = ["# Dynatrace dashboard plan", "", *_summary(plans), *_copies(plans)]
+    lines += ["", "## By dashboard", ""]
     lines += _per_dashboard(plans)
     lines += _steps(plans)
     lines += ["", "## Tiles and variables", *_tile_rows(plans)]

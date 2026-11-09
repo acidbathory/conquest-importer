@@ -119,10 +119,10 @@ class Document(BaseModel):
     ref: str  # file name (and index in a list file)
     kind: Literal["platform", "classic", "unreadable"]
     name: str = ""
-    owner: str = ""
-    private: bool | None = None
+    private: bool | None = None  # isPrivate of a document; None when not given
     app: str = ""  # originAppId of a document
     error: str = ""  # an Unreadable code when kind is "unreadable"
+    fingerprint: str = ""  # hash of the raw content without name, owner and ids
     platform: PlatformDashboard | None = None
     classic: ClassicDashboard | None = None
 
@@ -298,10 +298,36 @@ def _fail(ref: str, code: str) -> Document:
     return Document(ref=ref, kind="unreadable", error=code)
 
 
+# Fields that differ between copies of the same dashboard without changing what it shows.
+VOLATILE = frozenset(
+    {
+        "id",
+        "name",
+        "owner",
+        "created",
+        "createdBy",
+        "modified",
+        "lastModified",
+        "lastModifiedBy",
+        "modificationInfo",
+    }
+)
+
+
+def fingerprint(content: dict[str, Any]) -> str:
+    """Hash of the raw dashboard JSON, canonical, without VOLATILE fields. It hashes what the
+    file says, not what the models keep, so two dashboards that differ in a filter the models
+    ignore are still different."""
+    body = {k: v for k, v in content.items() if k not in VOLATILE}
+    meta = body.get("dashboardMetadata")
+    if isinstance(meta, dict):
+        body["dashboardMetadata"] = {k: v for k, v in meta.items() if k not in VOLATILE}
+    return hashlib.sha256(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()
+
+
 def _meta(raw: dict[str, Any]) -> dict[str, Any]:
     private = raw.get("isPrivate")
     return {
-        "owner": _str(raw.get("owner"), 120),
         "private": private if isinstance(private, bool) else None,
         "app": _str(raw.get("originAppId"), 120),
     }
@@ -319,12 +345,21 @@ def parse_document(ref: str, raw: object, stem: str = "") -> Document:
     try:
         if isinstance(classic_meta, dict):
             name = _str(raw.get("name"), 200) or _str(classic_meta.get("name"), 200) or stem
-            meta["owner"] = meta["owner"] or _str(classic_meta.get("owner"), 120)
             return Document(
-                ref=ref, kind="classic", name=name, classic=parse_classic(content), **meta
+                ref=ref,
+                kind="classic",
+                name=name,
+                classic=parse_classic(content),
+                fingerprint=fingerprint(content),
+                **meta,
             )
         return Document(
-            ref=ref, kind="platform", name=name, platform=parse_platform(content), **meta
+            ref=ref,
+            kind="platform",
+            name=name,
+            platform=parse_platform(content),
+            fingerprint=fingerprint(content),
+            **meta,
         )
     except ValueError:
         return _fail(ref, NOT_A_DASHBOARD)
@@ -362,26 +397,18 @@ def dashboard_files(path: Path) -> list[Path]:
     return files
 
 
-def load_documents(path: Path) -> tuple[list[Document], int]:
-    """All dashboards under `path`, and how many exact copies were skipped."""
+def load_documents(path: Path) -> tuple[list[Document], list[str]]:
+    """All dashboards under `path`, and the names of the exact copies that were skipped."""
     documents: list[Document] = []
-    seen: set[str] = set()
-    skipped = 0
+    seen: dict[str, str] = {}
+    copies: list[str] = []
     for file in dashboard_files(path):
         for doc in read_file(file):
-            key = doc.model_dump_json()  # a unique ref makes unreadable files never collide
-            if doc.kind != "unreadable":
-                key = _document_key(doc)
-            if key in seen:
-                skipped += 1
+            key = doc.fingerprint
+            if doc.kind != "unreadable" and key in seen:
+                copies.append(f"{printable(doc.name, 80)} (same as {seen[key]})")
                 continue
-            seen.add(key)
+            if doc.kind != "unreadable":
+                seen[key] = printable(doc.name, 80)
             documents.append(doc)
-    return documents, skipped
-
-
-def _document_key(doc: Document) -> str:
-    """Identity of the content only: a copy under another name is still the same dashboard."""
-    body = doc.platform if doc.platform is not None else doc.classic
-    payload = body.model_dump_json() if body is not None else ""
-    return hashlib.sha256(payload.encode()).hexdigest()
+    return documents, copies

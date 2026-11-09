@@ -45,7 +45,7 @@ def test_a_tile_keeps_the_fields_the_planner_needs() -> None:
 def test_the_classic_dashboard_is_read() -> None:
     (doc,) = m.read_file(FIXTURES / "classic-dashboards" / "classic-ops.json")
     assert doc.kind == "classic" and doc.classic is not None
-    assert doc.name == "Ops overview" and doc.owner
+    assert doc.name == "Ops overview"
     assert len(doc.classic.tiles) == 7 and doc.classic.management_zone
     assert doc.classic.filters == 2
     assert [t.tile_type for t in doc.classic.tiles][:3] == ["MARKDOWN", "HEADER", "DATA_EXPLORER"]
@@ -53,7 +53,7 @@ def test_the_classic_dashboard_is_read() -> None:
     assert doc.classic.tiles[5].management_zone
 
 
-def test_an_extract_envelope_carries_the_name_and_owner(tmp_path: Path) -> None:
+def test_an_extract_envelope_carries_the_name(tmp_path: Path) -> None:
     content = {"version": 21, "variables": [], "tiles": {}, "layouts": {}}
     envelope = {
         "id": "x",
@@ -63,7 +63,7 @@ def test_an_extract_envelope_carries_the_name_and_owner(tmp_path: Path) -> None:
         "content": content,
     }
     (doc,) = one(envelope, tmp_path)
-    assert (doc.kind, doc.name, doc.owner) == ("platform", "My board", "u1")
+    assert (doc.kind, doc.name) == ("platform", "My board")
 
 
 def test_one_bad_tile_does_not_stop_the_others(tmp_path: Path) -> None:
@@ -132,12 +132,12 @@ def test_exact_copies_are_counted_once(tmp_path: Path) -> None:
     (tmp_path / "b.json").write_text(json.dumps(board))
     (tmp_path / "c.json").write_text(json.dumps({**board, "tiles": {}}))
     docs, skipped = m.load_documents(tmp_path)
-    assert len(docs) == 2 and skipped == 1
+    assert len(docs) == 2 and len(skipped) == 1
 
 
 def test_a_folder_is_read_with_the_extractor_sub_folders() -> None:
     docs, skipped = m.load_documents(FIXTURES)
-    assert sorted(d.kind for d in docs) == ["classic"] + ["platform"] * 4 and skipped == 0
+    assert sorted(d.kind for d in docs) == ["classic"] + ["platform"] * 4 and skipped == []
 
 
 def test_an_oversized_file_is_refused_before_it_is_read(

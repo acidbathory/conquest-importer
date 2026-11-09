@@ -78,6 +78,8 @@ class DashboardPlan(BaseModel):
     ref: str
     name: str
     kind: str  # "platform", "classic" or "unreadable"
+    app: str = ""  # originAppId of a document (tells ready-made dashboards from user ones)
+    private: bool | None = None
     reasons: list[str] = []  # why the whole dashboard is manual
     notes: list[str] = []
     counts: Counts = Counts()
@@ -90,3 +92,4 @@ class DashboardPlans(BaseModel):
     dashboards: list[DashboardPlan] = []
     totals: Counts = Counts()
     copies_skipped: int = 0
+    copy_names: list[str] = []  # names of the skipped copies (at most 50)

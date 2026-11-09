@@ -17,14 +17,14 @@ from importer.sources.dynatrace.inventory import extract as ix
 HOSTILE = Path(__file__).parent / "fixtures" / "dynatrace-dashboards" / "hostile"
 
 
-def hostile_plan() -> tuple[DashboardPlans, int]:
+def hostile_plan() -> tuple[DashboardPlans, list[str]]:
     documents, copies = m.load_documents(HOSTILE)
     return plan_documents(documents, copies), copies
 
 
 def test_copies_are_counted_once_and_the_hostile_dashboard_is_read() -> None:
     plans, copies = hostile_plan()
-    assert copies == 1 and len(plans.dashboards) == 2
+    assert len(copies) == 1 and len(plans.dashboards) == 2
     assert plans.copies_skipped == 1
 
 
