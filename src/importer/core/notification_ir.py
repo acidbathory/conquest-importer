@@ -14,6 +14,7 @@ from typing import Any
 
 from pydantic import (
     BaseModel,
+    ConfigDict,
     SerializerFunctionWrapHandler,
     field_validator,
     model_serializer,
@@ -260,7 +261,34 @@ def build_plan(
 # documentation (docs/research/newrelic-notifications-and-nrql-reference.md, section 1.1).
 # ---------------------------------------------------------------------------------------------
 
-SECRET_NAME = re.compile(r"[A-Z][A-Z0-9_]{0,63}")
+# A secret is named, never carried. The name is a logical one (PAGERDUTY_KEY): at least one
+# underscore, 3 to 40 characters, and nothing shaped like a token or key (AWS access keys, sk-,
+# ghp_, glsa_, NRAK, Dynatrace dt0, long unbroken runs), so a pasted value cannot pass as a name.
+SECRET_NAME = re.compile(r"[A-Z][A-Z0-9]*_[A-Z0-9_]*")
+MAX_SECRET_NAME = 40
+TOKEN_SHAPE = re.compile(
+    r"AKIA|ASIA|SK[_-][A-Za-z0-9_-]{4,}|GH[POUSR]_[A-Za-z0-9_]{4,}"
+    r"|GLSA_|NRAK[_-]|DT0[A-Z][0-9]{2}|XOX[ABPRS][_-]|EYJ[A-Za-z0-9_-]{8,}"
+    r"|[A-Za-z0-9]{21,}",
+    re.IGNORECASE,
+)
+# Shapes of keys and tokens. A plain field must not hold one; LONG_RUN adds any unbroken run of 32
+# or more characters, which is how most tokens look but also how some URLs look.
+SECRET_SHAPE = re.compile(
+    r"AKIA[0-9A-Z]{12,}|ASIA[0-9A-Z]{12,}|\bsk-[A-Za-z0-9_-]{6,}|\bgh[pousr]_[A-Za-z0-9]{6,}"
+    r"|glsa_[A-Za-z0-9_]{6,}|NRAK-[A-Za-z0-9]{6,}|dt0[a-z][0-9]{2}\.|xox[abprs]-[A-Za-z0-9-]{6,}"
+    r"|eyJ[A-Za-z0-9_-]{10,}|-----BEGIN|\bBearer\s+\S{8,}"
+)
+LONG_RUN = re.compile(r"[A-Za-z0-9+/_=-]{32,}")
+NO_ECHO = ConfigDict(hide_input_in_errors=True)
+
+
+def looks_like_secret(value: str, *, strict: bool = True) -> bool:
+    """True when a plain field holds something shaped like a key, token or password.
+
+    `strict` also refuses a long unbroken run; fields such as a URL are checked without it.
+    """
+    return SECRET_SHAPE.search(value) is not None or (strict and LONG_RUN.search(value) is not None)
 
 
 class DestinationError(ValueError):
@@ -292,26 +320,40 @@ class AuthKind(StrEnum):
     OAUTH = "oauth"  # a browser sign-in; cannot be scripted
 
 
-class SecretRef(BaseModel, frozen=True):
+class SecretRef(BaseModel):
     """The name of a secret that a person supplies; the value is never stored in the IR."""
 
+    model_config = ConfigDict(frozen=True, hide_input_in_errors=True)
     name: str
 
     @field_validator("name")
     @classmethod
     def _shape(cls, value: str) -> str:
-        if not SECRET_NAME.fullmatch(value):
-            raise ValueError("secret name must be upper case letters, digits and underscores")
+        if (
+            len(value) > MAX_SECRET_NAME
+            or len(value) < 3
+            or not SECRET_NAME.fullmatch(value)
+            or TOKEN_SHAPE.match(value)
+        ):
+            raise ValueError(
+                "secret name must be a logical name: upper case letters, digits and "
+                "underscores with at least one underscore, 3 to 40 characters, not shaped like a "
+                "key"
+            )
         return value
 
 
 class HeaderAuth(BaseModel):
+    model_config = NO_ECHO
+
     key: str
     value: SecretRef
 
 
 class DestinationAuth(BaseModel):
     """Authentication of a destination. Every secret part is a reference."""
+
+    model_config = NO_ECHO
 
     kind: AuthKind
     user: str = ""
@@ -337,11 +379,15 @@ class DestinationAuth(BaseModel):
 class SecureUrl(BaseModel):
     """A webhook URL kept encrypted after its prefix (Terraform `secure_url` block)."""
 
+    model_config = NO_ECHO
+
     prefix: str
     suffix: SecretRef
 
 
 class NrDestination(BaseModel):
+    model_config = NO_ECHO
+
     type: DestinationType
     name: str
     properties: dict[str, str | SecretRef] = {}
@@ -349,6 +395,11 @@ class NrDestination(BaseModel):
     secure_url: SecureUrl | None = None
     channel_properties: dict[str, str] = {}
     channel_product: str = "IINT"
+
+    @model_validator(mode="after")
+    def _no_secret_values(self) -> "NrDestination":
+        screen_secrets(self)
+        return self
 
 
 NotificationPlan.model_rebuild()
@@ -539,8 +590,35 @@ def _check_auth(dest: NrDestination, spec: DestinationSpec) -> None:
         raise DestinationError(f"{dest.type.value} needs the custom header {spec.header_key}")
 
 
+def screen_secrets(dest: NrDestination) -> None:
+    """Refuse a secret held as plain text. Messages name the field, never the value."""
+    spec = SPECS[dest.type]
+    secret_keys = {p.key for p in spec.properties if p.secret}
+    for key, value in dest.properties.items():
+        if isinstance(value, SecretRef):
+            continue
+        if key in secret_keys:
+            raise DestinationError(f"property {key} must be a secret reference")
+        if looks_like_secret(value, strict=False):
+            raise DestinationError(f"property {key} looks like a secret; use a secret reference")
+    if dest.type == DestinationType.EMAIL and isinstance(dest.properties.get("email"), str):
+        parts = str(dest.properties["email"]).split(",")
+        if not all(EMAIL_ADDRESS.match(part.strip()) for part in parts):
+            raise DestinationError("property email must be one or more valid addresses")
+    plain: list[tuple[str, str]] = [
+        ("channel property " + k, v) for k, v in dest.channel_properties.items()
+    ]
+    if dest.auth is not None:
+        plain += [("auth user", dest.auth.user), ("auth prefix", dest.auth.prefix)]
+        plain += [("auth header key", h.key) for h in dest.auth.headers]
+    for where, value in plain:
+        if looks_like_secret(value):
+            raise DestinationError(f"{where} looks like a secret; use a secret reference")
+
+
 def validate_destination(dest: NrDestination) -> None:
     """Raise DestinationError unless the destination fits its type. Unknown parts are refused."""
+    screen_secrets(dest)
     spec = SPECS[dest.type]
     if dest.secure_url is not None and (
         dest.type != DestinationType.WEBHOOK or "url" in dest.properties
@@ -617,6 +695,11 @@ def plan_violations(plans: list[NotificationPlan]) -> list[str]:
         problems.append(
             "two plans have the same topic, so they would create the same objects; a channel "
             "can serve one workflow only"
+        )
+    names = [p.workflow.name for p in made if p.workflow is not None]
+    if len(set(names)) != len(names):
+        problems.append(
+            "two workflows have the same name; apply skips a workflow whose name exists"
         )
     for n, plan in enumerate(plans, start=1):
         problems += [f"plan {n}: {p}" for p in workflow_violations(plan)]

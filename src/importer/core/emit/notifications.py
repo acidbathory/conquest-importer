@@ -6,6 +6,7 @@ strings go through hcl_string().
 
 import hashlib
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from importer.core.emit.common import CannotEmit, emit_defaults
@@ -23,6 +24,7 @@ from importer.core.notification_ir import (
     PlannedDestination,
     PlannedWorkflow,
     SecretRef,
+    plan_violations,
     spec_for,
     validate_destination,
     workflow_violations,
@@ -203,13 +205,32 @@ def workflow_input(plan: NotificationPlan, channel_ids: list[str]) -> dict[str, 
     return data
 
 
-def _slug(plan: NotificationPlan) -> str:
-    return hashlib.sha256(plan.topic.encode()).hexdigest()[:10]
+def _slug(plan: NotificationPlan, n: int = 1) -> str:
+    """Ten hex characters of the topic's hash; a repeat of the topic hashes `#n` too."""
+    key = plan.topic if n == 1 else f"{plan.topic}#{n}"
+    return hashlib.sha256(key.encode()).hexdigest()[:10]
+
+
+def _slugs(plans: list[NotificationPlan]) -> list[str]:
+    """One resource-name slug per plan. Two plans with one topic (two SNS topics of one name in
+    different regions) get different slugs; a topic that occurs once keeps its old slug."""
+    seen: dict[str, int] = {}
+    slugs: list[str] = []
+    for plan in plans:
+        seen[plan.topic] = seen.get(plan.topic, 0) + 1
+        slugs.append(_slug(plan, seen[plan.topic]))
+    return slugs
+
+
+def secret_variable(name: str) -> str:
+    """The Terraform variable for a secret. The prefix keeps it clear of reserved words (count,
+    source, version...) and of the variables of a module this file is placed in."""
+    return "nr_secret_" + name.lower()
 
 
 def _hcl_value(value: str | SecretRef) -> str:
     """A string through hcl_string, or a reference to a sensitive Terraform variable."""
-    return hcl_string(value) if isinstance(value, str) else f"var.{value.name.lower()}"
+    return hcl_string(value) if isinstance(value, str) else f"var.{secret_variable(value.name)}"
 
 
 def _property_blocks(items: Mapping[str, str | SecretRef]) -> str:
@@ -280,19 +301,23 @@ def _secret_names(dests: list[NrDestination]) -> list[str]:
 
 
 def _variable_block(name: str) -> str:
-    return f'variable "{name.lower()}" {{\n  type      = string\n  sensitive = true\n}}\n'
+    return f'variable "{secret_variable(name)}" {{\n  type      = string\n  sensitive = true\n}}\n'
 
 
-def _destination_blocks(dests: list[NrDestination], slug: str) -> tuple[list[str], list[str]]:
-    """(resource texts, comments for destinations that cannot be emitted)."""
+def _destination_blocks(
+    dests: list[NrDestination], slug: str
+) -> tuple[list[str], list[str], list[NrDestination]]:
+    """(resource texts, comments for destinations that cannot be emitted, the ones emitted)."""
     blocks: list[str] = []
     skipped: list[str] = []
+    emitted: list[NrDestination] = []
     for i, dest in enumerate(dests):
         try:
             blocks.append(_destination_text(dest, slug, i))
+            emitted.append(dest)
         except CannotEmit as exc:
             skipped.append(f"# not emitted: destination {i + 1} of {slug}: {exc}\n")
-    return blocks, skipped
+    return blocks, skipped, emitted
 
 
 def _enrichment_blocks(wf: PlannedWorkflow) -> str:
@@ -319,7 +344,7 @@ def _workflow_block(wf: PlannedWorkflow, slug: str) -> str:
     if triggers:
         listed = ", ".join(hcl_string(t) for t in triggers)
         extra = f"    notification_triggers = [{listed}]\n"
-        pad = " " * 12  # lines channel_id up with notification_triggers
+        pad = " " * 11  # lines channel_id up with notification_triggers
     else:
         extra, pad = "", ""
     dests = "".join(
@@ -338,22 +363,25 @@ def _workflow_block(wf: PlannedWorkflow, slug: str) -> str:
     )
 
 
-def notifications_terraform(plans: list[NotificationPlan]) -> str:
+@dataclass(frozen=True)
+class TerraformResult:
+    text: str
+    violations: list[str]  # plan_violations(plans): what the caller should show
+
+
+def notifications_terraform_result(plans: list[NotificationPlan]) -> TerraformResult:
     """Terraform for every plan: its destinations and channels, and its workflow if it has one.
 
     Workflows are created disabled. A plan with destinations but no workflow (a Dynatrace plan
     whose filter could not be mapped) still gets its destinations, so a person only adds the
-    workflow.
+    workflow. A variable is declared for exactly the secrets the emitted blocks refer to.
     """
     blocks: list[str] = []
-    secrets: set[str] = set()
-    for plan in plans:
-        slug = _slug(plan)
-        dests = all_destinations(plan)
-        texts, skipped = _destination_blocks(dests, slug)
+    emitted: list[NrDestination] = []
+    for plan, slug in zip(plans, _slugs(plans), strict=True):
+        texts, skipped, done = _destination_blocks(all_destinations(plan), slug)
         blocks += texts + skipped
-        if not skipped:
-            secrets.update(_secret_names(dests))
+        emitted += done
         if plan.workflow is None:
             continue
         problems = workflow_violations(plan)
@@ -362,4 +390,9 @@ def notifications_terraform(plans: list[NotificationPlan]) -> str:
             blocks.append(f"# not emitted: workflow of {slug}: {why}\n")
         else:
             blocks.append(_workflow_block(plan.workflow, slug))
-    return "\n".join([_variable_block(n) for n in sorted(secrets)] + blocks)
+    declared = [_variable_block(n) for n in _secret_names(emitted)]
+    return TerraformResult("\n".join(declared + blocks), plan_violations(plans))
+
+
+def notifications_terraform(plans: list[NotificationPlan]) -> str:
+    return notifications_terraform_result(plans).text

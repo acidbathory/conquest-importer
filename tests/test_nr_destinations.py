@@ -28,7 +28,9 @@ from importer.core.notification_ir import (
 )
 
 TOKEN = SecretRef(name="PD_KEY")
-BASIC = DestinationAuth(kind=AuthKind.BASIC, user="me@example.com", password=SecretRef(name="PW"))
+BASIC = DestinationAuth(
+    kind=AuthKind.BASIC, user="me@example.com", password=SecretRef(name="BASIC_PASSWORD")
+)
 
 
 def dest(kind: DestinationType, **kw: object) -> NrDestination:
@@ -39,7 +41,9 @@ GOOD: dict[DestinationType, NrDestination] = {
     DestinationType.WEBHOOK: dest(
         DestinationType.WEBHOOK,
         properties={"url": "https://h.example.com/x"},
-        auth=DestinationAuth(kind=AuthKind.TOKEN, prefix="Bearer", token=SecretRef(name="TOK")),
+        auth=DestinationAuth(
+            kind=AuthKind.TOKEN, prefix="Bearer", token=SecretRef(name="WEBHOOK_TOKEN")
+        ),
         channel_properties={"payload": '{"a": "{{ issueId }}"}'},
     ),
     DestinationType.EMAIL: dest(
@@ -139,13 +143,17 @@ def test_webhook_refuses_unknown_or_missing_parts(change: dict[str, object], mes
 
 
 def test_a_secret_field_must_hold_a_reference_never_a_value() -> None:
-    bad = dest(
-        DestinationType.MICROSOFT_TEAMS,
-        properties={"securityCode": "s3cret-value"},
-        channel_properties={"teamId": "t", "channelId": "c"},
-    )
+    fields = {
+        "type": DestinationType.MICROSOFT_TEAMS,
+        "name": "t",
+        "properties": {"securityCode": "s3cret-value"},
+        "channel_properties": {"teamId": "t", "channelId": "c"},
+    }
+    with pytest.raises(ValueError, match="secret reference"):
+        NrDestination.model_validate(fields)  # refused when it is built
+    bad = NrDestination.model_construct(**fields)  # type: ignore[arg-type]
     with pytest.raises(DestinationError, match="must be a secret reference"):
-        validate_destination(bad)
+        validate_destination(bad)  # and again when it is emitted
     with pytest.raises(ValueError, match="secret name"):
         SecretRef(name="lower case value with spaces")
 
@@ -153,7 +161,7 @@ def test_a_secret_field_must_hold_a_reference_never_a_value() -> None:
 def test_a_reference_in_a_plain_field_is_refused() -> None:
     bad = dest(
         DestinationType.EMAIL,
-        properties={"email": SecretRef(name="X")},
+        properties={"email": SecretRef(name="SOME_NAME")},
         channel_properties={"subject": "s"},
     )
     with pytest.raises(DestinationError, match="is not a secret"):
@@ -182,13 +190,13 @@ def test_terraform_matches_the_provider_schema_and_holds_no_secret_value(
 
 def test_secrets_become_sensitive_variables() -> None:
     tf = notifications_terraform([plan_of(GOOD[DestinationType.MICROSOFT_TEAMS])])
-    assert "value = var.teams_code" in tf
-    assert 'variable "teams_code"' in tf and "sensitive = true" in tf
+    assert "value = var.nr_secret_teams_code" in tf
+    assert 'variable "nr_secret_teams_code"' in tf and "sensitive = true" in tf
 
 
 def test_terraform_auth_blocks() -> None:
     tf = notifications_terraform([plan_of(GOOD[DestinationType.SERVICE_NOW])])
-    assert "auth_basic {" in tf and "password = var.pw" in tf
+    assert "auth_basic {" in tf and "password = var.nr_secret_basic_password" in tf
     tf = notifications_terraform([plan_of(GOOD[DestinationType.WORKFLOW_AUTOMATION])])
     assert "auth_custom_header {" in tf and 'key   = "Api-Key"' in tf
     tf = notifications_terraform([plan_of(GOOD[DestinationType.PAGERDUTY_SERVICE_INTEGRATION])])
@@ -198,13 +206,13 @@ def test_terraform_auth_blocks() -> None:
 def test_secure_url_block_is_terraform_only() -> None:
     d = dest(
         DestinationType.WEBHOOK,
-        secure_url=SecureUrl(prefix="https://h.example.com/", suffix=SecretRef(name="HOOK")),
+        secure_url=SecureUrl(prefix="https://h.example.com/", suffix=SecretRef(name="HOOK_SUFFIX")),
         channel_properties={"payload": "{}"},
     )
     tf = notifications_terraform([plan_of(d)])
     assert "secure_url {" in tf and schema_errors(tf) == []
     with pytest.raises(CannotEmit, match="secure_url"):
-        nr_destination_input(d, {"HOOK": "x"})
+        nr_destination_input(d, {"HOOK_SUFFIX": "x"})
 
 
 @pytest.mark.parametrize("kind", NOT_CREATABLE)
@@ -242,7 +250,7 @@ def test_graphql_inputs_use_placeholders_or_given_secrets() -> None:
 
 
 def test_graphql_auth_shapes() -> None:
-    inp = nr_destination_input(GOOD[DestinationType.SERVICE_NOW], {"PW": "pw"})
+    inp = nr_destination_input(GOOD[DestinationType.SERVICE_NOW], {"BASIC_PASSWORD": "pw"})
     assert inp["auth"] == {
         "authType": "BASIC",
         "basic": {"user": "me@example.com", "password": "pw"},

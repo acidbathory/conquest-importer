@@ -165,7 +165,9 @@ def test_account_workflow_limit_is_reported() -> None:
     dest = PlannedDestination(kind=ChannelKind.EMAIL, name="n", target="a@example.com")
     wf = PlannedWorkflow(name="w", condition_names=["c"], destination_indexes=[0])
     plans = [
-        NotificationPlan(topic=f"t{i}", destinations=[dest], workflow=wf)
+        NotificationPlan(
+            topic=f"t{i}", destinations=[dest], workflow=wf.model_copy(update={"name": f"w{i}"})
+        )
         for i in range(MAX_WORKFLOWS + 1)
     ]
     problems = plan_violations(plans)

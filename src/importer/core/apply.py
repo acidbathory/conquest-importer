@@ -74,6 +74,7 @@ class Plan(BaseModel):
 class ApplyResult(BaseModel):
     created: list[str] = []
     skipped_existing: list[str] = []
+    skipped_review: list[str] = []  # plans marked needs_review that were not created
     failed: list[tuple[str, str]] = []
     objects: list[CreatedObject] = []  # ids of what was created, for the manifest
 
@@ -135,6 +136,10 @@ class NewRelicClient:
             transport=transport,
             verify=system_tls_context(),
         )
+
+    def add_secrets(self, values: list[str]) -> None:
+        """Have error text scrubbed of these values too (for example destination secrets)."""
+        self._secrets.extend(SecretStr(v) for v in values if v)
 
     def close(self) -> None:
         self._http.close()
