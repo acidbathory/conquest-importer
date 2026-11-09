@@ -24,6 +24,8 @@ PROM_TIERS = [
     ('up{job=~".*api"}', 1),
     ('up{job=~".*api.*"}', 1),
     ('up{job!~"a.*"}', 1),
+    ('up{job=~".+"}', 1),  # present, written as IS NOT NULL
+    ('node_filesystem_size_bytes{fstype=~"ext.*|xfs"}', 1),  # RLIKE, anchored like PromQL
     ('count{a="b"}', 1),  # a metric called count is not the aggregator
     ('up{job="rate(x_total[5m])"}', 1),  # text inside a string is not a call
     ("up * .5", 3),
@@ -66,10 +68,8 @@ PROM_TIERS = [
 
 PROM_MANUAL = [
     ('up{job=~".*"}', r.Q_REGEX),
-    ('up{job=~".+"}', r.Q_REGEX),
     ('up{job=~"a|"}', r.Q_REGEX),
     ('up{job=~"(?i)abc"}', r.Q_REGEX),
-    ('node_filesystem_size_bytes{fstype=~"ext.*|xfs"}', r.Q_REGEX),
     ('node_filesystem_size_bytes{device!~"^(tmpfs|rootfs)$"}', r.Q_REGEX),
     ("sum by ($group) (up)", r.Q_GROUP_VARIABLE),
     ("sum(up) by ($group)", r.Q_GROUP_VARIABLE),

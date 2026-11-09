@@ -52,7 +52,7 @@ class Unconvertible(Exception):
 
 @dataclass(frozen=True)
 class Cond:
-    """One label condition: `kind` is eq, in, like or absent."""
+    """One label condition: `kind` is eq, in, like, absent or rlike."""
 
     key: str
     kind: str

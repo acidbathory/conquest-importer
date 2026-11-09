@@ -41,6 +41,7 @@ from importer.sources.grafana.dashboard_convert.reuse import (
     MAX_EXPRESSION,
     NAME,
     QUOTED,
+    Cond,
     Unconvertible,
     loki_query,
     outer,
@@ -53,6 +54,7 @@ from importer.sources.grafana.dashboards.query_tier import (
     SUM_BY,
     TOPK,
 )
+from importer.sources.grafana.dashboards.regex_matchers import PRESENT, RegexUse, mask
 
 MAX_NESTING = 20
 MAX_OPERANDS = 50
@@ -220,9 +222,10 @@ def _window(token: str) -> tuple[str, int]:
 
 
 class _Parse:
-    def __init__(self, opts: QueryOptions, names: list[str]) -> None:
+    def __init__(self, opts: QueryOptions, names: list[str], regexes: dict[str, RegexUse]) -> None:
         self.opts = opts
         self.names = names
+        self.regexes = regexes
         self.notes: list[str] = []
         self.metrics: list[str] = []
         self.numeric: list[str] = []
@@ -413,13 +416,22 @@ class _Parse:
     def where(self, body: str) -> tuple[str, ...]:
         if "VARB" in body:
             raise Unconvertible(r.C_BUILTIN)
-        conds = prom_conditions(body, r.C_SHAPE)
+        conds = [self.regex(c) for c in prom_conditions(body, r.C_SHAPE)]
         for cond in conds:
             for value in cond.values:
                 for token in VAR_TOKEN.findall(value):
                     labels = self.var_labels.setdefault(self.names[int(token)], [])
                     labels.append(cond.key)
         return tuple(cond_sql(c, self.names) for c in conds)
+
+    def regex(self, cond: Cond) -> Cond:
+        """A condition on a masked word becomes RLIKE, or a presence test for `.+`."""
+        use = self.regexes.get(cond.values[0]) if cond.kind == "eq" else None
+        if use is None:
+            return cond
+        if use.pattern == PRESENT:
+            return Cond(cond.key, "absent", negate=not cond.negate)
+        return Cond(cond.key, "rlike", (use.pattern,), cond.negate)
 
     def facet(self, labels: list[str]) -> tuple[str, ...]:
         if any(VAR_TOKEN.search(label) for label in labels):
@@ -490,7 +502,8 @@ def convert_query(
     if len(expr) > MAX_EXPRESSION:
         raise Unconvertible(r.C_SHAPE)
     text, names = tokenize(" ".join(expr.split()), opts)
-    parse = _Parse(opts, names)
+    text, regexes = mask(text) if family == "prometheus" else (text, {})
+    parse = _Parse(opts, names, regexes)
     node = parse.expr(text, family)
     found = leaves(node)
     _check_shape(found)

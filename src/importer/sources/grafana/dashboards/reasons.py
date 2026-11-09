@@ -63,7 +63,10 @@ Q_LABEL_FN = "dashboard query rewrites labels with label_replace or label_join"
 Q_FUNCTION = "dashboard query uses a function with no New Relic counterpart in the converter"
 Q_NESTED = "dashboard query aggregates an aggregation"
 Q_COUNTER = "dashboard query reads a counter metric (_total, _count, _sum or _bucket) without rate"
-Q_REGEX = "dashboard query has a regex matcher that needs RLIKE verification"
+Q_REGEX = (
+    "dashboard query has a regex matcher that RLIKE cannot carry exactly (it matches an empty or "
+    "missing label value, or uses syntax outside the checked subset)"
+)
 Q_BINARY_LABELS = "dashboard query combines series that are grouped by different labels"
 Q_GROUP_VARIABLE = "dashboard query groups by a variable"
 Q_MATCHER = "dashboard query has a label matcher the converter does not read"
