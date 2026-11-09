@@ -229,6 +229,7 @@ def _charts(
         timeseries=viz in (V.LINE, V.AREA),
         bucket_seconds=bucket,
         intervals=ctx.variables.intervals,
+        unavailable=ctx.variables.unavailable,
     )
     queries: list[str] = []
     for target, owner in _targets(panel, ctx):

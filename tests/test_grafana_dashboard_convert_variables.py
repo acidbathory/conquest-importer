@@ -4,13 +4,14 @@ import pytest
 
 from importer.core.dashboard_ir import ReplacementStrategy, VariableType
 from importer.sources.grafana.dashboard_convert.name_map import NameEntry, NameMap
+from importer.sources.grafana.dashboard_convert.panels import Context, convert_panel
 from importer.sources.grafana.dashboard_convert.variables import (
     RawVar,
     Variables,
     convert_variables,
     custom_items,
 )
-from importer.sources.grafana.dashboards.models import Dashboard, Variable
+from importer.sources.grafana.dashboards.models import Dashboard, DsRef, Panel, Target, Variable
 from importer.sources.grafana.dashboards.plan import plan_dashboard
 
 
@@ -170,3 +171,30 @@ def test_hostile_values_cannot_break_the_variable_models() -> None:
     assert build([quoted]).variables[0].nrql == (
         "FROM Metric SELECT uniques(pod) WHERE metricName = 'up' AND job = 'a\\'b'"
     )
+
+
+def test_refresh_on_load_means_the_variable_ignores_the_time_picker() -> None:
+    on_load = build([query_var("label_values(up, pod)")], [RawVar(refresh=1)])
+    on_range = build([query_var("label_values(up, pod)")], [RawVar(refresh=2)])
+    assert on_load.variables[0].ignore_time_range is True
+    assert on_range.variables[0].ignore_time_range is False
+
+
+def test_a_variable_the_converter_cannot_write_is_counted_and_its_panels_say_so() -> None:
+    ds = DsRef(type="prometheus", uid="p")
+    var = Variable(name="pod", kind="query", query='label_values(up{job=~"a.b"}, pod)', ds=ds)
+    panel = Panel(
+        id=1,
+        type="timeseries",
+        title="t",
+        ds=ds,
+        targets=[Target(ref_id="A", expr='up{pod="$pod"}')],
+    )
+    dash = Dashboard(uid="u", title="t", variables=[var], panels=[panel])
+    plan = plan_dashboard(dash)
+    assert plan.variables[0].status == "converts" and plan.panels[0].tier is not None
+    found = convert_variables(dash, plan.variables, [RawVar()], NameMap())
+    assert found.variables == [] and found.manual == 1
+    draft = convert_panel(panel, plan.panels[0], None, Context(dash, NameMap(), found))
+    assert draft.kind.value == "unsupported"
+    assert draft.reasons[0].endswith("did not become a New Relic variable")

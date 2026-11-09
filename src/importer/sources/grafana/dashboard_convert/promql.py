@@ -90,6 +90,7 @@ class QueryOptions:
     timeseries: bool  # the widget draws over time (line, area)
     bucket_seconds: int | None = None  # a fixed bucket the query or panel asked for
     intervals: frozenset[str] = frozenset()  # interval variables: a window the bucket replaces
+    unavailable: frozenset[str] = frozenset()  # dashboard variables that did not convert
 
 
 @dataclass
@@ -119,6 +120,8 @@ def tokenize(expr: str, opts: QueryOptions) -> tuple[str, list[str]]:
             return "VARBOTHER"
         if name in opts.intervals:
             return BUILTINS["__interval"]
+        if name in opts.unavailable:
+            raise Unconvertible(r.C_VARIABLE_UNDEFINED)
         if name not in opts.variables:
             return match[0]
         value = opts.variables[name]

@@ -289,3 +289,42 @@ def test_a_like_pattern_with_a_percent_sign_is_refused() -> None:
     with pytest.raises(Unconvertible) as caught:
         cond_sql(Cond("job", "like", ("a%b*",)), [])
     assert caught.value.reason == r.C_LIKE_PERCENT
+
+
+def test_a_flat_selector_says_series_are_merged_unless_a_label_keeps_them_apart() -> None:
+    assert r.N_MERGED in convert_query("up", "prometheus", LINE).notes
+    assert r.N_MERGED not in convert_query("up", "prometheus", LINE, read_legend("{{a}}")).notes
+    assert r.N_MERGED not in convert_query("sum(up)", "prometheus", LINE).notes
+
+
+@pytest.mark.parametrize("value", ["x" * 201, "a\nb", "a\x00b"])
+def test_a_constant_that_is_long_or_has_a_line_break_is_refused(value: str) -> None:
+    opts = QueryOptions(variables={"c": value}, name_map=NameMap(), timeseries=True)
+    with pytest.raises(Unconvertible) as caught:
+        nrql('up{job="$c"}', opts)
+    assert caught.value.reason == r.C_SHAPE
+
+
+def test_a_negated_absent_label_is_is_not_null() -> None:
+    assert cond_sql(Cond("zone", "absent", negate=True), []) == "zone IS NOT NULL"
+    assert cond_sql(Cond("zone", "absent"), []) == "zone IS NULL"
+
+
+@pytest.mark.parametrize(
+    ("window", "interval"),
+    [
+        ("1d", "1 day"),
+        ("2w", "14 days"),
+        ("90s", "90 seconds"),
+        ("1h30m", "90 minutes"),
+        ("1m", "1 minute"),
+    ],
+)
+def test_the_increase_window_becomes_the_largest_whole_unit(window: str, interval: str) -> None:
+    out = nrql(f"sum(increase(x_total[{window}]))")
+    assert out.split(", ", 1)[1] == interval + ") FROM Metric TIMESERIES AUTO"
+
+
+def test_a_legend_asks_for_at_most_five_labels() -> None:
+    legend = read_legend(" ".join(f"{{{{l{i}}}}}" for i in range(8)))
+    assert legend.labels == ("l0", "l1", "l2", "l3", "l4")

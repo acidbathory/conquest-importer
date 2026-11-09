@@ -328,3 +328,74 @@ def test_two_dashboards_with_the_same_uid_get_different_keys() -> None:
     made, _ = convert_all(items)
     keys = [m.source_key for m in made]
     assert len(keys) == len(set(keys)) and "k8s-vars#2" in keys
+
+
+def test_html_in_a_text_panel_is_reduced_to_text() -> None:
+    text = by_title(convert(MINE, "hostile-convert.json"))["html <script>alert(1)</script>"]
+    assert text.text == "{{var}} bold & text"
+    assert text.confidence == Confidence.APPROXIMATE and r.N_HTML in text.reasons
+
+
+def _one_panel(**panel: Any) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "id": 1,
+        "type": "timeseries",
+        "title": "p",
+        "datasource": {"type": "prometheus", "uid": "p"},
+        "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8},
+        "targets": [{"refId": "A", "expr": "sum(up)"}],
+    }
+    body.update(panel)
+    return {"uid": "d", "title": "d", "schemaVersion": 39, "panels": [body]}
+
+
+def _convert_data(data: dict[str, Any], tmp_path: Path) -> IRDashboard:
+    (tmp_path / "d.json").write_text(json.dumps(data))
+    return DASHBOARD_REGISTRY["grafana"].convert(tmp_path)[0]
+
+
+@pytest.mark.parametrize(
+    ("interval", "tail"),
+    [
+        ("1m", "TIMESERIES 60 SECONDS"),
+        ("2h", "TIMESERIES 7200 SECONDS"),
+        ("100h", "TIMESERIES AUTO"),
+        ("0s", "TIMESERIES AUTO"),
+        ("$__interval", "TIMESERIES AUTO"),
+        ("1d", "TIMESERIES AUTO"),
+    ],
+)
+def test_a_fixed_query_interval_is_the_bucket_only_when_it_is_a_sane_literal(
+    interval: str, tail: str, tmp_path: Path
+) -> None:
+    data = _one_panel(targets=[{"refId": "A", "expr": "sum(up)", "interval": interval}])
+    widget = _convert_data(data, tmp_path).widgets[0]
+    assert queries(widget)[0].endswith(tail)
+    assert (r.N_FIXED_INTERVAL in widget.reasons) == (tail != "TIMESERIES AUTO")
+
+
+def test_axis_limits_that_cross_are_dropped_and_ordinary_ones_kept(tmp_path: Path) -> None:
+    crossed = _one_panel(fieldConfig={"defaults": {"min": 10, "max": 5}})
+    widget = _convert_data(crossed, tmp_path).widgets[0]
+    assert (widget.options.y_min, widget.options.y_max) == (None, None)
+    fine = _one_panel(fieldConfig={"defaults": {"min": 0, "max": 5}})
+    widget = _convert_data(fine, tmp_path).widgets[0]
+    assert (widget.options.y_min, widget.options.y_max) == (0.0, 5.0)
+
+
+def test_a_panel_that_shows_another_panels_result_uses_that_panels_query(tmp_path: Path) -> None:
+    data = _one_panel()
+    data["panels"].append(
+        {
+            "id": 2,
+            "type": "stat",
+            "title": "copy",
+            "gridPos": {"x": 0, "y": 8, "w": 24, "h": 4},
+            "datasource": {"type": "datasource", "uid": "-- Dashboard --"},
+            "targets": [{"refId": "A", "panelId": 1, "datasource": {"uid": "-- Dashboard --"}}],
+        }
+    )
+    widgets = _convert_data(data, tmp_path).widgets
+    assert queries(widgets[1]) == ["SELECT sum(up) FROM Metric"]
+    assert widgets[1].visualization is not None
+    assert widgets[1].visualization.value == "viz.billboard"

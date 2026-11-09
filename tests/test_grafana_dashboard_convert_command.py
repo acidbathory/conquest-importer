@@ -161,3 +161,17 @@ def test_the_metric_table_is_bounded(tmp_path: Path) -> None:
     assert "Metric names used by converted queries: **120**" in report
     assert "80 more names are not listed." in report
     assert report.count("| metric_") == 40
+
+
+def test_a_map_with_too_many_entries_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from importer.sources.grafana.dashboard_convert import name_map
+
+    monkeypatch.setattr(name_map, "MAX_ENTRIES", 1)
+    file = tmp_path / "two.json"
+    entry = {"event": "Metric", "attribute": "a"}
+    file.write_text(json.dumps({"metrics": {"one": entry, "two": entry}}))
+    with pytest.raises(NameMapError) as caught:
+        load_name_map(file)
+    assert "more than 1 metrics" in str(caught.value)

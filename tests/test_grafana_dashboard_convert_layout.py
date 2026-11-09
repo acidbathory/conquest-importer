@@ -262,3 +262,40 @@ def test_v2_panels_are_matched_by_title_and_read_their_unit(tmp_path: Path) -> N
     assert item.raw is not None
     units = [d.unit if d else None for d in item.raw.displays]
     assert units == ["ms", "s"]
+
+
+def classic_body_of(count: int) -> dict[str, Any]:
+    return classic([{"id": i, "type": "stat", "title": f"p{i}"} for i in range(count)])
+
+
+def test_the_panel_cap_applies_to_both_readers(monkeypatch: pytest.MonkeyPatch) -> None:
+    from importer.sources.grafana.dashboard_convert import raw as raw_module
+    from importer.sources.grafana.dashboards import classic as classic_module
+
+    monkeypatch.setattr(classic_module, "MAX_PANELS", 3)
+    monkeypatch.setattr(raw_module, "MAX_PANELS", 3)
+    body = classic_body_of(5)
+    dash = estate_of(body)
+    assert len(dash.panels) == 3
+    assert len(classic_bodies(body, {})) == 3
+    assert read_raw(body, "classic", dash, {}).matched
+
+
+def test_rows_nested_deeper_than_the_cap_are_left_out_by_both_readers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from importer.sources.grafana.dashboard_convert import raw as raw_module
+    from importer.sources.grafana.dashboards import classic as classic_module
+
+    monkeypatch.setattr(classic_module, "MAX_DEPTH", 0)
+    monkeypatch.setattr(raw_module, "MAX_DEPTH", 0)
+    inner = [{"id": 3, "type": "stat", "title": "hidden"}]
+    body = classic(
+        [
+            {"id": 1, "type": "stat", "title": "top"},
+            {"id": 2, "type": "row", "title": "r", "collapsed": True, "panels": inner},
+        ]
+    )
+    dash = estate_of(body)
+    assert [p.title for p in dash.panels] == ["top"]
+    assert [b["title"] for b in classic_bodies(body, {})] == ["top"]

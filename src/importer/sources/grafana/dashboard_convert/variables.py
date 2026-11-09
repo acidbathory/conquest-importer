@@ -55,6 +55,7 @@ class Variables:
     variables: list[IRVariable] = field(default_factory=list)
     options: dict[str, str | None] = field(default_factory=dict)  # name -> constant or None
     intervals: frozenset[str] = frozenset()
+    unavailable: frozenset[str] = frozenset()  # variables with no New Relic counterpart
     dropped: int = 0
     manual: int = 0
     substituted: int = 0
@@ -221,4 +222,5 @@ def convert_variables(
                 continue
             out.options[variable.name] = None
     out.intervals = frozenset(intervals)
+    out.unavailable = frozenset({v.name for v in dash.variables} - set(out.options) - intervals)
     return out
