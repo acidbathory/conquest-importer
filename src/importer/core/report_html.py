@@ -60,7 +60,7 @@ def _aws_create(account: str, nr: str, area: str) -> str:
     )
 
 
-def _gcp_create(_project: str, nr: str, _area: str) -> str:
+def _apply_create(_project: str, nr: str, _area: str) -> str:
     return (
         f"importer apply --in &lt;run folder&gt;/alerts --account-id {nr} "
         f"--apply --confirm-account {nr}"
@@ -87,6 +87,15 @@ GCP_CHECKLIST = (
     "and attach a workflow.",
     "Review each condition, then enable them one at a time.",
 )
+DYNATRACE_CHECKLIST = (
+    "Forward the logs to New Relic so the converted log counts have data, and check that the "
+    "attribute names in each condition (for example loglevel) match the attributes on the "
+    "forwarded logs. Nothing has been tried against a Dynatrace tenant that has workflows.",
+    "Davis problem workflows are notification routes, not conditions. Recreate each channel "
+    "as a destination and attach a workflow filtered on issue priority or tags.",
+    "SLOs are not converted yet. Rebuild each as a New Relic service level.",
+    "Review each condition, then enable them one at a time.",
+)
 PROFILES: dict[str, Profile] = {
     "cloudwatch": Profile(
         account_label="AWS account",
@@ -111,8 +120,20 @@ PROFILES: dict[str, Profile] = {
         "as two). Dashboards, notification channels and uptime checks are not read yet, so "
         "they are not counted.",
         names_word="policy",
-        create_command=_gcp_create,
+        create_command=_apply_create,
         checklist=GCP_CHECKLIST,
+    ),
+    "dynatrace": Profile(
+        account_label="Dynatrace tenant",
+        read_phrase="Your Dynatrace workflows and SLOs were read and converted.",
+        source_phrase="your Dynatrace tenant",
+        alarm_title=("Workflows and SLOs", "workflows and SLOs"),
+        share_label="Share of workflows and SLOs converted",
+        unit_sentence="One workflow or one SLO is one asset. Classic alerting profiles and "
+        "problem notifications are not read, so they are not counted.",
+        names_word="workflow",
+        create_command=_apply_create,
+        checklist=DYNATRACE_CHECKLIST,
     ),
 }
 

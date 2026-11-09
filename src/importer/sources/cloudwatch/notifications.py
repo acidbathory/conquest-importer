@@ -5,11 +5,11 @@ import re
 from pathlib import Path
 from typing import Any
 
+from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.ir import IRMonitor
 from importer.core.notification_ir import ChannelKind, IRChannel, IRTopic
 from importer.core.text import printable
 from importer.sources.cloudwatch.extract import _SNS_TOPIC
-from importer.sources.cloudwatch.models import MAX_INPUT_BYTES
 
 _EMAIL = re.compile(r"^[^@\s,;<>\"'\\]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$")
 _HTTPS = re.compile(r"^https://[^\s\"'<>\\]{1,2000}$")

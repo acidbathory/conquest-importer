@@ -4,7 +4,6 @@ Dashboard text is untrusted: JSON output is serialised by json, Terraform string
 hcl_string(), and the text of "not migrated" placeholders through md_cell().
 """
 
-import hashlib
 from typing import Any, NamedTuple
 
 from importer.core.dashboard_ir import (
@@ -17,6 +16,7 @@ from importer.core.dashboard_ir import (
 from importer.core.emit.common import CannotEmit
 from importer.core.emit.nrql import widget_nrql
 from importer.core.emit.terraform import hcl_string
+from importer.core.ids import source_id
 from importer.core.ir import Confidence
 from importer.core.report import md_cell
 
@@ -59,7 +59,7 @@ class EmitWidget(NamedTuple):
 def dashboard_id(dashboard: IRDashboard) -> int:
     """A stable integer from the source and dashboard name, for file and resource names."""
     key = f"{dashboard.source_system}:{dashboard.source_key}"
-    return int(hashlib.sha256(key.encode()).hexdigest()[:12], 16)
+    return source_id(key)
 
 
 def placeholder_text(widget: IRWidget) -> str:

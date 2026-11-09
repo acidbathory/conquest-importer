@@ -22,8 +22,8 @@ from typing import Any
 
 import httpx
 
+from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.text import printable
-from importer.sources.gcp.models import MAX_INPUT_BYTES
 
 PROJECT_ID = re.compile(r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$")
 API = "https://monitoring.googleapis.com/v3"

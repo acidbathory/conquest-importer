@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from importer.sources.cloudwatch.models import MAX_INPUT_BYTES
+from importer.core.ids import MAX_INPUT_BYTES
 
 
 class CloudWatchDashboard(BaseModel):

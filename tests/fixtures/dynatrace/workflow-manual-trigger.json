@@ -1,0 +1,20 @@
+{
+  "description": "Hand-made test object, shaped like the real exports.",
+  "id": "00000000-0000-0000-0000-000000000004",
+  "isDeployed": true,
+  "schemaVersion": 4,
+  "tasks": {
+    "run": {
+      "action": "dynatrace.automations:run-javascript",
+      "input": {
+        "script": "export default async function () {}"
+      },
+      "predecessors": []
+    }
+  },
+  "title": "example-manual-runbook",
+  "trigger": {},
+  "triggerType": "Manual",
+  "type": "STANDARD",
+  "version": 1
+}

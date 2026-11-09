@@ -12,7 +12,7 @@ FIXTURES = Path("tests/fixtures")
 
 def _monitors() -> list[IRMonitor]:
     out: list[IRMonitor] = []
-    for name, folder in (("cloudwatch", "cloudwatch"), ("gcp", "gcp")):
+    for name, folder in (("cloudwatch", "cloudwatch"), ("gcp", "gcp"), ("dynatrace", "dynatrace")):
         src = REGISTRY[name]
         out += src.translate(src.load(FIXTURES / folder))
     return out

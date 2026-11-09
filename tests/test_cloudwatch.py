@@ -12,10 +12,10 @@ from importer.cli import app
 from importer.core.emit.common import CannotEmit, nrql_for
 from importer.core.emit.nerdgraph import nerdgraph_payload
 from importer.core.emit.terraform import resource_block
+from importer.core.ids import source_id
 from importer.core.ir import Confidence, IRMonitor, Occurrences
 from importer.sources.cloudwatch.models import CloudWatchAlarm, load_alarms
 from importer.sources.cloudwatch.translate import (
-    alarm_source_id,
     load_namespace_map,
     translate_alarm,
     translate_composite,
@@ -258,8 +258,8 @@ def test_composite_is_unsupported_and_lists_alarm_names() -> None:
 
 
 def test_source_id_is_stable_and_distinct() -> None:
-    assert alarm_source_id("a") == alarm_source_id("a")
-    assert alarm_source_id("a") != alarm_source_id("b")
+    assert source_id("a") == source_id("a")
+    assert source_id("a") != source_id("b")
 
 
 def test_loader_accepts_bare_list_and_directory(tmp_path: Path) -> None:

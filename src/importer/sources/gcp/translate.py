@@ -7,13 +7,13 @@ New Relic's names for GCP metrics follow the documented rule but are not yet con
 live data, so every conversion is approximate until they are.
 """
 
-import hashlib
 import json
 import re
 from pathlib import Path
 
 from importer.core.emit.common import MAX_AGGREGATION_WINDOW_SECONDS, MAX_DURATION_SECONDS
 from importer.core.emit.nrql import identifier
+from importer.core.ids import source_id
 from importer.core.ir import (
     Aggregation,
     Confidence,
@@ -134,10 +134,6 @@ class _Fail(Exception):
         super().__init__(reason)
         self.confidence = confidence
         self.reason = reason
-
-
-def source_id(key: str) -> int:
-    return int(hashlib.sha256(key.encode()).hexdigest()[:12], 16)
 
 
 def nr_metric_name(metric_type: str) -> str:

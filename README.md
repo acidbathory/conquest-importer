@@ -105,6 +105,11 @@ customer results, and yours will differ.
 
 AWS CloudWatch is the platform tested most. Google Cloud alert policies also convert (`extract-gcp`,
 `convert --source gcp`); that path has been tested in a sandbox project and not on customer data.
+Dynatrace is in phase 0: scheduled log-count workflows convert, Davis problem workflows and SLOs
+are listed with manual steps (`extract-dynatrace`, `convert --source dynatrace`); nothing has run
+against a tenant that has workflows yet. Sequence: `extract-dynatrace --out out/dynatrace`,
+`convert --source dynatrace --in out/dynatrace --out out/dynatrace/alerts`,
+`report out/dynatrace --source dynatrace`.
 Datadog support was built and then removed; it is paused until AWS, GCP and Azure are covered.
 Planned, in this order:
 

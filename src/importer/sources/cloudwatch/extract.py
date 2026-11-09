@@ -17,8 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.text import printable
-from importer.sources.cloudwatch.models import MAX_INPUT_BYTES
 
 # (service, operation, region, profile, parameters) -> the response as plain JSON data
 Runner = Callable[[str, str, str, str | None, dict[str, Any]], dict[str, Any]]

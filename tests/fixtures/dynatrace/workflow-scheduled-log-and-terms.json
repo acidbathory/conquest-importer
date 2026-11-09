@@ -1,0 +1,48 @@
+{
+  "description": "Hand-made test object, shaped like the real exports.",
+  "id": "00000000-0000-0000-0000-000000000001",
+  "isDeployed": true,
+  "schemaVersion": 4,
+  "tasks": {
+    "count_checkouts": {
+      "action": "dynatrace.automations:execute-dql-query",
+      "input": {
+        "query": "fetch logs, from:now() - 1h | filter dt.process.name == \"checkout\" and loglevel == \"ERROR\" | summarize hits = count()"
+      },
+      "predecessors": []
+    },
+    "notify": {
+      "action": "dynatrace.email:send-email",
+      "conditions": {
+        "custom": "{{ result(\"count_checkouts\")[\"records\"][0][\"hits\"] >= 20 }}",
+        "states": {
+          "count_checkouts": "OK"
+        }
+      },
+      "input": {
+        "content": "x",
+        "subject": "x",
+        "to": [
+          "oncall@example.com"
+        ]
+      },
+      "predecessors": [
+        "count_checkouts"
+      ]
+    }
+  },
+  "title": "example-checkout-errors",
+  "trigger": {
+    "schedule": {
+      "isActive": true,
+      "timezone": "UTC",
+      "trigger": {
+        "intervalMinutes": 60,
+        "type": "interval"
+      }
+    }
+  },
+  "triggerType": "Schedule",
+  "type": "STANDARD",
+  "version": 1
+}

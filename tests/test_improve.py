@@ -27,9 +27,9 @@ def result(total: int, converted: int, unguided: list[str] | None = None) -> dic
     }
 
 
-def test_measure_covers_both_sources_with_sane_numbers() -> None:
+def test_measure_covers_every_source_with_sane_numbers() -> None:
     sources = improve.measure(ROOT)["sources"]
-    assert set(sources) == {"cloudwatch", "gcp"}
+    assert set(sources) == {"cloudwatch", "gcp", "dynatrace"}
     for s in sources.values():
         assert 0 < s["converted"] <= s["total"] and 0 <= s["rate"] <= 1
 

@@ -67,6 +67,11 @@ from importer.sources.cloudwatch.models import load_alarms
 from importer.sources.cloudwatch.notifications import load_topics, routing, translate_topic
 from importer.sources.cloudwatch.streaming import streaming_inputs
 from importer.sources.cloudwatch.translate import alarm_namespaces, load_namespace_map
+from importer.sources.dynatrace.extract import DynatraceError
+from importer.sources.dynatrace.extract import api_token as dynatrace_api_token
+from importer.sources.dynatrace.extract import environment_url as dynatrace_env_url
+from importer.sources.dynatrace.extract import extract as extract_dynatrace
+from importer.sources.dynatrace.extract import http_getter as dynatrace_getter
 from importer.sources.gcp import data_check as gcp_data
 from importer.sources.gcp.extract import GcpError, access_token, http_getter
 from importer.sources.gcp.extract import extract as extract_gcp
@@ -448,6 +453,35 @@ def extract_gcp_command(
         typer.echo(f"  Could not read {printable(warning, 200)}", err=True)
     typer.echo("Next:")
     typer.echo(f"  importer convert --source gcp --in {out / 'policies'} --out out/gcp-alerts")
+
+
+@app.command("extract-dynatrace")
+def extract_dynatrace_command(
+    out: Annotated[Path, typer.Option(help="New folder for the export")] = Path("out/dynatrace"),
+) -> None:
+    """Read workflows and SLOs from a Dynatrace Platform tenant.
+
+    Read-only: lists workflows and SLOs through the Platform APIs. Set DYNATRACE_ENV_URL
+    (https://<tenant id>.apps.dynatrace.com) and DYNATRACE_API_TOKEN (a platform token with
+    automation:workflows:read and slo:slos:read) in .env or the environment; the token is never
+    stored or printed. Behind a corporate proxy that inspects TLS, set SSL_CERT_FILE to a file
+    with the corporate root certificate. The export can contain email addresses and channel names
+    from workflow tasks: review it before sharing.
+    """
+    try:
+        token, env_url = dynatrace_api_token(), dynatrace_env_url()
+        with dynatrace_getter(token) as get:
+            result = extract_dynatrace(get, env_url, out)
+    except (DynatraceError, ValueError, OSError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
+        raise typer.Exit(code=1) from None
+    slos = f"{result.slos} SLOs" if result.slos_read else "SLOs were NOT read (see below)"
+    typer.echo(f"Read {result.workflows} workflows; {slos}.")
+    for warning in result.warnings:
+        typer.echo(f"  Warning: {printable(warning, 300)}", err=True)
+    typer.echo("Next:")
+    typer.echo(f"  importer convert --source dynatrace --in {out} --out {out / 'alerts'}")
+    typer.echo(f"  importer report {out} --source dynatrace")
 
 
 @app.command("extract-cloudwatch")
@@ -962,7 +996,7 @@ def report_command(
     ] = "",
     nr_account_id: Annotated[int | None, typer.Option(help="Shown in the header")] = None,
     region: Annotated[str, typer.Option(help="Shown in the header")] = "",
-    source: Annotated[str, typer.Option(help="cloudwatch or gcp")] = "cloudwatch",
+    source: Annotated[str, typer.Option(help="cloudwatch, gcp or dynatrace")] = "cloudwatch",
 ) -> None:
     """Write the post-migration HTML report: what migrated, what did not, and how to fix it.
 
