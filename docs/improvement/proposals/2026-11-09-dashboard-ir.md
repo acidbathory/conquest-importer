@@ -1,39 +1,44 @@
 # Proposal: dashboard IR and emitter extension (workstream A)
 
-Branch `improve/dashboard-ir`, from `integration/all-threads` (a53a9a3).
+Branch `improve/dashboard-ir`, from `integration/all-threads` (a53a9a3). Round 2 (reviewer defects) is included below.
 
 ## What changed
 
-Files: `src/importer/core/dashboard_ir.py`, `src/importer/core/emit/dashboard.py`, new `src/importer/core/dashboard_nrql.py`, the dashboard section of `docs/ir-spec.md`, tests `tests/test_dashboard_ir_{byte_identity,nrql,model,emit}.py`, fixtures `tests/fixtures/dashboard-output-hashes.json` and `tests/fixtures/newrelic-one-dashboard-schema.json`.
+Files: `src/importer/core/dashboard_ir.py`, `src/importer/core/emit/dashboard.py`, new `src/importer/core/dashboard_nrql.py`, the dashboard section of `docs/ir-spec.md`, tests `tests/test_dashboard_ir_{byte_identity,nrql,model,emit}.py`, fixtures `tests/fixtures/dashboard-output-hashes.json`, `tests/fixtures/dashboard-generated-hashes.json` and `tests/fixtures/newrelic-one-dashboard-schema.json`.
 
 1. Table widget: `Visualization.TABLE` (`viz.table`, `widget_table`).
-2. Raw NRQL series: `IRWidget.raw_series` (`RawNrqlSeries`), checked by `check_raw_nrql`. Rejected: SINCE, UNTIL, COMPARE WITH, `;`, control characters, unbalanced quotes, over 4096 characters. LIMIT is allowed on purpose: a top-N chart is written with `FACET ... LIMIT n`, and the Grafana `topk` mapping needs it. The brief listed LIMIT among the rejected clauses; add it to `RAW_FORBIDDEN_CLAUSES` if you want it refused.
-3. `TIMESERIES AUTO`: `Series.auto_period`. A nullable `period_seconds` was not possible without editing `core/emit/nrql.py` (see requests).
-4. Thresholds: `IRWidget.thresholds`, line and table as `threshold` blocks, billboard as `critical`/`warning`, all schema-confirmed names. Severity values are from provider docs only.
-5. Options: unit, legend, y min/max, y zero emitted in Terraform. Decimals and stacked are modelled, not emitted (UNVERIFIED).
-6. Variables: `IRDashboard.variables`, `check_variable_usage`, `check_variables_defined`, in both emitters.
-7. Height: `layout_problem`, `PROVIDER_MAX_HEIGHT = 12`. Both emitters raise `CannotEmit` above 12. `Layout` itself still accepts 100 because the AWS and GCP translators clamp to 100 and I may not edit them.
-8. Layout packing: not moved. `pack()` lives in `sources/gcp/dashboards.py`, which I do not own, and moving it to core means editing that file to import it. Requested below.
+2. Raw NRQL: `IRWidget.raw_series` (`RawNrqlSeries`, no label), checked by `check_raw_nrql`. Rejected: SINCE, UNTIL, COMPARE WITH, `;` and fullwidth `;`, control, bidirectional and zero-width characters, unbalanced quotes, over 4096 characters. Pretty-printed queries (tabs, line breaks) pass. LIMIT stays allowed (owner decision). A chart uses `series` or `raw_series`, not both. The emitters check raw queries again.
+3. `TIMESERIES AUTO`: `Series.auto_period` (auto wins over `period_seconds`; refused except on line and area).
+4. Thresholds: line `threshold` with name, table `threshold` with column_name (no name), billboard `critical`/`warning` (one of each). Severity enum is `ThresholdSeverity`; values from provider docs only.
+5. Options: unit, legend, y min/max, y zero in Terraform. Decimals and stacked are modelled, not emitted (UNVERIFIED). Numbers keep every digit (`number_text`).
+6. Variables in both emitters, `check_variable_usage`, `check_variables_defined`. Account ids are strict integers below 10^15; defaults must be among enum items; one default unless multi-select.
+7. Height: a widget above 12 is emitted at 12 in both emitters (row, column, width kept). The IR widget gets the reason `height N clamped to 12`, which `report.md` prints, and the dashboard description names the clamped widgets. `Layout` still accepts 100.
+8. Layout packing: not moved (see requests).
+9. Variable checks run only for a dashboard that defines variables or has raw series. AWS and GCP series keep `{{...}}` in labels and filter values as literal text.
+10. Caps: 300 widgets per dashboard, 50 variables, 50 thresholds and 50 raw series per widget; numbers within 10^15.
 
 ## Byte-identity evidence
 
-Hashes were captured from `integration/all-threads` before any change (18 files: IR JSON, NerdGraph JSON, `dashboards.tf`, `report.md`, for `tests/fixtures/cloudwatch-dashboards` and `tests/fixtures/gcp-dashboards` through `importer convert-dashboards`) and stored in `tests/fixtures/dashboard-output-hashes.json`. `tests/test_dashboard_ir_byte_identity.py` reruns both conversions and compares sha256 of every file. It passed before the change (commit 99bf865) and after. The IR files stay identical because the new fields are dropped from the serialised model while they hold their default.
+- Folder fixtures: 18 output files (IR, NerdGraph, `dashboards.tf`, `report.md`) for `cloudwatch-dashboards` and `gcp-dashboards`, hashed on `integration/all-threads` before any change (`tests/fixtures/dashboard-output-hashes.json`).
+- Generated set: 120 dashboards from a seeded generator in `tests/test_dashboard_ir_byte_identity.py` (all widget types except table, facets, scope filters of every shape, hostile and 300-character titles, labels and filter values containing braces, heights up to 12, emittable and unemittable dashboards). The fingerprint of each (IR JSON, NerdGraph payload, Terraform, or the CannotEmit message) was taken by running the same generator against a `git archive` of `integration/all-threads` in `/tmp` with `PYTHONPATH` pointing at it (confirmed by printing `importer.__file__`). 73 of the 120 emit. Stored in `tests/fixtures/dashboard-generated-hashes.json`.
+- The generated test failed on the round 1 code (only 39 of 120 emitted, because of the `{{...}}` checks) and passes after fix 9.
 
 ## Risks
 
-- A widget above height 12 is now not emitted (the whole dashboard gets `CannotEmit`). CloudWatch computes `height // 2` capped at 100, so a CloudWatch widget of 26 or more rows in the source would now be refused where it used to be emitted. The provider documents 12, the schema states no limit, and NerdGraph behaviour is unverified, so this follows the documentation. The fixtures contain no height above 8. Fix in the translators (request 2).
-- A literal `{{name}}` in a filter value of an AWS or GCP dashboard is now refused unless a variable of that name exists, because New Relic would substitute it.
-- NerdGraph variable field names (`defaultValues[].value.string`, `nrqlQuery`, `replacementStrategy` in upper case, `options`) are UNVERIFIED. Widget options and thresholds are not written to NerdGraph at all.
-- `terraform validate` ran in the new emit test and passed here, so the HCL for variables, thresholds and units is accepted by provider 3.100.1. It skips when the provider cannot be downloaded.
+- A clamped widget leaves a gap under it; the widgets below keep their rows. Whether NerdGraph accepts height above 12 is UNVERIFIED, so clamping is the safe choice.
+- A model is mutable. The emitters re-validate raw queries only; other fields (a variable query, an option) are checked at construction.
+- NerdGraph variable field names are UNVERIFIED. Widget options and thresholds are not written to NerdGraph.
+- `terraform validate` in `test_terraform_for_the_new_fields_validates` passes here; it skips when the provider cannot be downloaded.
+- Keyword detection is by position. A column named like a keyword and followed by something other than an operator (`SELECT as FROM Log`) is read as the clause; quote it with backticks.
 
 ## UNVERIFIED
 
 Height 12 on NerdGraph; valid `units.unit` strings; `data_format` types for decimals; severity value list (docs only); NerdGraph id for stacked bar; NerdGraph variable and rawConfiguration option field names; New Relic's NRQL length limit (4096 is a repository cap); nested variables on the target account.
 
-## Requests for other files
+## Requests for other files (the integrator has taken 1 to 4)
 
-1. `src/importer/core/apply_dashboards.py` `with_account`: also replace `ACCOUNT_ID_PLACEHOLDER` in `variables.dashboard.variables[*].nrqlQuery.accountIds`. Without it a payload with an `nrql` variable that has no `account_ids` is sent with the placeholder. Add a guard like the widget one.
-2. `src/importer/sources/cloudwatch/dashboards.py` (line 56) and `src/importer/sources/gcp/dashboards.py` (`_layout`, line 80): clamp height to `PROVIDER_MAX_HEIGHT` (12) instead of 100.
-3. `src/importer/sources/gcp/dashboards.py`: move `pack()` and `_overlaps()` to a new `core/dashboard_layout.py` and import them. I did not do it because it needs an edit to that file; the function depends only on `Layout`, and `tests/test_gcp_dashboards_layout.py` plus the byte-identity test would prove it.
-4. `src/importer/core/emit/nrql.py` `widget_nrql`: if you prefer a nullable period, make `Series.period_seconds` `int | None` and write `TIMESERIES AUTO` there; then `auto_period` can go.
+1. `core/apply_dashboards.py` `with_account`: replace `ACCOUNT_ID_PLACEHOLDER` in `variables.dashboard.variables[*].nrqlQuery.accountIds`, with a guard.
+2. Translators: clamp height to 12 (no longer needed for correctness, the emitters now clamp, but it removes the note).
+3. `sources/gcp/dashboards.py`: move `pack()` and `_overlaps()` to a new `core/dashboard_layout.py`.
+4. `core/emit/nrql.py` `widget_nrql`: optionally a nullable `period_seconds`; then `auto_period` can go.
 5. NerdGraph widget options: after one sandbox read-back, extend `nerdgraph_dashboard` with the confirmed `rawConfiguration` names.
