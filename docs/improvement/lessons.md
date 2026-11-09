@@ -3,6 +3,13 @@
 One entry per defect class. Each says what happened and the check that stops it coming back.
 New entries go on top.
 
+## 2026-11-09: cycle `gcp-next`
+
+| Defect | How it hid | Check that catches the class |
+|---|---|---|
+| The Google extractor lacked safeguards the Dynatrace extractor had (redirects as success, server text echoed unscrubbed, no size cap, no total page cap, odd token accepted) | Each extractor was written and reviewed alone; the Google tests used a fake getter, so the real getter never ran | Shared safeguards live in `core/safe_http.py` and every extractor's real getter is tested through `httpx.MockTransport` (`tests/test_gcp_http.py`). Next: a test that lists every `http_getter` and fails if one does not use `safe_http` |
+| A new manual reason contained words from an older broad rule ("monitor type", "uptime check") | First-match rules: the broad rule answered with the wrong steps | Found by a test that asserts the rule title for the new reason. Same class as the shadowing entry below; the generic "each rule wins for its own example" test is still not built |
+
 ## 2026-11-09: cycle `gcp-absence`
 
 | Defect | How it hid | Check that catches the class |

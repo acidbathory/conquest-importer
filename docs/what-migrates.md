@@ -157,8 +157,8 @@ a fix, roll back and re-apply.
 ## Other platforms
 
 AWS CloudWatch is the supported platform. Google Cloud is in progress: `importer extract-gcp
---project <id>` reads the alert policies (read-only), and `--source gcp` converts them. It also
-accepts the JSON of `gcloud alpha monitoring policies list --format=json`.
+--project <id>` reads the alert policies, channels, uptime checks and dashboards (read-only), and
+`--source gcp` converts the policies. It also accepts the JSON of `gcloud alpha monitoring policies list --format=json`.
 
 - **Converts:** metric threshold conditions (including percentile series for distribution
   metrics), metric-absence conditions and log-match conditions with plain terms.
@@ -183,8 +183,26 @@ accepts the JSON of `gcloud alpha monitoring policies list --format=json`.
 - **Check the data:** `importer check-gcp-data --alerts <run> --nr-account-id <n>` asks New Relic
   whether each converted condition's metric is arriving (read-only). A condition on a missing
   metric never fires, and a `sum()` on it returns 0 without an error.
-- **Not done yet:** dashboards, notification channels, uptime checks and SLOs are listed by
-  `extract-gcp` (channels and checks as inventory only) but not converted.
+- **Dashboards:** `extract-gcp` also reads the dashboards (the v1 API). `importer
+  convert-dashboards --source gcp --in <export>/dashboards --out <folder>` converts chart and
+  scorecard widgets over a plain time series filter (same metric names, labels, aligners and
+  reducers as alerts) and text widgets (as markdown). Mosaic, grid, column and row layouts are
+  placed on New Relic's 12-column grid. Every other widget (logs panel, alert chart, incident
+  list, MQL, PromQL, ratio and SQL queries, uptime and custom metrics) stays as a "Not migrated"
+  placeholder with a reason and steps. Dashboards are created private. Counter metrics show the
+  change per 5 minute window, not a rate. Never run against a real export: the fixtures are
+  hand-made.
+- **Notification channels:** `importer convert-gcp-notifications --channels <export>/channels
+  --alerts <converted run> --out <folder>` writes one section per set of channels (one workflow
+  to create by hand per set), the converted conditions that used it, and the steps for each
+  channel type (email, webhook with token or basic authentication, Slack with its one-time OAuth,
+  PagerDuty; SMS, Pub/Sub and mobile have no New Relic destination). Nothing is created
+  automatically: the export deliberately holds no addresses, URLs or secrets.
+- **Uptime checks:** `importer convert-gcp-uptime --checks <export>/uptime-checks --out <folder>`
+  lists each check with its path, period, the closest New Relic run frequency and the monitor to
+  create (ping or scripted for HTTP; TCP and group checks have no direct monitor). The host is not
+  exported. Uptime-check alerts stay manual and point at this list.
+- **Not done yet:** SLOs, log sinks and log-based metrics.
 - **Report:** `importer report <run folder> --source gcp` writes the same report with Google
   Cloud wording.
 - **Metric names:** checked on real data for Compute Engine and Pub/Sub only. See
