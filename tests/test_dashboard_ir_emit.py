@@ -16,8 +16,8 @@ from importer.core.dashboard_ir import (
     Layout,
     RawNrqlSeries,
     Series,
-    Severity,
     Threshold,
+    ThresholdSeverity,
     VariableItem,
     VariableType,
     Visualization,
@@ -30,6 +30,7 @@ from importer.core.emit.dashboard import (
     dashboard_resource,
     dashboards_terraform,
     nerdgraph_dashboard,
+    number_text,
 )
 from importer.core.ir import (
     Aggregation,
@@ -65,6 +66,8 @@ def widget(**extra: Any) -> IRWidget:
         "series": [Series(signal=signal(), period_seconds=60)],
         "confidence": Confidence.EXACT,
     }
+    if "raw_series" in extra and "series" not in extra:
+        base["series"] = []
     return IRWidget(**{**base, **extra})
 
 
@@ -134,20 +137,33 @@ def test_a_table_widget_has_no_timeseries_and_its_own_widget_type() -> None:
 def test_auto_period_writes_timeseries_auto_only_on_charts_over_time() -> None:
     auto = [Series(signal=signal(), period_seconds=60, auto_period=True)]
     assert queries(dash(widget(series=auto)))[0].endswith(" TIMESERIES AUTO")
-    assert (
-        "TIMESERIES" not in queries(dash(widget(series=auto, visualization=Visualization.PIE)))[0]
+    assert queries(dash(widget(series=auto, visualization=Visualization.AREA)))[0].endswith(
+        " TIMESERIES AUTO"
     )
     fixed = queries(dash(widget()))[0]
     assert fixed.endswith("TIMESERIES 60 SECONDS")
 
 
-def test_raw_series_follow_the_metric_series_unchanged() -> None:
-    raw = [RawNrqlSeries(label="x", nrql="SELECT count(*) FROM Log FACET host TIMESERIES AUTO")]
+def test_raw_series_are_written_unchanged_to_both_outputs() -> None:
+    raw = [RawNrqlSeries(nrql="SELECT count(*) FROM Log FACET host TIMESERIES AUTO")]
     d = dash(widget(raw_series=raw))
-    assert queries(d)[1] == raw[0].nrql
+    assert queries(d) == [raw[0].nrql]
     assert raw[0].nrql in terraform(d)
-    only_raw = dash(widget(series=[], raw_series=raw))
-    assert queries(only_raw) == [raw[0].nrql]
+
+
+def test_pretty_printed_raw_nrql_is_emitted_as_given() -> None:
+    nrql = "SELECT count(*)\n  FROM Log\n\tFACET host"
+    d = dash(widget(raw_series=[RawNrqlSeries(nrql=nrql)]))
+    assert queries(d) == [nrql]
+    assert "\\n  FROM Log" in terraform(d)
+
+
+def test_the_emitters_check_raw_queries_again_so_a_later_edit_cannot_slip_through() -> None:
+    raw = RawNrqlSeries(nrql="SELECT 1 FROM Log")
+    d = dash(widget(raw_series=[raw]))
+    raw.nrql = "SELECT 1 FROM Log SINCE 1 day ago"
+    with pytest.raises(CannotEmit, match="SINCE"):
+        nerdgraph_dashboard(d)
 
 
 def test_a_chart_with_only_raw_series_is_not_turned_into_a_placeholder() -> None:
@@ -160,16 +176,51 @@ def test_a_chart_with_only_raw_series_is_not_turned_into_a_placeholder() -> None
 # --- height ------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("emit", [nerdgraph_dashboard, terraform])
-def test_both_emitters_refuse_a_height_the_provider_refuses(emit: Any) -> None:
-    tall = widget(layout=Layout(column=1, row=1, width=4, height=13))
-    with pytest.raises(CannotEmit, match="12"):
-        emit(dash(tall))
+HEIGHTS = [6, 6, 6, 8, 12, 15, 20, 24, 26, 30]
 
 
-def test_the_provider_maximum_height_is_still_emitted() -> None:
+def tall_dashboard() -> IRDashboard:
+    widgets = [
+        widget(title=f"w{i}", layout=Layout(column=1, row=1 + 10 * i, width=12, height=h))
+        for i, h in enumerate(HEIGHTS)
+    ]
+    return dash(*widgets)
+
+
+def test_tall_widgets_are_clamped_and_the_dashboard_is_still_emitted() -> None:
+    d = tall_dashboard()
+    sent = nerdgraph_dashboard(d)["variables"]["dashboard"]
+    heights = [w["layout"]["height"] for w in sent["pages"][0]["widgets"]]
+    assert heights == [min(h, 12) for h in HEIGHTS]
+    rows = [w["layout"]["row"] for w in sent["pages"][0]["widgets"]]
+    assert rows == [1 + 10 * i for i in range(10)]
+    assert len(sent["pages"][0]["widgets"]) == 10
+    hcl = terraform(d)
+    assert hcl.count("height = 12") == 6 and "height = 30" not in hcl
+    assert "height = 6" in hcl and "height = 8" in hcl
+
+
+def test_the_clamp_is_recorded_in_the_ir_and_in_the_output_description() -> None:
+    d = tall_dashboard()
+    noted = [w.title for w in d.widgets if w.reasons]
+    assert noted == ["w5", "w6", "w7", "w8", "w9"]
+    assert d.widgets[9].reasons == ["height 30 clamped to 12"]
+    sent = nerdgraph_dashboard(d)["variables"]["dashboard"]
+    assert "w9 (30)" in sent["description"] and "clamped to 12" in sent["description"]
+    assert 'description = "' in terraform(d) and "w9 (30)" in terraform(d)
+    plain = nerdgraph_dashboard(dash(widget()))["variables"]["dashboard"]["description"]
+    assert "clamped" not in plain and "description" not in terraform(dash(widget()))
+
+
+def test_clamping_does_not_edit_the_ir_layout() -> None:
+    d = tall_dashboard()
+    nerdgraph_dashboard(d)
+    assert [w.layout.height for w in d.widgets] == HEIGHTS
+
+
+def test_the_provider_maximum_height_is_emitted_as_it_is() -> None:
     d = dash(widget(layout=Layout(column=1, row=1, width=4, height=12)))
-    assert "height = 12" in terraform(d)
+    assert "height = 12" in terraform(d) and d.widgets[0].reasons == []
 
 
 # --- options and thresholds --------------------------------------------------------------------
@@ -195,21 +246,21 @@ def test_options_with_no_verified_name_are_not_emitted() -> None:
 def test_nerdgraph_keeps_its_widget_shape_when_options_are_set() -> None:
     plain = nerdgraph_widget(dash(widget()))
     opts = WidgetOptions(unit="BYTES", legend=True)
-    th = [Threshold(severity=Severity.CRITICAL, from_value=1)]
+    th = [Threshold(severity=ThresholdSeverity.CRITICAL, from_value=1)]
     with_options = nerdgraph_widget(dash(widget(options=opts, thresholds=th)))
     assert with_options == plain
 
 
 def test_line_and_table_thresholds_become_threshold_blocks() -> None:
     th = [
-        Threshold(severity=Severity.WARNING, from_value=50, to_value=80, name='a "b"'),
-        Threshold(severity=Severity.CRITICAL, from_value=80),
+        Threshold(severity=ThresholdSeverity.WARNING, from_value=50, to_value=80, name='a "b"'),
+        Threshold(severity=ThresholdSeverity.CRITICAL, from_value=80),
     ]
     line = terraform(dash(widget(thresholds=th)))
     assert 'name = "a \\"b\\""' in line
     assert '        severity = "critical"' in line and '        from = "80"' in line
     assert "to = " not in line.split("critical")[1]
-    table_th = [Threshold(severity=Severity.SEVERE, to_value=5, column_name='c"ol')]
+    table_th = [Threshold(severity=ThresholdSeverity.SEVERE, to_value=5, column_name='c"ol')]
     table = terraform(dash(widget(visualization=Visualization.TABLE, thresholds=table_th)))
     assert 'column_name = "c\\"ol"' in table
     for text in (line, table):
@@ -218,12 +269,62 @@ def test_line_and_table_thresholds_become_threshold_blocks() -> None:
 
 def test_billboard_thresholds_become_critical_and_warning() -> None:
     th = [
-        Threshold(severity=Severity.CRITICAL, from_value=90),
-        Threshold(severity=Severity.WARNING, from_value=70.5),
+        Threshold(severity=ThresholdSeverity.CRITICAL, from_value=90),
+        Threshold(severity=ThresholdSeverity.WARNING, from_value=70.5),
     ]
     text = terraform(dash(widget(visualization=Visualization.BILLBOARD, thresholds=th)))
     assert '      critical = "90"' in text and '      warning = "70.5"' in text
     assert "threshold {" not in text
+
+
+def test_duplicate_billboard_severities_are_refused_so_terraform_never_repeats_an_attribute() -> (
+    None
+):
+    th = [
+        Threshold(severity=ThresholdSeverity.CRITICAL, from_value=90),
+        Threshold(severity=ThresholdSeverity.CRITICAL, from_value=95),
+    ]
+    with pytest.raises(ValueError, match="more than one"):
+        widget(visualization=Visualization.BILLBOARD, thresholds=th)
+
+
+def test_a_table_threshold_has_no_name_in_the_model_or_the_output() -> None:
+    with pytest.raises(ValueError, match="name"):
+        widget(
+            visualization=Visualization.TABLE,
+            thresholds=[Threshold(severity=ThresholdSeverity.SEVERE, to_value=5, name="n")],
+        )
+    ok = Threshold(severity=ThresholdSeverity.SEVERE, to_value=5, column_name="c")
+    text = terraform(dash(widget(visualization=Visualization.TABLE, thresholds=[ok])))
+    block = text.split("threshold {")[1].split("}")[0]
+    assert "name" not in block.replace("column_name", "")
+
+
+@pytest.mark.parametrize(
+    ("value", "text"),
+    [
+        (1073741824, "1073741824"),
+        (1234567, "1234567"),
+        (12345678901, "12345678901"),
+        (0.1, "0.1"),
+        (1e-7, "1e-07"),
+        (123456.789012, "123456.789012"),
+        (-5.0, "-5"),
+        (0.0, "0"),
+    ],
+)
+def test_numbers_are_written_with_every_digit(value: float, text: str) -> None:
+    th = [Threshold(severity=ThresholdSeverity.WARNING, from_value=value)]
+    opts = WidgetOptions(y_max=value) if value >= 0 else WidgetOptions()
+    hcl = terraform(dash(widget(thresholds=th, options=opts)))
+    assert f'from = "{text}"' in hcl
+    if value >= 0:
+        assert f"y_axis_left_max = {text}\n" in hcl
+
+
+@pytest.mark.parametrize("value", [0.1, 1e-7, 1e21, 2.0**53, 2.0**53 + 2, 1073741824.0, 1.5e300])
+def test_number_text_round_trips_exactly(value: float) -> None:
+    assert float(number_text(value)) == value
 
 
 # --- variables ---------------------------------------------------------------------------------
@@ -297,21 +398,52 @@ def test_a_dashboard_without_variables_has_no_variables_key() -> None:
     assert "variable {" not in terraform(dash(widget()))
 
 
-def test_a_variable_in_a_built_query_must_be_defined() -> None:
-    d = dash(widget(series=[Series(signal=signal("{{ghost}}"), period_seconds=60)]))
+def test_a_variable_in_a_built_query_must_be_defined_when_the_dashboard_has_variables() -> None:
+    other = IRVariable(name="other", title="O", type=VariableType.STRING)
+    d = dash(
+        widget(series=[Series(signal=signal("{{ghost}}"), period_seconds=60)]), variables=[other]
+    )
     with pytest.raises(CannotEmit, match="ghost"):
         nerdgraph_dashboard(d)
 
 
 def test_a_variable_in_a_built_query_clause_that_forbids_it_is_refused() -> None:
-    raw = RawNrqlSeries(nrql="SELECT count(*) FROM Log FACET host LIMIT 5")
-    ok = dash(widget(raw_series=[raw]))
-    assert queries(ok)
-    sig = signal("{{v}}")
-    bad = Series(label="{{v}}", signal=sig, period_seconds=60)  # a variable inside AS
+    bad = Series(label="{{v}}", signal=signal("{{v}}"), period_seconds=60)  # inside AS
     v = IRVariable(name="v", title="V", type=VariableType.STRING)
     with pytest.raises(CannotEmit, match="AS"):
         nerdgraph_dashboard(dash(widget(series=[bad]), variables=[v]))
+
+
+@pytest.mark.parametrize(
+    ("label", "value"),
+    [
+        ("{{instance}}", "web"),
+        ("Cost {{team}}", "web"),
+        ("plain", "{{x}}"),
+        ("plain", "a{{"),
+        ("plain", "}}"),
+        ("}}", "{{"),
+        ("{{ghost}} {{", "{{ghost}}"),
+    ],
+)
+def test_braces_in_structured_series_are_literal_text_and_emit_as_before(
+    label: str, value: str
+) -> None:
+    series = [Series(label=label, signal=signal(value), period_seconds=60)]
+    d = dash(widget(series=series))
+    (query,) = queries(d)
+    assert f"AS '{label}'" in query and value in query
+    assert "AS" in terraform(d)
+
+
+def test_the_variable_checks_run_for_a_dashboard_that_uses_raw_series() -> None:
+    raw = RawNrqlSeries(nrql="SELECT count(*) FROM Log")
+    other = dash(
+        widget(raw_series=[raw]),
+        widget(series=[Series(signal=signal("{{ghost}}"), period_seconds=60)]),
+    )
+    with pytest.raises(CannotEmit, match="ghost"):
+        nerdgraph_dashboard(other)
 
 
 # --- hostile text ------------------------------------------------------------------------------
@@ -335,7 +467,7 @@ def test_hostile_titles_and_variable_text_never_break_out_of_hcl_strings(text: s
         items=[VariableItem(title=text, value=text)],
         default_values=[text],
     )
-    t = Threshold(severity=Severity.WARNING, from_value=1, name=text)
+    t = Threshold(severity=ThresholdSeverity.WARNING, from_value=1, name=text)
     d = dash(widget(title=text, thresholds=[t]), name=text, variables=[v])
     hcl = terraform(d)
     assert "${" not in hcl.replace("$${", "")

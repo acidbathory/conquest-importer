@@ -9,6 +9,7 @@ and pass core/dashboard_nrql.py before they get here.
 from typing import Any, NamedTuple
 
 from importer.core.dashboard_ir import (
+    PROVIDER_MAX_HEIGHT,
     TIMESERIES_VISUALIZATIONS,
     IRDashboard,
     IRVariable,
@@ -18,15 +19,16 @@ from importer.core.dashboard_ir import (
     VariableType,
     Visualization,
     WidgetKind,
-    layout_problem,
+    provider_layout,
 )
-from importer.core.dashboard_nrql import check_variables_defined
+from importer.core.dashboard_nrql import check_raw_nrql, check_variables_defined
 from importer.core.emit.common import CannotEmit
 from importer.core.emit.nrql import widget_nrql
 from importer.core.emit.terraform import hcl_string
 from importer.core.ids import source_id
 from importer.core.ir import Confidence
 from importer.core.report import md_cell
+from importer.core.text import printable
 
 ACCOUNT_PLACEHOLDER = "ACCOUNT_ID_PLACEHOLDER"
 RESOURCE_PREFIXES = {"cloudwatch": "cw_dashboard", "gcp": "gcp_dashboard"}
@@ -88,23 +90,37 @@ def _series_query(series: Series, timeseries: bool) -> str:
 
 def _chart_queries(w: IRWidget, viz: Visualization) -> list[str]:
     timeseries = viz in TIMESERIES_VISUALIZATIONS
+    for raw in w.raw_series:
+        check_raw_nrql(raw.nrql)  # the models are mutable, so check again on the way out
     return [_series_query(s, timeseries) for s in w.series] + [r.nrql for r in w.raw_series]
 
 
+def _check_variables(dashboard: IRDashboard, queries: list[str]) -> None:
+    """Variable placement and definition, for dashboards that use variables or raw queries.
+
+    A structured series from the AWS and GCP translators is literal text: a label or filter value
+    that happens to contain braces is written as it is, as it always was.
+    """
+    uses_variables = bool(dashboard.variables) or any(w.raw_series for w in dashboard.widgets)
+    if uses_variables:
+        check_variables_defined(queries, [v.name for v in dashboard.variables])
+
+
 def emittable_widgets(dashboard: IRDashboard) -> list[EmitWidget]:
-    """Every widget ready to emit; widgets that were not converted become a text placeholder."""
+    """Every widget ready to emit; widgets that were not converted become a text placeholder.
+
+    A widget taller than the provider accepts is emitted at the maximum height (see
+    clamp_notes for the record of it).
+    """
     if dashboard.confidence not in (Confidence.EXACT, Confidence.APPROXIMATE):
         raise CannotEmit(f"confidence is {dashboard.confidence.value}")
-    names = [v.name for v in dashboard.variables]
     out: list[EmitWidget] = []
-    for w in dashboard.widgets:
-        problem = layout_problem(w.layout)
-        if problem:
-            raise CannotEmit(f"widget {md_cell(w.title, 40)!r}: {problem}")
+    for original in dashboard.widgets:
+        w = original.model_copy(update={"layout": provider_layout(original.layout)})
         if w.kind == WidgetKind.CHART and w.visualization and (w.series or w.raw_series):
             try:
                 queries = _chart_queries(w, w.visualization)
-                check_variables_defined(queries, names)
+                _check_variables(dashboard, queries)
             except ValueError as exc:
                 raise CannotEmit(f"widget {md_cell(w.title, 40)!r}: {exc}") from None
             out.append(EmitWidget(w, w.visualization, queries, ""))
@@ -113,6 +129,18 @@ def emittable_widgets(dashboard: IRDashboard) -> list[EmitWidget]:
         else:
             out.append(EmitWidget(w, Visualization.MARKDOWN, [], placeholder_text(w)))
     return out
+
+
+def clamp_notes(dashboard: IRDashboard) -> str:
+    """A sentence naming the widgets whose height was reduced, or an empty string."""
+    clamped = [
+        f"{printable(w.title, 40)} ({w.layout.height})"
+        for w in dashboard.widgets
+        if provider_layout(w.layout) is not w.layout
+    ]
+    if not clamped:
+        return ""
+    return f"Heights clamped to {PROVIDER_MAX_HEIGHT}: " + ", ".join(clamped) + "."
 
 
 def _query(nrql: str) -> dict[str, Any]:
@@ -169,9 +197,12 @@ def nerdgraph_dashboard(dashboard: IRDashboard) -> dict[str, Any]:
                 "rawConfiguration": raw,
             }
         )
+    description = f"Imported from a {dashboard.source_system} dashboard. Review it."
+    if notes := clamp_notes(dashboard):
+        description += " " + notes
     body: dict[str, Any] = {
         "name": dashboard.name,
-        "description": f"Imported from a {dashboard.source_system} dashboard. Review it.",
+        "description": description,
         "permissions": "PRIVATE",
         "pages": [{"name": dashboard.name, "widgets": widgets}],
     }
@@ -180,8 +211,11 @@ def nerdgraph_dashboard(dashboard: IRDashboard) -> dict[str, Any]:
     return {"query": MUTATION, "variables": {"accountId": ACCOUNT_PLACEHOLDER, "dashboard": body}}
 
 
-def _num(value: float) -> str:
-    return f"{value:g}"
+def number_text(value: float) -> str:
+    """A number with every digit kept: a whole number as an integer, anything else as repr."""
+    if value.is_integer() and abs(value) < 2**53:
+        return str(int(value))
+    return repr(float(value))
 
 
 def _flag(value: bool | None) -> str | None:
@@ -194,15 +228,15 @@ def _widget_attributes(w: IRWidget, viz: Visualization) -> list[str]:
     o = w.options
     pairs = [
         ("legend_enabled", _flag(o.legend)),
-        ("y_axis_left_min", None if o.y_min is None else _num(o.y_min)),
-        ("y_axis_left_max", None if o.y_max is None else _num(o.y_max)),
+        ("y_axis_left_min", None if o.y_min is None else number_text(o.y_min)),
+        ("y_axis_left_max", None if o.y_max is None else number_text(o.y_max)),
         ("y_axis_left_zero", _flag(o.y_zero)),
     ]
     lines = [f"      {k} = {v}" for k, v in pairs if v is not None]
     if viz == Visualization.BILLBOARD:
         # The IR guarantees a billboard threshold is critical or warning with a from_value.
         lines += [
-            f"      {t.severity.value} = {hcl_string(_num(t.from_value or 0))}"
+            f"      {t.severity.value} = {hcl_string(number_text(t.from_value or 0))}"
             for t in w.thresholds
         ]
     return lines
@@ -213,8 +247,8 @@ def _threshold_block(t: Threshold) -> list[str]:
         ("name", t.name),
         ("column_name", t.column_name),
         ("severity", t.severity.value),
-        ("from", None if t.from_value is None else _num(t.from_value)),
-        ("to", None if t.to_value is None else _num(t.to_value)),
+        ("from", None if t.from_value is None else number_text(t.from_value)),
+        ("to", None if t.to_value is None else number_text(t.to_value)),
     ]
     body = [f"        {k} = {hcl_string(v)}" for k, v in pairs if v is not None]
     return ["", "      threshold {", *body, "      }"]
@@ -290,8 +324,10 @@ def dashboard_resource(dashboard: IRDashboard, source_id: int) -> str:
         f'resource "newrelic_one_dashboard" "{prefix}_{source_id}" {{',
         f"  name        = {hcl_string(dashboard.name)}",
         '  permissions = "private"',
-        "",
     ]
+    if notes := clamp_notes(dashboard):
+        lines.append(f"  description = {hcl_string(notes)}")
+    lines.append("")
     for variable in dashboard.variables:
         lines += _variable_lines(variable)
     lines += ["  page {", f"    name = {hcl_string(dashboard.name)}"]

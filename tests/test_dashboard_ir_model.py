@@ -7,6 +7,8 @@ import pytest
 from pydantic import ValidationError
 
 from importer.core.dashboard_ir import (
+    MAX_VARIABLES,
+    MAX_WIDGETS,
     PROVIDER_MAX_HEIGHT,
     TIMESERIES_VISUALIZATIONS,
     IRDashboard,
@@ -15,13 +17,12 @@ from importer.core.dashboard_ir import (
     Layout,
     RawNrqlSeries,
     Series,
-    Severity,
     Threshold,
+    ThresholdSeverity,
     VariableType,
     Visualization,
     WidgetKind,
     WidgetOptions,
-    layout_problem,
 )
 from importer.core.ir import (
     Aggregation,
@@ -51,6 +52,8 @@ def chart(**extra: Any) -> IRWidget:
         "series": [Series(signal=signal(), period_seconds=60)],
         "confidence": Confidence.EXACT,
     }
+    if "raw_series" in extra and "series" not in extra:
+        base["series"] = []
     return IRWidget(**{**base, **extra})
 
 
@@ -76,12 +79,12 @@ def test_defaults_are_left_out_of_the_serialised_ir() -> None:
 def test_set_fields_are_serialised_and_round_trip() -> None:
     dash = dashboard(
         [
+            chart(raw_series=[RawNrqlSeries(nrql="SELECT count(*) FROM Log")]),
             chart(
                 series=[Series(signal=signal(), period_seconds=60, auto_period=True)],
-                raw_series=[RawNrqlSeries(label="raw", nrql="SELECT count(*) FROM Log")],
                 options=WidgetOptions(unit="BYTES", legend=False, y_min=0, y_max=10),
-                thresholds=[Threshold(severity=Severity.CRITICAL, from_value=90)],
-            )
+                thresholds=[Threshold(severity=ThresholdSeverity.CRITICAL, from_value=90)],
+            ),
         ],
         variables=[IRVariable(name="host", title="Host", type=VariableType.STRING)],
     )
@@ -101,12 +104,15 @@ def test_an_old_ir_file_without_the_new_fields_still_loads() -> None:
     assert IRDashboard.model_validate_json(text).widgets[0].raw_series == []
 
 
-def test_layout_still_accepts_what_it_did_and_the_provider_limit_is_reported() -> None:
+def test_layout_still_accepts_what_it_did_and_a_tall_widget_records_the_clamp() -> None:
     assert Layout(column=1, row=1, width=1, height=100).height == 100
     assert PROVIDER_MAX_HEIGHT == 12
-    assert layout_problem(Layout(column=1, row=1, width=1, height=12)) is None
-    problem = layout_problem(Layout(column=1, row=1, width=1, height=13))
-    assert problem is not None and "12" in problem and "13" in problem
+    tall = chart(layout=Layout(column=1, row=1, width=4, height=15))
+    assert tall.layout.height == 15
+    assert tall.reasons == ["height 15 clamped to 12"]
+    again = IRWidget.model_validate_json(tall.model_dump_json())
+    assert again.reasons == ["height 15 clamped to 12"]
+    assert chart(layout=Layout(column=1, row=1, width=4, height=12)).reasons == []
 
 
 @pytest.mark.parametrize(
@@ -115,12 +121,7 @@ def test_layout_still_accepts_what_it_did_and_the_provider_limit_is_reported() -
 )
 def test_raw_series_refuses_unsafe_nrql(bad: str) -> None:
     with pytest.raises(ValidationError):
-        RawNrqlSeries(label="x", nrql=bad)
-
-
-def test_raw_series_label_is_bounded() -> None:
-    with pytest.raises(ValidationError):
-        RawNrqlSeries(label="x" * 101, nrql="SELECT 1 FROM Log")
+        RawNrqlSeries(nrql=bad)
 
 
 def test_a_chart_needs_at_least_one_query_of_either_kind() -> None:
@@ -135,10 +136,14 @@ def test_a_chart_needs_at_least_one_query_of_either_kind() -> None:
         {"options": WidgetOptions(stacked=True), "visualization": Visualization.LINE},
         {"options": WidgetOptions(y_min=0), "visualization": Visualization.PIE},
         {"options": WidgetOptions(legend=True), "visualization": Visualization.MARKDOWN},
-        {"thresholds": [Threshold(severity=Severity.WARNING, from_value=1)],
+        {"thresholds": [Threshold(severity=ThresholdSeverity.WARNING, from_value=1)],
          "visualization": Visualization.PIE},
-        {"thresholds": [Threshold(severity=Severity.WARNING, from_value=1, column_name="c")]},
-        {"thresholds": [Threshold(severity=Severity.SUCCESS, from_value=1)],
+        {
+            "thresholds": [
+                Threshold(severity=ThresholdSeverity.WARNING, from_value=1, column_name="c")
+            ]
+        },
+        {"thresholds": [Threshold(severity=ThresholdSeverity.SUCCESS, from_value=1)],
          "visualization": Visualization.BILLBOARD},
     ],
 )  # fmt: skip
@@ -164,11 +169,11 @@ def test_invalid_widget_options_are_refused(kwargs: dict[str, Any]) -> None:
 
 def test_a_threshold_needs_a_bound_and_ordered_bounds() -> None:
     with pytest.raises(ValidationError):
-        Threshold(severity=Severity.WARNING)
+        Threshold(severity=ThresholdSeverity.WARNING)
     with pytest.raises(ValidationError):
-        Threshold(severity=Severity.WARNING, from_value=5, to_value=1)
+        Threshold(severity=ThresholdSeverity.WARNING, from_value=5, to_value=1)
     with pytest.raises(ValidationError):
-        Threshold(severity=Severity.WARNING, from_value=float("nan"))
+        Threshold(severity=ThresholdSeverity.WARNING, from_value=float("nan"))
 
 
 @pytest.mark.parametrize(
@@ -242,3 +247,109 @@ def test_a_raw_query_may_only_use_defined_variables() -> None:
         dashboard([chart(raw_series=[raw])])
     v = IRVariable(name="host", title="Host", type=VariableType.STRING)
     assert dashboard([chart(raw_series=[raw])], variables=[v]).variables == [v]
+
+
+# --- round 2: model limits -----------------------------------------------------------------
+
+
+def variable(**kwargs: Any) -> IRVariable:
+    base: dict[str, Any] = {"name": "v", "title": "V", "type": VariableType.STRING}
+    return IRVariable(**{**base, **kwargs})
+
+
+@pytest.mark.parametrize("ids", [["12"], [True], [1.0], [10**30], [0], [-3], [10**15]])
+def test_account_ids_must_be_real_positive_integers(ids: list[Any]) -> None:
+    with pytest.raises(ValidationError):
+        variable(type=VariableType.NRQL, nrql="FROM Log SELECT uniques(a)", account_ids=ids)
+
+
+def test_account_ids_in_range_are_kept() -> None:
+    v = variable(
+        type=VariableType.NRQL, nrql="FROM Log SELECT uniques(a)", account_ids=[1, 10**15 - 1]
+    )
+    assert v.account_ids == [1, 10**15 - 1]
+
+
+def test_defaults_must_be_among_the_enum_items() -> None:
+    items = [{"value": "a"}, {"value": "b"}]
+    variable(type=VariableType.ENUM, items=items, default_values=["a"])
+    with pytest.raises(ValidationError, match="not one of the items"):
+        variable(type=VariableType.ENUM, items=items, default_values=["c"])
+
+
+def test_a_single_select_variable_takes_at_most_one_default() -> None:
+    with pytest.raises(ValidationError, match="one default"):
+        variable(default_values=["a", "b"])
+    multi = variable(
+        default_values=["a", "b"],
+        multi_select=True,
+        type=VariableType.NRQL,
+        nrql="FROM Log SELECT uniques(a)",
+    )
+    assert multi.multi_select
+
+
+def test_collections_are_capped() -> None:
+    th = [Threshold(severity=ThresholdSeverity.WARNING, from_value=float(i)) for i in range(51)]
+    with pytest.raises(ValidationError):
+        chart(thresholds=th)
+    raw = [RawNrqlSeries(nrql="SELECT 1 FROM Log")] * 51
+    with pytest.raises(ValidationError):
+        chart(raw_series=raw)
+    with pytest.raises(ValidationError):
+        dashboard([chart()] * (MAX_WIDGETS + 1))
+    assert len(dashboard([chart()] * MAX_WIDGETS).widgets) == MAX_WIDGETS
+    many = [variable(name=f"v{i}") for i in range(MAX_VARIABLES + 1)]
+    with pytest.raises(ValidationError):
+        dashboard([chart()], variables=many)
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf"), 1e15 + 1, -1e16])
+def test_numbers_must_be_finite_and_below_1e15(value: float) -> None:
+    with pytest.raises(ValidationError):
+        WidgetOptions(y_max=value)
+    with pytest.raises(ValidationError):
+        Threshold(severity=ThresholdSeverity.WARNING, from_value=value)
+    assert WidgetOptions(y_max=1e15).y_max == 1e15
+
+
+def test_a_chart_uses_series_or_raw_series_not_both() -> None:
+    raw = [RawNrqlSeries(nrql="SELECT 1 FROM Log")]
+    with pytest.raises(ValidationError, match="not both"):
+        chart(raw_series=raw, series=[Series(signal=signal(), period_seconds=60)])
+
+
+@pytest.mark.parametrize("viz", [Visualization.BAR, Visualization.PIE, Visualization.BILLBOARD])
+def test_auto_period_needs_a_chart_over_time(viz: Visualization) -> None:
+    auto = [Series(signal=signal(), period_seconds=60, auto_period=True)]
+    with pytest.raises(ValidationError, match="auto_period"):
+        chart(series=auto, visualization=viz)
+    assert chart(series=auto, visualization=Visualization.AREA).series[0].auto_period
+
+
+def test_auto_period_wins_over_the_period_seconds_value() -> None:
+    a = Series(signal=signal(), period_seconds=300, auto_period=True)
+    assert a.auto_period and a.period_seconds == 300
+
+
+def test_raw_series_has_no_label_field() -> None:
+    assert "label" not in RawNrqlSeries.model_fields
+    assert ThresholdSeverity.CRITICAL.value == "critical"
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "SELECT 1 FROM Log\u2028WHERE a = 1",
+        "SELECT 1 FROM Log\u2029",
+        "SELECT 1 FROM Log\u0085",
+        "SELECT 1 FROM \u202eLog",
+        "SELECT 1 FROM Log\u2066",
+        "SIN\u200bCE",
+        "SELECT 1 FROM Log\ufeff",
+        "SELECT 1 FROM Log\uff1b",
+    ],
+)
+def test_hidden_characters_are_refused_in_raw_series(bad: str) -> None:
+    with pytest.raises(ValidationError):
+        RawNrqlSeries(nrql=bad)

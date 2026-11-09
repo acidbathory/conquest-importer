@@ -10,12 +10,13 @@ their default, so a dashboard that does not use them serialises exactly as befor
 """
 
 from enum import StrEnum
-from typing import Any, ClassVar, Self
+from typing import Annotated, Any, ClassVar, Self
 
 from pydantic import (
     BaseModel,
     Field,
     SerializerFunctionWrapHandler,
+    StrictInt,
     field_validator,
     model_serializer,
     model_validator,
@@ -70,6 +71,11 @@ OPTION_SUPPORT: dict[str, set[Visualization]] = {
     "thresholds": {Visualization.LINE, Visualization.TABLE, Visualization.BILLBOARD},
 }
 MAX_VARIABLES = 50
+MAX_WIDGETS = 300  # per dashboard (the GCP translator stops at 200)
+MAX_THRESHOLDS = 50
+MAX_RAW_SERIES = 50
+MAX_NUMBER = 1e15  # threshold and axis values; beyond this a float loses whole digits
+MAX_ACCOUNT_ID = 10**15
 MAX_ITEMS = 500
 MAX_TEXT = 200
 
@@ -96,14 +102,19 @@ class Layout(BaseModel):
     height: int = Field(ge=1, le=100)
 
 
-def layout_problem(layout: Layout) -> str | None:
-    """Why the provider would refuse this layout, or None."""
+def provider_layout(layout: Layout) -> Layout:
+    """The layout the provider accepts: the height is capped at PROVIDER_MAX_HEIGHT.
+
+    The row, column and width are kept, so nothing moves and nothing overlaps; a widget that was
+    taller just leaves a gap under it.
+    """
     if layout.height > PROVIDER_MAX_HEIGHT:
-        return (
-            f"widget height {layout.height} is above the {PROVIDER_MAX_HEIGHT} "
-            "that the New Relic provider accepts"
-        )
-    return None
+        return layout.model_copy(update={"height": PROVIDER_MAX_HEIGHT})
+    return layout
+
+
+def clamp_note(layout: Layout) -> str:
+    return f"height {layout.height} clamped to {PROVIDER_MAX_HEIGHT}"
 
 
 class Series(OmitDefaults):
@@ -112,15 +123,15 @@ class Series(OmitDefaults):
     label: str | None = None
     signal: MetricSignal
     period_seconds: int = Field(ge=1, le=86400)
-    # TIMESERIES AUTO instead of a fixed bucket; period_seconds is then ignored. A nullable
-    # period_seconds would be the other way to say this, but core/emit/nrql.py reads it as an int.
+    # TIMESERIES AUTO instead of a fixed bucket. When it is set, period_seconds is ignored (auto
+    # wins). Only line and area widgets take it. A nullable period_seconds would be the other way
+    # to say this, but core/emit/nrql.py reads it as an int.
     auto_period: bool = False
 
 
 class RawNrqlSeries(BaseModel):
-    """A query the translator already built. The label is for the report and the legend only."""
+    """A query the translator already built; the emitters write it as it is."""
 
-    label: str | None = Field(default=None, max_length=100)
     nrql: str
 
     @field_validator("nrql")
@@ -130,7 +141,7 @@ class RawNrqlSeries(BaseModel):
         return value
 
 
-class Severity(StrEnum):
+class ThresholdSeverity(StrEnum):
     # Values from the provider documentation; the schema does not enumerate them (UNVERIFIED).
     WARNING = "warning"
     SEVERE = "severe"
@@ -140,9 +151,9 @@ class Severity(StrEnum):
 
 
 class Threshold(BaseModel):
-    severity: Severity
-    from_value: float | None = Field(default=None, allow_inf_nan=False)
-    to_value: float | None = Field(default=None, allow_inf_nan=False)
+    severity: ThresholdSeverity
+    from_value: float | None = Field(default=None, ge=-MAX_NUMBER, le=MAX_NUMBER)
+    to_value: float | None = Field(default=None, ge=-MAX_NUMBER, le=MAX_NUMBER)
     name: str | None = Field(default=None, max_length=100)
     column_name: str | None = Field(default=None, max_length=MAX_TEXT)  # table widgets only
 
@@ -162,8 +173,8 @@ class WidgetOptions(BaseModel):
     decimals: int | None = Field(default=None, ge=0, le=10)  # UNVERIFIED output name; not emitted
     legend: bool | None = None
     stacked: bool | None = None  # UNVERIFIED NerdGraph id; modelled, not emitted
-    y_min: float | None = Field(default=None, allow_inf_nan=False)
-    y_max: float | None = Field(default=None, allow_inf_nan=False)
+    y_min: float | None = Field(default=None, ge=-MAX_NUMBER, le=MAX_NUMBER)
+    y_max: float | None = Field(default=None, ge=-MAX_NUMBER, le=MAX_NUMBER)
     y_zero: bool | None = None
 
     @model_validator(mode="after")
@@ -185,18 +196,38 @@ class IRWidget(OmitDefaults):
     text: str | None = None  # markdown widgets
     confidence: Confidence
     reasons: list[str] = []
-    raw_series: list[RawNrqlSeries] = []
+    raw_series: list[RawNrqlSeries] = Field(default=[], max_length=MAX_RAW_SERIES)
     options: WidgetOptions = WidgetOptions()
-    thresholds: list[Threshold] = []
+    thresholds: list[Threshold] = Field(default=[], max_length=MAX_THRESHOLDS)
 
     @model_validator(mode="after")
     def _options_fit_the_widget(self) -> Self:
-        used = [n for n in OPTION_SUPPORT if self._is_set(n)]
-        for name in used:
-            if self.visualization not in OPTION_SUPPORT[name]:
+        for name in OPTION_SUPPORT:
+            if self._is_set(name) and self.visualization not in OPTION_SUPPORT[name]:
                 raise ValueError(f"option {name} is not available on {self.visualization}")
         for t in self.thresholds:
             self._check_threshold(t)
+        if self.visualization == Visualization.BILLBOARD:
+            severities = [t.severity for t in self.thresholds]
+            if len(set(severities)) != len(severities):
+                raise ValueError("a billboard takes more than one threshold of the same severity")
+        return self
+
+    @model_validator(mode="after")
+    def _queries_fit_the_widget(self) -> Self:
+        if self.series and self.raw_series:
+            raise ValueError("use series or raw_series, not both")
+        if any(s.auto_period for s in self.series) and (
+            self.visualization not in TIMESERIES_VISUALIZATIONS
+        ):
+            raise ValueError("auto_period only applies to line and area widgets")
+        return self
+
+    @model_validator(mode="after")
+    def _record_the_height_clamp(self) -> Self:
+        note = clamp_note(self.layout)
+        if provider_layout(self.layout) is not self.layout and note not in self.reasons:
+            self.reasons = [*self.reasons, note]
         return self
 
     def _is_set(self, name: str) -> bool:
@@ -207,8 +238,11 @@ class IRWidget(OmitDefaults):
     def _check_threshold(self, t: Threshold) -> None:
         if t.column_name is not None and self.visualization != Visualization.TABLE:
             raise ValueError("a threshold column_name is only for table widgets")
+        if t.name is not None and self.visualization != Visualization.LINE:
+            raise ValueError("a threshold name is only for line widgets (the provider schema)")
         if self.visualization == Visualization.BILLBOARD and (
-            t.severity not in (Severity.CRITICAL, Severity.WARNING) or t.from_value is None
+            t.severity not in (ThresholdSeverity.CRITICAL, ThresholdSeverity.WARNING)
+            or t.from_value is None
         ):
             raise ValueError(
                 "a billboard takes only critical and warning thresholds with from_value"
@@ -244,17 +278,13 @@ class IRVariable(BaseModel):
     replacement: ReplacementStrategy = ReplacementStrategy.DEFAULT
     items: list[VariableItem] = Field(default=[], max_length=MAX_ITEMS)  # enum variables
     nrql: str | None = None  # nrql variables: a query that returns the values
-    account_ids: list[int] = Field(default=[], max_length=20)  # nrql variables; empty = default
+    # nrql variables; empty = the account in use
+    account_ids: list[Annotated[StrictInt, Field(ge=1, lt=MAX_ACCOUNT_ID)]] = Field(
+        default=[], max_length=20
+    )
     excluded: bool = False
     ignore_time_range: bool = False
     show_apply_action: bool = False
-
-    @field_validator("account_ids")
-    @classmethod
-    def _positive(cls, value: list[int]) -> list[int]:
-        if any(v < 1 for v in value):
-            raise ValueError("account ids must be positive")
-        return value
 
     @model_validator(mode="after")
     def _shape_matches_type(self) -> Self:
@@ -271,7 +301,15 @@ class IRVariable(BaseModel):
             raise ValueError("only nrql variables have a query or account ids")
         if self.type == VariableType.STRING and self.multi_select:
             raise ValueError("a string variable cannot be multi-select")
+        self._check_defaults()
         return self
+
+    def _check_defaults(self) -> None:
+        if len(self.default_values) > 1 and not self.multi_select:
+            raise ValueError("a single-select variable takes at most one default")
+        values = {i.value for i in self.items}
+        if values and not set(self.default_values) <= values:
+            raise ValueError("a default value is not one of the items")
 
     def _check_query(self) -> None:
         if not self.nrql:
@@ -288,7 +326,7 @@ class IRDashboard(OmitDefaults):
     source_system: str
     source_key: str  # the dashboard's name in the source system
     name: str
-    widgets: list[IRWidget]
+    widgets: list[IRWidget] = Field(max_length=MAX_WIDGETS)
     confidence: Confidence
     reasons: list[str] = []
     variables: list[IRVariable] = Field(default=[], max_length=MAX_VARIABLES)

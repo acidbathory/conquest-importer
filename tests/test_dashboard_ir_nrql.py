@@ -1,5 +1,9 @@
 """Validators for NRQL that a translator hands to the dashboard IR, and for {{variables}}."""
 
+import contextlib
+import time
+from typing import Any
+
 import pytest
 
 from importer.core.dashboard_nrql import (
@@ -79,7 +83,8 @@ def test_dashboard_nrql_that_is_allowed(nrql: str) -> None:
         ("SELECT count(*) FROM Log COMPARE WITH 1 week ago", "COMPARE WITH"),
         ("SELECT count(*) FROM Log; DROP", "semicolon"),
         ("SELECT count(*) FROM Log WHERE a = 'x", "quote"),
-        ("SELECT count(*) FROM Log\nSINCE 1 day ago", "control"),
+        ("SELECT count(*) FROM Log\nSINCE 1 day ago", "SINCE"),
+        ("SELECT count(*) FROM Log\x07", "control"),
         ("DELETE FROM Log", "SELECT or FROM"),
         ("", "empty"),
         ("SELECT 1 FROM Log WHERE a = '" + "x" * 5000 + "'", "longer than"),
@@ -93,3 +98,98 @@ def test_dashboard_nrql_that_is_refused(nrql: str, message: str) -> None:
 def test_raw_nrql_also_checks_variable_placement() -> None:
     with pytest.raises(ValueError, match="LIMIT"):
         check_raw_nrql("SELECT count(*) FROM Log FACET host LIMIT {{n}}")
+
+
+# --- round 2 ---------------------------------------------------------------------------------
+
+
+def test_pretty_printed_queries_are_accepted() -> None:
+    check_raw_nrql("SELECT count(*)\r\n\tFROM Log\n  WHERE a = 1\n  FACET host")
+
+
+def test_a_newline_inside_a_string_literal_is_still_refused() -> None:
+    with pytest.raises(ValueError, match="quote"):
+        check_raw_nrql("SELECT count(*) FROM Log WHERE a = 'x\ny'")
+
+
+def test_a_clause_split_over_lines_is_still_recognised() -> None:
+    with pytest.raises(ValueError, match="COMPARE WITH"):
+        check_raw_nrql("SELECT count(*) FROM Log COMPARE\n  WITH 1 day ago")
+
+
+@pytest.mark.parametrize(
+    "char",
+    [
+        "\x00", "\x07", "\x1b", "\x7f", "\x85", "\u2028", "\u2029", "\u202a",
+        "\u202e", "\u2066", "\u2069", "\u200b", "\u200c", "\u200d", "\u2060", "\ufeff",
+    ],
+)  # fmt: skip
+def test_control_bidi_and_zero_width_characters_are_refused(char: str) -> None:
+    with pytest.raises(ValueError, match="control"):
+        check_raw_nrql(f"SELECT count(*) FROM Log WHERE a = 'x{char}y'")  # noqa: S608
+
+
+def test_a_zero_width_character_cannot_hide_a_keyword() -> None:
+    with pytest.raises(ValueError, match="control"):
+        check_raw_nrql("SELECT count(*) FROM Log SIN\u200bCE 1 day ago")
+    with pytest.raises(ValueError, match="control"):
+        check_variable_usage("SELECT count(*) FROM Log LIM\u200bIT {{v}}")
+
+
+def test_a_fullwidth_semicolon_outside_a_string_is_refused() -> None:
+    with pytest.raises(ValueError, match="semicolon"):
+        check_raw_nrql("SELECT count(*) FROM Log\uff1b SELECT 1")
+    check_raw_nrql("SELECT count(*) FROM Log WHERE a = 'x\uff1b'")
+
+
+@pytest.mark.parametrize("bad", ["{{{v}}}", "{{v}}}", "{{{v}}", "{ {{v}}", "{{v}} }"])
+def test_extra_braces_around_a_variable_are_malformed(bad: str) -> None:
+    with pytest.raises(ValueError, match="malformed"):
+        check_variable_usage(f"SELECT count(*) FROM Log WHERE a IN ({bad})")  # noqa: S608
+
+
+@pytest.mark.parametrize(
+    "nrql",
+    [
+        "SELECT count(*) FROM Log WHERE with = {{v}}",
+        "SELECT count(*) FROM Log WHERE limit > {{v}}",
+        "SELECT count(*) FROM Log WHERE as IN ({{v}})",
+        "SELECT count(*) FROM Log WHERE as IS NOT NULL AND x = {{v}}",
+        "SELECT count(*) FROM Log WHERE attributes.limit = {{v}}",
+        "SELECT count(*) FROM Log WHERE `limit` = {{v}}",
+    ],
+)
+def test_a_column_named_like_a_keyword_does_not_hide_the_real_clause(nrql: str) -> None:
+    assert check_variable_usage(nrql) == ["v"]
+
+
+def test_a_real_clause_after_a_keyword_named_column_is_still_found() -> None:
+    with pytest.raises(ValueError, match="LIMIT"):
+        check_variable_usage("SELECT count(*) FROM Log WHERE limit = 3 FACET host LIMIT {{v}}")
+
+
+def test_the_length_limit_is_exactly_4096_characters() -> None:
+    head = "SELECT count(*) FROM Log WHERE a = '"
+    ok = head + "x" * (4096 - len(head) - 1) + "'"
+    assert len(ok) == 4096
+    check_raw_nrql(ok)
+    with pytest.raises(ValueError, match="longer than"):
+        check_raw_nrql(ok + " ")
+
+
+@pytest.mark.parametrize(
+    "run",
+    [
+        lambda: check_raw_nrql("SELECT 1 FROM Log WHERE a = '" + "x" * 100_000),
+        lambda: check_raw_nrql("'" * 100_001),
+        lambda: check_variable_usage("SELECT 1 FROM Log WHERE a IN (" + "{{v}}, " * 15_000 + ")"),
+        lambda: check_variable_usage("SELECT " * 15_000 + "{{v}}"),
+        lambda: check_variable_usage("{{" * 50_000),
+        lambda: check_variables_defined(["SELECT {{v}}"] * 20_000, ["v"]),
+    ],
+)
+def test_validators_stay_fast_on_100k_characters(run: Any) -> None:
+    start = time.perf_counter()
+    with contextlib.suppress(ValueError):
+        run()
+    assert time.perf_counter() - start < 2.0
