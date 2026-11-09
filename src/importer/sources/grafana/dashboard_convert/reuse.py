@@ -19,9 +19,9 @@ from importer.sources.grafana.translate import (
     QUOTED,
     _Ctx,
     _Fail,
-    _matchers,
-    _outer,
     _regex,
+    parse_matchers,
+    split_outer,
 )
 
 NAME = r"[A-Za-z_:][A-Za-z0-9_:]*"
@@ -63,7 +63,7 @@ class Cond:
 def outer(text: str, aggregators: str, fail: str) -> tuple[str | None, list[str], str]:
     """`agg [by (..)] (inner) [by (..)]` split into aggregator, labels and inner text."""
     try:
-        return _outer(text, aggregators)
+        return split_outer(text, aggregators)
     except _Fail:
         raise Unconvertible(fail) from None
 
@@ -79,7 +79,7 @@ def selector(inner: str, fail: str) -> tuple[str, str]:
 def prom_conditions(body: str, fail: str) -> list[Cond]:
     """Label matchers of a metric selector, in the forms the alert translator reads."""
     try:
-        found = _matchers(body, PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True)
+        found = parse_matchers(body, PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True)
     except _Fail:
         raise Unconvertible(fail) from None
     return [Cond(m.key, m.kind, m.values, m.negate) for m in found]

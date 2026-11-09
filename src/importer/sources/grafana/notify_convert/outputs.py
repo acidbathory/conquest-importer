@@ -18,9 +18,9 @@ from pathlib import Path
 from importer.core.emit.dashboard import TERRAFORM_HEADER
 from importer.core.emit.muting import muting_terraform
 from importer.core.emit.notifications import (
-    _secret_names,
     all_destinations,
     notifications_terraform,
+    secret_names,
     secret_variable,
 )
 from importer.core.notification_ir import plan_json
@@ -43,7 +43,7 @@ def output_files(c: Conversion) -> dict[str, str]:
     if c.muting_rules:
         terraform += "\n" + muting_terraform(c.muting_rules)
     files["notifications.tf"] = terraform
-    names = _secret_names([d for p in c.plans for d in all_destinations(p)])
+    names = secret_names([d for p in c.plans for d in all_destinations(p)])
     files["secrets.tfvars.example"] = "".join(
         f'{secret_variable(n)} = "{PLACEHOLDER}"\n' for n in names
     )
