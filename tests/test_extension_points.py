@@ -39,7 +39,9 @@ def test_load_all_registers_commands_from_modules_in_name_order(extra_command_di
     def keep() -> None:
         pass
 
-    assert commands.load_all(fresh) == ["aa_first", "zz_second"]
+    loaded = commands.load_all(fresh)
+    # real command modules may exist too: only the order of the two test modules matters here
+    assert [n for n in loaded if n in {"aa_first", "zz_second"}] == ["aa_first", "zz_second"]
     result = CliRunner().invoke(fresh, ["second-cmd"])
     assert result.exit_code == 0 and "second ran" in result.output
 
@@ -52,7 +54,7 @@ def test_a_command_module_without_register_is_a_clear_error(extra_command_dir: P
 
 def test_private_modules_are_skipped(extra_command_dir: Path) -> None:
     (extra_command_dir / "_helpers.py").write_text("raise RuntimeError('must not be imported')\n")
-    assert commands.load_all(typer.Typer()) == []
+    assert "_helpers" not in commands.load_all(typer.Typer())
 
 
 def test_the_real_cli_still_lists_its_commands() -> None:
