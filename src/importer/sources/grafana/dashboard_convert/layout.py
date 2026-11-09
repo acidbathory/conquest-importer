@@ -11,13 +11,14 @@ the IR, which records it.
 from dataclasses import dataclass
 from itertools import groupby
 
-from importer.core.dashboard_ir import MAX_WIDGETS, IRWidget, Layout, Visualization, WidgetKind
+from importer.core.dashboard_ir import IRWidget, Layout, Visualization, WidgetKind
 from importer.core.ir import Confidence
 from importer.core.report import md_cell
 from importer.core.text import printable
 from importer.sources.grafana.dashboard_convert.panels import Draft
 
 GRID = 24
+PAGE_WIDGETS = 150  # New Relic: widgets per page; the emitter writes one page
 MAX_HEIGHT = 100
 HEADING_ROWS = 1
 
@@ -87,7 +88,7 @@ def heading(section: str, row: int) -> IRWidget:
 
 
 def lay_out(items: list[Placed]) -> tuple[list[IRWidget], int]:
-    """Widgets in page order and how many did not fit under the widget limit."""
+    """Widgets in page order and how many did not fit under the limit of one page."""
     widgets: list[IRWidget] = []
     cursor = 1
     for section, group in groupby(items, key=lambda i: i.section):
@@ -101,4 +102,4 @@ def lay_out(items: list[Placed]) -> tuple[list[IRWidget], int]:
             shifted = layout.model_copy(update={"row": layout.row + cursor - 1})
             widgets.append(draft.widget(shifted))
         cursor += max(layout.row + layout.height - 1 for _, layout in packed)
-    return widgets[:MAX_WIDGETS], max(0, len(widgets) - MAX_WIDGETS)
+    return widgets[:PAGE_WIDGETS], max(0, len(widgets) - PAGE_WIDGETS)

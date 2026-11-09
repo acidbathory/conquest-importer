@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from importer.core.dashboard_ir import MAX_WIDGETS, PROVIDER_MAX_HEIGHT, Layout, WidgetKind
+from importer.core.dashboard_ir import PROVIDER_MAX_HEIGHT, Layout, WidgetKind
 from importer.core.ir import Confidence
 from importer.sources.grafana.dashboard_convert import reasons as r
 from importer.sources.grafana.dashboard_convert.layout import Placed, _fit, lay_out, pack
@@ -107,9 +107,9 @@ def test_a_tall_panel_is_clamped_by_the_ir_and_says_so() -> None:
 
 
 def test_more_widgets_than_the_limit_are_counted_not_lost_silently() -> None:
-    items = [placed(0, i * 2, 24, 2, "", f"p{i}") for i in range(MAX_WIDGETS + 5)]
+    items = [placed(0, i * 2, 24, 2, "", f"p{i}") for i in range(155)]
     widgets, skipped = lay_out(items)
-    assert len(widgets) == MAX_WIDGETS and skipped == 5
+    assert len(widgets) == 150 and skipped == 5  # New Relic: 150 widgets per page
 
 
 # --- matching raw display options to panels ---

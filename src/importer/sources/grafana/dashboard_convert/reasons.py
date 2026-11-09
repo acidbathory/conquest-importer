@@ -27,9 +27,7 @@ C_VARIABLE_UNDEFINED = (
     f"{PREFIX}: the query uses a variable that did not become a New Relic variable"
 )
 C_LIKE_PERCENT = f"{PREFIX}: a pattern contains % which NRQL LIKE cannot match literally"
-C_AGG_RATE = (
-    f"{PREFIX}: an average, minimum or maximum of rates has no correct New Relic form"
-)
+C_AGG_RATE = f"{PREFIX}: an average, minimum or maximum of rates has no correct New Relic form"
 C_REUSE = f"{PREFIX}: the panel reuses a query that did not convert"
 C_UNEXPECTED = f"{PREFIX}: the panel could not be read"
 

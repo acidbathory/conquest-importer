@@ -47,7 +47,7 @@ from importer.sources.grafana.dashboards.plan import PanelPlan
 V = Visualization
 MAX_TITLE = 200
 MAX_QUERY_TEXT = 100
-MAX_RAW_SERIES = 50
+MAX_QUERIES = 20  # New Relic: queries per widget
 EXTRA_CONVERTIBLE = frozenset({"gauge", "bargauge", "barchart", "logs", "logstable"})
 FIXED_VIZ = {
     "stat": V.BILLBOARD,
@@ -201,7 +201,7 @@ def _targets(panel: Panel, ctx: Context) -> list[tuple[Target, Panel]]:
         if source is None or any(t.panel_id is not None for t in source.targets):
             raise Unconvertible(r.C_REUSE)
         found += [(t, source) for t in source.targets if not t.hidden]
-    if not found or len(found) > MAX_RAW_SERIES:
+    if not found or len(found) > MAX_QUERIES:
         raise Unconvertible(r.C_SHAPE)
     return found
 
