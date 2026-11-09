@@ -54,3 +54,17 @@ def test_the_key_value_is_never_shown() -> None:
     assert "secret-value" not in render(
         _checks("123456789012", {"NEW_RELIC_API_KEY": "secret-value"})
     )
+
+
+def test_google_login_is_checked_for_the_gcp_source_and_the_token_is_not_shown() -> None:
+    from importer.sources.gcp.extract import GcpError
+
+    ok = run_checks("us-east-1", None, source="gcp", token_factory=lambda: "ya29.secret")
+    assert [c.name for c in ok][1] == "google login" and passed(ok)
+    assert "ya29" not in render(ok)
+
+    def no_login() -> str:
+        raise GcpError("no Google credentials found")
+
+    bad = run_checks("us-east-1", None, source="gcp", token_factory=no_login)
+    assert not passed(bad) and "aws keys" not in render(bad)

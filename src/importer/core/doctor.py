@@ -1,7 +1,8 @@
 """Preflight checks, so a new user meets setup problems before a real run. Read-only.
 
-Requirements are only: Python, AWS keys that can read CloudWatch, and a New Relic API key
-(the last only for creating things). Terraform is optional, for the data-ingestion step.
+Requirements are only: Python, credentials that can read the source (AWS keys for CloudWatch, a
+Google login for Google Cloud), and a New Relic API key (the last only for creating things).
+Terraform is optional, for the data-ingestion and project-link steps.
 """
 
 import os
@@ -11,6 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from importer.sources.cloudwatch.extract import AwsError, Reader, caller_account
+from importer.sources.gcp.extract import GcpError, access_token
 
 
 @dataclass(frozen=True)
@@ -21,12 +23,32 @@ class Check:
     required: bool = True
 
 
+def _aws_login(
+    region: str, profile: str | None, reader_factory: Callable[[str, str | None], Reader]
+) -> Check:
+    try:
+        account = caller_account(reader_factory(region, profile))
+    except (AwsError, ValueError) as exc:
+        return Check("aws keys", False, str(exc)[:240])
+    return Check("aws keys", True, f"working; signed in to account {account}")
+
+
+def _google_login(token_factory: Callable[[], str]) -> Check:
+    try:
+        token_factory()
+    except GcpError as exc:
+        return Check("google login", False, str(exc)[:240])
+    return Check("google login", True, "an access token is available (it is not shown)")
+
+
 def run_checks(
     region: str,
     profile: str | None,
     which: Callable[[str], str | None] = shutil.which,
     reader_factory: Callable[[str, str | None], Reader] = Reader,
     env: dict[str, str] | None = None,
+    source: str = "cloudwatch",
+    token_factory: Callable[[], str] = access_token,
 ) -> list[Check]:
     env = dict(os.environ) if env is None else env
     checks = [
@@ -36,11 +58,10 @@ def run_checks(
             f"{sys.version_info.major}.{sys.version_info.minor} (3.12 or newer needed)",
         )
     ]
-    try:
-        account = caller_account(reader_factory(region, profile))
-        checks.append(Check("aws keys", True, f"working; signed in to account {account}"))
-    except (AwsError, ValueError) as exc:
-        checks.append(Check("aws keys", False, str(exc)[:240]))
+    if source == "gcp":
+        checks.append(_google_login(token_factory))
+    else:
+        checks.append(_aws_login(region, profile, reader_factory))
     has_key = bool(env.get("NEW_RELIC_API_KEY"))
     checks.append(
         Check(

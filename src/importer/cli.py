@@ -154,10 +154,16 @@ def convert(
 def doctor(
     region: Annotated[str, typer.Option(help="AWS region to check")] = "us-east-1",
     profile: Annotated[str | None, typer.Option(help="AWS profile name")] = None,
+    source: Annotated[str, typer.Option(help="cloudwatch or gcp: which sign-in to check")] = (
+        "cloudwatch"
+    ),
 ) -> None:
-    """Check that the tools and AWS sign-in a run needs are in place. Read-only."""
+    """Check that the tools and sign-in a run needs are in place. Read-only."""
+    if source not in ("cloudwatch", "gcp"):
+        typer.echo("Error: --source must be cloudwatch or gcp", err=True)
+        raise typer.Exit(code=1)
     try:
-        checks = run_checks(region, profile)
+        checks = run_checks(region, profile, source=source)
     except ValueError as exc:
         typer.echo(f"Error: {printable(str(exc), 200)}", err=True)
         raise typer.Exit(code=1) from None
