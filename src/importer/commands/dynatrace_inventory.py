@@ -11,6 +11,8 @@ from typing import Annotated
 import typer
 
 from importer.core.text import printable
+from importer.sources.dynatrace.dashboards.models import load_documents
+from importer.sources.dynatrace.dashboards.plan import plan_documents, write_plan
 from importer.sources.dynatrace.extract import DynatraceError
 from importer.sources.dynatrace.inventory.extract import (
     environment_url,
@@ -62,3 +64,39 @@ def register(app: typer.Typer) -> None:
         typer.echo(
             f"  importer plan-dynatrace-dashboards --in {out} --out {out / 'plan-dashboards'}"
         )
+
+    @app.command("plan-dynatrace-dashboards")
+    def plan_dashboards_command(
+        source: Annotated[
+            Path,
+            typer.Option(
+                "--in",
+                help="Folder written by extract-dynatrace-inventory, or a dashboard JSON file",
+            ),
+        ],
+        out: Annotated[Path, typer.Option(help="New folder for report.md and plan.json")],
+    ) -> None:
+        """Say which dashboard tiles and variables convert, and what a person must do.
+
+        Offline. Every tile is exact (every clause maps to NRQL unchanged), draft (one plumbing
+        clause dropped, with a note) or manual. Markdown tiles convert. A tile that reads data
+        only Dynatrace has (self-monitoring metrics, security events, Smartscape) is flagged
+        "no New Relic data source". No New Relic dashboard is created.
+        """
+        try:
+            documents, copies = load_documents(source)
+            if not documents:
+                raise ValueError(f"no dashboard JSON found in {source}")
+            plans = plan_documents(documents, copies)
+            write_plan(plans, out)
+        except (ValueError, OSError) as exc:
+            raise _fail(exc) from None
+        t = plans.totals
+        typer.echo(
+            f"Planned {len(plans.dashboards)} dashboards: {t.data} data tiles "
+            f"({t.exact} exact, {t.draft} draft, {t.manual} manual), {t.markdown} markdown tiles, "
+            f"{t.variables_exact + t.variables_draft + t.variables_manual} variables "
+            f"({t.variables_exact} exact, {t.variables_draft} draft, {t.variables_manual} manual)."
+        )
+        typer.echo(f"{t.no_data_source} tiles read data New Relic does not have.")
+        typer.echo(f"Wrote {out / 'report.md'} and {out / 'plan.json'}")
