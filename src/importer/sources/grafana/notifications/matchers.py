@@ -6,23 +6,23 @@ uses RE2, which cannot backtrack badly; Python's `re` can, and differs from RE2 
 pattern is run only when the stdlib parser shows it is in a small safe subset (see
 `is_safe_pattern`). Anything else returns None, which callers report as undecidable instead of
 guessing. The gate is strict on purpose: it refuses some harmless patterns, such as an
-IPv4 address pattern with a counted group, because a repeated group that holds a repeat cannot
-be told apart from `(a?a?)*b` by a cheap rule. There is no wall-clock guard on a match (that needs a thread or a
-process); the gate and the length caps are the only protection.
+IPv4 address pattern with a counted group, because a repeated group that holds a repeat
+cannot be told apart from `(a?a?)*b` by a cheap rule. There is no wall-clock guard on a
+match (that needs a thread or a process); the gate and the length caps are the only protection.
 
 The parser is `re._parser`, a private module of CPython 3.11 and later. If it cannot be
 imported, every pattern is refused.
 """
 
+import importlib
 import re
 import warnings
 from functools import lru_cache
 from typing import Any
 
 try:
-    from re import _constants as _c
-    from re import _parser
-
+    _parser: Any = importlib.import_module("re._parser")
+    _c: Any = importlib.import_module("re._constants")
     PARSER_AVAILABLE = True
 except ImportError:  # pragma: no cover - a Python without the private modules
     PARSER_AVAILABLE = False
@@ -68,7 +68,7 @@ def _walk(items: Any, stats: _Stats) -> bool:
         if name in _ATOMS:
             continue
         if name == "SUBPATTERN":
-            group, add_flags, del_flags, body = av
+            _group, add_flags, del_flags, body = av
             if add_flags or del_flags or not _walk(body, stats):
                 return False
         elif name == "BRANCH":

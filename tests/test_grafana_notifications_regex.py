@@ -94,7 +94,9 @@ def test_the_reviewers_cases() -> None:
 
 def test_case_insensitive_matching_is_refused_for_non_ascii_values() -> None:
     assert mt.matches("=~", "(?i)abc", "ABC") is True
-    assert mt.matches("=~", "(?i)k", "K") is None  # the Kelvin sign folds to k in RE2
+    assert (
+        mt.matches("=~", "(?i)k", "\N{KELVIN SIGN}") is None
+    )  # the Kelvin sign folds to a plain k in RE2
 
 
 def test_a_python_warning_while_compiling_makes_the_pattern_unsafe() -> None:
@@ -123,7 +125,7 @@ def test_the_gate_fails_closed_when_the_parser_is_missing(monkeypatch: pytest.Mo
 
 
 def test_any_pattern_the_gate_accepts_finishes_fast_on_adversarial_subjects() -> None:
-    rng = random.Random(7)
+    rng = random.Random(7)  # noqa: S311 - a fixed seed for a repeatable test
     atoms = [
         "a", "b", "a?", "a*", "b+", "(a|b)", "(ab)", "(ab)*", "(ab){2}", "a{2,5}", ".*", "[ab]",
         "[ab]*", "(a?)", "(a*)", "(a|a)", ".", "x", "a+", "(a?a?)", "(a+)", "b?", "(ab?)",
