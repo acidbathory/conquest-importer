@@ -194,6 +194,10 @@ def _rule_files(
         except (GrafanaError, ValueError):
             result.warnings.append(f"rule files of a {source.type} data source were NOT read")
             continue
+        if skipped := sum(g.skipped for g in groups):
+            result.warnings.append(
+                f"{skipped} rules in rule files could not be read and were left out"
+            )
         by_namespace: dict[str, list[dict[str, Any]]] = {}
         for group in groups:
             by_namespace.setdefault(group.namespace, []).append(as_ruler_group(group))

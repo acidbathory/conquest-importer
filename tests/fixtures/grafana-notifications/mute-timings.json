@@ -1,0 +1,14 @@
+[
+  {
+    "name": "HOSTILE-nights",
+    "time_intervals": [
+      {"times": [{"start_time": "22:00", "end_time": "24:00"}], "weekdays": ["monday:friday"], "location": "Europe/Berlin"},
+      {"days_of_month": ["-1"], "months": ["LEAK-month"]},
+      {"location": "../../LEAK-zone"}
+    ]
+  },
+  {
+    "name": "HOSTILE-work",
+    "time_intervals": [{"times": [{"start_time": "09:00", "end_time": "17:00"}], "weekdays": ["monday:friday"]}]
+  }
+]

@@ -4,7 +4,7 @@
   "secret": "value never kept",
   "url": "host only, and only when the field is not secure",
   "address": "email addresses, only for type email",
-  "label": "short text, kept after a check for token-like content",
+  "label": "short text for a person to recognise (a Slack channel, a Jira project key or issue type), kept after a check for token-like content",
   "ident": "name only: an id, user name or key that can identify a person or account",
   "template": "only classified as default, empty or custom",
   "structured": "name only",
@@ -261,21 +261,21 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "resolve_transition",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "reopen_transition",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "reopen_duration",
@@ -289,14 +289,14 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "dedup_key_field",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "fields",
@@ -322,7 +322,7 @@
      "secure": false,
      "protected": false,
      "required": true,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "apiVersion",
@@ -409,7 +409,7 @@
      "secure": false,
      "protected": false,
      "required": true,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "messageFormat",
@@ -641,21 +641,21 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "component",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "group",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "summary",
@@ -669,14 +669,14 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "client",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "client_url",
@@ -812,28 +812,28 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "check",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "handler",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "namespace",
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "message",
@@ -887,7 +887,7 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "icon_url",
@@ -922,7 +922,7 @@
      "secure": false,
      "protected": false,
      "required": false,
-     "kind": "label"
+     "kind": "ident"
     },
     {
      "name": "title",

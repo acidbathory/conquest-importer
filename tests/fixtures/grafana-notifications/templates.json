@@ -1,0 +1,4 @@
+[
+  {"name": "HOSTILE-custom", "template": "{{ define \"HOSTILE-custom\" }}{{ .Labels.password }} LEAK-template-secret{{ end }}"},
+  {"name": "HOSTILE-inject", "template": "{{ define \"x\" }}\"}, {\"injected\": \"LEAK-json\", \"{{ end }}"}
+]

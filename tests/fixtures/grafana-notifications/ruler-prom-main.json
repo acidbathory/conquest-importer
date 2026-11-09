@@ -1,0 +1,21 @@
+{
+  "HOSTILE-namespace `x`": [
+    {
+      "name": "HOSTILE-group",
+      "interval": "1m",
+      "labels": {"team": "pay"},
+      "rules": [
+        {
+          "alert": "HOSTILE-alert | `x`",
+          "expr": "sum(rate(errors_total[5m])) > 5",
+          "for": "10m",
+          "labels": {"severity": "critical"},
+          "annotations": {"summary": "{{ $labels.password }}", "description": "ANNOTATION-text"}
+        },
+        {"alert": "HOSTILE-simple", "expr": "up == 0", "for": "5m"},
+        {"record": "job:errors:rate5m", "expr": "sum(rate(errors_total[5m]))"},
+        {"alert": "bad-for", "expr": "up == 0", "for": "soon"}
+      ]
+    }
+  ]
+}

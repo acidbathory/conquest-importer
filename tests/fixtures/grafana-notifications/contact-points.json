@@ -1,0 +1,85 @@
+[
+  {
+    "uid": "cp-slack",
+    "name": "HOSTILE-slack `x` | <b>",
+    "type": "slack",
+    "settings": {
+      "recipient": "#alerts",
+      "token": "[REDACTED]",
+      "url": "https://hooks.slack.com/services/LEAK-T000/LEAK-B000/LEAK-xyz",
+      "title": "{{ template \"default.title\" . }}",
+      "text": "{{ .Labels.password }} LEAK-text-body"
+    }
+  },
+  {
+    "uid": "cp-hook",
+    "name": "HOSTILE-hook\nnewline",
+    "type": "webhook",
+    "settings": {
+      "url": "https://user:LEAK-pw@hooks.example.com/path/LEAK-path?token=LEAK-query",
+      "httpMethod": "PUT",
+      "username": "LEAK-user",
+      "password": "LEAK-password",
+      "authorization_credentials": "LEAK-bearer",
+      "headers": {"X-Api-Key": "LEAK-header", "Authorization": "Bearer LEAK-auth"},
+      "hmacConfig": {"secret": "LEAK-hmac", "header": "X-Sig"},
+      "tlsConfig": {"clientKey": "LEAK-tls-key", "caCertificate": "LEAK-tls-ca"},
+      "payload": {"template": "{{ .Labels.password }} LEAK-payload", "vars": {"k": "LEAK-var"}},
+      "message": "LEAK-message"
+    }
+  },
+  {
+    "uid": "cp-mail",
+    "name": "HOSTILE-mail",
+    "type": "email",
+    "settings": {"addresses": "EMAILADDR-oncall@example.com; EMAILADDR-second@example.com", "subject": "LEAK-subject"}
+  },
+  {
+    "uid": "cp-pd",
+    "name": "HOSTILE-pd",
+    "type": "pagerduty",
+    "settings": {"integrationKey": "LEAK-integration-key", "severity": "critical", "client": "LEAK-client@x.io"}
+  },
+  {
+    "uid": "cp-discord",
+    "name": "HOSTILE-discord",
+    "type": "discord",
+    "settings": {"url": "https://discord.com/api/webhooks/1/LEAK-discord-token"}
+  },
+  {
+    "uid": "cp-telegram",
+    "name": "HOSTILE-telegram",
+    "type": "telegram",
+    "settings": {"bottoken": "LEAK-bot-token", "chatid": "LEAK-chat-id"}
+  },
+  {
+    "uid": "cp-jira",
+    "name": "HOSTILE-jira",
+    "type": "jira",
+    "settings": {
+      "api_url": "https://LEAK-tenant.atlassian.net/rest/api/2",
+      "user": "LEAK-jira-user",
+      "api_token": "LEAK-jira-token",
+      "project": "OPS",
+      "issue_type": "Task"
+    }
+  },
+  {
+    "uid": "cp-mqtt",
+    "name": "HOSTILE-mqtt",
+    "type": "mqtt",
+    "settings": {"brokerUrl": "tcp://LEAK-broker:1883", "topic": "alerts/LEAK-topic-token", "password": "LEAK-mqtt-pw"}
+  },
+  {
+    "uid": "cp-wecom",
+    "name": "HOSTILE-wecom",
+    "type": "wecom",
+    "settings": {"corp_id": "LEAK-corp", "agent_id": "LEAK-agent", "secret": "LEAK-wecom-secret"}
+  },
+  {
+    "uid": "cp-odd",
+    "name": "HOSTILE-odd",
+    "type": "../../LEAK-type",
+    "settings": {"LEAK key with spaces": "LEAK-value", "ok_key": "LEAK-value2"}
+  }
+]
