@@ -23,7 +23,6 @@ MAX_CONTENT = 10_000
 # UNVERIFIED: the strings New Relic accepts for `units.unit` are not enumerated in the pages read;
 # these are the names of the New Relic chart units. One sandbox read-back confirms or fixes them.
 UNITS = {
-    "percent": "PERCENTAGE",
     "bytes": "BYTES",
     "decbytes": "BYTES",
     "Bps": "BYTES_PER_SECOND",
@@ -146,6 +145,10 @@ def read_display(body: dict[str, Any]) -> Display:
 
 def new_relic_unit(unit: str) -> tuple[str | None, list[str]]:
     """The New Relic unit for a Grafana unit, or None with a note when there is none."""
+    if unit == "percent":  # 0 to 100; PERCENTAGE would show 50 as 5000%
+        return None, [r.N_PERCENT]
+    if unit == "percentunit":  # 0 to 1: PERCENTAGE formats 1 as 100% (research note, section 4.4)
+        return "PERCENTAGE", []
     if unit in UNITS:
         return UNITS[unit], []
     if unit in NO_UNIT:

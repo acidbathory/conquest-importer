@@ -142,7 +142,8 @@ def test_stacked_memory_is_an_area_with_alias_and_unit_and_the_gauge_is_a_billbo
         (ThresholdSeverity.WARNING, 70.0),
         (ThresholdSeverity.CRITICAL, 90.0),
     ]
-    assert gauge.options.unit == "PERCENTAGE"
+    assert gauge.options.unit is None  # 0 to 100 percent must not become PERCENTAGE
+    assert r.N_PERCENT in gauge.reasons
 
 
 def test_the_cpu_panel_has_a_threshold_line_only_because_the_style_is_set() -> None:

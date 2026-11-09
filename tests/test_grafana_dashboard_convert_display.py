@@ -53,12 +53,12 @@ def test_colour_families(color: str, expected: str) -> None:
 @pytest.mark.parametrize(
     ("unit", "expected", "notes"),
     [
-        ("percent", "PERCENTAGE", []),
+        ("percent", None, [r.N_PERCENT]),
         ("bytes", "BYTES", []),
         ("reqps", "REQUESTS_PER_SECOND", []),
         ("short", None, []),
         ("", None, []),
-        ("percentunit", None, [r.N_PERCENTUNIT]),
+        ("percentunit", "PERCENTAGE", []),
         ("µs", None, [r.N_UNIT]),
         ("dtdurations", None, [r.N_UNIT]),
     ],
