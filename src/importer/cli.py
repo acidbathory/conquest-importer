@@ -35,7 +35,7 @@ from importer.core.emit.dashboard import (
     nerdgraph_dashboard,
 )
 from importer.core.emit.nerdgraph import nerdgraph_payload
-from importer.core.emit.notifications import notifications_terraform
+from importer.core.emit.notifications import converted_condition_names, notifications_terraform
 from importer.core.emit.terraform import terraform_file
 from importer.core.ir import Confidence, IRMonitor
 from importer.core.manifest import CreatedObject, Kind, Manifest, load_manifest, save_manifest
@@ -73,6 +73,7 @@ from importer.sources.dynatrace.extract import environment_url as dynatrace_env_
 from importer.sources.dynatrace.extract import extract as extract_dynatrace
 from importer.sources.dynatrace.extract import http_getter as dynatrace_getter
 from importer.sources.gcp import data_check as gcp_data
+from importer.sources.gcp import notifications as gcp_notifications
 from importer.sources.gcp.extract import GcpError, access_token, http_getter
 from importer.sources.gcp.extract import extract as extract_gcp
 from importer.sources.gcp.link_terraform import link_terraform, services_for
@@ -645,13 +646,7 @@ def convert_notifications(
     except (OSError, ValueError) as exc:
         typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
         raise typer.Exit(code=1) from None
-    names: dict[int, str] = {}
-    for m in monitors:
-        try:
-            names[m.source_id] = nerdgraph_payload(m)["variables"]["condition"]["name"]
-        except (CannotEmit, ValueError):
-            continue
-    routes = routing(monitors, names)
+    routes = routing(monitors, converted_condition_names(monitors))
     (out / "notification-plans").mkdir(parents=True, exist_ok=True)
     plans: list[NotificationPlan] = []
     lines = ["# Notification conversion report", ""]
@@ -683,6 +678,35 @@ def convert_notifications(
     (out / "notifications.tf").write_text(tf)
     made = sum(p.workflow is not None for p in plans)
     typer.echo(f"Read {len(plans)} topics, planned {made} workflows. See {out / 'report.md'}")
+
+
+@app.command("convert-gcp-notifications")
+def convert_gcp_notifications(
+    channels: Annotated[
+        Path, typer.Option("--channels", help="Folder with channels.json (extract-gcp)")
+    ] = Path("out/gcp/channels"),
+    alerts: Annotated[
+        Path, typer.Option("--alerts", help="Output folder of `convert --source gcp` (has ir/)")
+    ] = Path("out/gcp-alerts"),
+    out: Annotated[Path, typer.Option(help="Output directory")] = Path("out/gcp-notifications"),
+    prefix: Annotated[str, typer.Option(help="Prefix for created object names")] = "Imported:",
+) -> None:
+    """Plan notification workflows from Google Cloud channels: routing and manual steps.
+
+    One section per set of channels, listing the converted conditions that used the set.
+    Addresses and secrets are not exported, so every channel is a manual step. Offline.
+    """
+    try:
+        known = gcp_notifications.load_channels(channels)
+        monitors = [
+            IRMonitor.model_validate_json(p.read_text())
+            for p in sorted((alerts / "ir").glob("*.json"))
+        ]
+        count = gcp_notifications.write_outputs(known, monitors, out, prefix)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Error: {printable(str(exc), 300)}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"Read {len(known)} channels, {count} channel sets. See {out / 'report.md'}")
 
 
 @app.command("apply-notifications")

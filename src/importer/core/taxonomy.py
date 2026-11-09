@@ -65,6 +65,8 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
         Category.MANUAL_FOLLOWUP,
         re.compile(
             r"configured manually|must be confirmed|not migrated|template variables"
+            r"|not exported|one-time oauth|has no new relic destination"
+            r"|channel is not in the export"
             r"|the dynatrace trigger was inactive|slo criteria: target|the workflow was a draft"
         ),
     ),

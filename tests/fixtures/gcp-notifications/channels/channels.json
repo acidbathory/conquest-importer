@@ -1,0 +1,50 @@
+[
+  {
+    "name": "projects/demo-project-123/notificationChannels/1",
+    "type": "email",
+    "displayName": "Ops mailbox",
+    "enabled": true
+  },
+  {
+    "name": "projects/demo-project-123/notificationChannels/2",
+    "type": "pagerduty",
+    "displayName": "Primary pager",
+    "enabled": true
+  },
+  {
+    "name": "projects/demo-project-123/notificationChannels/3",
+    "type": "slack",
+    "displayName": "#alerts",
+    "enabled": true
+  },
+  {
+    "name": "projects/demo-project-123/notificationChannels/4",
+    "type": "webhook_tokenauth",
+    "displayName": "Ticket hook",
+    "enabled": true
+  },
+  {
+    "name": "projects/demo-project-123/notificationChannels/5",
+    "type": "sms",
+    "displayName": "On-call phone",
+    "enabled": true
+  },
+  {
+    "name": "projects/demo-project-123/notificationChannels/6",
+    "type": "pubsub",
+    "displayName": "Bus",
+    "enabled": true
+  },
+  {
+    "name": "projects/demo-project-123/notificationChannels/7",
+    "type": "webhook_basicauth",
+    "displayName": "Basic hook",
+    "enabled": true
+  },
+  {
+    "name": "projects/demo-project-123/notificationChannels/8",
+    "type": "campfire",
+    "displayName": "Old chat",
+    "enabled": true
+  }
+]

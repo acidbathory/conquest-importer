@@ -1,0 +1,138 @@
+[
+  {
+    "name": "projects/demo-project-123/alertPolicies/1",
+    "displayName": "cpu-oncall",
+    "enabled": true,
+    "combiner": "OR",
+    "conditions": [
+      {
+        "displayName": "c",
+        "name": "projects/demo-project-123/alertPolicies/1/conditions/1",
+        "conditionThreshold": {
+          "filter": "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" AND resource.type=\"gce_instance\"",
+          "comparison": "COMPARISON_GT",
+          "thresholdValue": 0.8,
+          "duration": "300s",
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "perSeriesAligner": "ALIGN_MEAN"
+            }
+          ]
+        }
+      }
+    ],
+    "notificationChannels": [
+      "projects/demo-project-123/notificationChannels/1",
+      "projects/demo-project-123/notificationChannels/2"
+    ]
+  },
+  {
+    "name": "projects/demo-project-123/alertPolicies/2",
+    "displayName": "cpu-oncall-copy",
+    "enabled": true,
+    "combiner": "OR",
+    "conditions": [
+      {
+        "displayName": "c",
+        "name": "projects/demo-project-123/alertPolicies/2/conditions/1",
+        "conditionThreshold": {
+          "filter": "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" AND resource.type=\"gce_instance\"",
+          "comparison": "COMPARISON_GT",
+          "thresholdValue": 0.8,
+          "duration": "300s",
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "perSeriesAligner": "ALIGN_MEAN"
+            }
+          ]
+        }
+      }
+    ],
+    "notificationChannels": [
+      "projects/demo-project-123/notificationChannels/2",
+      "projects/demo-project-123/notificationChannels/1"
+    ]
+  },
+  {
+    "name": "projects/demo-project-123/alertPolicies/3",
+    "displayName": "cpu-chat",
+    "enabled": true,
+    "combiner": "OR",
+    "conditions": [
+      {
+        "displayName": "c",
+        "name": "projects/demo-project-123/alertPolicies/3/conditions/1",
+        "conditionThreshold": {
+          "filter": "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" AND resource.type=\"gce_instance\"",
+          "comparison": "COMPARISON_GT",
+          "thresholdValue": 0.8,
+          "duration": "300s",
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "perSeriesAligner": "ALIGN_MEAN"
+            }
+          ]
+        }
+      }
+    ],
+    "notificationChannels": [
+      "projects/demo-project-123/notificationChannels/3",
+      "projects/demo-project-123/notificationChannels/4"
+    ]
+  },
+  {
+    "name": "projects/demo-project-123/alertPolicies/4",
+    "displayName": "cpu-lonely",
+    "enabled": true,
+    "combiner": "OR",
+    "conditions": [
+      {
+        "displayName": "c",
+        "name": "projects/demo-project-123/alertPolicies/4/conditions/1",
+        "conditionThreshold": {
+          "filter": "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" AND resource.type=\"gce_instance\"",
+          "comparison": "COMPARISON_GT",
+          "thresholdValue": 0.8,
+          "duration": "300s",
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "perSeriesAligner": "ALIGN_MEAN"
+            }
+          ]
+        }
+      }
+    ],
+    "notificationChannels": []
+  },
+  {
+    "name": "projects/demo-project-123/alertPolicies/5",
+    "displayName": "cpu-unknown",
+    "enabled": true,
+    "combiner": "OR",
+    "conditions": [
+      {
+        "displayName": "c",
+        "name": "projects/demo-project-123/alertPolicies/5/conditions/1",
+        "conditionThreshold": {
+          "filter": "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" AND resource.type=\"gce_instance\"",
+          "comparison": "COMPARISON_GT",
+          "thresholdValue": 0.8,
+          "duration": "300s",
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "perSeriesAligner": "ALIGN_MEAN"
+            }
+          ]
+        }
+      }
+    ],
+    "notificationChannels": [
+      "projects/demo-project-123/notificationChannels/99"
+    ]
+  }
+]
