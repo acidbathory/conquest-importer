@@ -44,7 +44,7 @@ from importer.core.ir import (
     TagFilter,
     Threshold,
 )
-from importer.sources.grafana.models import GfNode, GrafanaRule
+from importer.sources.grafana.models import GfNode, GrafanaRule, parse_duration
 from importer.sources.grafana.notifications.promrules import split_comparison
 from importer.sources.grafana.rules2 import fields
 
@@ -161,6 +161,10 @@ R_COUNTER_UNAGG = (
 R_PER_SERIES_TEST = (
     "promql equality or inequality test on a selector with no aggregation tests each series, "
     "which one New Relic aggregation cannot"
+)
+R_RESAMPLE_MODE = (
+    "grafana pipeline has a resample expression with a downsampler, upsampler or window that "
+    "a New Relic window does not reproduce"
 )
 R_NO_NODE = "grafana pipeline: the condition does not point at a node of the rule"
 R_SHAPE = "grafana pipeline is not one query, an optional reduce and one threshold"
@@ -311,7 +315,7 @@ N_RATIO_ZERO = (
 )
 N_ABSENT = (
     "absent() becomes a loss-of-signal condition: it opens a violation when New Relic receives "
-    "no data points for the metric for the duration, and it only works once the metric has "
+    "no data points for five minutes (Prometheus keeps a series visible that long) plus the pending period, and it only works once the metric has "
     "arrived at least once; like absent() it fires only when no matching series reports at all, so "
     "one missing series among several does not alert, which may differ from the rule's intent"
 )
@@ -335,6 +339,11 @@ N_RATE_SAMPLES = (
     "Prometheus needs at least two samples inside the range to return a value, while New "
     "Relic divides the one change per interval it has by the range; when the scrape interval "
     "is longer than the range the values differ (not confirmed against live data)"
+)
+N_ABSENT_NODATA = (
+    "absent() returns nothing while the series exists, so Grafana puts the rule in its no-data "
+    "state then, and the rule's no-data state is not OK; the New Relic condition fires only "
+    "when the series is absent, so it may differ"
 )
 N_ROUTING = "notifications (contact points and notification policies) must be configured manually"
 
@@ -526,6 +535,7 @@ class Built:
     threshold: Threshold | None = None  # a form that fixes its own threshold (absent)
     heartbeat: HeartbeatSignal | None = None
     minimum_duration: int = 0  # seconds the query itself asks the condition to last
+    silence_seconds: int = 0  # how long a heartbeat is silent before the pending period
     per_series: bool = False  # a bare selector: Prometheus tests each series on its own
 
 
@@ -780,6 +790,23 @@ def _classic(
     return query, reducer, threshold, [N_CLASSIC]
 
 
+# (downsampler, reducer) pairs a New Relic window reproduces: it averages, or takes the last
+RESAMPLE_OK = frozenset({("mean", "mean"), ("mean", "last"), ("last", "last")})
+RESAMPLE_UPSAMPLERS = frozenset({"", "fillna"})  # fill nothing; pad and backfilling invent values
+
+
+def _check_resample(node: GfNode, reducer: str) -> None:
+    model = node.model
+    try:
+        window = parse_duration(model.get("window"))
+    except ValueError:
+        window = 0
+    pair = (str(model.get("downsampler", "")).lower(), reducer)
+    upsampler = str(model.get("upsampler", "")).lower()
+    if window <= 0 or pair not in RESAMPLE_OK or upsampler not in RESAMPLE_UPSAMPLERS:
+        raise Fail(R_RESAMPLE_MODE)
+
+
 def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, Threshold, bool, list[str]]:
     """Query, reducer, threshold, recovery flag and notes of the rule's pipeline."""
     _check_expressions(rule)
@@ -797,6 +824,7 @@ def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, Threshold, bool, list[str
         nodes, nodes.get(str(condition.model.get("expression"))), used
     )
     if step is not None and _expression_type(step) == "resample":
+        _check_resample(step, reducer)
         used.append(step)
         notes.append(N_RESAMPLE)
         step = nodes.get(str(step.model.get("expression")))
@@ -943,11 +971,21 @@ def _error_notes(rule: GrafanaRule) -> list[str]:
     return [N_ERROR_STATE] if rule.exec_err_state in ("Error", "Alerting", "KeepLast") else []
 
 
-def _states(rule: GrafanaRule, duration: int, heartbeat: bool) -> tuple[NoData, list[str]]:
+HEARTBEAT_FLOOR_SECONDS = 300  # the research recommends 3 to 5 minutes at least
+
+
+def _heartbeat_states(rule: GrafanaRule, silence: int) -> tuple[NoData, list[str]]:
+    """Loss of signal after the silence Prometheus needs plus the pending period."""
+    seconds = max(HEARTBEAT_FLOOR_SECONDS, rule.for_seconds + silence)
+    notes = [] if rule.expr or rule.no_data_state == "OK" else [N_ABSENT_NODATA]
+    return NoData(notify=True, timeout_minutes=-(-seconds // 60)), notes + _error_notes(rule)
+
+
+def _states(rule: GrafanaRule, duration: int, built: Built) -> tuple[NoData, list[str]]:
     notes: list[str] = []
     no_data = NoData()
-    if heartbeat:  # absence is the condition: loss of signal always opens the violation
-        return NoData(notify=True, timeout_minutes=max(1, duration // 60)), _error_notes(rule)
+    if built.kind is SignalKind.HEARTBEAT:  # absence is the condition
+        return _heartbeat_states(rule, built.silence_seconds)
     if rule.no_data_state == "Alerting":
         no_data = NoData(notify=True, timeout_minutes=max(1, duration // 60))
         notes.append(N_NODATA_ALERTING.format(minutes=no_data.timeout_minutes))
@@ -1030,7 +1068,7 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
         _any_series(built.metric, threshold)
         built.notes.append(N_ANY_SERIES)
     window, duration, window_notes = _windows(rule, built.window, built.minimum_duration)
-    no_data, state_notes = _states(rule, duration, built.kind is SignalKind.HEARTBEAT)
+    no_data, state_notes = _states(rule, duration, built)
     notes = _rule_notes(rule, plan) + built.notes + plan.notes
     if built.kind is SignalKind.LOG and threshold.operator in EMPTY_SENSITIVE:
         notes.append(N_COUNT_EMPTY)

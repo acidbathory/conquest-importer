@@ -113,7 +113,8 @@ def test_a_classic_condition_next_to_other_expressions_stays_manual() -> None:
 
 def with_resample(rule: GrafanaRule) -> GrafanaRule:
     """query A -> resample R -> reduce B -> threshold C."""
-    resample = expr_node("R", {"type": "resample", "expression": "A", "window": "1m"})
+    model = {"type": "resample", "expression": "A", "window": "1m", "downsampler": "mean"}
+    resample = expr_node("R", model)
     rule.data.insert(1, resample)
     rule.data[2].model["expression"] = "R"
     return rule

@@ -19,7 +19,7 @@ t = importlib.import_module("importer.sources.grafana.translate")
 
 
 def prom(expr: str, **kw: object) -> IRMonitor:
-    kw = {"kind": "gt", "params": [0], "for_": 0, "no_data_state": "Alerting", **kw}
+    kw = {"kind": "gt", "params": [0], "for_": 0, **kw}
     return one(make(expr, instant=True, **kw))  # type: ignore[arg-type]
 
 
@@ -39,7 +39,7 @@ def test_absent_is_a_heartbeat_with_loss_of_signal() -> None:
     assert m.confidence is Confidence.APPROXIMATE
     assert m.signal.kind is SignalKind.HEARTBEAT and m.signal.heartbeat is not None
     assert m.thresholds[0].operator is Operator.BELOW and m.thresholds[0].value == 1
-    assert m.no_data.notify and m.no_data.timeout_minutes == 1
+    assert m.no_data.notify and m.no_data.timeout_minutes == 5
     assert nrql_for(m) == "SELECT count(*) FROM Metric WHERE metricName = 'up' AND job = 'payments'"
     assert t.N_ABSENT in m.reasons
 
@@ -48,27 +48,64 @@ def test_the_condition_means_what_absent_means() -> None:
     nrql = nrql_for(prom('absent(up{job="payments"})'))
     present = [{"metricName": "up", "job": "payments"}] * 3
     other = [{"metricName": "up", "job": "billing"}, {"metricName": "cpu", "job": "payments"}]
-    # absent() returns nothing while a matching series exists: the count is 3, not below 1
-    assert evaluate(nrql, present)[()] == 3 and 3 >= 1
-    # absent() returns 1 when none matches: the query returns no row, which is what the
-    # expiration (loss of signal) turns into an open violation
+    # while a matching series exists the count is positive, so nothing is below 1
+    assert evaluate(nrql, present)[()] == 3
+    # with no matching series the query returns no row, which the expiration turns into a
+    # violation
     assert evaluate(nrql, other) == {}
     assert evaluate(nrql, []) == {}
 
 
-def test_the_expiration_is_the_pending_period() -> None:
-    m = prom("absent(up)", for_=600)
-    assert m.signal.window_seconds == 600 and m.no_data.timeout_minutes == 10
+LOOKBACK = 300  # Prometheus drops a series from instant queries five minutes after its last sample
 
 
-def test_absent_over_time_uses_its_range_as_the_time_without_data() -> None:
-    m = prom("absent_over_time(up[10m])")
-    assert m.signal.window_seconds == 600 and m.no_data.timeout_minutes == 10
+def prometheus_fires_at(last_sample: int, pending: int) -> int:
+    """absent() is 1 from the moment the last sample is older than the lookback; the alert
+    fires once it has been pending for `for`."""
+    return last_sample + LOOKBACK + pending
+
+
+def new_relic_fires_at(last_data: int, monitor: IRMonitor) -> int:
+    """Loss of signal opens a violation when no data has arrived for the expiration."""
+    assert monitor.no_data.notify and monitor.no_data.timeout_minutes
+    return last_data + monitor.no_data.timeout_minutes * 60
+
+
+@pytest.mark.parametrize("pending", [0, 60, 300, 600, 3600])
+def test_the_expiration_fires_when_prometheus_would_fire(pending: int) -> None:
+    m = prom("absent(up)", for_=pending)
+    for last in (0, 1234):
+        assert new_relic_fires_at(last, m) == prometheus_fires_at(last, pending)
+
+
+@pytest.mark.parametrize(("pending", "minutes"), [(0, 5), (60, 6), (300, 10), (600, 15)])
+def test_the_expiration_is_the_pending_period_plus_the_staleness_lookback(
+    pending: int, minutes: int
+) -> None:
+    assert prom("absent(up)", for_=pending).no_data.timeout_minutes == minutes
+
+
+@pytest.mark.parametrize(
+    ("range_", "pending", "minutes"),
+    [("10m", 0, 10), ("5m", 900, 20), ("1m", 0, 5), ("2m", 60, 5), ("30m", 120, 32)],
+)
+def test_absent_over_time_waits_its_range_plus_the_pending_period_but_never_under_five_minutes(
+    range_: str, pending: int, minutes: int
+) -> None:
+    m = prom(f"absent_over_time(up[{range_}])", for_=pending)
+    assert m.no_data.timeout_minutes == minutes
     assert m.signal.aggregation_window_seconds == 60
 
 
-def test_the_longer_of_the_range_and_the_pending_period_wins() -> None:
-    assert prom("absent_over_time(up[5m])", for_=900).no_data.timeout_minutes == 15
+@pytest.mark.parametrize("state", ["OK", "NoData", "Alerting", "KeepLast"])
+def test_a_grafana_absent_rule_says_what_its_no_data_state_does_unless_ok(state: str) -> None:
+    m = prom("absent(up)", no_data_state=state)
+    assert (t.N_ABSENT_NODATA in m.reasons) is (state != "OK")
+    assert m.confidence is Confidence.APPROXIMATE and m.no_data.notify
+
+
+def test_a_rule_file_absent_rule_has_no_no_data_state_to_explain() -> None:
+    assert t.N_ABSENT_NODATA not in file_rule("absent(up)").reasons
 
 
 def test_regex_and_negative_matchers_become_the_scope() -> None:
@@ -96,7 +133,7 @@ def test_a_threshold_that_does_not_fire_on_one_is_manual(kind: str, params: list
 
 def test_a_rule_file_absent_rule_needs_no_threshold() -> None:
     m = file_rule("absent(up{job='x'})".replace("'", '"'), for_seconds=300)
-    assert m.signal.kind is SignalKind.HEARTBEAT and m.no_data.timeout_minutes == 5
+    assert m.signal.kind is SignalKind.HEARTBEAT and m.no_data.timeout_minutes == 10
     assert t.N_RULE_FILE in m.reasons
 
 

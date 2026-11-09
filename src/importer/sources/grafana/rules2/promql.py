@@ -78,6 +78,7 @@ ABSENT_OVER_TIME = re.compile(rf"\s*absent_over_time\(\s*{SELECTOR}\s*{RANGE}\s*
 NUMBER = re.compile(r"\s*\d+(?:\.\d+)?\s*")
 OTHER_OPERATORS = "+-%^<>=!&|"
 MIN_RANGE = 60
+LOOKBACK_SECONDS = 300  # Prometheus shows a series for five minutes after its last sample
 
 
 @dataclass(frozen=True)
@@ -324,6 +325,7 @@ def _absent_form(expr: str, ctx: Ctx) -> Built | None:
         threshold=Threshold(severity=Severity.CRITICAL, operator=Operator.BELOW, value=1),
         heartbeat=heartbeat,
         minimum_duration=seconds,
+        silence_seconds=seconds or LOOKBACK_SECONDS,
     )
 
 
