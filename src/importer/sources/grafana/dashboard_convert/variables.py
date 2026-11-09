@@ -22,6 +22,7 @@ from importer.core.dashboard_ir import (
     VariableType,
 )
 from importer.core.emit.nrql import identifier, quote_string
+from importer.core.text import printable
 from importer.sources.grafana.dashboard_convert import reasons as r
 from importer.sources.grafana.dashboard_convert.name_map import NameMap
 from importer.sources.grafana.dashboard_convert.nrql import cond_sql
@@ -79,14 +80,21 @@ def custom_items(query: str) -> list[VariableItem]:
             continue
         pair = KEY_VALUE.match(text)
         title, value = (pair[1].strip(), pair[2].strip()) if pair else (None, text)
+        value = printable(value, MAX_VALUE + 1)
         if len(value) <= MAX_VALUE and value not in items:
-            items[value] = VariableItem(title=title[:MAX_TEXT] if title else None, value=value)
+            shown = printable(title, MAX_TEXT) if title else None
+            items[value] = VariableItem(title=shown, value=value)
     return list(items.values())
+
+
+def clean(value: str) -> str:
+    """A value shown to people and written to files: no control or direction characters."""
+    return printable(value, MAX_VALUE)
 
 
 def _items(variable: Variable, raw: RawVar) -> list[VariableItem]:
     saved = [
-        VariableItem(title=text[:MAX_TEXT] if text != value else None, value=value)
+        VariableItem(title=printable(text, MAX_TEXT) if text != value else None, value=clean(value))
         for text, value in raw.options[:MAX_ITEMS]
         if value != ALL and len(value) <= MAX_VALUE
     ]
@@ -94,7 +102,7 @@ def _items(variable: Variable, raw: RawVar) -> list[VariableItem]:
 
 
 def _title(variable: Variable, raw: RawVar) -> str:
-    return (raw.label or variable.name)[:MAX_TEXT]
+    return printable(raw.label or variable.name, MAX_TEXT)
 
 
 def _enum_defaults(
@@ -103,7 +111,7 @@ def _enum_defaults(
     values = [i.value for i in items]
     if multi and (ALL in raw.current or (include_all and not raw.current)):
         return values
-    kept = [c for c in raw.current if c in values]
+    kept = [clean(c) for c in raw.current if clean(c) in values]
     if not kept:
         return values[:1]
     return kept if multi else kept[:1]
@@ -124,7 +132,7 @@ def _enum(variable: Variable, raw: RawVar) -> IRVariable:
 
 def _string(variable: Variable, raw: RawVar) -> IRVariable:
     current = next((c for c in raw.current if c != ALL), variable.query)
-    default = [current[:MAX_VALUE]] if current else []
+    default = [clean(current)] if current else []
     return IRVariable(
         name=variable.name,
         title=_title(variable, raw),
@@ -182,7 +190,7 @@ def _nrql(variable: Variable, raw: RawVar, names: NameMap) -> IRVariable:
         type=VariableType.NRQL,
         nrql=variable_query(variable, names),
         multi_select=multi,
-        default_values=[d[:MAX_VALUE] for d in defaults],
+        default_values=[clean(d) for d in defaults],
         ignore_time_range=raw.refresh == 1,
     )
 
