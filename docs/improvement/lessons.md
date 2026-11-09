@@ -3,6 +3,14 @@
 One entry per defect class. Each says what happened and the check that stops it coming back.
 New entries go on top.
 
+## 2026-11-09: cycle `gcp-absence`
+
+| Defect | How it hid | Check that catches the class |
+|---|---|---|
+| A new signal kind (heartbeat) went through code that only knew the metric kind (`check-gcp-data`) | The tool answered "no metric name to check", which was false | Every consumer of a signal kind needs a test per kind. Next: a test that builds one monitor of each kind and runs every consumer |
+| Out-of-range values converted as approximate and failed only when emitting | Reported as converted, then silently not created | Translation checks the emitter limits (`_check_limits`) |
+| A dropped input (group-by field) changed what a note said | The note described a different condition | Dropping input always adds a note |
+
 ## 2026-11-09: found while hardening the Google source
 
 | Defect | How it hid | Check that catches the class |
