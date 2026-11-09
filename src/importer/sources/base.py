@@ -6,7 +6,9 @@ A source does two separate jobs, so each can be tested and reasoned about alone:
 Everything after the IR (emitters, report, apply) is shared and knows nothing about sources.
 """
 
-from collections.abc import Callable
+import importlib
+import pkgutil
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -62,3 +64,18 @@ def register_fixtures(source: str, *folders: str) -> None:
     """Add fixture folders (relative to the repository root) for a source; idempotent."""
     known = EXTRA_FIXTURES.setdefault(source, [])
     known.extend(f for f in folders if f not in known)
+
+
+def import_subpackages(package: str, path: Iterable[str]) -> list[str]:
+    """Import every sub-package of a source package (e.g. `importer.sources.grafana.dashboards`).
+
+    A parallel branch adds a sub-package for its feature; its `__init__` registers whatever it
+    owns (rules, taxonomy, fixtures, dashboard translators). Nobody edits the source's own
+    `__init__`. Names starting with `_` are skipped. Returns the imported names, sorted.
+    """
+    loaded: list[str] = []
+    for info in sorted(pkgutil.iter_modules(path), key=lambda m: m.name):
+        if info.ispkg and not info.name.startswith("_"):
+            importlib.import_module(f"{package}.{info.name}")
+            loaded.append(info.name)
+    return loaded

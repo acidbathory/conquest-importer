@@ -2,7 +2,13 @@ from pathlib import Path
 
 from importer.core.dashboard_ir import IRDashboard
 from importer.core.ir import IRMonitor
-from importer.sources.base import DashboardSource, Source, register, register_dashboards
+from importer.sources.base import (
+    DashboardSource,
+    Source,
+    import_subpackages,
+    register,
+    register_dashboards,
+)
 from importer.sources.cloudwatch import remediation_rules  # noqa: F401  (registers its rules)
 from importer.sources.cloudwatch.dashboard_models import CloudWatchDashboard, load_dashboards
 from importer.sources.cloudwatch.dashboards import translate_dashboard
@@ -60,3 +66,7 @@ DASHBOARDS = DashboardSource(
     translate=translate_dashboards,
 )
 register_dashboards(DASHBOARDS)
+
+# Feature sub-packages (src/importer/sources/cloudwatch/<feature>/) load themselves; see
+# docs/dev/parallel-work.md.
+import_subpackages(__name__, __path__)

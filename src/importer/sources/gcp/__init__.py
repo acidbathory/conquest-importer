@@ -1,6 +1,12 @@
 """Google Cloud Monitoring source: alert policies to New Relic."""
 
-from importer.sources.base import DashboardSource, Source, register, register_dashboards
+from importer.sources.base import (
+    DashboardSource,
+    Source,
+    import_subpackages,
+    register,
+    register_dashboards,
+)
 from importer.sources.gcp import remediation_rules  # noqa: F401  (registers its rules)
 from importer.sources.gcp.dashboard_models import load_dashboards
 from importer.sources.gcp.dashboards import translate_dashboards
@@ -24,3 +30,7 @@ DASHBOARDS = DashboardSource(
     translate=translate_dashboards,
 )
 register_dashboards(DASHBOARDS)
+
+# Feature sub-packages (src/importer/sources/gcp/<feature>/) load themselves; see
+# docs/dev/parallel-work.md.
+import_subpackages(__name__, __path__)

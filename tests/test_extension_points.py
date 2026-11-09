@@ -114,3 +114,23 @@ def test_extra_fixture_folders_are_measured(
     expected = improve.measure(here)["sources"]["gcp"]["total"]
     assert result["gcp"]["total"] == expected  # only the extra folder exists under tmp_path
     assert set(result) == {"gcp"}
+
+
+def test_import_subpackages_loads_feature_packages_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from importer.sources.base import import_subpackages
+
+    pkg = tmp_path / "fakesource"
+    (pkg / "feature_b").mkdir(parents=True)
+    (pkg / "feature_a").mkdir()
+    (pkg / "_private").mkdir()
+    (pkg / "plain_module.py").write_text("raise RuntimeError('not a package: must not load')\n")
+    for name in ("feature_a", "feature_b"):
+        (pkg / name / "__init__.py").write_text(f"LOADED = '{name}'\n")
+    (pkg / "_private" / "__init__.py").write_text("raise RuntimeError('private: must not load')\n")
+    (pkg / "__init__.py").write_text("")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.setattr(sys, "modules", dict(sys.modules))
+    assert import_subpackages("fakesource", [str(pkg)]) == ["feature_a", "feature_b"]
+    assert sys.modules["fakesource.feature_b"].LOADED == "feature_b"

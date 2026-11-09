@@ -1,6 +1,6 @@
 """Grafana source: Grafana-managed alert rules to New Relic."""
 
-from importer.sources.base import Source, register
+from importer.sources.base import Source, import_subpackages, register
 from importer.sources.grafana import remediation_rules  # noqa: F401  (registers its rules)
 from importer.sources.grafana.models import GrafanaRule, load_rules
 from importer.sources.grafana.translate import translate
@@ -15,3 +15,7 @@ SOURCE: Source[GrafanaRule] = Source(
     translate=translate,
 )
 register(SOURCE)
+
+# Feature sub-packages (src/importer/sources/grafana/<feature>/) load themselves; see
+# docs/dev/parallel-work.md.
+import_subpackages(__name__, __path__)
