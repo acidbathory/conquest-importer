@@ -90,6 +90,14 @@ customer results, and yours will differ.
 - Keys are read from the environment and never written to files or logs.
 - The report contains your alarm names. `importer stats` prints a version with the names removed, which is safe to share.
 
+## Other platforms and commands
+
+Google Cloud, Dynatrace and Grafana follow the same steps (`extract-<platform>`, `convert --source
+<platform>`, `report --source <platform>`). Run `importer --help` for every command, and
+`importer doctor --source <platform>` to check your settings offline. The per-platform command list
+and the notification options (`--include-needs-review`, secrets from the environment,
+`--incident-preference`, `--muting-handling`) are in the [walkthrough](docs/getting-started.md#other-commands).
+
 ## Documentation
 
 | | |
