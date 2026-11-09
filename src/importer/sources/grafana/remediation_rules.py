@@ -16,6 +16,122 @@ NRQL_LIMITS = (
 
 RULES: list[Rule] = [
     (
+        re.compile(r"^promql counter rate without sum"),
+        "PromQL counter rate without sum",
+        [
+            "Prometheus tests each series on its own, so one busy series fires the rule. A "
+            "New Relic total over all series would hide it. Either wrap the rate in "
+            "`sum by (label) (...)` in Grafana so the grouping is explicit, or write a "
+            "condition with a FACET on the series label (`SELECT sum(metric) / 300 FROM "
+            "Metric FACET label`) and check it against the Grafana panel.",
+        ],
+    ),
+    (
+        re.compile(r"^promql equality or inequality test"),
+        "PromQL equality test on a bare selector",
+        [
+            "A test such as `up == 0` fires for each series that has that value. One New "
+            "Relic aggregation (average, minimum or maximum) cannot tell the same. Use "
+            "`min(...)` or `max(...)` with a below or above test, or write a condition with "
+            "a FACET on the series label and an equals threshold.",
+        ],
+    ),
+    (
+        re.compile(r"^promql counter function on a metric"),
+        "PromQL counter name",
+        [
+            "rate() and increase() convert only for a metric New Relic stores as a count, "
+            "which it guesses from a name ending _total, _count or _bucket. For another name, "
+            "look the metric up in the data explorer. If it is a counter, add the label "
+            "`newrelic_metric_type` with the value `counter` in the remote write relabel "
+            "configuration so it is stored as a count, then use `sum(metric)` over the range "
+            "(divided by the range in seconds for a rate). If it is a gauge, rate() does not "
+            "apply and the condition needs a different query.",
+        ],
+    ),
+    (
+        re.compile(r"^promql counter rate aggregated"),
+        "PromQL counter rate aggregation",
+        [
+            "Only sum() of a rate or increase converts, because New Relic adds up the "
+            "changes of all series. An average, minimum or maximum of per-series rates needs "
+            "one value per series: write a condition with a FACET on the series label and "
+            "check it against the Grafana panel.",
+        ],
+    ),
+    (
+        re.compile(r"^promql counter rate reduced"),
+        "PromQL counter rate reducer",
+        [
+            "The rule reduces the rate series over time (mean, max, min or sum) instead of "
+            "taking the last value, which New Relic windows do not do on top of a rate. Change "
+            "the Grafana reducer to last, or write the condition by hand with a window that "
+            "matches the range the reducer looked back over.",
+        ],
+    ),
+    (
+        re.compile(r"^promql counter range"),
+        "PromQL counter range",
+        [
+            "The range of rate() or increase() becomes the aggregation window, which is a "
+            "whole number of minutes (60 seconds or more). Round the range in Grafana to a "
+            "whole number of minutes, or write the condition by hand with a window and a "
+            "threshold scaled to your range.",
+        ],
+    ),
+    (
+        re.compile(r"^promql ratio:"),
+        "PromQL ratio not converted",
+        [
+            "A ratio converts when both sides are the same aggregation (avg of gauges, sum "
+            "of counters) of different metrics with the same labels, grouping and range. An "
+            "error rate that divides one metric filtered by a code by the same metric "
+            "unfiltered needs `filter()`: write `SELECT filter(sum(metric), WHERE code LIKE "
+            "'5%') / sum(metric) FROM Metric` by hand (check that the conditions page "
+            "accepts it in your account), or create the two counts as separate conditions.",
+        ],
+    ),
+    (
+        re.compile(r"^promql absent\(\) returns 1"),
+        "PromQL absent() threshold",
+        [
+            "absent() returns 1 when the series is missing. The rule's threshold does not "
+            "fire on 1, so the rule would not alert on absence the way the query reads. "
+            "Decide what the rule should do and create a loss-of-signal condition by hand, "
+            "or change the threshold in Grafana to above 0 and convert again.",
+        ],
+    ),
+    (
+        re.compile(r"^promql expression compares inside the query"),
+        "PromQL comparison inside the query",
+        [
+            "The query filters with a comparison (such as `up == 0`) and the rule then tests "
+            "the value that is left with a threshold node, so the two together do not make "
+            "one New Relic threshold. Move the comparison into the threshold node: query the "
+            "plain metric, and set the threshold to the number and the operator.",
+        ],
+    ),
+    (
+        re.compile(r"^promql expression `.*can never fire"),
+        "Grafana rule that cannot fire",
+        [
+            "The query keeps only series equal to one number, and the threshold node then asks "
+            "for a different value, so this rule never fires in Grafana either. It is probably "
+            "a mistake. Decide what it should detect, then put that comparison in the threshold "
+            "(for `up == 0`, query `up` and fire when it is below 1).",
+        ],
+    ),
+    (
+        re.compile(r"^data source-managed rule: the query has no comparison"),
+        "Rule-file rule without a comparison",
+        [
+            "The rule fires whenever its query returns any series, and the query has no "
+            "comparison with a number, so there is no threshold to carry over. Find what makes "
+            "the query return nothing when things are healthy and write that as a New Relic "
+            "threshold on the same metric.",
+        ],
+    ),
+    (
         re.compile(r"^grafana rule could not be read"),
         "Grafana rule not readable",
         [
@@ -199,17 +315,30 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^promql uses histogram_quantile"),
+        "PromQL histogram_quantile",
+        [
+            "histogram_quantile reads Prometheus `_bucket` counters. New Relic has "
+            "`bucketPercentile(metric, 95)` for that data in a query, but the documentation "
+            "does not list it among the functions an alert condition accepts, so it was not "
+            "converted and nothing was guessed. Run the query with bucketPercentile in the "
+            "query builder; if the condition editor accepts it, create the condition by "
+            "hand. If not, alert on a count of requests slower than the limit (the buckets "
+            "above it) divided by the total count, which is an ordinary ratio. `percentile()` "
+            "is for New Relic distribution metrics, not for Prometheus buckets.",
+        ],
+    ),
+    (
         re.compile(
-            r"^promql uses (?:offset|a subquery|vector matching|topk|histogram_quantile"
+            r"^promql uses (?:offset|a subquery|vector matching|topk"
             r"|without)"
         ),
         "PromQL feature with no alert-condition equivalent",
         [
-            "offset, subqueries, joins (on, ignoring, group_left), topk or bottomk, "
-            "histogram_quantile and without() cannot be used in a New Relic alert "
-            "condition. Express the same test in NRQL on New Relic data: `percentile()` "
-            "for histogram data, a FACET for grouping, and a second condition instead of "
-            "an offset comparison.",
+            "offset, subqueries, joins (on, ignoring, group_left), topk or bottomk "
+            "and without() cannot be used in a New Relic alert condition. Express the same "
+            "test in NRQL on New Relic data: a FACET for grouping, and a second condition "
+            "instead of an offset comparison.",
             NRQL_LIMITS,
         ],
     ),
@@ -250,7 +379,8 @@ RULES: list[Rule] = [
             "The metric or label name has a character NRQL does not accept as an attribute "
             "name (a colon, from a recording rule, for example). Find how the name arrives in "
             "New Relic with a query in the data explorer and write the condition with that "
-            "name.",
+            "name. A label called `metricName` collides with the attribute New Relic keeps the "
+            "metric name in; rename the label at the source and write the condition by hand.",
         ],
     ),
     (
@@ -342,6 +472,17 @@ RULES: list[Rule] = [
         [
             "The rule was paused, so it was not evaluating. The New Relic condition is "
             "created disabled. Ask the owner whether it is still wanted before you enable it.",
+        ],
+    ),
+    (
+        re.compile(r"^grafana origin:"),
+        "Grafana folder, group and labels",
+        [
+            "The folder, group and labels are not carried onto the New Relic condition. "
+            "Notification policies in Grafana route on labels such as these, so rebuild the "
+            "routing as workflow filters (see the notification conversion) and decide where "
+            "the folder and group should live, for example in the policy name. Whether rule "
+            "labels can be used to filter New Relic issues has not been verified.",
         ],
     ),
     (

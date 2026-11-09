@@ -1,0 +1,26 @@
+{
+  "logs-namespace": [
+    {
+      "name": "api-logs",
+      "interval": "1m",
+      "rules": [
+        {
+          "alert": "ApiErrorBurst",
+          "expr": "sum by (app) (count_over_time({env=\"prod\",app=~\"api.*\"} |= \"error\" [5m])) > 50",
+          "for": "5m",
+          "labels": {"severity": "page"},
+          "annotations": {"summary": "Many error lines"}
+        },
+        {
+          "alert": "ApiLatencyFromLogs",
+          "expr": "quantile_over_time(0.99, {app=\"api\"} | json | unwrap duration_ms [5m]) > 3000",
+          "for": "5m"
+        },
+        {
+          "record": "app:error_lines:rate5m",
+          "expr": "sum by (app) (rate({env=\"prod\"} |= \"error\" [5m]))"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+## 2026-11-09: cycle `grafana-rules2`
+
+| Defect | How it hid | Check that catches the class |
+|---|---|---|
+| Rule-file rules (Mimir and Loki ruler, Prometheus rule files) were reported as "data source-managed" without being read: the loader dropped `expr`, a recording rule written as `record: name` was read as an alert, and the translator raised before it looked at any data | The shape was added with the loader tests only; no test converted a rule-file rule | `tests/test_grafana_rules2_rulefile.py` runs the same query as a rule-file rule and as a Grafana rule and compares the signal and the thresholds, so the two paths cannot drift. The rule-file fixtures are registered with the measure |
+| A new reason or note shares its first words with an older, broader remediation rule (`promql expression compares ...` and `^promql expression`) | First-match rules | New rules are placed before the broad ones and each new reason is in `MANUAL_REASONS` or `NOTES` of `tests/test_grafana_rules.py`, which asserts it is answered by exactly its own rule. The generic version (every rule of every source with its own example) is still not built |
+| A note that lists text from the rule (folder, group, labels) can carry a secret or change its own category (a label value containing the word "query") | Reasons were written to name fixed vocabulary only; the first draft of the note echoed any string | `rules2/fields.py` shows a value only when it is short, plain and not secret-looking, counts the rest, and the category is fixed by an anchored taxonomy rule. `tests/test_grafana_rules2_fields.py` feeds token-like keys and values, long hex, markup, control characters and non-strings |
+| A conversion can look right and mean something else (a rate that is a sum, an absence that is a count) | The older tests compared strings of NRQL | `tests/grafana_rules2_eval.py` evaluates the emitted NRQL on sample rows and the tests compare it with the PromQL value worked out by hand (rate of delta counters, ratio of increases, absent with and without a series). The evaluator reads only the query shapes the converter emits and refuses anything else |
+| The byte-identity pin of the Grafana output has to change when the Grafana conversion improves, and a pin that changes by itself defeats its purpose | The pin covers the output of five sources in one file | The test failed on `convert/grafana` only; the other groups stayed byte-identical. Only that group was regenerated, and the files that changed are listed in the proposal for a person to review |
+| A comparison inside a Grafana query (`up == 0`) plus a threshold node reads as one test but is two: the comparison filters, the node then tests the value that is left | The old reason said "binary operator", which hid that the rule is almost certainly wrong in Grafana too (the value left by `up == 0` is 0, and the node tests above 0) | A specific reason and steps; rule-file rules, which have no node, take the comparison as the threshold |
+
+Process note: the rule-file translation was written before its tests (the loader tests were first
+and failed on assertions). The counter, ratio, absent, pipeline and field tests were written
+before the code; the first run of each was an import or attribute error, and with the new forms
+switched off 49 of 69 form tests failed on assertions. The fixture and hostile-input tests were
+written after the code and passed on the first run, so they did not show a defect; the fuzz
+check that no input raises ran 3,000 random expressions in under 0.2 seconds each.

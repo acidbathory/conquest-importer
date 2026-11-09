@@ -73,6 +73,7 @@ class GrafanaRule(BaseModel):
     record: dict[str, Any] | None = None
     notification_settings: dict[str, Any] | None = None
     datasource_managed: bool = False
+    expr: str = ""  # the query of a rule-file rule (Mimir or Loki ruler, Prometheus rule file)
     shape: str = ""
     unreadable: bool = False  # a field had an unexpected type or value; nothing else is trusted
     paused_unknown: bool = False  # isPaused had a value that is not a boolean; treated as paused
@@ -189,6 +190,10 @@ def _ruler(raw: dict[str, Any], ctx: _Context) -> GrafanaRule:
 def _ruler_datasource_rule(raw: dict[str, Any], ctx: _Context) -> GrafanaRule:
     """A rule the Mimir or Loki ruler evaluates; it has an `expr`, not a Grafana pipeline."""
     fields = _common(raw, ctx, "ruler")
+    expr = raw.get("expr")
+    fields["expr"] = expr if isinstance(expr, str) else ""
+    if isinstance(raw.get("record"), str):  # a recording rule in a rule file names its metric
+        fields["record"] = {"metric": raw["record"]}
     return GrafanaRule.model_validate({**fields, "datasource_managed": True})
 
 
