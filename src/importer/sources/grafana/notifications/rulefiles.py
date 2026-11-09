@@ -23,11 +23,11 @@ from importer.sources.grafana.notifications.models import (
     as_dict,
     as_list,
 )
+from importer.sources.grafana.notifications.reasons import R_RULE_GROUP_UNREADABLE
 
 MAX_EXPR = 100_000
 MAX_TEXT = 4_000
 MAX_LABELS = 200
-R_GROUP_UNREADABLE = "grafana rule file group could not be read"
 
 
 def _text_map(value: Any) -> dict[str, str]:
@@ -115,7 +115,7 @@ def load_rule_groups(data: Any, kind: str = "prometheus") -> list[PromRuleGroup]
     budget = [MAX_RULES]
     groups = [g for ns, raw in items if (g := _group(raw, ns, kind, budget)) is not None]
     if items and not groups:
-        raise ValueError(R_GROUP_UNREADABLE)
+        raise ValueError(R_RULE_GROUP_UNREADABLE)
     return groups
 
 

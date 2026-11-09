@@ -39,9 +39,16 @@ P_ROOT_MATCHERS = (
 )
 
 
+_UNESCAPES = {'"': '"', "\\": "\\", "n": "\n", "t": "\t"}
+
+
 def _unquote(text: str) -> str:
+    """Strip the quotes and undo the escapes for a quote, a backslash, n and t.
+
+    Any other backslash stays: it is regex syntax.
+    """
     if len(text) >= 2 and text[0] == text[-1] == '"':
-        return _ESCAPE.sub(lambda m: {"n": "\n", "t": "\t"}.get(m.group(1), m.group(1)), text[1:-1])
+        return _ESCAPE.sub(lambda m: _UNESCAPES.get(m.group(1), m.group(0)), text[1:-1])
     return text
 
 

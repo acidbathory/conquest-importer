@@ -13,10 +13,9 @@ from dataclasses import dataclass
 from typing import Literal
 
 from importer.sources.grafana.notifications.models import MAX_TEMPLATE_CHARS, Template
+from importer.sources.grafana.notifications.reasons import R_CUSTOM_TEMPLATE
 
 TemplateStatus = Literal["default", "empty", "custom"]
-
-R_CUSTOM_TEMPLATE = "grafana custom notification template not converted"
 
 # Reviewed Handlebars bodies for Grafana's default templates. Every variable is on the list in
 # docs/research/newrelic-notifications-and-nrql-reference.md. A webhook payload wraps the text in
