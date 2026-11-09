@@ -95,6 +95,24 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"over new relic's limit"),
+        "Window longer than New Relic allows",
+        [
+            "New Relic accepts a breach duration of up to 24 hours and an aggregation window of "
+            "up to 1 hour. Create the condition by hand with values inside those limits, or "
+            "alert on a longer period with a shorter duration and a rolled-up query.",
+        ],
+    ),
+    (
+        re.compile(r"valid new relic attribute name"),
+        "Label that is not a valid attribute name",
+        [
+            "Find the attribute New Relic stores for this label (run `SELECT keyset() FROM "
+            "Metric WHERE metricName = '<name>'`) and write the `WHERE` or `FACET` clause by "
+            "hand with that name in backticks.",
+        ],
+    ),
+    (
         re.compile(r"not one of the google cloud service metrics"),
         "Metric New Relic does not collect from Google Cloud",
         [

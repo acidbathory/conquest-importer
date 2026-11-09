@@ -12,6 +12,8 @@ import json
 import re
 from pathlib import Path
 
+from importer.core.emit.common import MAX_AGGREGATION_WINDOW_SECONDS, MAX_DURATION_SECONDS
+from importer.core.emit.nrql import identifier
 from importer.core.ir import (
     Aggregation,
     Confidence,
@@ -178,11 +180,22 @@ def _label_name(field: str) -> str | None:
     for prefix in ("resource.labels.", "resource.label."):
         if field.startswith(prefix):
             label = field[len(prefix) :]
-            return PROJECT_LABELS.get(label, f"gcp.{label}")
+            return _valid_attribute(PROJECT_LABELS.get(label, f"gcp.{label}"), field)
     for prefix in ("metric.labels.", "metric.label."):
         if field.startswith(prefix):
-            return f"metric.{field[len(prefix) :]}"
+            return _valid_attribute(f"metric.{field[len(prefix) :]}", field)
     return None
+
+
+def _valid_attribute(attribute: str, field: str) -> str:
+    """The attribute when NRQL accepts it as a name; otherwise the condition stays manual."""
+    try:
+        identifier(attribute)
+    except ValueError:
+        raise _Fail(
+            Confidence.MANUAL, f"label {field!r} does not make a valid New Relic attribute name"
+        ) from None
+    return attribute
 
 
 def _scope(terms: list[Term]) -> tuple[str, list[TagFilter], list[str]]:
@@ -226,19 +239,20 @@ def _reducer(
 ) -> tuple[list[str], list[str]]:
     """Group-by labels and notes for the cross-series reducer of a condition."""
     reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
-    group_by = _group_labels(agg)
+    group_by, notes = _group_labels(agg)
     if reducer in REDUCERS:
-        if REDUCERS[reducer] == aggregation:
-            return group_by, []
-        return group_by, [
-            f"{reducer} and {aligner} become one {aggregation.value} in New Relic's query"
-        ]
+        if REDUCERS[reducer] != aggregation:
+            notes.append(
+                f"{reducer} and {aligner} become one {aggregation.value} in New Relic's query"
+            )
+        return group_by, notes
     if reducer != "REDUCE_NONE":
         raise _Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
-    return group_by, [
+    notes.append(
         "Google evaluates each time series on its own; the New Relic query combines them "
         "unless you facet by the resource id"
-    ]
+    )
+    return group_by, notes
 
 
 def _whole_windows(duration: int, period: int) -> tuple[int, str]:
@@ -251,6 +265,21 @@ def _whole_windows(duration: int, period: int) -> tuple[int, str]:
         f"the duration of {duration}s is not a whole number of {period}s windows, so it is "
         f"rounded up to {window}s and the condition fires slightly later than in Google"
     )
+
+
+def _check_limits(period: int, window: int) -> None:
+    """Manual when New Relic would refuse the window at emit time."""
+    if period > MAX_AGGREGATION_WINDOW_SECONDS:
+        raise _Fail(
+            Confidence.MANUAL,
+            f"aggregation window {period}s is over New Relic's limit of "
+            f"{MAX_AGGREGATION_WINDOW_SECONDS}s",
+        )
+    if window > MAX_DURATION_SECONDS:
+        raise _Fail(
+            Confidence.MANUAL,
+            f"duration {window}s is over New Relic's limit of {MAX_DURATION_SECONDS}s",
+        )
 
 
 def _metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[str]]:
@@ -282,10 +311,19 @@ def _first_aggregation(body: dict[str, object]) -> tuple[dict[str, object], str]
     return agg, aligner
 
 
-def _group_labels(agg: dict[str, object]) -> list[str]:
+def _group_labels(agg: dict[str, object]) -> tuple[list[str], list[str]]:
+    """Mapped group-by attributes without repeats, and a note for each field that was dropped."""
     raw = agg.get("groupByFields")
     fields = raw if isinstance(raw, list) else []
-    return [label for f in fields if (label := _label_name(str(f)))]
+    labels: list[str] = []
+    notes: list[str] = []
+    for field in map(str, fields):
+        label = _label_name(field)
+        if label is None:
+            notes.append(f"group-by field {field!r} is not mapped and was dropped")
+        elif label not in labels:
+            labels.append(label)
+    return labels, notes
 
 
 def _metric_condition(
@@ -329,6 +367,7 @@ def _metric_condition(
         terms={"a": term}, aggregation=aggregation, scope=scope, group_by=group_by
     )
     window, note = _whole_windows(duration, period)
+    _check_limits(period, window)
     if note:
         notes.append(note)
     return signal, period, window, scale, [*scope_notes, *notes]
@@ -363,8 +402,8 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
     if duration < 60:
         raise _Fail(Confidence.MANUAL, f"duration {duration}s is not supported")
     name = nr_metric_name(metric_type)
-    group_by = _group_labels(agg)
-    notes = [ABSENCE_NOTE]
+    group_by, notes = _group_labels(agg)
+    notes.append(ABSENCE_NOTE)
     if period < POLL_SECONDS:
         notes.append(
             f"the alignment period of {period}s is raised to {POLL_SECONDS}s, the polling interval"
@@ -373,6 +412,7 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
     if duration < window:
         notes.append(f"the duration of {duration}s is raised to {window}s, one polling interval")
     duration, note = _whole_windows(duration, window)
+    _check_limits(window, duration)
     if note:
         notes.append(note)
     if not group_by:

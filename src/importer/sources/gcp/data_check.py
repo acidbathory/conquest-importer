@@ -49,6 +49,21 @@ def _number(rows: list[dict[str, Any]]) -> float | None:
     return float(value) if isinstance(value, int | float) else None
 
 
+def _check_absence(
+    client: NewRelicClient, account_id: int, monitor: IRMonitor, query: str
+) -> Check:
+    """An absence condition has data when any series reports; a faceted query returns many rows."""
+    rows = _rows(client, account_id, query)
+    points = sum(int(v) for r in rows if isinstance(v := r.get("count"), int | float))
+    if points:
+        return Check(monitor.name, Status.DATA, points, float(points), "series are reporting")
+    note = (
+        "the metric has not arrived, so this condition would fire as soon as it is enabled "
+        "and stay open"
+    )
+    return Check(monitor.name, Status.NO_DATA, 0, None, note)
+
+
 def check_monitor(client: NewRelicClient, account_id: int, monitor: IRMonitor, hours: int) -> Check:
     name = monitor.name
     if monitor.confidence not in (Confidence.EXACT, Confidence.APPROXIMATE):
@@ -62,6 +77,8 @@ def check_monitor(client: NewRelicClient, account_id: int, monitor: IRMonitor, h
         points = int(_number(_rows(client, account_id, f"{nrql} {since}")) or 0)
         note = "" if points else "no matching log events; are the project's logs forwarded?"
         return Check(name, Status.DATA if points else Status.NO_DATA, points, float(points), note)
+    if monitor.signal.kind is SignalKind.HEARTBEAT:
+        return _check_absence(client, account_id, monitor, f"{nrql} {since}")
     metric = monitor.signal.metric
     targets = (
         [t.nr_target for t in metric.terms.values() if t.nr_target and t.nr_target.attribute]
@@ -93,7 +110,8 @@ def render(checks: list[Check], hours: int) -> str:
         "# Data check",
         "",
         f"Data points seen in the last {hours} hours for the metric behind each converted "
-        "condition. A condition with no data cannot fire.",
+        "condition. A threshold condition with no data cannot fire; an absence condition with "
+        "no data fires as soon as it is enabled.",
         "",
         "| Condition | Status | Points | Latest query value | Note |",
         "|---|---|---|---|---|",
