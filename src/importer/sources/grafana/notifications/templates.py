@@ -12,7 +12,11 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-from importer.sources.grafana.notifications.models import MAX_TEMPLATE_CHARS, Template
+from importer.sources.grafana.notifications.models import (
+    MAX_TEMPLATE_CHARS,
+    ContactPoint,
+    Template,
+)
 from importer.sources.grafana.notifications.reasons import R_CUSTOM_TEMPLATE
 
 TemplateStatus = Literal["default", "empty", "custom"]
@@ -76,18 +80,55 @@ def _hints(text: str) -> tuple[str, ...]:
     return tuple(lines)
 
 
-def translate_template(text: str) -> TemplateResult:
-    """The fixed body for an empty or default template; a custom one is reported, not converted."""
+def translate_template(text: str, overridden: frozenset[str] = frozenset()) -> TemplateResult:
+    """The fixed body for an empty or default template; a custom one is reported, not converted.
+
+    `overridden` holds default template names that a custom template in the same export
+    defines again. Whether Grafana lets a user redefine a default name is UNVERIFIED; the call is
+    treated as custom so the fixed body is never used for a redefined name.
+    """
     stripped = text.strip()
     if not stripped:
+        if overridden:
+            return TemplateResult("custom", "", R_CUSTOM_TEMPLATE, ())
         return TemplateResult("empty", DEFAULT_BODIES["default.message"], "", ())
     call = _DEFAULT_CALL.fullmatch(stripped)
-    if call and call.group(1) in DEFAULT_BODIES:
+    if call and call.group(1) in DEFAULT_BODIES and call.group(1) not in overridden:
         return TemplateResult("default", DEFAULT_BODIES[call.group(1)], "", ())
     return TemplateResult("custom", "", R_CUSTOM_TEMPLATE, _hints(text[:MAX_TEMPLATE_CHARS]))
 
 
+_DEFINE = re.compile(r'\{\{-?\s*define\s+"([^"]{1,100})"')
+DEFINE_NAME = re.compile(r"[A-Za-z0-9_.-]{1,100}")
+MAX_DEFINES = 50
+
+
+def define_names(text: str) -> list[str]:
+    """Plain names in `{{ define "name" }}` blocks, at most MAX_DEFINES, without repeats."""
+    names: list[str] = []
+    for found in _DEFINE.finditer(text):
+        name = found.group(1)
+        if DEFINE_NAME.fullmatch(name) and name not in names:
+            names.append(name)
+        if len(names) >= MAX_DEFINES:
+            break
+    return names
+
+
 def make_template(name: str, text: str) -> Template:
-    """A named template group. Text may hold a pasted secret: only a hash and the size stay."""
+    """A named template group. Text may hold a pasted secret: only a hash, the size and the
+    names it defines stay."""
     digest = hashlib.sha256(text.encode()).hexdigest()
-    return Template(name=name, sha256=digest, length=len(text))
+    return Template(name=name, sha256=digest, length=len(text), defines=define_names(text))
+
+
+def mark_overridden(contact_points: list[ContactPoint], templates: list[Template]) -> None:
+    """Contact point template fields that call a default become custom when the export
+    redefines a default name (the fixed body must not stand in for a different template)."""
+    redefined = {n for t in templates for n in t.defines if n in DEFAULT_BODIES}
+    if not redefined:
+        return
+    for cp in contact_points:
+        for field_name, status in cp.templates.items():
+            if status in ("default", "empty"):
+                cp.templates[field_name] = "custom"

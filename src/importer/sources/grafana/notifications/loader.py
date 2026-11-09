@@ -23,10 +23,16 @@ from importer.sources.grafana.notifications.models import (
     Template,
     as_dict,
     as_list,
+    safe_ref,
 )
 from importer.sources.grafana.notifications.policies import parse_policy_tree
 from importer.sources.grafana.notifications.rulefiles import load_rule_file
-from importer.sources.grafana.notifications.templates import make_template
+from importer.sources.grafana.notifications.templates import (
+    DEFINE_NAME,
+    MAX_DEFINES,
+    make_template,
+    mark_overridden,
+)
 from importer.sources.grafana.notifications.timings import parse_mute_timings
 
 UID = re.compile(r"[A-Za-z0-9_-]{1,40}")
@@ -60,14 +66,16 @@ def read_templates(payload: Any) -> list[Template]:
             continue
         text = entry.get("template", entry.get("text"))
         if isinstance(text, str):
-            found.append(make_template(name[:200], text[:MAX_TEMPLATE_CHARS]))
+            found.append(make_template(safe_ref(name), text[:MAX_TEMPLATE_CHARS]))
         elif isinstance(entry.get("sha256"), str) and SHA256.fullmatch(entry["sha256"]):
             length = entry.get("length")
+            defines = [d for d in as_list(entry.get("defines")) if isinstance(d, str)]
             found.append(
                 Template(
-                    name=name[:200],
+                    name=safe_ref(name),
                     sha256=entry["sha256"],
                     length=length if isinstance(length, int) and length >= 0 else 0,
+                    defines=[d for d in defines if DEFINE_NAME.fullmatch(d)][:MAX_DEFINES],
                 )
             )
     return found
@@ -139,4 +147,5 @@ def load_export(folder: Path) -> NotificationExport:
     )
     if (folder / RULE_FILES).is_dir():
         _rule_files(folder / RULE_FILES, export)
+    mark_overridden(export.contact_points, export.templates)
     return export

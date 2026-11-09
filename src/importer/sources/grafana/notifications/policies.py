@@ -1,14 +1,17 @@
 """Read the notification policy tree (the routing tree) with depth, size and matcher caps.
 
 Accepts the provisioning shape (`matchers` as strings, `object_matchers` as triples, the
-deprecated `match` and `match_re` maps). A matcher that cannot be read is counted on its node,
-and the node is then undecidable when the tree is flattened; it is never guessed. A tree that
-is cut by a cap is marked incomplete and is not planned from.
+deprecated `match` and `match_re` maps) and the shape the extractor saves. A matcher that cannot
+be read, or whose value looks like an address or token, is counted on its node, and the node is
+then undecidable when the tree is flattened; it is never guessed. A tree that is cut by a cap is
+marked incomplete, the mark is saved with the tree (`_incomplete`, `_problems`), and a marked
+tree is not planned from.
 """
 
 import re
 from typing import Any
 
+from importer.core.redact import looks_sensitive
 from importer.core.text import printable
 from importer.sources.grafana.models import parse_duration
 from importer.sources.grafana.notifications.models import (
@@ -24,22 +27,26 @@ from importer.sources.grafana.notifications.models import (
     PolicyTree,
     as_dict,
     as_list,
+    safe_ref,
 )
 
 OPERATORS = ("=~", "!~", "!=", "=")
+_QUOTED = r'"(?:[^"\\]|\\.)*"'
 _MATCHER = re.compile(
-    r'\s*([A-Za-z_][A-Za-z0-9_.:-]*|"(?:[^"\\]|\\.)*")\s*(=~|!~|!=|=)\s*(.*?)\s*', re.DOTALL
+    rf'\s*([A-Za-z_][A-Za-z0-9_.:-]*|{_QUOTED})\s*(=~|!~|!=|=)\s*({_QUOTED}|[^\s",\\=~!{{}}]+)\s*',
+    re.DOTALL,
 )
 _ESCAPE = re.compile(r"\\(.)", re.DOTALL)
+_UNESCAPES = {'"': '"', "\\": "\\", "n": "\n", "t": "\t"}
 P_TOO_DEEP = "the notification policy tree is deeper than the importer reads; the rest was left out"
 P_TOO_MANY = "the notification policy tree has more routes than the importer reads"
 P_NOT_OBJECT = "a notification policy route was not an object and was left out"
 P_ROOT_MATCHERS = (
     "the root route has matchers, which Alertmanager does not allow; they were ignored"
 )
-
-
-_UNESCAPES = {'"': '"', "\\": "\\", "n": "\n", "t": "\t"}
+P_SAVED = "the saved notification policy tree was marked as cut when it was written"
+KNOWN_PROBLEMS = (P_TOO_DEEP, P_TOO_MANY, P_NOT_OBJECT, P_ROOT_MATCHERS, P_SAVED)
+CUTTING_PROBLEMS = (P_TOO_DEEP, P_TOO_MANY, P_NOT_OBJECT, P_SAVED)
 
 
 def _unquote(text: str) -> str:
@@ -53,7 +60,7 @@ def _unquote(text: str) -> str:
 
 
 def parse_matcher_string(text: str) -> Matcher | None:
-    """`severity="critical"`, `team=~"a|b"`, `env!=prod`; None when it is not a matcher."""
+    """`severity="critical"`, `team=~"a|b"`, `env!=prod`; None unless it is exactly one matcher."""
     if len(text) > MAX_MATCHER_CHARS:
         return None
     found = _MATCHER.fullmatch(text)
@@ -71,6 +78,11 @@ def _matcher_from_triple(item: Any) -> Matcher | None:
     return Matcher(name=name, op=op, value=value) if len(value) <= MAX_MATCHER_CHARS else None
 
 
+def _readable(m: Matcher | None) -> Matcher | None:
+    """The matcher, unless its value looks like an address or token (it is not stored then)."""
+    return m if m is not None and not looks_sensitive(m.value) else None
+
+
 def _matchers(raw: dict[str, Any]) -> tuple[list[Matcher], int]:
     """(matchers, how many entries could not be read)."""
     found: list[Matcher | None] = []
@@ -85,6 +97,7 @@ def _matchers(raw: dict[str, Any]) -> tuple[list[Matcher], int]:
             Matcher(name=k, op=op, value=v) if isinstance(v, str) else None
             for k, v in list(pairs.items())[:MAX_MATCHERS]
         ]
+    found = [_readable(m) for m in found]
     good = [m for m in found if m is not None]
     bad = len(found) - len(good)
     if len(good) > MAX_MATCHERS:
@@ -93,12 +106,15 @@ def _matchers(raw: dict[str, Any]) -> tuple[list[Matcher], int]:
 
 
 def _names(value: Any) -> list[str]:
-    return [printable(n, MAX_NAME) for n in as_list(value)[:MAX_GROUP_BY] if isinstance(n, str)]
+    return [safe_ref(n) for n in as_list(value)[:MAX_GROUP_BY] if isinstance(n, str)]
 
 
 def _seconds(value: Any) -> int | None:
+    """Seconds in a duration; None when it is not set (inherit) or not readable. 0 stays 0."""
+    if value is None or value == "":
+        return None
     try:
-        return parse_duration(value) or None
+        return parse_duration(value)
     except ValueError:
         return None
 
@@ -120,8 +136,12 @@ def _node(raw: dict[str, Any]) -> PolicyNode:
     group_by = raw.get("group_by")
     receiver = raw.get("receiver")
     return PolicyNode(
-        receiver=printable(receiver, MAX_NAME) if isinstance(receiver, str) else "",
-        group_by=_names(group_by) if isinstance(group_by, list) else None,
+        receiver=safe_ref(receiver) if isinstance(receiver, str) else "",
+        group_by=(
+            [printable(n, MAX_NAME) for n in as_list(group_by)[:MAX_GROUP_BY] if isinstance(n, str)]
+            if isinstance(group_by, list)
+            else None
+        ),
         matchers=matchers,
         unparsed_matchers=bad,
         continue_=raw.get("continue") is True,
@@ -165,6 +185,11 @@ def parse_policy_tree(raw: Any) -> PolicyTree:
         budget.problem(P_ROOT_MATCHERS, cuts=False)
         root.matchers, root.unparsed_matchers = [], 0
     root.routes = _children(raw, 0, budget)
+    if raw.get("_incomplete") is True:  # written by the extractor for a tree that was cut
+        budget.problem(P_SAVED, cuts=True)
+    saved = [p for p in as_list(raw.get("_problems")) if p in KNOWN_PROBLEMS]
+    for problem in saved:
+        budget.problem(problem, cuts=problem in CUTTING_PROBLEMS)
     return PolicyTree(
         root=root, node_count=budget.nodes, incomplete=budget.incomplete, problems=budget.problems
     )

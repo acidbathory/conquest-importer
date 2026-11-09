@@ -112,6 +112,7 @@ class Template(BaseModel):
     name: str
     sha256: str
     length: int
+    defines: list[str] = []  # names the template defines; a redefined default makes calls custom
     text: str | None = None  # always None when read by the importer; see templates.py
 
 

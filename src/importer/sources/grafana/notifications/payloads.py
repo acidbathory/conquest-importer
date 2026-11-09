@@ -2,7 +2,12 @@
 
 from typing import Any
 
-from importer.sources.grafana.notifications.models import MuteTiming, PolicyNode, TimeInterval
+from importer.sources.grafana.notifications.models import (
+    MuteTiming,
+    PolicyNode,
+    PolicyTree,
+    TimeInterval,
+)
 
 UNREADABLE_MATCHER = (
     "?"  # reads back as a matcher that cannot be parsed, so the node stays undecidable
@@ -30,9 +35,19 @@ def policy_to_payload(node: PolicyNode) -> dict[str, Any]:
         "repeat_interval": node.repeat_interval_seconds,
     }
     body.update({k: v for k, v in intervals.items() if v})
-    body.update({k: f"{v}s" for k, v in timings.items() if v})
+    body.update({k: f"{v}s" for k, v in timings.items() if v is not None})
     if node.routes:
         body["routes"] = [policy_to_payload(r) for r in node.routes]
+    return body
+
+
+def policy_tree_to_payload(tree: PolicyTree) -> dict[str, Any]:
+    """The tree in the API shape, with the mark that says it was cut and why."""
+    body = policy_to_payload(tree.root)
+    if tree.incomplete:
+        body["_incomplete"] = True
+    if tree.problems:
+        body["_problems"] = list(tree.problems)
     return body
 
 
