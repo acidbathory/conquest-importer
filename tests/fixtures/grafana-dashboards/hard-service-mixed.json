@@ -1,0 +1,504 @@
+{
+  "uid": "hard-service-mixed",
+  "title": "Service health (hard)",
+  "schemaVersion": 41,
+  "version": 12,
+  "tags": [
+    "fixture"
+  ],
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "graphTooltip": 1,
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "name": "Deploys",
+        "enable": true,
+        "iconColor": "blue",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki-main"
+        },
+        "expr": "{app=\"deployer\"} |= \"finished\""
+      }
+    ]
+  },
+  "links": [
+    {
+      "type": "dashboards",
+      "title": "Related",
+      "tags": [
+        "fixture"
+      ],
+      "asDropdown": true,
+      "includeVars": true,
+      "keepTime": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "type": "custom",
+        "query": "prod,stage",
+        "multi": false,
+        "current": {
+          "text": "prod",
+          "value": "prod"
+        },
+        "options": []
+      },
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prom-main"
+        },
+        "query": "label_values(http_requests_total{env=\"$env\"}, service)",
+        "regex": "/^(?!canary-).*/",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "refresh": 2,
+        "current": {}
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prom-main"
+        },
+        "query": "label_values(kube_pod_info{service=~\"$service\"}, pod)",
+        "multi": true,
+        "includeAll": true,
+        "refresh": 2,
+        "current": {}
+      },
+      {
+        "name": "window",
+        "type": "interval",
+        "query": "1m,5m,15m",
+        "auto": true,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "text": "auto",
+          "value": "$__auto_interval_window"
+        }
+      },
+      {
+        "name": "filters",
+        "type": "adhoc",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prom-main"
+        }
+      },
+      {
+        "name": "owner",
+        "type": "constant",
+        "query": "team-a",
+        "hide": 2
+      },
+      {
+        "name": "search",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Traffic for $service",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [],
+      "repeat": "service"
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Request rate",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 30
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (code) (rate(http_requests_total{service=~\"$service\",env=\"$env\"}[$__rate_interval]))",
+          "legendFormat": "{{code}}"
+        },
+        {
+          "refId": "B",
+          "expr": "label_replace(sum(rate(http_requests_total{code=~\"5..\"}[$__rate_interval])), \"series\", \"5xx\", \"\", \"\")",
+          "legendFormat": "5xx"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Latency p95 / p99",
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])))",
+          "legendFormat": "p99",
+          "hide": false
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Error ratio",
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "-- Mixed --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "no data"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 0.001,
+                "result": {
+                  "text": "ok",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "expr": "sum(rate(http_requests_total{code=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))",
+          "hide": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "type": "math",
+          "expression": "$A * 100"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Slow endpoints",
+      "gridPos": {
+        "x": 6,
+        "y": 9,
+        "w": 18,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "p95 (s)"
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, histogram_quantile(0.95, sum by (le, handler) (rate(http_request_duration_seconds_bucket[$__range]))))",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "logs",
+      "title": "Errors",
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{app=~\"$service\"} |= \"error\" | json | level=\"error\"",
+          "queryType": "range",
+          "maxLines": 200
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Queue depth (CloudWatch)",
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cw-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "namespace": "AWS/SQS",
+          "metricName": "ApproximateNumberOfMessagesVisible",
+          "dimensions": {
+            "QueueName": "jobs"
+          },
+          "statistic": "Maximum",
+          "period": "300",
+          "region": "default",
+          "alias": "{{QueueName}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "libraryPanel": {
+        "uid": "lib-cpu-1",
+        "name": "CPU by pod"
+      },
+      "title": "CPU by pod (library)",
+      "gridPos": {
+        "x": 12,
+        "y": 25,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 9,
+      "type": "state-timeline",
+      "title": "Pod phase",
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom-main"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kube_pod_status_phase{pod=~\"$pod\"} == 1",
+          "legendFormat": "{{pod}} {{phase}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Details (collapsed)",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 11,
+          "type": "timeseries",
+          "title": "Retries",
+          "gridPos": {
+            "x": 0,
+            "y": 40,
+            "w": 12,
+            "h": 8
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prom-main"
+          },
+          "links": [
+            {
+              "title": "Runbook",
+              "url": "https://example.invalid/runbook?from=${__from}&to=${__to}&var-env=${env}",
+              "targetBlank": true
+            }
+          ],
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(retries_total{service=~\"$service\"}[$__interval])",
+              "interval": "1m",
+              "legendFormat": "retries"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "alertlist",
+      "title": "Firing alerts",
+      "gridPos": {
+        "x": 12,
+        "y": 33,
+        "w": 12,
+        "h": 6
+      },
+      "options": {
+        "stateFilter": {
+          "firing": true
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,269 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "4.6.3"
+    },
+    {
+      "type": "panel",
+      "id": "singlestat",
+      "name": "Singlestat",
+      "version": ""
+    }
+  ],
+  "id": null,
+  "title": "Legacy rows layout (schemaVersion 12)",
+  "tags": [
+    "fixture",
+    "legacy"
+  ],
+  "style": "dark",
+  "timezone": "browser",
+  "editable": true,
+  "hideControls": false,
+  "sharedCrosshair": true,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "1m"
+    ],
+    "time_options": [
+      "5m",
+      "1h"
+    ]
+  },
+  "refresh": false,
+  "schemaVersion": 12,
+  "version": 2,
+  "annotations": {
+    "list": [
+      {
+        "name": "restarts",
+        "datasource": "${DS_PROMETHEUS}",
+        "enable": true,
+        "iconColor": "rgba(255, 96, 96, 1)",
+        "expr": "changes(process_start_time_seconds[1m]) > 0",
+        "titleFormat": "restart",
+        "step": "60s"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": "${DS_PROMETHEUS}",
+        "query": "label_values(up, instance)",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": null,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": [],
+        "regex": "",
+        "tags": [],
+        "tagsQuery": "",
+        "useTags": false
+      },
+      {
+        "name": "interval",
+        "type": "interval",
+        "query": "1m,5m,10m",
+        "auto": false,
+        "current": {
+          "text": "5m",
+          "value": "5m"
+        },
+        "options": []
+      }
+    ]
+  },
+  "rows": [
+    {
+      "title": "Health",
+      "collapse": false,
+      "editable": true,
+      "height": "250px",
+      "showTitle": true,
+      "repeat": null,
+      "panels": [
+        {
+          "id": 1,
+          "type": "singlestat",
+          "title": "Instances up",
+          "span": 3,
+          "datasource": "${DS_PROMETHEUS}",
+          "valueName": "current",
+          "format": "none",
+          "decimals": 0,
+          "prefix": "",
+          "postfix": " up",
+          "colorBackground": false,
+          "colorValue": true,
+          "thresholds": "1,2",
+          "colors": [
+            "#d44a3a",
+            "rgba(237, 129, 40, 0.89)",
+            "#299c46"
+          ],
+          "valueMaps": [
+            {
+              "value": "null",
+              "op": "=",
+              "text": "N/A"
+            }
+          ],
+          "mappingType": 1,
+          "sparkline": {
+            "show": true,
+            "full": false
+          },
+          "gauge": {
+            "show": false,
+            "minValue": 0,
+            "maxValue": 100,
+            "thresholdMarkers": true,
+            "thresholdLabels": false
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(up{instance=~\"$instance\"})",
+              "intervalFactor": 2,
+              "step": 60
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "graph",
+          "title": "Request rate",
+          "span": 9,
+          "datasource": "${DS_PROMETHEUS}",
+          "lines": true,
+          "fill": 1,
+          "linewidth": 1,
+          "stack": true,
+          "percentage": false,
+          "nullPointMode": "null",
+          "legend": {
+            "show": true,
+            "avg": true,
+            "max": true,
+            "current": false,
+            "values": true,
+            "alignAsTable": true
+          },
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "label": null,
+              "logBase": 1,
+              "min": 0,
+              "max": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "show": false
+            }
+          ],
+          "aliasColors": {
+            "5xx": "#bf1b00"
+          },
+          "seriesOverrides": [
+            {
+              "alias": "5xx",
+              "yaxis": 2
+            }
+          ],
+          "thresholds": [
+            {
+              "value": 100,
+              "op": "gt",
+              "colorMode": "critical",
+              "fill": true,
+              "line": true
+            }
+          ],
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{instance=~\"$instance\"}[$interval])) by (code)",
+              "legendFormat": "{{code}}",
+              "intervalFactor": 2,
+              "step": 120
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Collapsed extras",
+      "collapse": true,
+      "height": "200px",
+      "showTitle": true,
+      "repeat": "instance",
+      "panels": [
+        {
+          "id": 3,
+          "type": "table",
+          "title": "Per instance",
+          "span": 12,
+          "datasource": "${DS_PROMETHEUS}",
+          "transform": "timeseries_to_rows",
+          "styles": [
+            {
+              "pattern": "Value",
+              "type": "number",
+              "unit": "short",
+              "decimals": 1,
+              "colorMode": "cell",
+              "colors": [
+                "green",
+                "orange",
+                "red"
+              ],
+              "thresholds": [
+                "10",
+                "20"
+              ]
+            }
+          ],
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "node_load1{instance=\"$instance\"}",
+              "format": "table",
+              "instant": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
