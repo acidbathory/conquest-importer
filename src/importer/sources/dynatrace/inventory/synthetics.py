@@ -82,10 +82,12 @@ class SyntheticsPlan(BaseModel):
 def _locations() -> tuple[dict[tuple[str, str], tuple[str, str]], dict[str, tuple[str, str]]]:
     raw = json.loads((DATA / "synthetic_locations.json").read_text())
     cities = {
-        (row["city"].lower(), row["country"]): (row["new_relic"], row["status"])
+        (row["city"].lower(), row["country"].upper()): (row["new_relic"], row["status"])
         for row in raw["cities"]
     }
-    countries = {row["country"]: (row["new_relic"], row["status"]) for row in raw["countries"]}
+    countries = {
+        row["country"].upper(): (row["new_relic"], row["status"]) for row in raw["countries"]
+    }
     return cities, countries
 
 
@@ -102,11 +104,37 @@ def _has_script(request: dict[str, Any]) -> bool:
     return bool(request.get("preProcessingScript") or request.get("postProcessingScript"))
 
 
+DEFAULT_STATUS_RULE = ">=400"  # Dynatrace's default: a 4xx or 5xx fails; so does a simple monitor
+
+
+def _is_default_status_rule(rule: dict[str, Any]) -> bool:
+    """The rule every Dynatrace HTTP monitor gets, which a New Relic simple monitor also applies."""
+    return (
+        rule.get("type") == "httpStatusesList"
+        and rule.get("passIfFound") is False
+        and str(rule.get("value", "")).replace(" ", "") == DEFAULT_STATUS_RULE
+    )
+
+
 def _simple_rules(rules: list[dict[str, Any]]) -> bool:
-    """At most one pattern rule that must be found."""
+    """At most one plain text rule that must be found (regex rules need a script)."""
     if len(rules) > 1:
         return False
-    return all(x.get("type") == "patternConstraint" and x.get("passIfFound") is True for x in rules)
+    return all(
+        x.get("type") == "patternConstraint"
+        and x.get("passIfFound") is True
+        and x.get("regex") is not True
+        for x in rules
+    )
+
+
+def _needs_a_person(request: dict[str, Any], rules: list[dict[str, Any]]) -> bool:
+    """Authentication, a client certificate or a regex rule: a simple monitor cannot do it."""
+    return bool(
+        request.get("authentication")
+        or request.get("clientCertificate")
+        or any(x.get("regex") is True or x.get("type") == "regexConstraint" for x in rules)
+    )
 
 
 def _classify_http(monitor: Monitor) -> tuple[TYPES, list[str], list[str]]:
@@ -116,9 +144,11 @@ def _classify_http(monitor: Monitor) -> tuple[TYPES, list[str], list[str]]:
     if len(requests) > 1:
         return "SCRIPT_API", [r.S_API_SCRIPT], []
     request = requests[0]
-    rules = _rules(request)
+    rules = [x for x in _rules(request) if not _is_default_status_rule(x)]
     if _has_script(request):
         return "SCRIPT_API", [r.S_API_SCRIPT, r.S_PRE_POST], []
+    if _needs_a_person(request, rules):
+        return "SCRIPT_API", [r.S_AUTH], []
     if str(request.get("method", "GET")).upper() not in ("GET", "HEAD") or request.get(
         "requestBody"
     ):
@@ -181,16 +211,24 @@ def device_for(script: dict[str, Any]) -> list[str]:
 
 
 def map_location(location: Location | None) -> LocationPlan:
-    """A Dynatrace location to a New Relic one; private and unknown ones say what is missing."""
+    """A Dynatrace location to a New Relic one; private and unknown ones say what is missing.
+
+    Country codes compare in upper case. A row that is not DOCS, and any country-only fallback,
+    carries a reason because the choice is a guess.
+    """
     if location is None:
         return LocationPlan(new_relic="", status="UNMAPPED", reasons=[r.S_LOCATION])
     if location.kind == "PRIVATE" or location.id.startswith("SYNTHETIC_LOCATION"):
         return LocationPlan(new_relic="", status="PRIVATE", reasons=[r.S_PRIVATE])
     cities, countries = _locations()
-    found = cities.get((location.city.lower(), location.country)) or countries.get(location.country)
+    country = location.country.upper()
+    found = cities.get((location.city.lower(), country))
+    if found is None and country in countries:
+        found = (countries[country][0], "UNVERIFIED")  # nearest region of the country: a guess
     if found is None:
         return LocationPlan(new_relic="", status="UNMAPPED", reasons=[r.S_LOCATION])
-    return LocationPlan(new_relic=found[0], status=found[1])
+    reasons = [] if found[1] == "DOCS" else [r.S_LOCATION_ROW]
+    return LocationPlan(new_relic=found[0], status=found[1], reasons=reasons)
 
 
 def _period(minutes: int | None) -> tuple[str, list[str]]:

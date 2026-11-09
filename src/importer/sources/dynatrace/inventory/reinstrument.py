@@ -121,18 +121,37 @@ def _target(row: dict[str, str]) -> dict[str, str]:
     return {k: row[k] for k in ("target", "kind", "status", "source")}
 
 
+def _norm(name: str) -> str:
+    """Lower case with runs of spaces, underscores and hyphens as one space."""
+    return re.sub(r"[\s_-]+", " ", name.strip().lower())
+
+
 @lru_cache(maxsize=1)
-def _technologytable() -> tuple[dict[str, tuple[str, Target]], list[str]]:
-    """alias (lower case) -> (row name, target), and the UNVERIFIED row names."""
+def _technologytable() -> tuple[dict[str, tuple[str, Target, str]], list[str]]:
+    """normalised alias -> (row name, target, alias as written), and the UNVERIFIED row names."""
     raw = json.loads((DATA / "technology_agents.json").read_text())
-    by_alias: dict[str, tuple[str, Target]] = {}
+    by_alias: dict[str, tuple[str, Target, str]] = {}
     unverified: list[str] = []
     for row in raw["rows"]:
         target = Target(**_target(row))
-        by_alias.update(dict.fromkeys(row["aliases"], (row["technology"], target)))
+        for alias in row["aliases"]:
+            by_alias[_norm(alias)] = (row["technology"], target, alias)
         if row["status"] != "DOCS":
             unverified.append(row["technology"])
     return by_alias, unverified
+
+
+@lru_cache(maxsize=1)
+def _worst_status() -> dict[str, str]:
+    """For each target text, UNVERIFIED if any table row that names it is UNVERIFIED."""
+    worst: dict[str, str] = {}
+    rows = list(_entitytable()[0].values())
+    rows += [t for _, t in _entitytable()[1]]
+    rows += [t for _, t, _ in _technologytable()[0].values()]
+    for target in rows:
+        if worst.get(target.target) != "UNVERIFIED":
+            worst[target.target] = target.status
+    return worst
 
 
 def target_for_type(entity_type: str) -> Target | None:
@@ -142,8 +161,13 @@ def target_for_type(entity_type: str) -> Target | None:
     return next((t for prefix, t in prefixes if entity_type.startswith(prefix)), None)
 
 
-def target_for_technology(name: str) -> tuple[str, Target] | None:
-    return _technologytable()[0].get(name.strip().lower())
+def target_for_technology(name: str) -> tuple[str, Target, bool] | None:
+    """The row, its target, and whether the name matched as written (else after normalising)."""
+    found = _technologytable()[0].get(_norm(name))
+    if found is None:
+        return None
+    row, target, alias = found
+    return row, target, name.strip().lower() == alias
 
 
 def _type_rows(entities: list[Entity]) -> list[TypeRow]:
@@ -180,8 +204,13 @@ def _type_rows(entities: list[Entity]) -> list[TypeRow]:
 
 
 def _technology_rows(entities: list[Entity]) -> tuple[list[TechnologyRow], Counter[str], int]:
-    """Rows per technology name, the New Relic target counts for services, and untagged services."""
+    """Rows per technology, the New Relic target counts for services, and untagged services.
+
+    A name counts once per service however it is spelled; case, underscores and hyphens do not
+    make two technologies.
+    """
     counts: Counter[str] = Counter()
+    shown: dict[str, str] = {}
     targets: Counter[str] = Counter()
     without = 0
     for entity in entities:
@@ -190,56 +219,50 @@ def _technology_rows(entities: list[Entity]) -> tuple[list[TechnologyRow], Count
         if not entity.technologies:
             without += 1
             continue
-        counts.update(entity.technologies)
-        found = {t.target for tech in entity.technologies if (t := _target_of(tech))}
+        names = {_norm(t): t for t in reversed(entity.technologies)}  # first spelling wins
+        counts.update(names.keys())
+        for key, spelling in names.items():
+            shown.setdefault(key, spelling)
+        found = {m[1].target for t in names.values() if (m := target_for_technology(t))}
         targets.update(found or {"unmapped"})
-    rows: list[TechnologyRow] = []
-    for name, count in counts.most_common(MAX_ROWS):
-        match = target_for_technology(name)
-        if match is None:
-            rows.append(
-                TechnologyRow(
-                    technology=printable(name, 80),
-                    count=count,
-                    target="none",
-                    status="UNVERIFIED",
-                    reasons=[r.I_TECH],
-                )
-            )
-        else:
-            _, target = match
-            notes = [r.I_ROW] if target.status != "DOCS" else []
-            rows.append(
-                TechnologyRow(
-                    technology=printable(name, 80),
-                    count=count,
-                    target=target.target,
-                    status=target.status,
-                    reasons=notes,
-                )
-            )
+    rows = [_technology_row(shown[key], count) for key, count in counts.most_common(MAX_ROWS)]
     return rows, targets, without
 
 
-def _target_of(technology: str) -> Target | None:
-    match = target_for_technology(technology)
-    return match[1] if match else None
+def _technology_row(name: str, count: int) -> TechnologyRow:
+    match = target_for_technology(name)
+    if match is None:
+        return TechnologyRow(
+            technology=printable(name, 80),
+            count=count,
+            target="none",
+            status="UNVERIFIED",
+            reasons=[r.I_TECH],
+        )
+    _, target, as_written = match
+    notes = ([r.I_ROW] if target.status != "DOCS" else []) + ([] if as_written else [r.I_SPELLING])
+    return TechnologyRow(
+        technology=printable(name, 80),
+        count=count,
+        target=target.target,
+        status="DOCS" if target.status == "DOCS" and as_written else "UNVERIFIED",
+        reasons=notes,
+    )
 
 
 def _target_rows(entities: list[Entity], service_targets: Counter[str]) -> list[TargetRow]:
+    """Counts per New Relic target. A target's status is the worst of the rows that name it."""
     totals: Counter[str] = Counter()
-    status: dict[str, str] = {}
     for entity in entities:
         target = target_for_type(entity.type)
-        if target is None or target.kind in ("by-technology", "no-path"):
-            continue
-        totals[target.target] += 1
-        status[target.target] = target.status
-    for name, count in service_targets.items():
-        totals[name] += count
-        match = next((t for _, t in _technologytable()[0].values() if t.target == name), None)
-        status[name] = match.status if match else "UNVERIFIED"
-    return [TargetRow(target=t, count=c, status=status[t]) for t, c in totals.most_common()]
+        if target is not None and target.kind not in ("by-technology", "no-path"):
+            totals[target.target] += 1
+    totals.update(service_targets)
+    worst = _worst_status()
+    return [
+        TargetRow(target=t, count=c, status=worst.get(t, "UNVERIFIED"))
+        for t, c in totals.most_common()
+    ]
 
 
 WINDOW = re.compile(r"^(?:now)?-(\d{1,4})([dw])$")

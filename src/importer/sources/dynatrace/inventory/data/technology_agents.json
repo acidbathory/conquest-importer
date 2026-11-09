@@ -1,16 +1,147 @@
 {
   "_comment": "Dynatrace technology (from serviceTechnologyTypes, compared in lower case) to the New Relic way of monitoring it. status: DOCS = read in New Relic documentation on 2026-11-09 (source ids are in docs/research/dynatrace-dashboards-inventory-datapath.md); UNVERIFIED = inferred or from memory, not confirmed.",
   "rows": [
-    {"technology": "Java", "aliases": ["java"], "target": "New Relic APM Java agent", "kind": "apm-agent", "status": "DOCS", "source": "N19"},
-    {"technology": "Java frameworks and servers", "aliases": ["spring", "tomcat", "apache tomcat", "jetty", "jboss", "wildfly", "websphere", "weblogic", "netty"], "target": "New Relic APM Java agent", "kind": "apm-agent", "status": "UNVERIFIED", "source": "inferred: these run on a JVM"},
-    {"technology": ".NET", "aliases": ["dotnet", ".net", "asp.net", "asp.net core"], "target": "New Relic APM .NET agent", "kind": "apm-agent", "status": "DOCS", "source": "N19"},
-    {"technology": "IIS", "aliases": ["iis app pool", "iis"], "target": "New Relic APM .NET agent", "kind": "apm-agent", "status": "UNVERIFIED", "source": "inferred: ASP.NET runs in IIS"},
-    {"technology": "Node.js", "aliases": ["node.js", "nodejs", "node_js"], "target": "New Relic APM Node.js agent", "kind": "apm-agent", "status": "DOCS", "source": "N19"},
-    {"technology": "Python", "aliases": ["python"], "target": "New Relic APM Python agent", "kind": "apm-agent", "status": "DOCS", "source": "N19"},
-    {"technology": "PHP", "aliases": ["php"], "target": "New Relic APM PHP agent", "kind": "apm-agent", "status": "DOCS", "source": "N19"},
-    {"technology": "Ruby", "aliases": ["ruby"], "target": "New Relic APM Ruby agent", "kind": "apm-agent", "status": "DOCS", "source": "N19"},
-    {"technology": "Go", "aliases": ["go", "golang"], "target": "New Relic APM Go agent (a library, so the code changes)", "kind": "apm-agent", "status": "DOCS", "source": "N19; the code-change statement is UNVERIFIED"},
-    {"technology": "C++, Rust, Erlang, Elixir", "aliases": ["c++", "cpp", "rust", "erlang", "elixir"], "target": "OpenTelemetry SDK exporting to the New Relic OTLP endpoint", "kind": "opentelemetry", "status": "UNVERIFIED", "source": "N11 for OTLP; the absence of a New Relic agent is read from N19 not listing them"},
-    {"technology": "Web servers, databases and queues", "aliases": ["nginx", "apache", "apache http server", "mysql", "postgresql", "mongodb", "redis", "kafka", "rabbitmq", "elasticsearch", "microsoft sql server"], "target": "New Relic on-host integration through the infrastructure agent", "kind": "integration", "status": "UNVERIFIED", "source": "not read"}
+    {
+      "technology": "Java",
+      "aliases": [
+        "java"
+      ],
+      "target": "New Relic APM Java agent",
+      "kind": "apm-agent",
+      "status": "DOCS",
+      "source": "N19"
+    },
+    {
+      "technology": "Java frameworks and servers",
+      "aliases": [
+        "spring",
+        "tomcat",
+        "apache tomcat",
+        "jetty",
+        "jboss",
+        "wildfly",
+        "websphere",
+        "weblogic",
+        "netty"
+      ],
+      "target": "New Relic APM Java agent",
+      "kind": "apm-agent",
+      "status": "UNVERIFIED",
+      "source": "inferred: these run on a JVM"
+    },
+    {
+      "technology": ".NET",
+      "aliases": [
+        "dotnet",
+        ".net",
+        "asp.net",
+        "asp.net core",
+        "asp dotnet",
+        "asp net"
+      ],
+      "target": "New Relic APM .NET agent",
+      "kind": "apm-agent",
+      "status": "DOCS",
+      "source": "N19"
+    },
+    {
+      "technology": "IIS",
+      "aliases": [
+        "iis app pool",
+        "iis"
+      ],
+      "target": "New Relic APM .NET agent",
+      "kind": "apm-agent",
+      "status": "UNVERIFIED",
+      "source": "inferred: ASP.NET runs in IIS"
+    },
+    {
+      "technology": "Node.js",
+      "aliases": [
+        "node.js",
+        "nodejs",
+        "node_js",
+        "node js"
+      ],
+      "target": "New Relic APM Node.js agent",
+      "kind": "apm-agent",
+      "status": "DOCS",
+      "source": "N19"
+    },
+    {
+      "technology": "Python",
+      "aliases": [
+        "python"
+      ],
+      "target": "New Relic APM Python agent",
+      "kind": "apm-agent",
+      "status": "DOCS",
+      "source": "N19"
+    },
+    {
+      "technology": "PHP",
+      "aliases": [
+        "php"
+      ],
+      "target": "New Relic APM PHP agent",
+      "kind": "apm-agent",
+      "status": "DOCS",
+      "source": "N19"
+    },
+    {
+      "technology": "Ruby",
+      "aliases": [
+        "ruby"
+      ],
+      "target": "New Relic APM Ruby agent",
+      "kind": "apm-agent",
+      "status": "DOCS",
+      "source": "N19"
+    },
+    {
+      "technology": "Go",
+      "aliases": [
+        "go",
+        "golang"
+      ],
+      "target": "New Relic APM Go agent (a library, so the code changes)",
+      "kind": "apm-agent",
+      "status": "DOCS",
+      "source": "N19; the code-change statement is UNVERIFIED"
+    },
+    {
+      "technology": "C++, Rust, Erlang, Elixir",
+      "aliases": [
+        "c++",
+        "cpp",
+        "rust",
+        "erlang",
+        "elixir"
+      ],
+      "target": "OpenTelemetry SDK exporting to the New Relic OTLP endpoint",
+      "kind": "opentelemetry",
+      "status": "UNVERIFIED",
+      "source": "N11 for OTLP; the absence of a New Relic agent is read from N19 not listing them"
+    },
+    {
+      "technology": "Web servers, databases and queues",
+      "aliases": [
+        "nginx",
+        "apache",
+        "apache http server",
+        "mysql",
+        "postgresql",
+        "mongodb",
+        "redis",
+        "kafka",
+        "rabbitmq",
+        "elasticsearch",
+        "microsoft sql server"
+      ],
+      "target": "New Relic on-host integration through the infrastructure agent",
+      "kind": "integration",
+      "status": "UNVERIFIED",
+      "source": "not read"
+    }
   ]
 }

@@ -16,6 +16,10 @@ I_NO_TECH = f"{INV} the service lists no technology"
 I_PROCESS = f"{INV} OneAgent process detection is replaced by New Relic agents, not migrated"
 I_PARTIAL = f"{INV} the entity list is partial, so the counts are a lower bound"
 I_ROW = f"{INV} the target in this row is not confirmed against New Relic documentation"
+I_SPELLING = (
+    f"{INV} the technology name matched only after changing case, underscores or hyphens, "
+    "so the spelling is not confirmed"
+)
 I_OS = f"{INV} the operating system may not be supported by the New Relic infrastructure agent"
 
 S_API_SCRIPT = f"{SYN} the monitor needs a scripted API monitor that a person writes"
@@ -25,6 +29,13 @@ S_PRE_POST = (
 )
 S_STEP = f"{SYN} the clickpath maps to a step monitor, but the step locator format is not confirmed"
 S_NETWORK = f"{SYN} network availability monitors (ICMP, TCP, DNS) have no New Relic monitor"
+S_AUTH = (
+    f"{SYN} authentication, a client certificate or a regular-expression rule needs a scripted "
+    "API monitor that a person writes"
+)
+S_LOCATION_ROW = (
+    f"{SYN} the location was chosen from a mapping row or country fallback that is not confirmed"
+)
 S_NO_SCRIPT = f"{SYN} the monitor has no script to read"
 S_KIND = f"{SYN} the kind of monitor is not known"
 S_LOCATION = f"{SYN} a location has no mapping to a New Relic location"
@@ -52,11 +63,14 @@ CATEGORY: dict[str, Category] = {
     I_PARTIAL: Category.MANUAL_FOLLOWUP,
     I_ROW: Category.UNVERIFIED_NAMES,
     I_OS: Category.UNVERIFIED_NAMES,
+    I_SPELLING: Category.UNVERIFIED_NAMES,
     S_API_SCRIPT: Category.UNSUPPORTED_FEATURE,
     S_BROWSER_SCRIPT: Category.UNSUPPORTED_FEATURE,
     S_PRE_POST: Category.UNSUPPORTED_FEATURE,
     S_STEP: Category.UNVERIFIED_NAMES,
     S_NETWORK: Category.UNSUPPORTED_FEATURE,
+    S_AUTH: Category.UNSUPPORTED_FEATURE,
+    S_LOCATION_ROW: Category.UNVERIFIED_NAMES,
     S_NO_SCRIPT: Category.UNSUPPORTED_FEATURE,
     S_KIND: Category.UNSUPPORTED_FEATURE,
     S_LOCATION: Category.MISSING_MAPPING,

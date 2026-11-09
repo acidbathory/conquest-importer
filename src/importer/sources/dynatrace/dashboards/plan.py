@@ -127,6 +127,16 @@ def _reason_counts(plans: DashboardPlans) -> Counter[str]:
     return found
 
 
+def _markdown_lines(plans: DashboardPlans) -> list[str]:
+    tiles = [t for d in plans.dashboards for t in d.tiles if t.kind in ("markdown", "MARKDOWN")]
+    flagged = sum(1 for t in tiles if "unsafe-link" in t.flags or "html" in t.flags)
+    return [
+        f"Markdown tiles with an unsafe-link or html flag: {flagged} of {len(tiles)}. A tile "
+        "without a flag was not found unsafe by these checks; that is not a proof it is safe.",
+        "",
+    ]
+
+
 def _summary(plans: DashboardPlans) -> list[str]:
     t = plans.totals
     kinds = Counter(d.kind for d in plans.dashboards)
@@ -153,6 +163,7 @@ def _summary(plans: DashboardPlans) -> list[str]:
             ],
         ),
         "",
+        *_markdown_lines(plans),
         *table(
             ["Variables", "Count"],
             [

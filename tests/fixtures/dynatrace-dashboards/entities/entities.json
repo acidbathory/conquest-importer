@@ -19,7 +19,7 @@
     {"entityId": "SERVICE-000000000000000A", "type": "SERVICE", "displayName": "no tech", "properties": {}},
     {"entityId": "KUBERNETES_CLUSTER-0000000000000001", "type": "KUBERNETES_CLUSTER", "displayName": "prod"},
     {"entityId": "KUBERNETES_CLUSTER-0000000000000002", "type": "KUBERNETES_CLUSTER", "displayName": "stage"},
-    {"entityId": "PROCESS_GROUP_INSTANCE-0000000000000001", "type": "PROCESS_GROUP_INSTANCE", "displayName": "p1"},
+    {"entityId": "PROCESS_GROUP-0000000000000001", "type": "PROCESS_GROUP", "displayName": "p1"},
     {"entityId": "APPLICATION-0000000000000001", "type": "APPLICATION", "displayName": "web ui"},
     {"entityId": "MOBILE_APPLICATION-0000000000000001", "type": "MOBILE_APPLICATION", "displayName": "app"},
     {"entityId": "AWS_LAMBDA_FUNCTION-0000000000000001", "type": "AWS_LAMBDA_FUNCTION", "displayName": "fn"},

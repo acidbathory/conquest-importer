@@ -1,34 +1,162 @@
 {
-  "_comment": "Dynatrace public synthetic location (city and country code) to a New Relic public location. New Relic names are cloud regions; the AWS_ prefix is optional through NerdGraph and Terraform. status: DOCS = the name appears in New Relic documentation (N10, N5); UNVERIFIED = the city-to-region choice or the name is from memory. A city that is not here falls back to the nearest region of its country, or is unmapped.",
+  "_comment": "Dynatrace public synthetic location (city and country code) to a New Relic public location. New Relic names are cloud regions; the AWS_ prefix is optional through NerdGraph and Terraform. status: DOCS = the city is listed in the New Relic documentation (N10: Frankfurt, DE); UNVERIFIED = the choice of region for the city, or its name, is from memory (the names AWS_US_EAST_1 and AWS_AP_SOUTH_1 appear in the documentation, but not which Dynatrace city maps to them). A city that is not here falls back to the nearest region of its country (always UNVERIFIED), or is unmapped.",
   "cities": [
-    {"city": "Ashburn", "country": "US", "new_relic": "AWS_US_EAST_1", "status": "DOCS"},
-    {"city": "Washington", "country": "US", "new_relic": "AWS_US_EAST_1", "status": "DOCS"},
-    {"city": "Columbus", "country": "US", "new_relic": "AWS_US_EAST_2", "status": "UNVERIFIED"},
-    {"city": "San Francisco", "country": "US", "new_relic": "AWS_US_WEST_1", "status": "UNVERIFIED"},
-    {"city": "Portland", "country": "US", "new_relic": "AWS_US_WEST_2", "status": "UNVERIFIED"},
-    {"city": "Montreal", "country": "CA", "new_relic": "AWS_CA_CENTRAL_1", "status": "UNVERIFIED"},
-    {"city": "Sao Paulo", "country": "BR", "new_relic": "AWS_SA_EAST_1", "status": "UNVERIFIED"},
-    {"city": "Dublin", "country": "IE", "new_relic": "AWS_EU_WEST_1", "status": "UNVERIFIED"},
-    {"city": "London", "country": "GB", "new_relic": "AWS_EU_WEST_2", "status": "UNVERIFIED"},
-    {"city": "Paris", "country": "FR", "new_relic": "AWS_EU_WEST_3", "status": "UNVERIFIED"},
-    {"city": "Frankfurt", "country": "DE", "new_relic": "AWS_EU_CENTRAL_1", "status": "UNVERIFIED"},
-    {"city": "Milan", "country": "IT", "new_relic": "AWS_EU_SOUTH_1", "status": "UNVERIFIED"},
-    {"city": "Stockholm", "country": "SE", "new_relic": "AWS_EU_NORTH_1", "status": "UNVERIFIED"},
-    {"city": "Mumbai", "country": "IN", "new_relic": "AWS_AP_SOUTH_1", "status": "DOCS"},
-    {"city": "Singapore", "country": "SG", "new_relic": "AWS_AP_SOUTHEAST_1", "status": "UNVERIFIED"},
-    {"city": "Sydney", "country": "AU", "new_relic": "AWS_AP_SOUTHEAST_2", "status": "UNVERIFIED"},
-    {"city": "Tokyo", "country": "JP", "new_relic": "AWS_AP_NORTHEAST_1", "status": "UNVERIFIED"},
-    {"city": "Seoul", "country": "KR", "new_relic": "AWS_AP_NORTHEAST_2", "status": "UNVERIFIED"},
-    {"city": "Hong Kong", "country": "HK", "new_relic": "AWS_AP_EAST_1", "status": "UNVERIFIED"},
-    {"city": "Cape Town", "country": "ZA", "new_relic": "AWS_AF_SOUTH_1", "status": "UNVERIFIED"}
+    {
+      "city": "Ashburn",
+      "country": "US",
+      "new_relic": "AWS_US_EAST_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Washington",
+      "country": "US",
+      "new_relic": "AWS_US_EAST_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Columbus",
+      "country": "US",
+      "new_relic": "AWS_US_EAST_2",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "San Francisco",
+      "country": "US",
+      "new_relic": "AWS_US_WEST_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Portland",
+      "country": "US",
+      "new_relic": "AWS_US_WEST_2",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Montreal",
+      "country": "CA",
+      "new_relic": "AWS_CA_CENTRAL_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Sao Paulo",
+      "country": "BR",
+      "new_relic": "AWS_SA_EAST_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Dublin",
+      "country": "IE",
+      "new_relic": "AWS_EU_WEST_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "London",
+      "country": "GB",
+      "new_relic": "AWS_EU_WEST_2",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Paris",
+      "country": "FR",
+      "new_relic": "AWS_EU_WEST_3",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Frankfurt",
+      "country": "DE",
+      "new_relic": "AWS_EU_CENTRAL_1",
+      "status": "DOCS"
+    },
+    {
+      "city": "Milan",
+      "country": "IT",
+      "new_relic": "AWS_EU_SOUTH_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Stockholm",
+      "country": "SE",
+      "new_relic": "AWS_EU_NORTH_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Mumbai",
+      "country": "IN",
+      "new_relic": "AWS_AP_SOUTH_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Singapore",
+      "country": "SG",
+      "new_relic": "AWS_AP_SOUTHEAST_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Sydney",
+      "country": "AU",
+      "new_relic": "AWS_AP_SOUTHEAST_2",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Tokyo",
+      "country": "JP",
+      "new_relic": "AWS_AP_NORTHEAST_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Seoul",
+      "country": "KR",
+      "new_relic": "AWS_AP_NORTHEAST_2",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Hong Kong",
+      "country": "HK",
+      "new_relic": "AWS_AP_EAST_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "city": "Cape Town",
+      "country": "ZA",
+      "new_relic": "AWS_AF_SOUTH_1",
+      "status": "UNVERIFIED"
+    }
   ],
   "countries": [
-    {"country": "US", "new_relic": "AWS_US_EAST_1", "status": "UNVERIFIED"},
-    {"country": "DE", "new_relic": "AWS_EU_CENTRAL_1", "status": "UNVERIFIED"},
-    {"country": "GB", "new_relic": "AWS_EU_WEST_2", "status": "UNVERIFIED"},
-    {"country": "FR", "new_relic": "AWS_EU_WEST_3", "status": "UNVERIFIED"},
-    {"country": "AU", "new_relic": "AWS_AP_SOUTHEAST_2", "status": "UNVERIFIED"},
-    {"country": "IN", "new_relic": "AWS_AP_SOUTH_1", "status": "UNVERIFIED"},
-    {"country": "JP", "new_relic": "AWS_AP_NORTHEAST_1", "status": "UNVERIFIED"}
+    {
+      "country": "US",
+      "new_relic": "AWS_US_EAST_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "country": "DE",
+      "new_relic": "AWS_EU_CENTRAL_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "country": "GB",
+      "new_relic": "AWS_EU_WEST_2",
+      "status": "UNVERIFIED"
+    },
+    {
+      "country": "FR",
+      "new_relic": "AWS_EU_WEST_3",
+      "status": "UNVERIFIED"
+    },
+    {
+      "country": "AU",
+      "new_relic": "AWS_AP_SOUTHEAST_2",
+      "status": "UNVERIFIED"
+    },
+    {
+      "country": "IN",
+      "new_relic": "AWS_AP_SOUTH_1",
+      "status": "UNVERIFIED"
+    },
+    {
+      "country": "JP",
+      "new_relic": "AWS_AP_NORTHEAST_1",
+      "status": "UNVERIFIED"
+    }
   ]
 }

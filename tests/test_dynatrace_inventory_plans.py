@@ -36,7 +36,7 @@ def test_entities_are_counted_per_type_with_their_new_relic_target() -> None:
         and rows["CLOUD_APPLICATION"].status == "UNVERIFIED"
     )
     assert r.I_TYPE in rows["WEIRD_TYPE"].reasons and rows["WEIRD_TYPE"].kind == "unmapped"
-    assert r.I_PROCESS in rows["PROCESS_GROUP_INSTANCE"].reasons
+    assert r.I_PROCESS in rows["PROCESS_GROUP"].reasons
 
 
 def test_services_are_counted_per_technology_and_unmapped_ones_say_so() -> None:
@@ -142,8 +142,8 @@ def test_locations_map_by_city_then_country_and_say_when_they_cannot() -> None:
     plan = synthetic_plan().monitors
     first = plan[0].locations
     assert [(x.new_relic, x.status) for x in first] == [
-        ("AWS_US_EAST_1", "DOCS"),
-        ("AWS_EU_CENTRAL_1", "UNVERIFIED"),
+        ("AWS_US_EAST_1", "UNVERIFIED"),
+        ("AWS_EU_CENTRAL_1", "DOCS"),
     ]
     assert plan[5].locations[0].status == "PRIVATE" and plan[5].locations[0].reasons == [
         r.S_PRIVATE

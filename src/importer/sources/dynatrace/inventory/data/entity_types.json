@@ -1,21 +1,91 @@
 {
-  "_comment": "Dynatrace entity type to the New Relic target. Exact type names first, then prefixes. kind 'by-technology' sends the entity to technology_agents.json; 'no-path' marks what is replaced, not migrated. status as in technology_agents.json.",
+  "_comment": "Dynatrace entity type to the New Relic target. Exact type names first, then prefixes. kind 'by-technology' sends the entity to technology_agents.json; 'no-path' marks what is replaced, not migrated. status as in technology_agents.json. Only types the extractor requests (ENTITY_TYPES) have a row, plus the cloud prefixes for hand-saved files.",
   "types": [
-    {"type": "HOST", "target": "New Relic infrastructure agent", "kind": "infrastructure", "status": "DOCS", "source": "N21"},
-    {"type": "SERVICE", "target": "by technology", "kind": "by-technology", "status": "DOCS", "source": "N19"},
-    {"type": "PROCESS_GROUP", "target": "none: OneAgent process detection is replaced by the New Relic agents", "kind": "no-path", "status": "UNVERIFIED", "source": "research note section 6.4"},
-    {"type": "PROCESS_GROUP_INSTANCE", "target": "none: OneAgent process detection is replaced by the New Relic agents", "kind": "no-path", "status": "UNVERIFIED", "source": "research note section 6.4"},
-    {"type": "KUBERNETES_CLUSTER", "target": "New Relic Kubernetes integration", "kind": "kubernetes", "status": "DOCS", "source": "N20"},
-    {"type": "CLOUD_APPLICATION", "target": "New Relic Kubernetes integration", "kind": "kubernetes", "status": "UNVERIFIED", "source": "inferred: a Kubernetes workload"},
-    {"type": "APPLICATION", "target": "New Relic browser agent", "kind": "browser", "status": "UNVERIFIED", "source": "not read"},
-    {"type": "MOBILE_APPLICATION", "target": "New Relic mobile agent", "kind": "mobile", "status": "UNVERIFIED", "source": "not read"},
-    {"type": "AWS_LAMBDA_FUNCTION", "target": "New Relic Lambda layer", "kind": "serverless", "status": "UNVERIFIED", "source": "not read"},
-    {"type": "SYNTHETIC_TEST", "target": "New Relic synthetic monitors (see plan-dynatrace-synthetics)", "kind": "synthetics", "status": "DOCS", "source": "research note section 5"},
-    {"type": "HTTP_CHECK", "target": "New Relic synthetic monitors (see plan-dynatrace-synthetics)", "kind": "synthetics", "status": "DOCS", "source": "research note section 5"}
+    {
+      "type": "HOST",
+      "target": "New Relic infrastructure agent",
+      "kind": "infrastructure",
+      "status": "DOCS",
+      "source": "N21"
+    },
+    {
+      "type": "SERVICE",
+      "target": "by technology",
+      "kind": "by-technology",
+      "status": "DOCS",
+      "source": "N19"
+    },
+    {
+      "type": "PROCESS_GROUP",
+      "target": "none: OneAgent process detection is replaced by the New Relic agents",
+      "kind": "no-path",
+      "status": "UNVERIFIED",
+      "source": "research note section 6.4"
+    },
+    {
+      "type": "KUBERNETES_CLUSTER",
+      "target": "New Relic Kubernetes integration",
+      "kind": "kubernetes",
+      "status": "DOCS",
+      "source": "N20"
+    },
+    {
+      "type": "CLOUD_APPLICATION",
+      "target": "New Relic Kubernetes integration",
+      "kind": "kubernetes",
+      "status": "UNVERIFIED",
+      "source": "inferred: a Kubernetes workload"
+    },
+    {
+      "type": "APPLICATION",
+      "target": "New Relic browser agent",
+      "kind": "browser",
+      "status": "UNVERIFIED",
+      "source": "not read"
+    },
+    {
+      "type": "MOBILE_APPLICATION",
+      "target": "New Relic mobile agent",
+      "kind": "mobile",
+      "status": "UNVERIFIED",
+      "source": "not read"
+    },
+    {
+      "type": "AWS_LAMBDA_FUNCTION",
+      "target": "New Relic Lambda layer",
+      "kind": "serverless",
+      "status": "UNVERIFIED",
+      "source": "not read"
+    },
+    {
+      "type": "AZURE_MICROSOFT_WEB_SERVERFARMS",
+      "target": "New Relic Azure App Service integration",
+      "kind": "cloud",
+      "status": "DOCS",
+      "source": "N14"
+    }
   ],
   "prefixes": [
-    {"prefix": "AWS_", "target": "CloudWatch Metric Streams to New Relic", "kind": "cloud", "status": "DOCS", "source": "N16"},
-    {"prefix": "AZURE_", "target": "New Relic Azure integrations", "kind": "cloud", "status": "DOCS", "source": "N14"},
-    {"prefix": "GCP_", "target": "New Relic Google Cloud integration", "kind": "cloud", "status": "UNVERIFIED", "source": "the importer's GCP source"}
+    {
+      "prefix": "AWS_",
+      "target": "CloudWatch Metric Streams to New Relic",
+      "kind": "cloud",
+      "status": "DOCS",
+      "source": "N16"
+    },
+    {
+      "prefix": "AZURE_",
+      "target": "New Relic Azure integrations",
+      "kind": "cloud",
+      "status": "UNVERIFIED",
+      "source": "N14 documents App Service plans only; other Azure types are not checked"
+    },
+    {
+      "prefix": "GCP_",
+      "target": "New Relic Google Cloud integration",
+      "kind": "cloud",
+      "status": "UNVERIFIED",
+      "source": "the importer's GCP source"
+    }
   ]
 }

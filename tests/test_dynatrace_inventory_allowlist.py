@@ -509,3 +509,10 @@ def test_the_canaries_cover_every_kind_of_field() -> None:
     assert len(set(CANARIES)) == len(CANARIES) and all(
         re.fullmatch(r"CANARY_[A-Z]+", c) for c in CANARIES
     )
+
+
+def test_a_dashboard_name_that_looks_like_a_token_is_replaced(tmp_path: Path) -> None:
+    docs = [{"id": UUID.format(1), "name": "https://user@host/?token=CANARY_JUNK"}]
+    read(serve(documents=docs), tmp_path)
+    saved = json.loads(next((tmp_path / "out/dashboards").glob("*.json")).read_text())
+    assert saved["name"] == "dashboard-1" and "CANARY" not in everything(tmp_path)

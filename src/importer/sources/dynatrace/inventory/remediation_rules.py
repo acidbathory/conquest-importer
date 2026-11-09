@@ -63,6 +63,14 @@ _TABLE: list[tuple[str, str, list[str]]] = [
         ],
     ),
     (
+        r.I_SPELLING,
+        "Technology spelling not confirmed",
+        [
+            "The name matched a table row only after normalising its spelling. Check that the "
+            "row is the technology you mean before counting it.",
+        ],
+    ),
+    (
         r.I_OS,
         "Operating system support not confirmed",
         [
@@ -113,6 +121,23 @@ _TABLE: list[tuple[str, str, list[str]]] = [
             "New Relic has no ICMP, TCP or DNS monitor. A scripted API monitor can make a "
             "TCP or DNS check from Node (UNVERIFIED); an ICMP ping from public locations is "
             "not possible that way.",
+        ],
+    ),
+    (
+        r.S_AUTH,
+        "Synthetic monitor with authentication or a regex rule",
+        [
+            "A simple monitor has no authentication, client certificate or regular-expression "
+            "check. Write a scripted API monitor in Node that sends the credentials from New "
+            "Relic secure credentials and makes the same assertions.",
+        ],
+    ),
+    (
+        r.S_LOCATION_ROW,
+        "Location chosen from an unconfirmed row",
+        [
+            "The New Relic location comes from a table row marked UNVERIFIED, or from the "
+            "country only. Check that the location exists and is close to the original.",
         ],
     ),
     (
