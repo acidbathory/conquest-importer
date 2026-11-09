@@ -124,3 +124,45 @@ Added by this work:
 - The Alloy `write_relabel_config` attribute names and the `auth` link in the OTLP exporter.
 - The mapping of `group_by` (`alertname`, folder plus alertname, or `...`) to an incident
   preference.
+
+## Round 2 (second review)
+
+All seven must-fix items and the should-fix items were done; see the commits after the merge of
+`integration/all-threads`. Owner decisions applied: no new dependency (the regex gate is strict
+instead, and rejects more patterns), rule annotations are dropped at read time.
+
+- Incomplete policy trees are saved with `_incomplete` and `_problems`, honoured on load, and warned
+  about in the command summary.
+- The regex gate parses the pattern with the stdlib parser and refuses nested repeats, branches in
+  repeated groups, empty-matching repeated groups, lookaround, backreferences, atomic and
+  possessive forms, scoped flags, and the forms where RE2 differs. It refuses harmless patterns such
+  as `(\d{1,3}\.){3}\d{1,3}`; those are reported undecidable. There is no wall-clock guard on a
+  single match (that needs a thread or process); the gate and the length caps are the protection.
+  It uses `re._parser`, a private module: the gate fails closed if it cannot be imported, and a test
+  pins Python 3.12 or later.
+- Grafana-injected labels (UNVERIFIED names) are decided only from a known value.
+- The extractor writes everything or nothing, with mode 0600, and a recursion error is a clean
+  error.
+- Every contact point item is rebuilt from scratch; option fields are typed; free-text labels are no
+  longer kept; names and uids that look like an address or token become a stable reference
+  (`redacted-<hash>`), and policy receivers and interval names get the same treatment so links hold.
+- Mute timing zones are checked against the time zone database (`Local` is reported, as before);
+  an interval that would exceed 200 schedules is reported whole.
+- Redefined default templates make the default calls custom (whether Grafana allows redefining a
+  default name is UNVERIFIED).
+- Rule files: annotations dropped; label values and expressions that look like secrets are replaced
+  with a placeholder and a note; matcher values that look like secrets make the node undecidable.
+
+Surviving mutants: 2 of 32 (both equivalent, see lessons). Before the round the reviewer listed 12
+survivors; each now has a test.
+
+Decisions for the owner:
+1. `Local` as a mute timing zone is reported as manual (the server's zone is not known to the
+   importer). Say if it should be accepted as UTC instead.
+2. Free-text fields (Slack channel, Jira project) are no longer kept at all. A person reviewing the
+   plan sees only the field names.
+3. The regex over-rejection, including counted repeats inside repeated groups.
+
+Requests for the integrator (still open): `core/safe_http.decode_json` with a `want` parameter that
+allows a list; the shared time zone and clock patterns could move to `core` if another source needs
+them.

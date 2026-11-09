@@ -349,8 +349,12 @@ Relic from them yet; wiring them into the notification plan is the next wave.
   only) and the rules that Mimir or Loki rulers hold. It sends only GET requests, never with a
   query string, so contact points are never decrypted and every stored secret arrives as
   `[REDACTED]`. Secret values, header values, URL paths and queries, and template text are not
-  written; email addresses are written to `contact-points.json` only. Use a folder other than
-  the one `extract-grafana` wrote.
+  written; email addresses are written to `contact-points.json` only. Option values are kept
+  only when they have the type the schema table gives them (a boolean, an integer in range,
+  one of a list); free text such as a Slack channel or a Jira project is not kept. Rule files
+  keep the expression and the labels (a value that looks like an address, URL or token is
+  replaced with a placeholder) and drop annotations. Files are readable by the owner only,
+  and a failed run leaves no folder. Use a folder other than the one `extract-grafana` wrote.
 - **Contact points:** each of the 24 integration types has a verdict. Converts: `email` (EMAIL)
   and `webhook` (WEBHOOK, with a warning that the receiver gets the New Relic payload and that
   the HTTP method, credentials, signing, TLS and custom payload are manual). Webhook template (a
@@ -361,21 +365,32 @@ Relic from them yet; wiring them into the notification plan is the next wave.
   New Relic reference note; none was tested on a live account.
 - **Notification policies:** the tree is flattened with Alertmanager's rules (first match wins
   unless `continue`, anchored regular expressions, a missing label is the empty string, mute
-  and active intervals are not inherited). Labels of the rule and of its query are decided now;
-  labels in the query's `by (...)` become tag predicates on the issue. Anything that cannot be
+  and active intervals are not inherited). A matcher on a label of the rule, `alertname` or
+  `grafana_folder` is decided now, and so is one on a label the query is known not to have.
+  Labels Grafana adds to every alert instance (`__alert_rule_uid__`,
+  `__alert_rule_namespace_uid__`, `datasource_uid`, `ref_id`; the list is from memory and
+  UNVERIFIED) are decided only when the rule carries their value, and are otherwise reported,
+  never read as empty. Labels in the query's `by (...)` become tag predicates on the issue.
+  A tree that was cut by a size limit or a bad route is saved as cut, and every rule is then
+  reported as undecidable. Anything that cannot be
   decided (a bare selector with an unknown label set, a template in a rule label, a regular
   expression a filter cannot say, an earlier route that cannot be negated) is listed, never
-  guessed. Group wait, group interval and repeat interval are lost.
+  guessed. Regular expressions run only when a parser shows they are in a small safe subset;
+  anything with nested repeats (even a harmless address pattern such as `(\d{1,3}\.){3}`),
+  backreferences, lookaround, or forms that Go's RE2 reads differently is reported as
+  undecidable. Over-rejection is intended. Group wait, group interval and repeat interval are lost.
 - **Mute timings:** a time range with weekdays or days 1 to 28 of the month, a time zone, and
   years convert to muting schedules (clock times and recurrence). Negative days, days 29 to 31,
-  months without a year, a run of months across the year end, and a mute timing that combines
-  days of the month with weekdays are reported. Active time intervals are reported, not
+  months without a year, a run of months across the year end, a time zone that is not in the
+  time zone database (`Local` included), an interval that would need more than 200 schedules,
+  and a mute timing that combines days of the month with weekdays are reported. Behaviour at
+  daylight saving changes is UNVERIFIED. Active time intervals are reported, not
   converted.
 - **Templates:** only Grafana's default templates map to a fixed Handlebars body. A custom
   template is reported and never translated.
 - **Rule files:** Prometheus, Mimir and Loki rule groups (JSON; `rules.yml` needs
   `yq -o=json` first because PyYAML is not a dependency) become rule objects the Grafana
-  translator can read. An alert with one top-level comparison against a number gets the same
+  translator can read (annotations are dropped). An alert with one top-level comparison against a number gets the same
   query, reduce and threshold nodes as a Grafana rule; others stay data source-managed.
 - **Data path:** `importer plan-grafana-datapath --region us|eu|jp --out <new folder>` writes
   a Prometheus remote write block, Alloy snippets for dual write and for OTLP, the naming
