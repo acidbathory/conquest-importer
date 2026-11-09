@@ -110,7 +110,7 @@ def test_the_output_is_readable_by_the_loader_and_converts(tmp_path: Path) -> No
     read(serve(), tmp_path)
     monitors = REGISTRY["grafana"].convert(tmp_path / "out")
     assert len(monitors) == 17
-    assert sum(m.confidence is Confidence.APPROXIMATE for m in monitors) == 4
+    assert sum(m.confidence is Confidence.APPROXIMATE for m in monitors) == 5
 
 
 def test_a_path_off_the_allow_list_is_refused_by_the_real_getter() -> None:
@@ -545,4 +545,4 @@ def test_the_documented_sequence_runs_end_to_end(
     )
     assert report.exit_code == 0, report.output
     html = target.read_text()
-    assert "4 of 17 alert rules migrated" in html and "Grafana" in html
+    assert "5 of 17 alert rules migrated" in html and "Grafana" in html

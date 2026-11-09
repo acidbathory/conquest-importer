@@ -118,6 +118,33 @@ R_NO_COMPARISON = (
     "data source-managed rule: the query has no comparison against a number, so there is no "
     "threshold to convert"
 )
+R_COMPARE_AND_NODE = (
+    "promql expression compares inside the query and the rule also has a threshold node, so the "
+    "two cannot be one New Relic threshold"
+)
+R_COUNTER_NAME = (
+    "promql counter function on a metric whose name does not end in _total, _count or _bucket, "
+    "so New Relic may not store it as a delta count"
+)
+R_COUNTER_AGG = (
+    "promql counter rate aggregated with {agg}(); only sum() of a rate or increase converts"
+)
+R_COUNTER_REDUCER = (
+    "promql counter rate reduced over time by {reducer}; only the last value converts"
+)
+R_COUNTER_RANGE = (
+    "promql counter range of {seconds}s is not a whole number of minutes, so it cannot be one "
+    "New Relic aggregation window"
+)
+R_RATIO_SHAPE = (
+    "promql ratio: both sides must be the same aggregation of different metrics with the same "
+    "labels, grouping and range; anything else needs filter() in one query"
+)
+R_RATIO_AGG = "promql ratio: {agg}() values; only avg() of gauges or sum() of counters converts"
+R_ABSENT_THRESHOLD = (
+    "promql absent() returns 1 when the series is missing, and the grafana threshold does not "
+    "fire on 1"
+)
 R_NO_NODE = "grafana pipeline: the condition does not point at a node of the rule"
 R_SHAPE = "grafana pipeline is not one query, an optional reduce and one threshold"
 R_MATH = "grafana pipeline has a math expression"
@@ -245,6 +272,27 @@ N_ERROR_STATE = (
 N_RULE_FILE = (
     "this rule comes from a Prometheus-style rule file (Mimir or Loki ruler); the threshold is "
     "the comparison in its query, and the rule has no Grafana pipeline"
+)
+N_COUNTER = (
+    "New Relic stores a Prometheus counter as the change in each interval (the type is guessed "
+    "from a name ending _total, _count or _bucket), so sum() over the window is the increase over "
+    "that window; Prometheus extrapolates rate() and increase() to the ends of the range, so the "
+    "values may differ a little"
+)
+N_RATE_DIVISION = (
+    "the rate is sum() divided by the {seconds}s window, written as arithmetic because rate() is "
+    "not documented as usable in an alert condition; check the value against Grafana, it may "
+    "differ"
+)
+N_RATIO_ZERO = (
+    "a window in which the denominator is 0 or empty may give no value in New Relic, where "
+    "Prometheus gives NaN or no sample, so it may differ"
+)
+N_ABSENT = (
+    "absent() becomes a loss-of-signal condition: it opens a violation when New Relic receives "
+    "no data points for the metric for the duration, and it only works once the metric has "
+    "arrived at least once; like absent() it fires only when no matching series reports at all, so "
+    "one missing series among several does not alert, which may differ from the rule's intent"
 )
 N_ROUTING = "notifications (contact points and notification policies) must be configured manually"
 
@@ -413,6 +461,8 @@ class _Ctx:
     reducer: str  # the Grafana reducer (last when the rule has none)
     instant: bool  # an instant query has one point, so the reducer cannot look back
     range_seconds: int | None  # relativeTimeRange.from, when it is a positive whole number
+    threshold: Threshold | None = None  # the rule's own test, for forms that fix the value (absent)
+    node: bool = True  # the rule has a threshold node (a Grafana rule); a rule-file rule has none
 
 
 # an across-series aggregate and a reducer that one New Relic aggregation expresses exactly
@@ -428,6 +478,7 @@ class _Built:
     notes: list[str] = field(default_factory=list)
     threshold: Threshold | None = None  # a form that fixes its own threshold (absent)
     heartbeat: HeartbeatSignal | None = None
+    minimum_duration: int = 0  # seconds the query itself asks the condition to last
 
 
 def _looked_back(ctx: _Ctx) -> str:
@@ -435,9 +486,36 @@ def _looked_back(ctx: _Ctx) -> str:
     return "last" if ctx.instant else ctx.reducer
 
 
+# Query forms beyond the plain selector (counters, ratios, absent). Each returns None when the
+# expression is not its form, so the checks below still give their usual reason. Filled by
+# `importer.sources.grafana.rules2`; registering twice adds nothing.
+PromForm = Callable[[str, "_Ctx"], "_Built | None"]
+PROM_FORMS: list[PromForm] = []
+
+
+def register_prom_form(form: PromForm) -> None:
+    if form not in PROM_FORMS:
+        PROM_FORMS.append(form)
+
+
+def _time_window(ctx: _Ctx, reducer: str) -> tuple[int | None, list[str]]:
+    """The window a gauge query fixes (None: the interval) and the notes about the reducer."""
+    if reducer == "last":
+        return None, [N_RANGE_IGNORED]
+    if ctx.range_seconds is None:
+        raise _Fail(R_RANGE_MISSING)
+    return ctx.range_seconds, [N_RANGE_USED]
+
+
 def _prometheus(expr: str, ctx: _Ctx) -> _Built:
     if len(expr) > MAX_EXPRESSION:
         raise _Fail(PROM_NOT_SIMPLE)
+    for form in PROM_FORMS:
+        built = form(expr, ctx)
+        if built is not None:
+            return built
+    if ctx.node and split_comparison(expr) is not None:
+        raise _Fail(R_COMPARE_AND_NODE)
     feature = _first_feature(_skeleton(expr), PROM_FEATURES)
     if feature:
         raise _Fail(feature)
@@ -466,14 +544,8 @@ def _prometheus(expr: str, ctx: _Ctx) -> _Built:
         notes.append(N_PER_SERIES)
         if reducer == "last":
             notes.append(N_LAST)
-    fixed: int | None = None
-    if reducer == "last":
-        notes.append(N_RANGE_IGNORED)
-    elif ctx.range_seconds is None:
-        raise _Fail(R_RANGE_MISSING)
-    else:
-        fixed = ctx.range_seconds
-        notes.append(N_RANGE_USED)
+    fixed, window_notes = _time_window(ctx, reducer)
+    notes += window_notes
     if any(m.negate for m in matches):
         notes.append(N_NEGATION)
     term = MetricTerm(
@@ -701,7 +773,7 @@ def _grafana_plan(rule: GrafanaRule) -> _Plan:
     query, reducer, threshold_node, notes = _pipeline(rule)
     threshold, recovery = _threshold(threshold_node)
     kind, inferred = _datasource_type(query)
-    ctx = _Ctx(reducer, _instant(query), _range_seconds(query))
+    ctx = _Ctx(reducer, _instant(query), _range_seconds(query), threshold)
     return _Plan(kind, inferred, str(query.model.get("expr", "")), ctx, threshold, recovery, notes)
 
 
@@ -711,7 +783,7 @@ def _rule_file_plan(rule: GrafanaRule) -> _Plan:
     expr = comparison.query if comparison else rule.expr
     threshold = _make_threshold(comparison.operator, [comparison.value]) if comparison else None
     kind, inferred = _kind_of(None, "", expr)
-    return _Plan(kind, inferred, expr, _Ctx("last", True, None), threshold)
+    return _Plan(kind, inferred, expr, _Ctx("last", True, None, threshold, node=False), threshold)
 
 
 def _built(plan: _Plan) -> _Built:
@@ -728,7 +800,7 @@ def _whole_minutes(seconds: int) -> int:
     return max(MIN_WINDOW_SECONDS, -(-seconds // 60) * 60)
 
 
-def _windows(rule: GrafanaRule, fixed: int | None) -> tuple[int, int, list[str]]:
+def _windows(rule: GrafanaRule, fixed: int | None, minimum: int = 0) -> tuple[int, int, list[str]]:
     """Aggregation window, threshold duration and notes. Both are whole numbers of windows."""
     notes: list[str] = []
     if fixed is not None:
@@ -745,7 +817,7 @@ def _windows(rule: GrafanaRule, fixed: int | None) -> tuple[int, int, list[str]]
         notes.append(N_ROUNDED_WINDOW.format(seconds=base, window=window))
     if fixed is not None and rule.interval_seconds != fixed:
         notes.append(N_LOKI_WINDOW.format(range=fixed, window=window))
-    duration = max(rule.for_seconds, window)
+    duration = max(rule.for_seconds, window, minimum)
     duration = -(-duration // window) * window
     if duration > MAX_DURATION_SECONDS:
         raise _Fail(R_PENDING.format(seconds=rule.for_seconds, limit=MAX_DURATION_SECONDS))
@@ -758,9 +830,15 @@ def _windows(rule: GrafanaRule, fixed: int | None) -> tuple[int, int, list[str]]
     return window, duration, notes
 
 
-def _states(rule: GrafanaRule, duration: int) -> tuple[NoData, list[str]]:
+def _error_notes(rule: GrafanaRule) -> list[str]:
+    return [N_ERROR_STATE] if rule.exec_err_state in ("Error", "Alerting", "KeepLast") else []
+
+
+def _states(rule: GrafanaRule, duration: int, heartbeat: bool) -> tuple[NoData, list[str]]:
     notes: list[str] = []
     no_data = NoData()
+    if heartbeat:  # absence is the condition: loss of signal always opens the violation
+        return NoData(notify=True, timeout_minutes=max(1, duration // 60)), _error_notes(rule)
     if rule.no_data_state == "Alerting":
         no_data = NoData(notify=True, timeout_minutes=max(1, duration // 60))
         notes.append(N_NODATA_ALERTING.format(minutes=no_data.timeout_minutes))
@@ -768,9 +846,7 @@ def _states(rule: GrafanaRule, duration: int) -> tuple[NoData, list[str]]:
         notes.append(N_NODATA_DEFAULT)
     elif rule.no_data_state == "KeepLast":
         notes.append(N_NODATA_KEEP)
-    if rule.exec_err_state in ("Error", "Alerting", "KeepLast"):
-        notes.append(N_ERROR_STATE)
-    return no_data, notes
+    return no_data, notes + _error_notes(rule)
 
 
 def _text(value: Any) -> str:
@@ -799,8 +875,8 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
     if threshold is None:
         raise _Fail(R_NO_COMPARISON)
     recovery, pipeline_notes, inferred = plan.recovery, plan.notes, plan.inferred
-    window, duration, window_notes = _windows(rule, built.window)
-    no_data, state_notes = _states(rule, duration)
+    window, duration, window_notes = _windows(rule, built.window, built.minimum_duration)
+    no_data, state_notes = _states(rule, duration, built.kind is SignalKind.HEARTBEAT)
     notes = [N_INFERRED] if inferred else []
     if rule.expr:
         notes.append(N_RULE_FILE)
@@ -831,6 +907,7 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
         occurrences=Occurrences.ALL,
         metric=built.metric,
         count=built.count,
+        heartbeat=built.heartbeat,
     )
     monitor.thresholds = [threshold]
     monitor.no_data = no_data

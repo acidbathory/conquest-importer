@@ -18,6 +18,7 @@ CONVERTED = {
     "ckg-prom-regex-unagg",
     "ckg-loki-errors",
     "ckg-expr-keeplast-nodata",
+    "ckg-prom-absent",
 }
 
 
@@ -132,15 +133,14 @@ def test_every_unconverted_sample_rule_has_one_specific_reason_and_steps() -> No
         ("ckg-expr-multi-ds-manual", "more than one data source"),
         ("ckg-expr-within-range", "threshold range"),
         ("ckg-loki-latency", "parser stage or unwrap"),
-        ("ckg-prom-5xx-rate", "promql uses rate"),
-        ("ckg-prom-absent", "promql uses absent"),
+        ("ckg-prom-5xx-rate", "promql label matcher"),
         ("ckg-prom-disk-fill", "promql uses rate"),
         ("ckg-prom-join-manual", "promql uses vector matching"),
         ("ckg-prom-mem-ratio", "promql uses an _over_time"),
         ("ckg-prom-offset-manual", "promql uses offset"),
         ("ckg-prom-p95", "promql uses histogram_quantile"),
         ("ckg-prom-topk-manual", "promql uses topk"),
-        ("ckg-prom-up-zero", "promql uses a binary operator"),
+        ("ckg-prom-up-zero", "compares inside the query"),
     ],
 )
 def test_each_unconverted_sample_rule_says_why(title: str, fragment: str) -> None:
@@ -417,8 +417,10 @@ def test_identical_copies_that_were_merged_are_counted_in_a_note() -> None:
 @pytest.mark.parametrize(
     ("expr", "fragment"),
     [
-        ("rate(x[5m])", "promql uses rate"),
-        ("increase(x[5m])", "promql uses rate"),
+        ("rate(x[5m])", "does not end in _total"),
+        ("increase(x[5m])", "does not end in _total"),
+        ("irate(x[5m])", "promql uses rate"),
+        ("delta(x[5m])", "promql uses rate"),
         ("avg_over_time(x[5m])", "promql uses an _over_time"),
         ("x offset 5m", "promql uses offset"),
         ("max_over_time(x[1h:5m])", "promql uses a subquery"),
@@ -427,10 +429,13 @@ def test_identical_copies_that_were_merged_are_counted_in_a_note() -> None:
         ("topk(3, x)", "promql uses topk"),
         ("bottomk(3, x)", "promql uses topk"),
         ("histogram_quantile(0.9, x)", "promql uses histogram_quantile"),
-        ("absent(x)", "promql uses absent"),
-        ("absent_over_time(x[5m])", "promql uses absent"),
+        ("absent(x)", "absent() returns 1"),
+        ("absent_over_time(x[5m])", "absent() returns 1"),
+        ("absent(sum(x))", "promql uses absent"),
+        ("absent_over_time(x)", "promql uses absent"),
         ("x + y", "promql uses a binary operator"),
-        ("x == 0", "promql uses a binary operator"),
+        ("x == 0", "compares inside the query"),
+        ("x == y", "promql uses a binary operator"),
         ("x > bool 1", "promql uses a binary operator"),
         ("x and y", "promql uses a binary operator"),
         ("sum without (a) (x)", "promql uses without"),

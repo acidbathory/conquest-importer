@@ -16,6 +16,91 @@ NRQL_LIMITS = (
 
 RULES: list[Rule] = [
     (
+        re.compile(r"^promql counter function on a metric"),
+        "PromQL counter name",
+        [
+            "rate() and increase() convert only for a metric New Relic stores as a count, "
+            "which it guesses from a name ending _total, _count or _bucket. For another name, "
+            "look the metric up in the data explorer. If it is a counter, add the label "
+            "`newrelic_metric_type` with the value `counter` in the remote write relabel "
+            "configuration so it is stored as a count, then use `sum(metric)` over the range "
+            "(divided by the range in seconds for a rate). If it is a gauge, rate() does not "
+            "apply and the condition needs a different query.",
+        ],
+    ),
+    (
+        re.compile(r"^promql counter rate aggregated"),
+        "PromQL counter rate aggregation",
+        [
+            "Only sum() of a rate or increase converts, because New Relic adds up the "
+            "changes of all series. An average, minimum or maximum of per-series rates needs "
+            "one value per series: write a condition with a FACET on the series label and "
+            "check it against the Grafana panel.",
+        ],
+    ),
+    (
+        re.compile(r"^promql counter rate reduced"),
+        "PromQL counter rate reducer",
+        [
+            "The rule reduces the rate series over time (mean, max, min or sum) instead of "
+            "taking the last value, which New Relic windows do not do on top of a rate. Change "
+            "the Grafana reducer to last, or write the condition by hand with a window that "
+            "matches the range the reducer looked back over.",
+        ],
+    ),
+    (
+        re.compile(r"^promql counter range"),
+        "PromQL counter range",
+        [
+            "The range of rate() or increase() becomes the aggregation window, which is a "
+            "whole number of minutes (60 seconds or more). Round the range in Grafana to a "
+            "whole number of minutes, or write the condition by hand with a window and a "
+            "threshold scaled to your range.",
+        ],
+    ),
+    (
+        re.compile(r"^promql ratio:"),
+        "PromQL ratio not converted",
+        [
+            "A ratio converts when both sides are the same aggregation (avg of gauges, sum "
+            "of counters) of different metrics with the same labels, grouping and range. An "
+            "error rate that divides one metric filtered by a code by the same metric "
+            "unfiltered needs `filter()`: write `SELECT filter(sum(metric), WHERE code LIKE "
+            "'5%') / sum(metric) FROM Metric` by hand (check that the conditions page "
+            "accepts it in your account), or create the two counts as separate conditions.",
+        ],
+    ),
+    (
+        re.compile(r"^promql absent\(\) returns 1"),
+        "PromQL absent() threshold",
+        [
+            "absent() returns 1 when the series is missing. The rule's threshold does not "
+            "fire on 1, so the rule would not alert on absence the way the query reads. "
+            "Decide what the rule should do and create a loss-of-signal condition by hand, "
+            "or change the threshold in Grafana to above 0 and convert again.",
+        ],
+    ),
+    (
+        re.compile(r"^promql expression compares inside the query"),
+        "PromQL comparison inside the query",
+        [
+            "The query filters with a comparison (such as `up == 0`) and the rule then tests "
+            "the value that is left with a threshold node, so the two together do not make "
+            "one New Relic threshold. Move the comparison into the threshold node: query the "
+            "plain metric, and set the threshold to the number and the operator.",
+        ],
+    ),
+    (
+        re.compile(r"^data source-managed rule: the query has no comparison"),
+        "Rule-file rule without a comparison",
+        [
+            "The rule fires whenever its query returns any series, and the query has no "
+            "comparison with a number, so there is no threshold to carry over. Find what makes "
+            "the query return nothing when things are healthy and write that as a New Relic "
+            "threshold on the same metric.",
+        ],
+    ),
+    (
         re.compile(r"^grafana rule could not be read"),
         "Grafana rule not readable",
         [
