@@ -65,3 +65,41 @@ Input is the JSON from `gcloud alpha monitoring policies list --format=json`. On
 - **Metric names** follow New Relic's documented rule (`gcp.<service>.<metric path>`). No suffix is added; Google's own counter names already end in `_count`. Names for Compute Engine and Pub/Sub are confirmed on live data (see `docs/research/gcp-metric-names-verified.md`), the rest are not. Counter conditions use a window of at least 300 seconds because New Relic polls every 5 minutes.
 - **Log-match conditions** with plain terms become a count of `Log` events. Severity ranges (`severity>=ERROR`) become a list of levels. OR and regular expressions stay manual.
 - **Absence, MQL, PromQL, SQL, ratio and forecast** conditions are manual with steps. Notification channels are listed, never migrated.
+
+## Dashboards
+The dashboard IR is `core/dashboard_ir.py` (`IRDashboard`, `IRWidget`, `Series`, ...). The emitters are `core/emit/dashboard.py` (NerdGraph and Terraform). Fields marked "new" were added for the Dynatrace and Grafana translators; each is optional, and a dashboard that does not use them serialises and emits exactly as before. `tests/test_dashboard_ir_byte_identity.py` proves it with the AWS and GCP fixture folders and with 120 generated dashboards whose hashes come from the emitters before the change; that holds for widget heights up to 12 and for any text in labels and filter values.
+
+Widget types (`Visualization`): `viz.line`, `viz.area`, `viz.bar`, `viz.pie`, `viz.billboard`, `viz.markdown`, and new `viz.table` (Terraform `widget_table`, no `TIMESERIES`).
+
+Series. A widget has `series` (a `MetricSignal`, NRQL built by `core/emit/nrql.py`) and new `raw_series` (a query the translator already built; it has no label, because a New Relic query has none). A chart uses one or the other, not both, at most 50 raw series. Raw queries are written as given.
+- `Series.period_seconds` is still an integer, 1 to 86400. New `auto_period: true` writes `TIMESERIES AUTO` instead of the fixed bucket and ignores `period_seconds` (auto wins). It is refused on any widget other than line and area. A nullable `period_seconds` would be the cleaner shape but `core/emit/nrql.py` reads it as an integer.
+- A raw query must pass `check_raw_nrql` (`core/dashboard_nrql.py`): one statement starting with `SELECT` or `FROM`, at most 4096 characters (a repository cap, the New Relic limit is UNVERIFIED), no `;` or fullwidth semicolon outside a string, balanced quotes (a string literal cannot span lines), no control characters other than tab, line feed and carriage return (so pretty-printed queries pass), no line or paragraph separators, bidirectional overrides or zero-width characters (they could hide a keyword), and none of `SINCE`, `UNTIL`, `COMPARE WITH` (the dashboard time picker owns the window). `LIMIT` and `TIMESERIES` are allowed. The checker looks at the query with string literals and backtick names blanked out. A keyword followed by a comparison operator, `IS`, `IN`, `LIKE`, `NOT`, `AND`, `OR`, a comma or `)`, or preceded by a dot, is read as a column name (`WHERE limit > {{v}}` passes). A column named like a keyword and followed by anything else is read as the clause: quote it with backticks. Braces other than whole `{{name}}` references are malformed (`{{{v}}}` is refused). The emitters check raw queries again, because the models are not frozen. It validates structure; it does not make text safe, so the translator must still build the query with `quote_string` and `identifier`.
+
+Variables. `IRDashboard.variables` (new, at most 50, unique names). Each `IRVariable` has `name` (letters, digits, underscore, at most 64, not starting with a digit), `title`, `type` (`nrql`, `enum`, `string`), `default_values` (one at most unless `multi_select`; for an enum each must be an item value), `multi_select` (not for `string`), `replacement` (`default`, `identifier`, `number`, `string`), `items` (enum only, unique values), `nrql` and `account_ids` (nrql only; integers from 1 to 10^15 - 1, at most 20; no accounts means the account in use), and the three options `excluded`, `ignore_time_range`, `show_apply_action`.
+- A query refers to a variable as `{{name}}`. `check_variable_usage(nrql)` returns the names used and raises if one sits in `LIMIT`, `SINCE`, `TIMESERIES`, `COMPARE WITH`, `AS`, `OFFSET`, `SLIDE BY`, `UNTIL` or `WITH` (list from the New Relic template-variable documentation, see `docs/research/newrelic-notifications-and-nrql-reference.md`). A reference in a string literal belongs to the clause around it, so `AS '{{v}}'` is refused.
+- `check_variables_defined` requires every variable used in a widget query to be defined. The model checks raw series on construction. The emitter checks every query of a dashboard that defines variables or has raw series, and raises `CannotEmit`. A dashboard with neither (every AWS and GCP dashboard) is not checked: braces in a label or filter value there are literal text and are written as before, even though New Relic would treat `{{x}}` in a query as a variable.
+- A variable's own query may not use variables (nested variables are for some plans only, UNVERIFIED for the target account).
+
+Limits: at most 300 widgets per dashboard, 50 variables.
+
+Widget options (new, `IRWidget.options` and `IRWidget.thresholds`). Allowed per widget type, from the provider schema:
+
+| Option | Widget types | Terraform output |
+|---|---|---|
+| `unit` | all charts | `units { unit }` (1 to 40 characters, no control characters; the strings New Relic accepts are UNVERIFIED) |
+| `legend` | all charts | `legend_enabled` |
+| `y_min`, `y_max` | line, area, bar | `y_axis_left_min`, `y_axis_left_max` |
+| `y_zero` | line | `y_axis_left_zero` |
+| `thresholds` | line, table, billboard | line: `threshold { name, severity, from, to }`; table: `threshold { column_name, severity, from, to }` (the schema has no `name` on a table threshold, so the model refuses one); billboard: `critical` and `warning` set to the `from_value` |
+| `decimals` | all charts | not written (UNVERIFIED) |
+| `stacked` | bar, area | not written (UNVERIFIED) |
+
+A threshold needs `from_value`, `to_value` or both, between -10^15 and 10^15, at most 50 per widget. A billboard accepts only `critical` and `warning` thresholds with `from_value`, and only one of each (Terraform would reject a repeated attribute). Numbers are written with every digit: whole numbers as integers, others with `repr`. The enum is `ThresholdSeverity`. Severity values (`warning`, `severe`, `critical`, `success`, `unavailable`) come from the provider documentation; the provider schema does not enumerate them (UNVERIFIED).
+
+Limits and the provider.
+- Height. `Layout.height` still accepts 1 to 100, because the AWS and GCP translators clamp to 100. The provider documents 1 to 12; its schema states no limit on the attribute, and whether NerdGraph enforces 12 is UNVERIFIED. Both emitters write a taller widget at height 12 (`PROVIDER_MAX_HEIGHT`, `provider_layout`) and keep its row, column and width, so nothing overlaps; the widget below simply starts lower than the gap needs. The loss is recorded three ways: the widget gets the reason `height N clamped to 12` when it is built (so `report.md` shows it), the NerdGraph and Terraform description names the widgets (`Heights clamped to 12: title (30)`), and the IR keeps the original height.
+- NerdGraph carries variables (`DashboardInput.variables`) but not widget options or thresholds. The field names of both are UNVERIFIED (no offline schema), and the repository rule is to keep unconfirmed names out of output. Read one dashboard back in the sandbox to confirm them, then extend `nerdgraph_dashboard`.
+- UNVERIFIED: valid `units.unit` strings, `data_format` types behind `decimals`, the NerdGraph id for a stacked bar, the NerdGraph variable field names.
+- `apply` (`core/apply_dashboards.py`) replaces the account placeholder in widget queries only. An `nrql` variable with no `account_ids` is written with the placeholder, so `with_account` must replace it before such a payload is sent.
+
+Serialisation. The new fields are left out of `model_dump_json` while they hold their default (`OmitDefaults`), and load back with defaults, so IR files written before the change still load and dashboards that do not use the fields write the same bytes.
