@@ -132,3 +132,82 @@ tests, not code.
   any other code sees them.
 - Fixtures cannot show that a converted query returns data or fires; `check-dynatrace-metrics`
   against a sandbox can, and needs an approved live step.
+
+
+# Round 2: review fixes
+
+An independent reviewer proved eleven defects with snippets. Merged `integration/all-threads`
+first (the base already fixes `tests/test_extension_points.py`; my edit to it is dropped).
+
+## What changed
+
+| # | Defect | Fix | Test |
+|---|---|---|---|
+| 1 | `or(and(..), eq)` flattened to an IN that meant something else | `or` accepts only direct `eq` calls on one dimension; `and()`, `or()`, `not()` with no tests are manual | `test_converted_filters_mean_what_the_selector_says_for_many_small_trees` (over 300 generated trees against a small evaluator), `test_the_reviewers_or_of_and_is_manual`, `test_an_empty_filter_call_is_manual_not_no_filter` |
+| 2 | Threshold scaled by the unit factor under `+`, `-`, `k / metric` | Only `metric * k`, `k * metric`, `metric / k` keep the factor, `k / metric` inverts it; anything else with a unit conversion is manual | `test_multiplying_or_dividing_...`, `test_a_constant_divided_by_the_metric_inverts_the_factor`, `test_adding_to_a_scaled_metric_is_manual`, `test_a_detector_threshold_is_scaled_too` |
+| 3 | `queryOffset` 21 to 60 minutes gave a delay over New Relic's 1200 s | Cap at 20 minutes; reason, rule text and docs say 20 | `test_offsets_up_to_20_minutes_...`, `test_offsets_over_20_minutes_are_manual_...` |
+| 4 | An entity id compared with a name attribute never matched | A value shaped like an entity id on a `dt.entity.*` dimension is manual; a split by an entity dimension notes that labels change from ids to names | `test_an_entity_id_filter_is_manual`, `test_splitting_by_an_entity_dimension_says_the_labels_change`, `test_an_id_shaped_value_on_a_dimension_that_is_not_an_entity_converts` |
+| 5 | `OverflowError` on a 400-digit integer | Integers above 10^15 (thresholds) or 10^9 (counts) and numbers in text over 40 characters are refused before `float()`; `OverflowError` caught | `test_a_huge_detector_number_is_manual_not_a_crash`, `test_a_huge_number_in_a_metric_event_does_not_crash` (through `importer convert`) |
+| 6 | Generated key `A#2` could repeat a real id | `Keys` skips every key in use | `test_generated_suffixes_never_collide_with_real_ids`, `test_generated_keys_skip_every_taken_suffix` |
+| 7 | `//` accepted; scheme and path chosen by two separate checks | One trailing slash stripped once, one `fullmatch`, one result drives the scheme and the paths. A bearer token goes only to an apps host, an API token only to a live host | `test_host_patterns_refuse_every_bypass` (32 hostile addresses), `test_a_platform_token_goes_only_to_...`, `test_an_api_token_goes_only_to_...` |
+| 8 | Not-found decided by the message text | `ClassicError.status`; only status 404 on the first page falls back; a 404 on a later page is an error; no schema read at all fails the run | `test_an_error_whose_text_says_404_is_still_an_error`, `test_a_404_on_a_later_page_...`, `test_when_no_schema_can_be_read_the_run_fails`, `test_the_command_exits_1_when_nothing_could_be_read` |
+| 9 | 100,000-character page key and a `[` x 100000 body gave tracebacks | Page key capped at 2000; `InvalidURL` and `RecursionError` caught in my getter | `test_a_huge_page_key_is_an_error`, `test_a_deeply_nested_body_is_an_error_not_a_traceback`, `test_the_cli_never_shows_a_traceback_for_hostile_bodies` |
+| 10 | Informational event types became paging conditions | `INFO`, `CUSTOM_ANNOTATION`, `CUSTOM_DEPLOYMENT`, `CUSTOM_CONFIGURATION` are manual with a rule; `davisMerge` is noted | `test_informational_event_types_are_not_paging_conditions`, `test_davis_merge_is_noted_when_present` |
+| 11 | The data check ignored the condition's filters | The count uses the condition's own scope (the query is the condition's, with the select replaced by a count) | `test_a_filtered_condition_is_blind_when_only_other_rows_exist` |
+| 12 | Smaller points | Gauge note on `:rate`; `/ 0` manual; repeated `splitBy` and `by:{}` names de-duplicated in order; default `dealertingSamples` (5) not noted; empty value placeholder; booleans refused as counts; a text `enabled` is not read as enabled; bidi, zero-width and control characters removed from names and keys; PARTIAL notes for `:count`, `:median`, `:value`; remediation text no longer points inside the package | `tests/test_dynatrace_classic_round2.py` |
+| 12b | A user metric map | `IMPORTER_DYNATRACE_METRIC_MAP` names a file (same strict validation, read at each conversion) and `importer validate-dynatrace-map FILE` checks one. The built-in `convert` is in a frozen file, so an environment variable stands in for a `--metric-map` option | `test_a_user_map_is_used_...`, `test_the_validate_command_...` |
+| owner | Inventory rows must not be misread in the rate | `importer summarize-dynatrace-classic` prints the rate and, on its own line, the listed-only rows and the rate without them (19 of 85; 25 of 66) | `test_the_summary_shows_listed_only_rows_on_their_own_line` |
+
+Owner decisions applied: the classic SaaS host stays (with the tightened check above), the
+3-deviation baseline band stays and is labelled as chosen in every baseline reason, and inventory
+rows stay in the rate.
+
+## Mutation checks
+
+37 mutants of the code the review listed (host regexes loosened three ways, the slash strip, the
+header scheme, every cap on both sides, the notification allow-list, the schema allow-list, the
+length caps, the map `select` limit, the no-data timeout, the case-insensitive guard, name
+capping, the offset cap, the entity-id pattern, the `or` rule, the factor inversion, key
+uniqueness, the event-type set, the dealerting default, boolean refusal, nesting depth).
+
+| | Survived |
+|---|---|
+| After the first round-2 tests | 9 of 37 |
+| After the boundary tests added for them | 0 of 37 |
+
+The nine were: a page cap and a total page cap that allowed one extra, the schema allow-list with
+an extra entry, name capping, a key loop that stopped after one try, the detector number caps at
+their exact value, a data-check count that kept the FACET, and the entity-id guard applied to
+dimensions that are not entities. Mutants were run by a throwaway script outside the repository
+that edits one source line, runs the eight Dynatrace classic test files and restores the file.
+The first-round tests were not measured separately.
+
+## Requests for the integrator (new)
+
+- Shared `api_token`, `environment_url`, `is_plain_token` and the host patterns are now copied in
+  `sources/dynatrace/extract.py` and here; move them to `core/`.
+- `core/report.py` / `md_cell`: strip bidirectional and zero-width characters. This source removes
+  them from its own names and keys, but `md_cell` is shared.
+- `core/emit/nrql.py`: `Num` is emitted with `:g`, which loses precision above six digits, and
+  `identifier()` uses `match` with `$`, which accepts a trailing newline; use `fullmatch`.
+- `core/safe_http.py`: `decode_json` lets `RecursionError` escape for a body of nested brackets.
+  This source catches it in its own getter; fix it at the source for the Google and Grafana
+  extractors too.
+- `cli.py`: a `--metric-map PATH` option on `convert` would replace the environment variable.
+- Report: show listed-only rows on their own line (this source prints it with
+  `summarize-dynatrace-classic`).
+
+## Result
+
+Gate: `rm -rf .mypy_cache; sh scripts/improve/gate.sh` printed GATE PASSED, 2476 passed and 24
+skipped. Measure unchanged: `dynatrace-classic` 25 of 85, the others as before.
+
+## UNVERIFIED (added)
+
+- The New Relic aggregation delay limit of 1200 s is from the reviewer; it is not in the pages I
+  read.
+- The alert duration limit: New Relic pages give 2 hours for an alert event; the emitter allows 24
+  hours. A Dynatrace window of up to 60 minutes fits either.
+- The Dynatrace default of 5 for `dealertingSamples` and the default `:rate` interval of one
+  minute.
+- That an entity id always looks like `TYPE-` plus 16 hex digits.

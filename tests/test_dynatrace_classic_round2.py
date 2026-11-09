@@ -58,12 +58,12 @@ def trees(depth: int) -> list[tuple[Any, ...]]:
 def source_text(tree: tuple[Any, ...]) -> str:
     if tree[0] == "eq":
         return f'eq("{tree[1]}","{tree[2]}")'
-    return tree[0] + "(" + ",".join(source_text(t) for t in tree[1:]) + ")"
+    return str(tree[0]) + "(" + ",".join(source_text(t) for t in tree[1:]) + ")"
 
 
 def meaning(tree: tuple[Any, ...], row: Row) -> bool:
     if tree[0] == "eq":
-        return row[tree[1]] == tree[2]
+        return bool(row[tree[1]] == tree[2])
     if tree[0] == "not":
         return not meaning(tree[1], row)
     results = [meaning(t, row) for t in tree[1:]]

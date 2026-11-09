@@ -29,3 +29,15 @@
   settings path has never answered, and the shape of a masked secret, the `rule` text of the newer
   maintenance windows and the way several entity conditions combine are guesses taken from
   documentation. The list is in the proposal.
+
+## Round 2 (review fixes)
+
+| Defect | How it hid | Check that catches the class |
+|---|---|---|
+| A rewrite that flattened nested filter calls changed what a filter meant | Hand-picked examples all had the shape I expected | A generated set of over 300 small filter trees compared with a tiny evaluator: a conversion must mean what the source says or be refused |
+| A value computed for one purpose (the unit factor) applied to another (any threshold) | The tests multiplied; nothing added | Test each operator with a scaled metric, not only the one the code was written for |
+| A limit on one side (New Relic's delay) was never checked because my cap was a different number | I took the cap from the Dynatrace side | Every Dynatrace number that becomes a New Relic field is checked against the New Relic maximum, with a boundary test on both sides |
+| Two checks of the same fact (the host pattern, in two places) disagreed on `//` | A helper and its caller each stripped a slash | One function returns the kind; the scheme and the paths use that result, and a table of 32 hostile addresses tests it |
+| A decision made on message text (`returned 404`) | The server controls the text | Errors carry a status attribute; a test has a 403 whose text says 404 |
+| Tests that only fail on the far side of a boundary | A cap test with 50 pages passes if the cap is off by one | Every cap has a test at exactly the cap and one past it; 37 mutants of the caps and allow-lists must all be killed |
+| Test helpers could not be shared (`tests` is not a package) | An import of another test file failed at collection | Shared builders live in `tests/dynatrace_classic_helpers.py`, a module of its own |
