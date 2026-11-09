@@ -513,7 +513,7 @@ def extract_grafana_command(
     try:
         token = grafana_api_token()
         base = grafana_host(grafana_url(), allow_host)
-        with grafana_getter(token, base) as get:
+        with grafana_getter(token, base, allow_host=allow_host) as get:
             result = extract_grafana(get, base, out, allow_host)
     except (GrafanaError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 400)}", err=True)

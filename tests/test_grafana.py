@@ -25,6 +25,9 @@ def by_title() -> dict[str, IRMonitor]:
     return {m.name: m for m in translate(load_rules(FIXTURES / "export_alert_rules.json"))}
 
 
+NO_RANGE = object()  # leave relativeTimeRange out of the query node
+
+
 def text(m: IRMonitor) -> str:
     return " | ".join(m.reasons).lower()
 
@@ -39,24 +42,33 @@ def make(
     for_: int = 300,
     interval: int | None = 60,
     uid: str = "ds-1",
+    time_range: Any = 600,
+    instant: bool = False,
+    query_type: str = "",
+    reduce_settings: dict[str, Any] | None = None,
     **rule: Any,
 ) -> GrafanaRule:
     """A rule with the pipeline query -> reduce -> threshold."""
     model: dict[str, Any] = {"refId": "A", "expr": expr}
     if dtype:
         model["datasource"] = {"type": dtype, "uid": uid}
-    nodes: list[dict[str, Any]] = [
-        {"refId": "A", "datasourceUid": uid, "model": model, "relativeTimeRange": {"from": 600}}
-    ]
+    if instant:
+        model["instant"] = True
+    query: dict[str, Any] = {
+        "refId": "A",
+        "datasourceUid": uid,
+        "model": model,
+        "queryType": query_type,
+    }
+    if time_range is not NO_RANGE:
+        query["relativeTimeRange"] = {"from": time_range, "to": 0}
+    nodes: list[dict[str, Any]] = [query]
     source = "A"
     if reducer:
-        nodes.append(
-            {
-                "refId": "B",
-                "datasourceUid": "__expr__",
-                "model": {"type": "reduce", "expression": "A", "reducer": reducer},
-            }
-        )
+        reduce_model: dict[str, Any] = {"type": "reduce", "expression": "A", "reducer": reducer}
+        if reduce_settings:
+            reduce_model["settings"] = reduce_settings
+        nodes.append({"refId": "B", "datasourceUid": "__expr__", "model": reduce_model})
         source = "B"
     evaluator = {"type": kind, "params": [80] if params is None else params}
     nodes.append(
@@ -145,6 +157,8 @@ def test_the_cpu_gauge_becomes_an_average_by_instance() -> None:
     )
     assert (m.thresholds[0].operator, m.thresholds[0].value) == (Operator.ABOVE, 80)
     assert (m.signal.window_seconds, m.signal.aggregation_window_seconds) == (300, 60)
+    # relativeTimeRange.from is 600, but the reducer is last, so it is ignored and says so
+    assert "time range is ignored" in text(m)
     assert m.unmapped["enabled"] is False  # the rule was paused
     assert "paused" in text(m)
 
@@ -189,6 +203,10 @@ def test_the_hand_made_shapes_convert_or_stay_manual() -> None:
     queue = monitors["hm-apis-queue-depth"]
     assert nrql_for(queue) == "SELECT max(queue_depth) FROM Metric WHERE env = 'prod' FACET queue"
     assert queue.thresholds[0].operator is Operator.ABOVE_OR_EQUALS
+    # reducer max over a 600s query range: that range is the window; for (180s) rounds up to it
+    assert (queue.signal.aggregation_window_seconds, queue.signal.window_seconds) == (600, 600)
+    assert "time range is used" in text(queue)
+    assert "time range is ignored" not in text(loki)  # a Loki count takes its window from [5m]
     assert "recovery threshold" in text(queue)
     assert "unsupported" in text(monitors["hm-ruler-cloudwatch"]) or "not supported" in text(
         monitors["hm-ruler-cloudwatch"]
@@ -204,11 +222,8 @@ def test_the_hand_made_shapes_convert_or_stay_manual() -> None:
     [
         ("up_total_x", "SELECT average(up_total_x) FROM Metric"),
         ("avg(cpu)", "SELECT average(cpu) FROM Metric"),
-        ("sum(cpu)", "SELECT sum(cpu) FROM Metric"),
-        ("min(cpu)", "SELECT min(cpu) FROM Metric"),
-        ("max(cpu)", "SELECT max(cpu) FROM Metric"),
-        ("sum by (a, b) (cpu)", "SELECT sum(cpu) FROM Metric FACET a, b"),
-        ("sum(cpu) by (a)", "SELECT sum(cpu) FROM Metric FACET a"),
+        ("avg by (a, b) (cpu)", "SELECT average(cpu) FROM Metric FACET a, b"),
+        ("avg(cpu) by (a)", "SELECT average(cpu) FROM Metric FACET a"),
         ('cpu{a="x"}', "SELECT average(cpu) FROM Metric WHERE a = 'x'"),
         ('cpu{a="x",}', "SELECT average(cpu) FROM Metric WHERE a = 'x'"),
         ('cpu{a!="x"}', "SELECT average(cpu) FROM Metric WHERE a != 'x'"),
@@ -238,8 +253,165 @@ def test_a_bare_selector_takes_its_aggregation_from_the_reducer(reducer: str, wo
     assert nrql_for(one(make("cpu", reducer=reducer))) == f"SELECT {word}(cpu) FROM Metric"  # noqa: S608 - expected text, not SQL
 
 
-def test_a_promql_aggregation_wins_over_the_reducer() -> None:
-    assert nrql_for(one(make("sum(cpu)", reducer="mean"))) == "SELECT sum(cpu) FROM Metric"
+@pytest.mark.parametrize(
+    ("expr", "reducer"),
+    [
+        ("sum(cpu)", "mean"),
+        ("sum(cpu)", "last"),
+        ("sum(cpu)", "sum"),
+        ("sum by (a) (cpu)", "sum"),
+        ("min(cpu)", "max"),
+        ("min(cpu)", "last"),
+        ("max(cpu)", "mean"),
+        ("max(cpu)", "last"),
+        ("avg(cpu)", "max"),
+        ("avg(cpu)", "min"),
+        ("avg(cpu)", "sum"),
+    ],
+)
+def test_an_across_series_aggregate_that_does_not_match_the_reducer_is_manual(
+    expr: str, reducer: str
+) -> None:
+    m = one(make(expr, reducer=reducer))
+    assert m.confidence is Confidence.MANUAL
+    assert "cannot be one new relic aggregation" in text(m) and steps_for(m.reasons)
+
+
+@pytest.mark.parametrize(
+    ("expr", "reducer", "nrql"),
+    [
+        ("avg(cpu)", "last", "SELECT average(cpu) FROM Metric"),
+        ("avg(cpu)", "mean", "SELECT average(cpu) FROM Metric"),
+        ("max(cpu)", "max", "SELECT max(cpu) FROM Metric"),
+        ("min by (a) (cpu)", "min", "SELECT min(cpu) FROM Metric FACET a"),
+    ],
+)
+def test_an_aggregate_that_one_new_relic_aggregation_expresses_exactly_converts(
+    expr: str, reducer: str, nrql: str
+) -> None:
+    m = one(make(expr, reducer=reducer))
+    assert m.confidence is Confidence.APPROXIMATE, m.reasons
+    assert nrql_for(m) == nrql
+
+
+def test_an_instant_query_makes_the_reducer_irrelevant_so_max_over_max_needs_a_range() -> None:
+    assert one(make("max(cpu)", reducer="max", instant=True)).confidence is Confidence.MANUAL
+
+
+@pytest.mark.parametrize(
+    ("seconds", "window"), [(60, 60), (600, 600), (3600, 3600), (90, 120), (30, 60)]
+)
+def test_a_reducer_over_time_uses_the_query_time_range_as_the_window(
+    seconds: int, window: int
+) -> None:
+    m = one(make("cpu", reducer="max", time_range=seconds, for_=0))
+    assert m.signal.aggregation_window_seconds == window
+    assert "time range is used" in text(m)
+
+
+def test_the_range_changes_the_window_only_for_a_reducer_that_looks_back() -> None:
+    last = one(make("cpu", reducer="last", time_range=600, for_=0))
+    assert last.signal.aggregation_window_seconds == 60
+    assert "time range is ignored" in text(last)
+    mean = one(make("cpu", reducer="mean", time_range=600, for_=0))
+    assert mean.signal.aggregation_window_seconds == 600
+    assert one(make("cpu", reducer=None, time_range=600, for_=0)).signal.window_seconds == 60
+
+
+def test_an_instant_query_ignores_the_range_whatever_the_reducer() -> None:
+    m = one(make("cpu", reducer="max", time_range=600, for_=0, instant=True))
+    assert m.signal.aggregation_window_seconds == 60 and "time range is ignored" in text(m)
+
+
+def test_the_pending_period_is_whole_range_windows() -> None:
+    m = one(make("cpu", reducer="max", time_range=600, for_=900))
+    assert (m.signal.aggregation_window_seconds, m.signal.window_seconds) == (600, 1200)
+
+
+@pytest.mark.parametrize(
+    ("seconds", "fragment"),
+    [
+        (7200, "grafana aggregation window"),
+        (3601, "grafana aggregation window"),
+        (0, "grafana query time range"),
+        (-60, "grafana query time range"),
+        (None, "grafana query time range"),
+        ("600", "grafana query time range"),
+        (True, "grafana query time range"),
+        (NO_RANGE, "grafana query time range"),
+    ],
+)
+def test_a_range_that_cannot_be_the_window_is_manual(seconds: Any, fragment: str) -> None:
+    m = one(make("cpu", reducer="max", time_range=seconds))
+    assert m.confidence is Confidence.MANUAL and fragment in text(m) and steps_for(m.reasons)
+
+
+def test_a_missing_range_does_not_matter_for_the_last_reducer() -> None:
+    m = one(make("cpu", reducer="last", time_range=NO_RANGE))
+    assert m.confidence is Confidence.APPROXIMATE
+
+
+@pytest.mark.parametrize("reducer", ["max", "min", "sum", "mean"])
+def test_a_loki_range_query_reduced_by_anything_but_last_is_manual(reducer: str) -> None:
+    m = one(make('sum(count_over_time({a="1"}[5m]))', dtype="loki", reducer=reducer))
+    assert m.confidence is Confidence.MANUAL and "logql range query" in text(m)
+    assert steps_for(m.reasons)
+
+
+@pytest.mark.parametrize("reducer", ["max", "min", "sum", "mean", "last"])
+def test_an_instant_loki_query_converts_whatever_the_reducer(reducer: str) -> None:
+    for kwargs in ({"query_type": "instant"}, {"instant": True}):
+        m = one(make('sum(count_over_time({a="1"}[5m]))', dtype="loki", reducer=reducer, **kwargs))
+        assert m.confidence is Confidence.APPROXIMATE
+
+
+def test_a_loki_range_query_with_last_converts() -> None:
+    m = one(make('sum(count_over_time({a="1"}[5m]))', dtype="loki", reducer="last"))
+    assert m.confidence is Confidence.APPROXIMATE
+
+
+@pytest.mark.parametrize(
+    ("settings", "converts", "fragment"),
+    [
+        (None, True, ""),
+        ({"mode": ""}, True, ""),
+        ({"mode": "strict"}, True, ""),
+        ({"mode": "dropNN"}, True, "drops non-numeric"),
+        ({"mode": "replaceNN", "replaceWithValue": 0}, False, "grafana reduce mode"),
+        ({"mode": "weird"}, False, "grafana reduce mode"),
+    ],
+)
+def test_the_reduce_mode_is_noted_or_makes_the_rule_manual(
+    settings: dict[str, Any] | None, converts: bool, fragment: str
+) -> None:
+    m = one(make("cpu", reduce_settings=settings))
+    assert (m.confidence is Confidence.APPROXIMATE) is converts
+    assert fragment in text(m)
+    if not converts:
+        assert steps_for(m.reasons)
+
+
+def test_a_paused_flag_the_importer_does_not_understand_is_treated_as_paused_and_noted() -> None:
+    m = one(make("cpu", is_paused=True, paused_unknown=True))
+    assert m.unmapped == {"enabled": False} and "paused flag" in text(m)
+
+
+def test_a_rule_that_could_not_be_read_is_manual_with_a_fixed_reason() -> None:
+    m = one(GrafanaRule(title="x'; drop", unreadable=True))
+    assert m.confidence is Confidence.MANUAL
+    assert m.reasons == ["grafana rule could not be read (a field has an unexpected type or value)"]
+    assert steps_for(m.reasons)
+
+
+def test_two_rules_with_one_uid_and_different_content_keep_distinct_keys_and_say_so() -> None:
+    a, b = make("cpu", duplicate_uid=True), make("mem", duplicate_uid=True)
+    first, second = translate([a, b])
+    assert first.source_key != second.source_key and second.source_key.endswith("#2")
+    assert "same uid" in text(first) and "same uid" in text(second)
+
+
+def test_identical_copies_that_were_merged_are_counted_in_a_note() -> None:
+    assert "2 identical copies" in text(one(make("cpu", copies_merged=2)))
 
 
 @pytest.mark.parametrize(

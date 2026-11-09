@@ -51,6 +51,24 @@ The 17 real sample rules:
 | ckg-prom-topk-manual | manual | `topk` |
 | ckg-prom-up-zero | manual | comparison operator in the query (`== 0`) |
 
+## Round 2 (review fixes)
+
+- Across-series aggregate and reducer are no longer mixed: only avg with last or mean, max with max,
+  min with min (and bare selectors) convert; `sum` and every mismatch is manual. Owner to review:
+  I kept max/max and min/min as convertible because they are exact; the reviewer asked for every
+  sum, min and max aggregator to be manual.
+- `relativeTimeRange.from` is the window for reducers that look back; reducer last and instant
+  queries ignore it (noted). `model.instant: true` counts as instant as well as `queryType`
+  "instant"; that is my choice, not the reviewer's.
+- Loki: only reducer last, or an instant query, converts.
+- Malformed rules become manual items instead of stopping the load; too-deep nesting is a clean error.
+- `isPaused` is parsed strictly; unknown values are treated as paused and noted.
+- Same uid and identical content is merged (counted); same uid and different content both survive.
+  Because the key includes the folder, an export (folder title) and a provisioning read (folder uid)
+  of one rule count as two rules.
+- Extractor host checks tightened; `TagFilter` match fields are left out of saved IR when unused,
+  and a test proves the IR of the other sources is byte-identical to before.
+
 ## Changes to shared files
 
 - `src/importer/core/ir.py` and `core/emit/nrql.py`: `TagFilter` gains `negate`, `values` and

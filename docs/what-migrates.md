@@ -240,10 +240,27 @@ the ruler and `/apis` shapes are hand-made from the documentation.
     (LIKE). Names ending `_total`, `_count`, `_sum` or `_bucket` look like counters and stay manual.
   - a Loki `count_over_time({k="v"} |= "text" [5m])`, optionally in `sum (by ...)`. It becomes a
     count of `Log` events with the labels and `message LIKE` filters. The range is the window.
-- **Window and pending period:** the aggregation window is the group's evaluation interval (60
-  seconds when the read has none), or the Loki range, rounded up to whole minutes and at most one
-  hour. The pending period (`for`) becomes the threshold duration, rounded up to whole windows and
-  at most 24 hours; New Relic restarts the count when a window has no data, so it may differ.
+- **Aggregation layers:** Grafana aggregates across series (the PromQL `avg`, `sum`, `min`,
+  `max`) and then reduces over time (the reduce node). One New Relic aggregation does both only
+  when they are the same operation, so these convert: `avg` with reducer last or mean, `max` with
+  reducer max, `min` with reducer min, and a bare selector with any of last, mean, min, max, sum.
+  Any other pair (for example `sum(x)` with any reducer, or `max(x)` with mean) stays manual, with
+  steps; a plain `sum` would add every sample of every series in the window.
+- **Window:** a reducer that looks back (mean, min, max, sum, on a range query) uses the query's
+  `relativeTimeRange.from` as the aggregation window, in whole minutes from 60 seconds to one hour;
+  a missing, zero or longer range is manual. Reducer last, and any instant query, ignore the range
+  and use the group's evaluation interval (60 seconds when the read has none); the rule says which
+  happened. A Loki count takes its window from the `[5m]` range, and only reducer last (or an
+  instant query) converts. Windows are rounded up to whole minutes.
+- **Pending period:** the pending period (`for`) becomes the threshold duration, rounded up to
+  whole windows and at most 24 hours; New Relic restarts the count when a window has no data, so it
+  may differ. Reduce mode `dropNN` is noted; `replaceNN` and unknown modes stay manual.
+- **Reading problems:** a rule with a malformed field (a duration that is not like `5m`, a query
+  node that is not an object) is kept as a manual item with a fixed reason and the other rules
+  load. `isPaused` is read as a boolean ("true" and "false" are accepted); any other value is
+  treated as paused and noted. Identical copies of a rule are merged; two rules with one uid and
+  different content both stay, with distinct keys and a note. A file nested too deeply is refused
+  with a message.
 - **Notes on a converted rule:** the metric must already reach New Relic (Prometheus remote write
   or OTLP) and its New Relic name and label attributes are not confirmed. A rule without a data
   source type in its query has the type inferred from the data source uid or the query shape, and

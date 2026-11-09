@@ -7,6 +7,13 @@ New entries go on top.
 
 | Defect | How it hid | Check that catches the class |
 |---|---|---|
+| Aggregation layers mixed up: a PromQL aggregate across series was used as the New Relic aggregation over time, and the Grafana reducer was ignored | The query looked right and the numbers only differ with the scrape interval and the number of series | A table of the (aggregate, reducer) pairs that one NRQL aggregation expresses exactly; every other pair is manual. Tests per pair |
+| A query time range that the reducer depends on was never read | Every sample rule used reducer last, which does not need it | Window tests assert what happens to `relativeTimeRange` in every case, and the note says whether it was used or ignored |
+| A new field on a shared model changed the saved output of every source | No test compared saved IR | `ir-before-grafana.json` holds hashes of the saved IR of the older sources; a test converts their fixtures and compares |
+| One malformed rule stopped the whole load | Fixtures were all well formed | Per-rule validation; tests with each malformed field and with 100,000-deep nesting through the CLI |
+
+| Defect | How it hid | Check that catches the class |
+|---|---|---|
 | New source's reasons were answered by another source's loose rule (`reducer`, `over New Relic's limit`, `valid New Relic attribute name`) | Each reason still got some guidance, just the wrong text | `test_a_specific_rule_is_not_shadowed_by_a_broader_one` lists an example reason per Grafana rule. Next: one generic test over all sources |
 | A new rule could claim another source's reason | Only visible by reading the output | `test_the_grafana_rules_do_not_claim_reasons_of_other_sources` (uses a saved list of the other sources' reasons) |
 | New taxonomy wording could move other sources' categories | Categories only show in the measure | `test_the_categories_of_the_other_sources_are_unchanged` against `tests/fixtures/taxonomy_before_grafana.json` |

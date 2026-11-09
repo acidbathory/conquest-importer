@@ -148,7 +148,9 @@ def test_durations(text: Any, seconds: int) -> None:
     assert parse_duration(text) == seconds
 
 
-@pytest.mark.parametrize("text", ["abc", "5x", "-5m", "5", "1.5m", True, [], "1m 30s", "m5"])
+@pytest.mark.parametrize(
+    "text", ["500ms", "1s500ms", "abc", "5x", "-5m", "5", "1.5m", True, [], "1m 30s", "m5"]
+)
 def test_a_bad_duration_is_refused(text: Any) -> None:
     with pytest.raises(ValueError, match="duration"):
         parse_duration(text)

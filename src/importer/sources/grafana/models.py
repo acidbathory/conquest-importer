@@ -9,6 +9,7 @@ Shapes follow docs/research/grafana-native-coverage.md. The provisioning and exp
 checked against a live stack (Grafana 13.4); the ruler and /apis shapes were not.
 """
 
+import hashlib
 import json
 import re
 from collections.abc import Callable
@@ -22,8 +23,8 @@ from importer.core.ids import MAX_INPUT_BYTES
 MAX_FILES = 10_000
 MAX_RULES = 50_000
 MAX_DEPTH = 6
-DURATION_PART = re.compile(r"(\d+)(ms|s|m|h|d|w|y)")
-UNIT_SECONDS = {"ms": 0, "s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800, "y": 31536000}
+DURATION_PART = re.compile(r"(\d+)(s|m|h|d|w|y)")
+UNIT_SECONDS = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800, "y": 31536000}
 STATES = {  # lower case spelling -> the name Grafana documents
     "nodata": "NoData",
     "ok": "OK",
@@ -32,6 +33,7 @@ STATES = {  # lower case spelling -> the name Grafana documents
     "keeplast": "KeepLast",
     "error": "Error",
 }
+NESTING_ERROR = "a JSON file is nested too deeply to read; pass a smaller or flatter export"
 SHAPE_ERROR = (
     "expected Grafana alert rules: a list of rules, an export with groups, a ruler response, "
     "or an /apis rule list"
@@ -71,6 +73,10 @@ class GrafanaRule(BaseModel):
     notification_settings: dict[str, Any] | None = None
     datasource_managed: bool = False
     shape: str = ""
+    unreadable: bool = False  # a field had an unexpected type or value; nothing else is trusted
+    paused_unknown: bool = False  # isPaused had a value that is not a boolean; treated as paused
+    duplicate_uid: bool = False  # another rule has this uid but different content
+    copies_merged: int = 0  # identical copies of this rule that were read and dropped
 
 
 def parse_duration(value: Any) -> int:
@@ -89,6 +95,16 @@ def parse_duration(value: Any) -> int:
 def _pick(raw: dict[str, Any], *names: str) -> Any:
     """The first of several spellings of a field that is present."""
     return next((raw[n] for n in names if n in raw), None)
+
+
+def _paused(value: Any) -> tuple[bool, bool]:
+    """(paused, value not understood). Only real booleans and "true"/"false" are understood;
+    anything else counts as paused, because a condition created disabled is the safe side."""
+    if value is None or isinstance(value, bool):
+        return bool(value), False
+    if isinstance(value, str) and value.lower() in ("true", "false"):
+        return value.lower() == "true", False
+    return True, True
 
 
 def _state(value: Any) -> str:
@@ -120,6 +136,7 @@ class _Context(BaseModel):
 
 def _common(raw: dict[str, Any], ctx: _Context, shape: str) -> dict[str, Any]:
     """Fields every spelling carries once the field names are unified."""
+    paused, paused_unknown = _paused(_pick(raw, "isPaused", "is_paused", "paused"))
     return {
         "title": str(_pick(raw, "title", "alert", "record") or ""),
         "uid": str(raw.get("uid") or ""),
@@ -132,7 +149,8 @@ def _common(raw: dict[str, Any], ctx: _Context, shape: str) -> dict[str, Any]:
         "annotations": _mapping(raw.get("annotations")),
         "no_data_state": _state(_pick(raw, "noDataState", "no_data_state")),
         "exec_err_state": _state(_pick(raw, "execErrState", "exec_err_state")),
-        "is_paused": bool(_pick(raw, "isPaused", "is_paused", "paused")),
+        "is_paused": paused,
+        "paused_unknown": paused_unknown,
         "condition": str(raw.get("condition") or ""),
         "data": _nodes(raw.get("data")),
         "notification_settings": _pick(raw, "notification_settings", "notificationSettings"),
@@ -202,11 +220,26 @@ RULE_SHAPES: list[tuple[Callable[[dict[str, Any]], bool], Callable[..., GrafanaR
 ]
 
 
+def _text(value: Any) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def _unreadable(raw: dict[str, Any], ctx: _Context) -> GrafanaRule:
+    """A stand-in for a rule that failed validation: only plain text fields are kept."""
+    inner = _mapping(raw.get("grafana_alert"))
+    title = _text(_pick(raw, "title", "alert") or inner.get("title"))
+    uid = _text(raw.get("uid") or inner.get("uid"))
+    return GrafanaRule(title=title, uid=uid, folder=ctx.folder, group=ctx.group, unreadable=True)
+
+
 def _rule(raw: Any, ctx: _Context) -> GrafanaRule:
     if isinstance(raw, dict):
         for matches, normalise in RULE_SHAPES:
             if matches(raw):
-                return normalise(raw, ctx)
+                try:
+                    return normalise(raw, ctx)
+                except (ValueError, TypeError):  # one bad rule must not stop the others
+                    return _unreadable(raw, ctx)
     raise ValueError(SHAPE_ERROR)
 
 
@@ -239,7 +272,7 @@ def _collect_item(item: Any, folder: str, depth: int) -> list[GrafanaRule]:
         raise ValueError(SHAPE_ERROR)
     if isinstance(item.get("groups"), list):  # export envelope
         return [r for g in item["groups"] for r in _group_rules(_mapping(g), folder)]
-    if isinstance(item.get("rules"), list) and "name" in item:  # one group
+    if isinstance(item.get("rules"), list):  # one group; without a name, a plain rule list
         return _group_rules(item, folder)
     if isinstance(item.get("items"), list):  # /apis list
         return [_rule(i, _Context()) for i in item["items"]]
@@ -261,19 +294,57 @@ def _files(path: Path) -> list[Path]:
     return found
 
 
+def _content_key(rule: GrafanaRule) -> tuple[Any, ...]:
+    """What makes two rules with one uid the same rule."""
+    try:
+        nodes = [n.model_dump(mode="json") for n in rule.data]
+        data = json.dumps(nodes, sort_keys=True, default=str)
+    except (ValueError, RecursionError):  # pydantic reports too deep a structure as a ValueError
+        raise ValueError(NESTING_ERROR) from None
+    digest = hashlib.sha256(data.encode()).hexdigest()
+    return (rule.uid, rule.title, rule.folder, rule.group, rule.for_seconds, digest)
+
+
+def _merge(rules: list[GrafanaRule]) -> list[GrafanaRule]:
+    """Drop identical copies of a rule (counted on the one kept); flag a uid used twice."""
+    kept: list[GrafanaRule] = []
+    by_key: dict[tuple[Any, ...], GrafanaRule] = {}
+    by_uid: dict[str, list[GrafanaRule]] = {}
+    for rule in rules:
+        if not rule.uid or rule.unreadable:
+            kept.append(rule)
+            continue
+        key = _content_key(rule)
+        if key in by_key:
+            by_key[key].copies_merged += 1
+            continue
+        by_key[key] = rule
+        by_uid.setdefault(rule.uid, []).append(rule)
+        kept.append(rule)
+    for same in by_uid.values():
+        if len(same) > 1:
+            for rule in same:
+                rule.duplicate_uid = True
+    return kept
+
+
 def load_rules(path: Path) -> list[GrafanaRule]:
-    """Read alert rules from a file, an API response or a folder; the same uid is kept once."""
+    """Read alert rules from a file, an API response or a folder.
+
+    A rule that fails validation is kept as an unreadable stand-in. Identical copies of a rule
+    (the same rule read two ways) are merged; rules that share a uid but differ all survive.
+    """
     rules: list[GrafanaRule] = []
-    seen: set[str] = set()
     for file in _files(path):
         if file.stat().st_size > MAX_INPUT_BYTES:
             raise ValueError(f"{file} is larger than {MAX_INPUT_BYTES // (1024 * 1024)} MB")
-        for rule in _collect(json.loads(file.read_text())):
-            if rule.uid:
-                if rule.uid in seen:
-                    continue
-                seen.add(rule.uid)
-            rules.append(rule)
+        try:
+            rules += _collect(json.loads(file.read_text()))
+        except RecursionError:
+            raise ValueError(NESTING_ERROR) from None
         if len(rules) > MAX_RULES:
             raise ValueError(f"more than {MAX_RULES} alert rules; pass a smaller input")
-    return rules
+    try:
+        return _merge(rules)
+    except RecursionError:
+        raise ValueError(NESTING_ERROR) from None

@@ -16,6 +16,57 @@ NRQL_LIMITS = (
 
 RULES: list[Rule] = [
     (
+        re.compile(r"^grafana rule could not be read"),
+        "Grafana rule not readable",
+        [
+            "A field of this rule has a type or value the importer does not accept (a duration "
+            "that is not like 5m, a query node that is not an object, and so on). Open the rule "
+            "in Grafana, check it, and recreate the condition by hand or export the rule again.",
+        ],
+    ),
+    (
+        re.compile(r"^grafana query time range"),
+        "Grafana query time range",
+        [
+            "The reducer looks back over the query's time range, but the rule does not give a "
+            "usable range. Read the range in the Grafana rule editor, then create the New "
+            "Relic condition with that aggregation window (60 seconds to one hour).",
+        ],
+    ),
+    (
+        re.compile(r"^promql aggregation"),
+        "PromQL aggregation across series",
+        [
+            "Grafana first combines the series (sum, min, max or avg across series) and then "
+            "reduces that result over time. A New Relic aggregation does one or the other, so "
+            "sum() over a window would add every sample of every series. Decide which you "
+            "mean. For a total across series at one moment, use a NRQL query with "
+            "`sum(metric)` in a window the size of one scrape and check it against the "
+            "Grafana panel. For the highest or lowest value over time, use `max()` or `min()` "
+            "with the matching reducer.",
+        ],
+    ),
+    (
+        re.compile(r"^logql range query"),
+        "LogQL range query reducer",
+        [
+            "A range query returns a count for each step, and the rule reduces those counts "
+            "with min, max, mean or sum. New Relic counts one window at a time. Switch the "
+            "rule's query to an instant query in Grafana, or create the condition by hand with "
+            "a window and threshold that match what the reducer measured.",
+        ],
+    ),
+    (
+        re.compile(r"^grafana reduce mode"),
+        "Grafana reduce mode",
+        [
+            "The reduce node replaces non-numeric values (for example NaN or no data) with a "
+            "number, so the rule can fire or stay quiet where New Relic would see no data. "
+            "Decide what an empty window should mean, then use gap filling or loss of "
+            "signal on the New Relic condition to match.",
+        ],
+    ),
+    (
         re.compile(r"^recording rule:"),
         "Grafana recording rule",
         [

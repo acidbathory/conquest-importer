@@ -95,6 +95,21 @@ OTHER_DATASOURCES = {
 UID_HINTS = (("loki", "loki"), ("logs", "loki"), ("prom", "prometheus"), ("mimir", "prometheus"))
 
 # manual reasons
+R_UNREADABLE = "grafana rule could not be read (a field has an unexpected type or value)"
+R_RANGE_MISSING = (
+    "grafana query time range is missing or not a positive whole number of seconds, so the "
+    "window to reduce over is unknown"
+)
+R_AGG_MIX = (
+    "promql aggregation {agg}() across series with reduce function {reducer} cannot be one New "
+    "Relic aggregation"
+)
+R_LOKI_REDUCER = (
+    "logql range query reduced by something other than last cannot be one New Relic count"
+)
+R_REDUCE_MODE = (
+    "grafana reduce mode replaces or rejects non-numeric values, which changes when the rule fires"
+)
 R_RECORD = "recording rule: it writes a metric and has no alert condition"
 R_DS_MANAGED = "data source-managed rule (Mimir or Loki ruler), not a Grafana-managed rule"
 R_NO_NODE = "grafana pipeline: the condition does not point at a node of the rule"
@@ -175,9 +190,26 @@ N_INTERVAL_UNKNOWN = (
 N_ROUNDED_WINDOW = (
     "the window of {seconds}s is rounded up to a whole minute, {window}s, so it may differ"
 )
+N_RANGE_USED = (
+    "the query time range is used as the aggregation window, because the reducer looks back over "
+    "it; New Relic windows are separate, so it may differ"
+)
+N_RANGE_IGNORED = (
+    "the query time range is ignored, because the rule takes only the last value; the window is "
+    "the evaluation interval, so it may differ"
+)
+N_DROPNN = (
+    "the reduce mode drops non-numeric values; New Relic ignores empty values too, so it may differ"
+)
+N_PAUSED_UNKNOWN = (
+    "the paused flag has a value the importer does not understand, so the rule is treated as "
+    "paused and the condition is created disabled; it must be confirmed before you enable it"
+)
+N_COPIES = "{count} identical copies of this rule were collapsed into the one kept"
+N_DUP_UID = "another rule has the same uid but its content differs from this one, so both were kept"
 N_LOKI_WINDOW = (
-    "Grafana counts the last {range}s at every evaluation; New Relic counts separate {window}s "
-    "windows, so it may differ"
+    "Grafana looks at the last {range}s at every evaluation; New Relic evaluates separate "
+    "{window}s windows, so it may differ"
 )
 N_COUNT_EMPTY = (
     "a window with no logs is no row in New Relic, not a count of 0, so a below or equals "
@@ -364,6 +396,19 @@ PROM_FEATURES: list[tuple[re.Pattern[str], str]] = [
 PROM_SELECTOR = re.compile(rf"\s*([A-Za-z_:][A-Za-z0-9_:]*)\s*(?:\{{({BODY})\}})?\s*")
 
 
+@dataclass(frozen=True)
+class _Ctx:
+    """What the data source handlers need to know about the rule around the query."""
+
+    reducer: str  # the Grafana reducer (last when the rule has none)
+    instant: bool  # an instant query has one point, so the reducer cannot look back
+    range_seconds: int | None  # relativeTimeRange.from, when it is a positive whole number
+
+
+# an across-series aggregate and a reducer that one New Relic aggregation expresses exactly
+EXACT_AGGREGATES = frozenset({("avg", "last"), ("avg", "mean"), ("max", "max"), ("min", "min")})
+
+
 @dataclass
 class _Built:
     kind: SignalKind
@@ -373,7 +418,12 @@ class _Built:
     notes: list[str] = field(default_factory=list)
 
 
-def _prometheus(expr: str, reducer: str) -> _Built:
+def _looked_back(ctx: _Ctx) -> str:
+    """The reducer that really applies: an instant query has one point, so it is `last`."""
+    return "last" if ctx.instant else ctx.reducer
+
+
+def _prometheus(expr: str, ctx: _Ctx) -> _Built:
     if len(expr) > MAX_EXPRESSION:
         raise _Fail(PROM_NOT_SIMPLE)
     feature = _first_feature(_skeleton(expr), PROM_FEATURES)
@@ -392,13 +442,26 @@ def _prometheus(expr: str, reducer: str) -> _Built:
         raise _Fail(PROM_COUNTER)
     attribute = _attribute(name)
     notes = [N_METRIC]
+    reducer = _looked_back(ctx)
     if aggregator:
+        # an aggregate across series, then a reduce over time, is two layers; one NRQL
+        # aggregation covers both only when the two are the same operation
+        if (aggregator, reducer) not in EXACT_AGGREGATES:
+            raise _Fail(R_AGG_MIX.format(agg=aggregator, reducer=reducer))
         aggregation = PROM_AGGREGATIONS[aggregator]
     else:
         aggregation = REDUCERS[reducer]
         notes.append(N_PER_SERIES)
         if reducer == "last":
             notes.append(N_LAST)
+    fixed: int | None = None
+    if reducer == "last":
+        notes.append(N_RANGE_IGNORED)
+    elif ctx.range_seconds is None:
+        raise _Fail(R_RANGE_MISSING)
+    else:
+        fixed = ctx.range_seconds
+        notes.append(N_RANGE_USED)
     if any(m.negate for m in matches):
         notes.append(N_NEGATION)
     term = MetricTerm(
@@ -412,7 +475,7 @@ def _prometheus(expr: str, reducer: str) -> _Built:
         scope=[_tag_filter(m) for m in matches],
         group_by=[_attribute(g) for g in group_by],
     )
-    return _Built(SignalKind.METRIC, None, metric=metric, notes=notes)
+    return _Built(SignalKind.METRIC, fixed, metric=metric, notes=notes)
 
 
 # --- Loki ---
@@ -451,7 +514,10 @@ def _line_filter(op: str, raw: str) -> CountFilter:
     return CountFilter(key="message", value=f"*{text}*", negate=op in ("!=", "!~"), wildcard=True)
 
 
-def _loki(expr: str, reducer: str) -> _Built:  # noqa: ARG001 - an instant count has one point
+def _loki(expr: str, ctx: _Ctx) -> _Built:
+    if ctx.reducer != "last" and not ctx.instant:
+        # a range query returns a series of counts; min, max, mean or sum of them is not a count
+        raise _Fail(R_LOKI_REDUCER)
     if len(expr) > MAX_EXPRESSION:
         raise _Fail(LOKI_NOT_SIMPLE)
     feature = _first_feature(_skeleton(expr), LOKI_FEATURES)
@@ -480,7 +546,7 @@ def _loki(expr: str, reducer: str) -> _Built:  # noqa: ARG001 - an instant count
 
 
 # the data source type decides how the query is read
-HANDLERS: dict[str, Callable[[str, str], _Built]] = {
+HANDLERS: dict[str, Callable[[str, _Ctx], _Built]] = {
     "prometheus": _prometheus,
     "loki": _loki,
 }
@@ -520,8 +586,8 @@ def _check_expressions(rule: GrafanaRule) -> list[GfNode]:
     return queries
 
 
-def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, GfNode]:
-    """The query, its reducer and the threshold node of a query -> [reduce] -> threshold rule."""
+def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, GfNode, list[str]]:
+    """Query, reducer, threshold node and notes of a query -> [reduce] -> threshold rule."""
     _check_expressions(rule)
     nodes = {n.refId: n for n in rule.data}
     condition = nodes.get(rule.condition)
@@ -532,9 +598,15 @@ def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, GfNode]:
     used = [condition]
     step = nodes.get(str(condition.model.get("expression")))
     reducer = "last"
+    notes: list[str] = []
     if step is not None and _expression_type(step) == "reduce":
         used.append(step)
         reducer = str(step.model.get("reducer", "")).lower()
+        mode = str(_mapping(step.model.get("settings")).get("mode") or "").lower()
+        if mode == "dropnn":
+            notes.append(N_DROPNN)
+        elif mode not in ("", "strict"):
+            raise _Fail(R_REDUCE_MODE)
         step = nodes.get(str(step.model.get("expression")))
     if step is None or _expression_type(step):
         raise _Fail(R_SHAPE)
@@ -543,7 +615,7 @@ def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, GfNode]:
         raise _Fail(R_SHAPE)
     if reducer not in REDUCERS:
         raise _Fail(R_REDUCER)
-    return step, reducer, condition
+    return step, reducer, condition, notes
 
 
 def _threshold(node: GfNode) -> tuple[Threshold, bool]:
@@ -586,12 +658,23 @@ def _datasource_type(node: GfNode) -> tuple[str, bool]:
     return ("loki" if re.search(r"(?<![\w:])\{", flat) else "prometheus"), True
 
 
+def _instant(query: GfNode) -> bool:
+    return query.queryType == "instant" or query.model.get("instant") is True
+
+
+def _range_seconds(query: GfNode) -> int | None:
+    seconds = query.relativeTimeRange.get("from")
+    ok = isinstance(seconds, int) and not isinstance(seconds, bool) and seconds > 0
+    return seconds if ok else None
+
+
 def _built(query: GfNode, reducer: str) -> tuple[_Built, bool]:
     kind, inferred = _datasource_type(query)
     handler = HANDLERS.get(kind)
     if handler is None:
         raise _Fail(R_DATASOURCE.format(label=OTHER_DATASOURCES.get(kind, "unknown")))
-    return handler(str(query.model.get("expr", "")), reducer), inferred
+    ctx = _Ctx(reducer, _instant(query), _range_seconds(query))
+    return handler(str(query.model.get("expr", "")), ctx), inferred
 
 
 # --- windows and states ---
@@ -654,17 +737,19 @@ def _text(value: Any) -> str:
 
 
 def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
+    if rule.unreadable:
+        raise _Fail(R_UNREADABLE)
     if rule.record is not None:
         raise _Fail(R_RECORD)
     if rule.datasource_managed:
         raise _Fail(R_DS_MANAGED)
-    query, reducer, threshold_node = _pipeline(rule)
+    query, reducer, threshold_node, pipeline_notes = _pipeline(rule)
     threshold, recovery = _threshold(threshold_node)
     built, inferred = _built(query, reducer)
     window, duration, window_notes = _windows(rule, built.window)
     no_data, state_notes = _states(rule, duration)
     notes = [N_INFERRED] if inferred else []
-    notes += built.notes
+    notes += built.notes + pipeline_notes
     if built.kind is SignalKind.LOG and threshold.operator in EMPTY_SENSITIVE:
         notes.append(N_COUNT_EMPTY)
     notes += window_notes
@@ -674,7 +759,11 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
         notes.append(N_KEEP_FIRING)
     notes += state_notes
     if rule.is_paused:
-        notes.insert(0, N_PAUSED)
+        notes.insert(0, N_PAUSED_UNKNOWN if rule.paused_unknown else N_PAUSED)
+    if rule.duplicate_uid:
+        notes.append(N_DUP_UID)
+    if rule.copies_merged:
+        notes.append(N_COPIES.format(count=rule.copies_merged))
     notes.append(N_ROUTING)
     annotations = rule.annotations
     message = _text(annotations.get("description")) or _text(annotations.get("summary"))

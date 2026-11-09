@@ -36,7 +36,14 @@ CUSTOM_HOST = re.compile(
     r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?::\d{1,5})?"
 )
 IP_LIKE = re.compile(r"\d+(?:\.\d+){3}(?::\d+)?")
-BARE_BASE = re.compile(r"https://[a-z0-9.-]+(?::\d{1,5})?")
+NUMERIC_LABEL = re.compile(
+    r"[0-9]+|0x[0-9a-f]*"
+)  # a final label like this is an address in disguise
+INTERNAL_SUFFIXES = (".internal", ".local", ".localhost")
+ALLOW_HOST_HELP = (
+    "--allow-host must be a plain public host name like grafana.example.com (lowercase ASCII, "
+    "port 443 only, not an address, .internal, .local or .localhost)"
+)
 BEARER = re.compile(r"Bearer\s+\S+", re.IGNORECASE)
 TOKEN_LIKE = re.compile(r"gl(?:sa|c|cp)_[A-Za-z0-9_=.-]+")
 TYPE_NAME = re.compile(r"[a-z0-9_-]{1,40}")
@@ -92,18 +99,32 @@ def grafana_url() -> str:
     return os.environ.get("GRAFANA_URL", "").strip()
 
 
+def _check_allow_host(allow_host: str) -> str:
+    """The allowed host in lowercase when it is a plain public name; else raise."""
+    if not allow_host.isascii():
+        raise ValueError(ALLOW_HOST_HELP)
+    allowed = allow_host.strip().lower()
+    if not CUSTOM_HOST.fullmatch(allowed) or IP_LIKE.fullmatch(allowed):
+        raise ValueError(ALLOW_HOST_HELP)
+    name, _, port = allowed.partition(":")
+    if port not in ("", "443") or NUMERIC_LABEL.fullmatch(name.rsplit(".", 1)[-1]):
+        raise ValueError(ALLOW_HOST_HELP)
+    if name == "localhost" or name.endswith(INTERNAL_SUFFIXES):
+        raise ValueError(ALLOW_HOST_HELP)
+    return allowed
+
+
 def validate_host(url: str, allow_host: str | None = None) -> str:
     """The base URL (scheme and host only) when it is a Grafana Cloud stack or the allowed host."""
+    if not url.isascii():  # before lower(): the Kelvin sign would become a plain k
+        raise ValueError(HOST_HELP)
     host = url.strip().lower().rstrip("/")
     if host and "://" not in host:
         host = "https://" + host
-    if allow_host is not None:
-        allowed = allow_host.strip().lower()
-        if not CUSTOM_HOST.fullmatch(allowed) or IP_LIKE.fullmatch(allowed):
-            raise ValueError("--allow-host must be a plain host name like grafana.example.com")
+    allowed = _check_allow_host(allow_host) if allow_host is not None else None
     if CLOUD_HOST.fullmatch(host):
         return host
-    if allow_host is None:
+    if allowed is None:
         raise ValueError(HOST_HELP)
     if host != f"https://{allowed}":
         raise ValueError("--allow-host does not match the host in GRAFANA_URL; " + HOST_HELP)
@@ -155,7 +176,10 @@ def _decode(response: httpx.Response, token: str) -> Any:
 
 @contextmanager
 def http_getter(
-    token: str, base: str, transport: httpx.BaseTransport | None = None
+    token: str,
+    base: str,
+    transport: httpx.BaseTransport | None = None,
+    allow_host: str | None = None,
 ) -> Iterator[Getter]:
     """A Getter for the allow-listed paths that closes its connection pool when the block ends.
 
@@ -163,8 +187,12 @@ def http_getter(
     Redirects are not followed, so the token cannot be sent to another host. `transport` is for
     tests.
     """
-    if not BARE_BASE.fullmatch(base):
-        raise GrafanaError("the base URL must be https://<host> with no path or credentials")
+    try:  # checked here too, so no caller can send the token to a host that was not validated
+        checked = validate_host(base, allow_host)
+    except ValueError as exc:
+        raise GrafanaError(str(exc)) from None
+    if checked != base:
+        raise GrafanaError("the base URL must be https://<host> exactly as validated")
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
     with httpx.Client(timeout=60, headers=headers, transport=transport) as client:
 

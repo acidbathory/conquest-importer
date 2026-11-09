@@ -20,7 +20,7 @@
               "refId": "A",
               "datasource": {"type": "prometheus", "uid": "prom-main"},
               "expr": "max by (queue) (queue_depth{env=\"prod\"})",
-              "instant": true
+              "instant": false
             }
           },
           "B": {

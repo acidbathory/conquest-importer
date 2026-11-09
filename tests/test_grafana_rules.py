@@ -19,6 +19,11 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 # every manual reason with the rule that must answer it (first match wins across all sources)
 MANUAL_REASONS = [
+    (t.R_UNREADABLE, "Grafana rule not readable"),
+    (t.R_RANGE_MISSING, "Grafana query time range"),
+    (t.R_AGG_MIX.format(agg="sum", reducer="mean"), "PromQL aggregation across series"),
+    (t.R_LOKI_REDUCER, "LogQL range query reducer"),
+    (t.R_REDUCE_MODE, "Grafana reduce mode"),
     (t.R_RECORD, "Grafana recording rule"),
     (t.R_DS_MANAGED, "Data source-managed rule"),
     (t.R_NO_NODE, "Grafana pipeline not converted"),
@@ -84,6 +89,12 @@ EXPECTED_CATEGORY = {
     t.LOKI_PARSER: C.UNSUPPORTED_FEATURE,
     t.LOKI_FUNCTION: C.UNSUPPORTED_FEATURE,
     t.LOKI_REGEX: C.UNSUPPORTED_FEATURE,
+    t.N_RANGE_USED: C.APPROXIMATION,
+    t.N_RANGE_IGNORED: C.APPROXIMATION,
+    t.N_DROPNN: C.APPROXIMATION,
+    t.N_PAUSED_UNKNOWN: C.MANUAL_FOLLOWUP,
+    t.N_COPIES.format(count=2): C.APPROXIMATION,
+    t.N_DUP_UID: C.APPROXIMATION,
     t.N_INFERRED: C.UNVERIFIED_NAMES,
     t.N_METRIC: C.UNVERIFIED_NAMES,
     t.N_LOGS: C.UNVERIFIED_NAMES,

@@ -173,6 +173,8 @@ def test_grafana_cloud_hosts_are_accepted(url: str) -> None:
         "https://my_stack.grafana.net",
         "https://a.b.grafana.net",
         "https://127.0.0.1",
+        "https://myst\u212aack.grafana.net",
+        "https://mystack.grafana.n\u0435t",
         "ftp://mystack.grafana.net",
         "",
     ],
@@ -186,8 +188,8 @@ def test_another_https_host_needs_the_explicit_option_and_must_match() -> None:
     assert gx.validate_host("https://grafana.example.com", "grafana.example.com") == (
         "https://grafana.example.com"
     )
-    assert gx.validate_host("grafana.example.com:8443", "grafana.example.com:8443") == (
-        "https://grafana.example.com:8443"
+    assert gx.validate_host("grafana.example.com:443", "grafana.example.com:443") == (
+        "https://grafana.example.com:443"
     )
     with pytest.raises(ValueError, match="does not match"):
         gx.validate_host("https://other.example.com", "grafana.example.com")
@@ -228,6 +230,53 @@ def test_a_bad_host_is_refused_before_any_call(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match=r"grafana\.net"):
         extract(get, "https://evil.example.com", tmp_path / "o")
     assert calls == []
+
+
+ODD_HOSTS = [
+    "127.1",
+    "1.1",
+    "grafana.example.1",
+    "0x7f.0.0.1",
+    "0xa9.0xfe.0xa9.0xfe",
+    "grafana.example.0x7f",
+    "grafana.example.com:8443",
+    "grafana.example.com:80",
+    "grafana.example.com:0",
+    "grafana.example.com:99999",
+    "metadata.google.internal",
+    "svc.internal",
+    "printer.local",
+    "box.localhost",
+    "gr\u212aafana.example.com",
+    "gr\u0430fana.example.com",
+]
+
+
+@pytest.mark.parametrize("host", ODD_HOSTS)
+def test_hosts_that_resolve_to_internal_addresses_or_look_odd_are_refused(host: str) -> None:
+    with pytest.raises(ValueError, match=r"--allow-host"):
+        gx.validate_host("https://" + host, host)
+
+
+def test_port_443_is_the_only_port_and_the_host_is_lowercase_ascii() -> None:
+    assert gx.validate_host("https://Grafana.Example.com:443", "grafana.example.com:443") == (
+        "https://grafana.example.com:443"
+    )
+    result = gx.validate_host("https://grafana.example.com", "grafana.example.com")
+    assert result.isascii() and result == result.lower()
+
+
+def test_the_getter_checks_the_host_itself_not_only_the_caller() -> None:
+    for base in ("https://evil.example.com", "https://127.1", "https://metadata.google.internal"):
+        with pytest.raises(GrafanaError), gx.http_getter("t", base):
+            pass
+    with gx.http_getter("t", "https://grafana.example.com", allow_host="grafana.example.com"):
+        pass
+    with (
+        pytest.raises(GrafanaError),
+        gx.http_getter("t", "https://grafana.example.com", allow_host="other.example.com"),
+    ):
+        pass
 
 
 def test_the_getter_refuses_a_base_that_is_not_a_bare_host() -> None:
@@ -401,7 +450,9 @@ def run_cli(
     monkeypatch.setenv("GRAFANA_SA_TOKEN", token)
     monkeypatch.setattr(
         "importer.cli.grafana_getter",
-        lambda t, b: gx.http_getter(t, b, httpx.MockTransport(handler)),
+        lambda t, b, allow_host=None: gx.http_getter(
+            t, b, httpx.MockTransport(handler), allow_host=allow_host
+        ),
     )
     return CliRunner().invoke(
         app, ["extract-grafana", "--out", str(tmp_path / "o"), *(extra or [])]
