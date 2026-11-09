@@ -95,7 +95,7 @@ def test_yaml_rule_files_are_refused_by_either_suffix(tmp_path: Path) -> None:
     for suffix in (".yml", ".yaml", ".YML"):
         path = tmp_path / f"rules{suffix}"
         path.write_text("groups: []\n")
-        with pytest.raises(ValueError, match="^rule files must be JSON"):
+        with pytest.raises(ValueError, match=r"^rule files must be JSON"):
             rulefiles.load_rule_file(path)
 
 
