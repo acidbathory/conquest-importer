@@ -359,3 +359,16 @@ def test_ci_flag_parses_gh_output(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr("subprocess.run", lambda *_a, **_k: Done())
     assert sb.ci_status() == "success (abcdef1, 2026-11-10T10:00:00Z)"
+
+
+def test_parity_list_form_is_accepted(out: Path) -> None:
+    (out / "parity.json").write_text(json.dumps([{"verdict": "match"}, {"verdict": "mismatch"}]))
+    m = sb.gather([out], root=None, evidence=None, today="d")["metrics"]
+    assert m["out/grafana/parity_match"] == 1
+    assert m["out/grafana/parity_mismatch"] == 1
+
+
+def test_parity_source_key_names_the_scope(out: Path) -> None:
+    (out / "parity.json").write_text(json.dumps({"source": "dynatrace", "verdicts": {"match": 2}}))
+    m = sb.gather([out], root=None, evidence=None, today="d")["metrics"]
+    assert m["out/dynatrace/parity_match"] == 2

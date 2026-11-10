@@ -101,6 +101,41 @@ Stop the cycle and report when any of these holds:
 | Shared `/tmp` between agents | Two agents wrote to the same temporary file | Briefs name a private folder, `/tmp/<slug>/` |
 | Stale branches | A branch finished against an old base | Rebase and re-run the gate before merging; `overlap.sh` before any merge |
 
+## Before proposing anything
+
+1. Check that it is not already done: `docs/improvement/next-actions.md` ("Done"),
+   `docs/improvement/live-evidence.json`, `docs/improvement/scoreboard-history.csv`, and
+   `git log --oneline origin/main` (grep for the topic). Also `git branch --no-merged origin/main`
+   for work in progress elsewhere.
+2. Never copy a number from a research note or an older backlog. Measure it again with the commands
+   in `next-actions.md` ("How the numbers were taken") and write the date next to it. A census from
+   before a fix describes a project that no longer exists (the "8 widgets end to end" figure was
+   removed by the chained-variables work). `tests/test_next_actions.py` fails if a backlog item has
+   no measurement date or the Done section is missing.
+
+## The parity.json contract
+
+The parity verifier writes `parity.json` into the converter output folder it checked (next to
+`ir/` or `dashboard-ir/`). The scoreboard reads exactly one of these three forms and ignores
+anything else with a warning:
+
+```json
+{"source": "grafana", "verdicts": {"match": 12, "mismatch": 2, "not_comparable": 5}}
+```
+```json
+{"source": "grafana", "items": [{"name": "cpu", "verdict": "match", "checked_on": "2026-11-10"}]}
+```
+```json
+[{"verdict": "match"}, {"verdict": "mismatch"}]
+```
+
+Rules: `verdict` is a string; counts are integers; `source` (optional) is the source system name,
+and when absent the folder's only source is used. Verdicts are lower-cased by the reader.
+`match` / `matched` / `verified` / `pass` count as progress; `mismatch` / `diverge` / `fail` count
+as regressions; any other word (for example `not_comparable`, `no_data`) is reported but is
+information only. Each item should carry `checked_on` and the method in the verifier's own report.
+The scoreboard writes `out/<source>/parity_<verdict>` metrics.
+
 ## Dispatching
 
 Every dispatch is a brief copied from `docs/dev/brief-templates/` with the blanks filled in. The

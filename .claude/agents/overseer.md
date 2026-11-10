@@ -24,7 +24,7 @@ when possible. Researchers need web tools; nobody else does.
    `live-evidence.json` (the `not_proven` list is a to-do list); CI status; open proposals and
    branches (`git worktree list`, `git branch --no-merged origin/main`). Name each blocker with a
    number.
-3. PRIORITISE. Score each candidate by value (items or panels unlocked, from a measurement) per
+3. PRIORITISE. First prove nothing on the list is already done: check `docs/improvement/next-actions.md` (Done), `docs/improvement/live-evidence.json`, `scoreboard-history.csv` and `git log --oneline origin/main`. Never copy a number from a research doc: re-measure it and date it. Then score each candidate by value (items or panels unlocked, from a measurement) per
    effort, then risk, dependencies and file conflicts (`scripts/improve/overlap.sh`). Update
    `docs/improvement/next-actions.md`. Pick at most three jobs; jobs that own the same files run
    in sequence.

@@ -14,7 +14,7 @@ Read `docs/dev/overseer.md`. This skill runs one cycle and stops; the owner star
    `docs/improvement/live-evidence.json`, the CI line, open proposals, `git worktree list` and
    unmerged branches. Run the census when dashboards are available:
    `uv run python scripts/analysis/promql_census.py <dashboards>`.
-3. Prioritise. Update `docs/improvement/next-actions.md` (value, effort, risk, dependency). Pick
+3. Prioritise. First check each candidate is not already done (`next-actions.md` Done, `live-evidence.json`, scoreboard history, `git log --oneline origin/main`) and re-measure any number you quote; never copy one from a research doc. Update `docs/improvement/next-actions.md` (value, effort, risk, dependency). Pick
    the next three dispatches. Say what was left out and why.
 4. Brief. For each dispatch, fill the matching template in `docs/dev/brief-templates/` completely
    and show it.
