@@ -410,3 +410,15 @@ def test_a_panel_that_shows_another_panels_result_uses_that_panels_query(tmp_pat
     assert queries(widgets[1]) == ["SELECT sum(up) FROM Metric"]
     assert widgets[1].visualization is not None
     assert widgets[1].visualization.value == "viz.billboard"
+
+
+def test_every_variable_of_a_chain_gets_the_real_account_when_applied() -> None:
+    from importer.core.apply_dashboards import with_account
+
+    d = convert(MINE, "node-exporter-rows.json")
+    sent = with_account(nerdgraph_dashboard(d), 4242)
+    variables = sent["variables"]["dashboard"]["variables"]
+    assert [v["name"] for v in variables] == ["job", "instance"]
+    assert [v["nrqlQuery"]["accountIds"] for v in variables] == [[4242], [4242]]
+    assert "ACCOUNT_ID_PLACEHOLDER" not in json.dumps(sent)
+    assert "{{job}}" in variables[1]["nrqlQuery"]["query"]
