@@ -393,12 +393,12 @@ def test_a_cycle_of_variables_is_refused_by_name() -> None:
             dashboard([chart()], variables=order)
 
 
-def test_order_variables_puts_parents_first_and_keeps_the_rest_in_place() -> None:
+def test_order_variables_puts_parents_first_and_leaves_ordered_lists_alone() -> None:
     free = IRVariable(name="free", title="f", type=VariableType.STRING)
     parent = nrql_var("env", "FROM T SELECT uniques(e)")
     child = nrql_var("machine", "FROM T SELECT uniques(m) WHERE e IN ({{env}})")
     grandchild = nrql_var("disk", "FROM T SELECT uniques(d) WHERE m IN ({{machine}})")
-    assert order_variables([grandchild, free, child, parent]) == [free, parent, child, grandchild]
+    assert order_variables([grandchild, free, child, parent]) == [parent, child, grandchild, free]
     assert order_variables([free, parent]) == [free, parent]  # nothing to move
 
 

@@ -513,3 +513,43 @@ def test_terraform_for_the_new_fields_validates(tmp_path: Path) -> None:
         check=False,
     )
     assert check.returncode == 0, check.stdout + check.stderr
+
+
+def _parent_and_child() -> tuple[IRVariable, IRVariable]:
+    parent = IRVariable(
+        name="env", title="Env", type=VariableType.NRQL, nrql="FROM T SELECT uniques(e)"
+    )
+    child = IRVariable(
+        name="machine",
+        title="Machine",
+        type=VariableType.NRQL,
+        nrql="FROM T SELECT uniques(m) WHERE e IN ({{env}})",
+    )
+    return parent, child
+
+
+def test_a_nested_variable_is_written_after_its_parent_in_both_outputs() -> None:
+    parent, child = _parent_and_child()
+    d = dash(widget(), variables=[parent, child])
+    names = [v["name"] for v in nerdgraph_dashboard(d)["variables"]["dashboard"]["variables"]]
+    assert names == ["env", "machine"]
+    tf = terraform(d)
+    assert tf.index('name = "env"') < tf.index('name = "machine"')
+    assert "{{env}}" in tf
+
+
+def test_the_emitters_refuse_a_child_listed_before_its_parent() -> None:
+    parent, child = _parent_and_child()
+    d = dash(widget(), variables=[parent, child]).model_copy(update={"variables": [child, parent]})
+    with pytest.raises(CannotEmit, match="before"):
+        nerdgraph_dashboard(d)
+    with pytest.raises(CannotEmit, match="before"):
+        terraform(d)
+
+
+def test_the_emitters_refuse_a_variable_query_that_names_an_undefined_variable() -> None:
+    _, child = _parent_and_child()
+    parent, _ = _parent_and_child()
+    d = dash(widget(), variables=[parent, child]).model_copy(update={"variables": [child]})
+    with pytest.raises(CannotEmit, match="env"):
+        nerdgraph_dashboard(d)
