@@ -1,0 +1,76 @@
+# Telemetry rig: scrape the local exporters every 15s and remote_write to New Relic.
+# __TMP__ is replaced by start.sh. Everything listens on 127.0.0.1 only.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    ckg_test: "true"          # added to every remote-written sample (and to alerts)
+
+rule_files:
+  - __TMP__/rules.yml
+
+remote_write:
+  - url: https://metric-api.newrelic.com/prometheus/v1/write?prometheus_server=ckg-local
+    # New Relic docs form: authorization.credentials = the ingest licence key. The key sits in a
+    # 0600 file in the temp dir (credentials_file is the file form of the bearer token).
+    authorization:
+      credentials_file: __TMP__/nr.token
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: "go_.*|promhttp_.*|scrape_series_added|scrape_samples_post_metric_relabeling|scrape_duration_seconds|ALERTS_FOR_STATE"
+        action: drop
+      # a label called metricName collides with the New Relic attribute for the metric name: rename it
+      - source_labels: [metricName]
+        regex: "(.+)"
+        target_label: metric_name
+        replacement: "$1"
+        action: replace
+      - regex: metricName
+        action: labeldrop
+    queue_config:
+      max_samples_per_send: 2000
+      capacity: 10000
+      max_shards: 4
+  # Experiment: the same non-suffixed counters again, with the type forced to counter, under another
+  # prometheus_server name. A handful of series only (volume stays small).
+  - url: https://metric-api.newrelic.com/prometheus/v1/write?prometheus_server=ckg-local-typed
+    authorization:
+      credentials_file: __TMP__/nr.token
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: "nginx_ingress_controller_requests|pg_stat_database_xact_commit|pg_stat_database_tup_inserted|pg_stat_activity_count|pg_locks_count|system_cpu_count"
+        action: keep
+      - source_labels: [__name__]
+        regex: "nginx_ingress_controller_requests|pg_stat_database_xact_commit|pg_stat_database_tup_inserted"
+        target_label: newrelic_metric_type
+        replacement: counter
+        action: replace
+      - source_labels: [__name__]
+        regex: "pg_stat_activity_count|pg_locks_count|system_cpu_count"
+        target_label: newrelic_metric_type
+        replacement: gauge
+        action: replace
+
+scrape_configs:
+  - job_name: node           # the real macOS node_exporter; keep only the families the dashboards read
+    static_configs: [{targets: ["127.0.0.1:9100"]}]
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: "node_(cpu_seconds_total|memory_.*|load[0-9]+|network_(receive|transmit)_bytes_total|filesystem_(avail|size|free)_bytes|boot_time_seconds|time_seconds|uname_info)"
+        action: keep
+  - job_name: kube-state-metrics
+    static_configs: [{targets: ["127.0.0.1:9101"]}]
+  - job_name: jvm
+    static_configs: [{targets: ["127.0.0.1:9111", "127.0.0.1:9112"]}]
+  - job_name: node-extras
+    static_configs: [{targets: ["127.0.0.1:9121", "127.0.0.1:9122"]}]
+  - job_name: cadvisor
+    static_configs: [{targets: ["127.0.0.1:9131", "127.0.0.1:9132"]}]
+  - job_name: postgres
+    static_configs: [{targets: ["127.0.0.1:9141", "127.0.0.1:9142"]}]
+  - job_name: ingress-nginx
+    static_configs: [{targets: ["127.0.0.1:9151"]}]
+  - job_name: flaky          # 503 for five minutes in every fifteen: up == 0 windows
+    static_configs: [{targets: ["127.0.0.1:9161"]}]
+  - job_name: missing        # nothing listens here: up == 0 always
+    static_configs: [{targets: ["127.0.0.1:9199"]}]

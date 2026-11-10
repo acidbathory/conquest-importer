@@ -187,9 +187,10 @@ LABELS = """\
 - `prometheus_server` (from the remote write URL or the collector processor) is added to every
   point; `newrelic_metric_type` is read and removed.
 - **Collision:** a Prometheus label called `metricName` has the same name as the attribute that
-  holds the metric name. Rename it in the sender (the commented `write_relabel_configs` in the
-  snippets rename it to `metric_name`); converted NRQL that filters on it must use the new name.
-  Whether New Relic keeps the label or overwrites it is UNVERIFIED.
+  holds the metric name. Measured on a live remote write feed: New Relic keeps the metric name and
+  drops the label value, so a filter on the label finds nothing. Rename it in the sender (the
+  commented `write_relabel_configs` in the snippets rename it to `metric_name`, which was tested);
+  converted NRQL that filters on it must use the new name.
 - A label with a dot or a name starting with `__` does not occur in Prometheus data; internal
   `__` labels are dropped by Prometheus before sending.
 """

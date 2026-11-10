@@ -53,7 +53,7 @@ SUPPORTED_TODAY = frozenset(
         "agg.by", "agg.ungrouped",
         "binop.+", "binop.-", "binop.*", "binop./",
         "arith.scalar_scalar", "arith.vector_scalar", "arith.vector_vector",
-        "match.implicit", "scalar.literal", "unary.-", "var.as_operand",
+        "match.implicit", "scalar.literal", "unary.-", "var.as_operand", "name.recording_rule",
     }
 )  # fmt: skip
 QUERY_REASON_PREFIXES = ("dashboard query", "dashboard logql query")

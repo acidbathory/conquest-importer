@@ -200,10 +200,16 @@ What to know before you start:
   a counter. `grafana-prom-hints` reads the real type from Prometheus. Its live run on a Grafana Cloud
   stack found empty metadata, so the type path is tested on fixtures only.
 - A label called `metricName` collides with the New Relic attribute that holds the metric name.
-  The generated file shows a relabel rule. UNVERIFIED against a live remote-write feed.
+  Measured on a live remote-write feed: New Relic drops the label value and keeps the metric name,
+  so rename the label before sending (the generated file shows the relabel rule, which worked).
 - If a metric arrives under another name or event, give `--name-map` to the dashboard conversion.
-- Remote write itself was not tested end to end. The round trips sent points with the Metric API in
-  the same form remote write is documented to produce.
+- Remote write was tested end to end with a local Prometheus (2026-11-10, see
+  `docs/research/telemetry-rig-results.md`). Data was visible within seconds. A name ending
+  `_total`, `_count` or `_bucket` is stored as a delta count, `_sum` as a summary, anything else as a
+  gauge. So a counter without `_total` (for example `nginx_ingress_controller_requests`) arrives as
+  a cumulative gauge, and a gauge ending `_count` (for example `pg_stat_activity_count`) arrives as
+  a count. Fix both with `newrelic_metric_type` in `write_relabel_configs`; the converter adds a
+  note when a type hint disagrees with the name rule.
 
 `datapath-plan.md` (with `--alerts` and `--dashboards`) lists, for each converted rule and tile, the
 step after which it has data. Read it.

@@ -358,6 +358,17 @@ class _Parse:
             kept=agg is None,
         )
 
+    def check_stored_type(self, name: str) -> None:
+        """Note a hinted type that New Relic's name rule on remote write would get the other way."""
+        kind = self.opts.name_map.types.get(name)
+        if kind is None:
+            return
+        stored_as_count = name.endswith(COUNTER_SUFFIXES)
+        if kind == "gauge" and stored_as_count:
+            self.note(r.n_type_override(name, "gauge"))
+        elif kind == "counter" and not stored_as_count:
+            self.note(r.n_type_override(name, "counter"))
+
     def is_counter(self, name: str) -> bool:
         """The hinted type when there is one, else the name suffix."""
         kind = self.opts.name_map.types.get(name)
@@ -442,12 +453,13 @@ class _Parse:
         if VAR_TOKEN.search(name) or "VARB" in name:
             raise Unconvertible(r.C_VAR_NAME)
         self.metrics.append(name)
+        self.check_stored_type(name)
         entry = self.opts.name_map.metrics.get(name)
         if entry is not None:
             self.mapped = True
         event, attribute = (entry.event, entry.attribute) if entry else ("Metric", name)
         try:
-            return event, identifier(attribute)
+            return event, metric_identifier(attribute)
         except ValueError:
             raise Unconvertible(r.C_NAME) from None
 
@@ -510,6 +522,17 @@ def _facet_list(
         labels = labels[:MAX_FACETS]
         notes.append(r.N_FACET_LIMIT)
     return labels
+
+
+RECORDING_NAME = re.compile(r"[A-Za-z_:][A-Za-z0-9_:]*")
+
+
+def metric_identifier(name: str) -> str:
+    """A metric name as an NRQL attribute. Recording rules (`job:x:rate5m`) keep their colons in
+    New Relic and NRQL reads them in backticks (measured with the telemetry rig)."""
+    if ":" in name and RECORDING_NAME.fullmatch(name):
+        return f"`{name}`"
+    return identifier(name)
 
 
 def identifier_or_fail(name: str) -> str:

@@ -395,3 +395,22 @@ def test_round_ceil_floor_and_abs_around_a_whole_query_are_written(expr: str, se
 @pytest.mark.parametrize("expr", ["round(up, 0.5)", "round(up) + 1 > 2", "sum(round(up))"])
 def test_round_with_a_second_argument_or_inside_an_aggregation_stays_manual(expr: str) -> None:
     assert classify_query(expr, "prometheus").tier is None
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (
+            "instance:node_cpu_utilisation:rate5m",
+            "SELECT average(`instance:node_cpu_utilisation:rate5m`) FROM Metric TIMESERIES AUTO",
+        ),
+        (
+            'avg by (instance) (instance:node_cpu_utilisation:rate5m{job="node-extras"})',
+            "SELECT average(`instance:node_cpu_utilisation:rate5m`) FROM Metric "
+            "WHERE job = 'node-extras' FACET instance LIMIT MAX TIMESERIES AUTO",
+        ),
+    ],
+)
+def test_recording_rule_names_with_colons_are_quoted(expr: str, expected: str) -> None:
+    # Measured live (telemetry rig): remote write keeps the colon name; NRQL reads it in backticks.
+    assert nrql(expr) == expected

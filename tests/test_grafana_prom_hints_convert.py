@@ -111,3 +111,32 @@ def test_the_command_reads_a_hints_file_next_to_a_name_map(tmp_path: Path) -> No
     assert "average(node_load1)" not in "".join(
         p.read_text() for p in (tmp_path / "b").glob("nerdgraph/*")
     )
+
+
+def test_hinted_type_that_new_relic_would_infer_differently_gets_a_note() -> None:
+    """Measured with remote write: a counter named without _total is stored as a gauge and a gauge
+    named *_count is stored as a count, unless newrelic_metric_type is set."""
+    counter = convert_query(
+        "sum(rate(requests[5m]))", "prometheus", opts(NameMap(types={"requests": "counter"}))
+    )
+    assert any("newrelic_metric_type=counter" in n and "requests" in n for n in counter.notes)
+    gauge = convert_query(
+        "sum(open_count)",
+        "prometheus",
+        opts(NameMap(types={"open_count": "gauge"}, series={"open_count": []})),
+    )
+    assert any("newrelic_metric_type=gauge" in n and "open_count" in n for n in gauge.notes)
+
+
+def test_hinted_type_that_matches_the_name_rule_has_no_type_note() -> None:
+    names = NameMap(types={"x_total": "counter", "up": "gauge"})
+    for expr in ("sum(rate(x_total[5m]))", "up"):
+        assert not any(
+            "newrelic_metric_type" in n
+            for n in convert_query(expr, "prometheus", opts(names)).notes
+        )
+    # without hints nothing is known, so nothing is said
+    assert not any(
+        "newrelic_metric_type" in n
+        for n in convert_query("sum(rate(requests[5m]))", "prometheus", opts(NameMap())).notes
+    )
