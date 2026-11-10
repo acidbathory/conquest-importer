@@ -23,6 +23,20 @@ remote_write:
       max_samples_per_send: 2000
       capacity: 10000
       max_shards: 4
+  # Experiment: the same non-suffixed counters again, with the type forced to counter, under another
+  # prometheus_server name. A handful of series only (volume stays small).
+  - url: https://metric-api.newrelic.com/prometheus/v1/write?prometheus_server=ckg-local-typed
+    authorization:
+      credentials_file: __TMP__/nr.token
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: "nginx_ingress_controller_requests|pg_stat_database_xact_commit|pg_stat_database_tup_inserted"
+        action: keep
+      - source_labels: [__name__]
+        regex: ".*"
+        target_label: newrelic_metric_type
+        replacement: counter
+        action: replace
 
 scrape_configs:
   - job_name: node           # the real macOS node_exporter; keep only the families the dashboards read
