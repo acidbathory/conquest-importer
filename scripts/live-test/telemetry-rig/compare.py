@@ -156,6 +156,17 @@ CASES: list[tuple[str, str, str]] = [
     ),
     ("up_by_job", "up", "sum by (job) (up)"),
     ("up_flaky_avg", "up", 'avg_over_time(up{job="flaky"}[10m])'),
+    (
+        "alert_5xx_ratio",
+        "alert",
+        'sum by (ingress) (rate(nginx_ingress_controller_requests{status=~"5.."}[2m])) / sum by (ingress) (rate(nginx_ingress_controller_requests[2m]))',
+    ),
+    (
+        "alert_5xx_ratio_gt",
+        "alert",
+        'sum by (ingress) (rate(nginx_ingress_controller_requests{status=~"5.."}[2m])) / sum by (ingress) (rate(nginx_ingress_controller_requests[2m])) > 0.05',
+    ),
+    ("alert_target_down", "alert", 'up{job=~"flaky|missing"} == 0'),
     ("recording_name", "recording", "instance:node_cpu_utilisation:rate5m"),
     ("uptime_days", "gauge", '(time() - container_start_time_seconds{name=~".+"}) / 86400'),
     ("absent_failed_jobs", "absent", "absent(kube_job_status_failed)"),
@@ -281,7 +292,9 @@ def run_case(
         out.update(compare_chart(pe, nr, conv.facet, t0))
         # the same expression with every range set to the New Relic bucket: data path without window semantics
         e1 = re.sub(r"\[\d+[smhd]\]", f"[{STEP}s]", expr)
-        if e1 != expr:
+        if (
+            e1 != expr and "increase(" not in expr
+        ):  # increase() scales to its own range, so a 1m twin is not comparable
             p1 = prom_get(
                 "/api/v1/query_range", query=e1, start=str(t0), end=str(t1), step=str(STEP)
             )["result"]
@@ -339,7 +352,7 @@ def compare_chart(pe: list[dict], nr: list[dict], facet: list[str], t0: int) -> 
                 "n": len(pairs),
                 "prom_mean": nice(mp),
                 "nr_mean": nice(mn),
-                "mean_ratio": nice(mn / mp) if mp else None,
+                "mean_ratio": nice(mn / mp) if mp else (1.0 if abs(mn) < 1e-12 else None),
                 "median_bucket_err": nice(statistics.median(errs)) if errs else None,
             }
         )
