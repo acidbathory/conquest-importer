@@ -200,3 +200,18 @@ def test_projection_counts_panels_by_scenario() -> None:
     assert (low.query_layer, low.end_to_end) == (3, 2)  # a, b and e; a and b have no other blocker
     high = census.project(found, census.expressible(3))
     assert (high.query_layer, high.end_to_end) == (4, 3)
+
+
+def test_greedy_adds_the_construct_that_unlocks_most() -> None:
+    found = census.Census(
+        expressions=[
+            _expr(["selector.instant", "fn.round"], False),
+            _expr(["selector.instant", "fn.round"], False),
+            _expr(["selector.instant", "fn.abs"], False),
+            _expr(["selector.instant", "agg.without"], False),  # verdict 4: never a candidate
+        ],
+        panels=[_panel("a", [0]), _panel("b", [1]), _panel("c", [2]), _panel("d", [3])],
+    )
+    steps = census.greedy(found, 3)
+    assert [s[0] for s in steps] == ["fn.round", "fn.abs"]
+    assert [s[1] for s in steps] == [2, 3]

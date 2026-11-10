@@ -200,12 +200,14 @@ def table(census: Census) -> list[dict[str, object]]:
     panels: dict[str, set[str]] = defaultdict(set)
     sole: Counter[str] = Counter()
     sole_clean: Counter[str] = Counter()
+    blocks: Counter[str] = Counter()
     for row in census.panels:
         for i in row.expressions:
             for c in census.expressions[i].constructs:
                 exprs[c] += 1
                 panels[c].add(row.key)
         b = blockers(census, row)
+        blocks.update(b)
         if len(b) == 1 and not row.converted:
             (only,) = b
             sole[only] += 1
@@ -218,13 +220,14 @@ def table(census: Census) -> list[dict[str, object]]:
                 "supported_today": c in SUPPORTED_TODAY,
                 "expressions": exprs[c],
                 "panels": len(panels[c]),
+                "blocks": blocks[c],
                 "sole_blocker": sole[c],
                 "sole_blocker_clean": sole_clean[c],
             }
         )
     for tag in sorted(set(sole) - set(exprs)):
         out.append({"construct": tag, "supported_today": False, "expressions": 0, "panels": 0,
-                    "sole_blocker": sole[tag], "sole_blocker_clean": sole_clean[tag]})  # fmt: skip
+                    "blocks": blocks[tag], "sole_blocker": sole[tag], "sole_blocker_clean": sole_clean[tag]})  # fmt: skip
     return out
 
 
@@ -235,6 +238,7 @@ class Projection:
     panels: int
     query_layer: int  # every PromQL expression of the panel converts
     end_to_end: int  # ... and nothing else (variables, transformations, widget type) blocks
+    if_variables_solved: int = 0  # ... and only the "variable stays manual" gate is ignored
 
 
 def today() -> Callable[[str], bool]:
@@ -255,9 +259,25 @@ def expressible(cap: int, verified_only: bool = False) -> Callable[[str], bool]:
     return check
 
 
-def project(census: Census, supported: Callable[[str], bool]) -> Projection:
-    query_layer = end_to_end = 0
+VARIABLE_GATE = "dashboard panel uses a variable that stays manual"
+
+
+def only(*extra: str) -> Callable[[str], bool]:
+    """Supported = what works today plus the listed constructs (a what-if for cheap fixes)."""
+    return lambda c: (
+        c in SUPPORTED_TODAY or c in extra or any(c.startswith(x) for x in extra if x.endswith("."))
+    )
+
+
+def project(
+    census: Census, supported: Callable[[str], bool], group: str | None = None
+) -> Projection:
+    query_layer = end_to_end = freed = 0
+    panels = 0
     for row in census.panels:
+        if group is not None and group_of(row) != group:
+            continue
+        panels += 1
         ok = True
         for i in row.expressions:
             exp = census.expressions[i]
@@ -269,7 +289,47 @@ def project(census: Census, supported: Callable[[str], bool]) -> Projection:
                 ok = False  # failed for a reason no construct explains: never counted
         query_layer += ok
         end_to_end += ok and not row.other_blockers
-    return Projection(len(census.panels), query_layer, end_to_end)
+        freed += ok and all(x.startswith(VARIABLE_GATE) for x in row.other_blockers)
+    return Projection(panels, query_layer, end_to_end, freed)
+
+
+def greedy(census: Census, cap: int, steps: int = 12) -> list[tuple[str, int, int]]:
+    """Add the construct that unlocks the most panels, step by step.
+
+    Returns (construct, panels convertible at the query layer, same with the variable gate
+    lifted). Only constructs with a verdict code of at most `cap` are candidates."""
+    chosen: set[str] = set()
+    candidates = {
+        c for e in census.expressions for c in e.unsupported if verdict_for(c).code <= cap
+    }
+
+    def supported(c: str) -> bool:
+        return c in SUPPORTED_TODAY or c in chosen
+
+    out: list[tuple[str, int, int]] = []
+    base = project(census, supported)
+    for _ in range(steps):
+        best: tuple[int, int, str] | None = None
+        for c in sorted(candidates - chosen):
+            chosen.add(c)
+            p = project(census, supported)
+            chosen.discard(c)
+            gain = (
+                p.query_layer - base.query_layer,
+                p.if_variables_solved - base.if_variables_solved,
+            )
+            if gain[0] > 0 and (best is None or gain > best[:2]):
+                best = (gain[0], gain[1], c)
+        if best is None:
+            break
+        chosen.add(best[2])
+        base = project(census, supported)
+        out.append((best[2], base.query_layer, base.if_variables_solved))
+    return out
+
+
+def group_of(row: PanelRow) -> str:
+    return "community" if row.dashboard.startswith("ckg-") else "built-in"
 
 
 def other_blocker_classes(census: Census) -> Counter[str]:
@@ -321,40 +381,75 @@ def alert_table(texts: list[str]) -> tuple[int, int, list[tuple[str, int]]]:
 def render(census: Census, alerts: tuple[int, int, list[tuple[str, int]]] | None = None) -> str:
     """The Markdown tables of the research note."""
     lines: list[str] = []
-    rows = table(census)
+    rows = sorted(
+        table(census),
+        key=lambda r: (bool(r["supported_today"]), -int(str(r["blocks"])), -int(str(r["panels"]))),
+    )
     lines.append(
         f"dashboards {census.dashboards}; panels {census.panels_total}; panels with PromQL "
         f"{len(census.panels)}; PromQL expressions {len(census.expressions)}; "
         f"LogQL expressions skipped {census.loki_expressions}"
     )
-    groups = Counter(
-        "community" if p.dashboard.startswith("ckg-") else "built-in" for p in census.panels
-    )
+    groups = Counter(group_of(p) for p in census.panels)
+    converting = sum(e.converts for e in census.expressions)
     lines.append(f"PromQL panels by group: {dict(groups)}")
+    lines.append(
+        f"PromQL expressions the converter writes today: {converting} of {len(census.expressions)}"
+    )
     lines.append("")
     lines.append(
-        "| construct | expressions | panels | sole blocker | sole, nothing else blocks | today | verdict | evidence |"
+        "| construct | expressions | panels | panels it blocks | sole blocker | sole, nothing else blocks | today | verdict | evidence |"
     )
-    lines.append("|---|---:|---:|---:|---:|---|---:|---|")
+    lines.append("|---|---:|---:|---:|---:|---:|---|---:|---|")
     for r in rows:
         name = str(r["construct"])
         v = verdict_for(name)
         today_ok = "yes" if r["supported_today"] else "no"
         lines.append(
-            f"| `{name}` | {r['expressions']} | {r['panels']} | {r['sole_blocker']} | "
+            f"| `{name}` | {r['expressions']} | {r['panels']} | {r['blocks']} | {r['sole_blocker']} | "
             f"{r['sole_blocker_clean']} | {today_ok} | {v.code} | {v.status} |"
         )
     lines.append("")
-    lines.append("| scenario | PromQL panels | query layer converts | end to end converts |")
-    lines.append("|---|---:|---:|---:|")
+    lines.append(
+        "| scenario | PromQL panels | query layer converts | end to end converts | end to end if the variable gate is lifted |"
+    )
+    lines.append("|---|---:|---:|---:|---:|")
     for label, fn in (
         ("today", today()),
+        (
+            "cheap parser fixes only (quotes, upper case, huge)",
+            only("style.", "shape.huge_expression"),
+        ),
         ("verdict 1 and 2, any evidence", expressible(2)),
         ("verdict 1 and 2, MEASURED or DOCS only", expressible(2, True)),
         ("verdict 1, 2 and 3, any evidence", expressible(3)),
     ):
         p = project(census, fn)
-        lines.append(f"| {label} | {p.panels} | {p.query_layer} | {p.end_to_end} |")
+        lines.append(
+            f"| {label} | {p.panels} | {p.query_layer} | {p.end_to_end} | {p.if_variables_solved} |"
+        )
+    lines.append("")
+    lines.append(
+        "| group | scenario | PromQL panels | query layer | end to end | if variable gate lifted |"
+    )
+    lines.append("|---|---|---:|---:|---:|---:|")
+    for group in ("community", "built-in"):
+        for label, fn in (
+            ("today", today()),
+            ("verdict 1, 2", expressible(2)),
+            ("verdict 1, 2, 3", expressible(3)),
+        ):
+            p = project(census, fn, group)
+            lines.append(
+                f"| {group} | {label} | {p.panels} | {p.query_layer} | {p.end_to_end} | {p.if_variables_solved} |"
+            )
+    lines.append("")
+    lines.append("Greedy order (verdict 1 to 3), each row adds one construct to the previous rows:")
+    lines.append("")
+    lines.append("| step | construct | query layer converts | with variable gate lifted |")
+    lines.append("|---:|---|---:|---:|")
+    for n, (c, q, f) in enumerate(greedy(census, 3), 1):
+        lines.append(f"| {n} | `{c}` | {q} | {f} |")
     lines.append("")
     lines.append("| other blocker (planner reason) | panels |")
     lines.append("|---|---:|")
