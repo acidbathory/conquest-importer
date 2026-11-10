@@ -446,7 +446,7 @@ class _Parse:
             self.mapped = True
         event, attribute = (entry.event, entry.attribute) if entry else ("Metric", name)
         try:
-            return event, identifier(attribute)
+            return event, metric_identifier(attribute)
         except ValueError:
             raise Unconvertible(r.C_NAME) from None
 
@@ -509,6 +509,17 @@ def _facet_list(
         labels = labels[:MAX_FACETS]
         notes.append(r.N_FACET_LIMIT)
     return labels
+
+
+RECORDING_NAME = re.compile(r"[A-Za-z_:][A-Za-z0-9_:]*")
+
+
+def metric_identifier(name: str) -> str:
+    """A metric name as an NRQL attribute. Recording rules (`job:x:rate5m`) keep their colons in
+    New Relic and NRQL reads them in backticks (measured with the telemetry rig)."""
+    if ":" in name and RECORDING_NAME.fullmatch(name):
+        return f"`{name}`"
+    return identifier(name)
 
 
 def identifier_or_fail(name: str) -> str:

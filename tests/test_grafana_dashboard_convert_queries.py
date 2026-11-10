@@ -373,3 +373,22 @@ def test_rate_chart_note_warns_when_the_bucket_may_not_match_the_scrape_interval
     fixed = QueryOptions(variables={}, name_map=NameMap(), timeseries=True, bucket_seconds=60)
     assert r.N_RATE_BUCKET not in convert_query("rate(x_total[5m])", "prometheus", fixed).notes
     assert r.N_RATE_BUCKET not in convert_query("rate(x_total[5m])", "prometheus", STAT).notes
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (
+            "instance:node_cpu_utilisation:rate5m",
+            "SELECT average(`instance:node_cpu_utilisation:rate5m`) FROM Metric TIMESERIES AUTO",
+        ),
+        (
+            'avg by (instance) (instance:node_cpu_utilisation:rate5m{job="node-extras"})',
+            "SELECT average(`instance:node_cpu_utilisation:rate5m`) FROM Metric "
+            "WHERE job = 'node-extras' FACET instance LIMIT MAX TIMESERIES AUTO",
+        ),
+    ],
+)
+def test_recording_rule_names_with_colons_are_quoted(expr: str, expected: str) -> None:
+    # Measured live (telemetry rig): remote write keeps the colon name and NRQL reads it in backticks.
+    assert nrql(expr) == expected
