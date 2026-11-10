@@ -7,6 +7,7 @@ of `docs/research/promql-to-nrql-census.md`. This module has no I/O.
 
 import re
 
+from importer.sources.grafana.dashboards.regex_matchers import SAFE
 from importer.sources.grafana.promql_ast import (
     VARIABLE,
     Aggregate,
@@ -23,6 +24,8 @@ from importer.sources.grafana.promql_ast import (
     walk,
 )
 
+MAX_PATTERN = 200
+MAX_OPERANDS = 50  # the converter's own cap on operands of one expression
 SCALAR_FUNCTIONS = frozenset({"time", "scalar", "pi"})
 ARITHMETIC = frozenset({"+", "-", "*", "/", "%", "^", "atan2"})
 COMPARISONS = frozenset({"==", "!=", ">", "<", ">=", "<="})
@@ -73,7 +76,9 @@ def _selector(node: Selector, out: set[str]) -> None:
     elif ":" in node.name:
         out.add("name.recording_rule")
     for m in node.matchers:
-        out.add({"=": "matcher.eq", "!=": "matcher.ne", "=~": "matcher.re", "!~": "matcher.nre"}[m.op])
+        out.add(
+            {"=": "matcher.eq", "!=": "matcher.ne", "=~": "matcher.re", "!~": "matcher.nre"}[m.op]
+        )
         if m.label == "__name__":
             out.add("matcher.name_label")
         if VARIABLE.search(m.value):
@@ -82,6 +87,8 @@ def _selector(node: Selector, out: set[str]) -> None:
             out.add("matcher.ne_empty")
         if m.op == "=" and m.value == "":
             out.add("matcher.eq_empty")
+        if m.op in ("=~", "!~") and not VARIABLE.search(m.value) and not _carried_syntax(m.value):
+            out.add("matcher.re.complex_syntax")
         if m.op in ("=~", "!~") and _matches_empty(m.value):
             out.add("matcher.re.matches_empty")
     if node.range:
@@ -90,6 +97,13 @@ def _selector(node: Selector, out: set[str]) -> None:
         out.add("mod.offset")
     if node.at:
         out.add("mod.at")
+
+
+def _carried_syntax(pattern: str) -> bool:
+    """The small regex syntax the converter turns into RLIKE (regex_matchers.SAFE)."""
+    return pattern in ("", ".+") or (
+        len(pattern) <= MAX_PATTERN and SAFE.fullmatch(pattern) is not None and "(?" not in pattern
+    )
 
 
 def _matches_empty(pattern: str) -> bool:
@@ -135,7 +149,8 @@ def _aggregate(node: Aggregate, out: set[str]) -> None:
     out.add(f"agg.{node.op}")
     out.add({"by": "agg.by", "without": "agg.without", None: "agg.ungrouped"}[node.grouping])
     inner = list(walk(node.expr))
-    if any(isinstance(n, Aggregate) for n in inner):
+    ranking = node.op in ("topk", "bottomk", "limitk")  # ranking a grouped result is not nesting
+    if not ranking and any(isinstance(n, Aggregate) for n in inner):
         out.add("agg.nested")
     if node.op in ("avg", "min", "max") and any(
         isinstance(n, Call) and n.func.lower() in RATE_FUNCTIONS for n in inner
@@ -177,6 +192,8 @@ def constructs_of(node: Node, text: str = "") -> set[str]:
     if UPPERCASE_AGGREGATE.search(text):
         out.add("style.uppercase_aggregate")
     out |= _bare_counters(node)
+    if sum(isinstance(n, Binary) for n in walk(node)) >= MAX_OPERANDS:
+        out.add("shape.huge_expression")
     for n in walk(node):
         if isinstance(n, Binary) and n.op == "or" and _is_vector_literal(n.rhs):
             out.add("idiom.or_vector")

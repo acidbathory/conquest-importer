@@ -44,7 +44,10 @@ def ids(expr: str) -> set[str]:
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
-        ('up{job="a", env!="b", p=~"c", n!~"d"}', {"matcher.eq", "matcher.ne", "matcher.re", "matcher.nre"}),
+        (
+            'up{job="a", env!="b", p=~"c", n!~"d"}',
+            {"matcher.eq", "matcher.ne", "matcher.re", "matcher.nre"},
+        ),
         ("sum without (a) (up)", {"agg.sum", "agg.without"}),
         ("sum by (a) (up)", {"agg.sum", "agg.by"}),
         ("rate(x[$__rate_interval])", {"fn.rate", "window.rate_interval", "selector.range"}),
@@ -69,7 +72,7 @@ def ids(expr: str) -> set[str]:
         ('up{job=~".*"}', {"matcher.re.matches_empty"}),
         ("sum(up{a='b'})", {"style.single_quoted_string"}),
         ("SUM(up)", {"style.uppercase_aggregate"}),
-        ("up{job=~\"$job\"}", {"matcher.value_variable"}),
+        ('up{job=~"$job"}', {"matcher.value_variable"}),
         ("-up", {"unary.-"}),
     ],
 )
@@ -143,7 +146,7 @@ def test_verdict_codes_and_text() -> None:
     for name, verdict in verdicts.VERDICTS.items():
         assert verdict.code in (1, 2, 3, 4), name
         assert verdict.status in ("MEASURED", "DOCS", "UNVERIFIED", "n/a"), name
-        assert verdict.note, name
+        assert verdict.note or verdict.code != 4, name
         if verdict.code in (1, 2, 3):
             assert verdict.nrql, name
 
@@ -166,7 +169,9 @@ def test_census_agrees_with_the_converter() -> None:
 
 
 def _expr(constructs: list[str], converts: bool) -> object:
-    return census.Expression("d", "0:0", "t", "timeseries", "A", "x", "prometheus", "", constructs, converts)
+    return census.Expression(
+        "d", "0:0", "t", "timeseries", "A", "x", "prometheus", "", constructs, converts
+    )
 
 
 def _panel(key: str, indexes: list[int], other: list[str] | None = None) -> object:

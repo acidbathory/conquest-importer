@@ -10,15 +10,18 @@ mapped to construct ids (`promql_constructs.py`) and run through the current con
 network. The script prints a Markdown summary; `--json` writes the full result.
 """
 
+import argparse
 import json
 import sys
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from promql_constructs import constructs_of  # noqa: E402
+from promql_verdicts import verdict_for  # noqa: E402
 
 from importer.core.dashboard_ir import WidgetKind  # noqa: E402
 from importer.sources.grafana.dashboard_convert.legend import read_legend  # noqa: E402
@@ -98,7 +101,9 @@ class Census:
     other_panels: int = 0
 
 
-def _options(draft_ctx_variables: dict[str, str | None], names: list[str], panel_type: str, drafted) -> QueryOptions:  # type: ignore[no-untyped-def]
+def _options(
+    draft_ctx_variables: dict[str, str | None], names: list[str], panel_type: str, drafted
+) -> QueryOptions:  # type: ignore[no-untyped-def]
     """Query options in which every dashboard variable is a plain variable (not "unavailable"),
     so that the converter judges the query text and not the variable plan."""
     variables = {**{n: None for n in names}, **draft_ctx_variables}
@@ -139,7 +144,9 @@ def analyse_item(item: Item, census: Census, index: int) -> None:
                 exp.parse_error = str(error)
             opts = _options(drafted.ctx.variables.options, names, panel.type, drafted)
             try:
-                convert_query(target.expr, family, opts, read_legend(target.legend), panel.repeat or None)
+                convert_query(
+                    target.expr, family, opts, read_legend(target.legend), panel.repeat or None
+                )
                 exp.converts = True
             except Unconvertible as stop:
                 exp.reason = stop.reason
@@ -221,17 +228,167 @@ def table(census: Census) -> list[dict[str, object]]:
     return out
 
 
-def main(argv: list[str]) -> int:
-    paths = [Path(a) for a in argv if not a.startswith("--")]
-    census = build(paths)
+@dataclass
+class Projection:
+    """Panels with a PromQL query, and how many convert under one scenario."""
+
+    panels: int
+    query_layer: int  # every PromQL expression of the panel converts
+    end_to_end: int  # ... and nothing else (variables, transformations, widget type) blocks
+
+
+def today() -> Callable[[str], bool]:
+    return lambda c: c in SUPPORTED_TODAY
+
+
+def expressible(cap: int, verified_only: bool = False) -> Callable[[str], bool]:
+    """Supported = what works today plus every construct whose verdict code is at most `cap`.
+
+    With `verified_only` a construct also needs the status MEASURED or DOCS."""
+
+    def check(construct: str) -> bool:
+        if construct in SUPPORTED_TODAY:
+            return True
+        verdict = verdict_for(construct)
+        return verdict.code <= cap and (not verified_only or verdict.status in ("MEASURED", "DOCS"))
+
+    return check
+
+
+def project(census: Census, supported: Callable[[str], bool]) -> Projection:
+    query_layer = end_to_end = 0
+    for row in census.panels:
+        ok = True
+        for i in row.expressions:
+            exp = census.expressions[i]
+            if exp.parse_error or (
+                not exp.converts and not all(supported(c) for c in exp.unsupported)
+            ):
+                ok = False
+            elif not exp.converts and not exp.unsupported:
+                ok = False  # failed for a reason no construct explains: never counted
+        query_layer += ok
+        end_to_end += ok and not row.other_blockers
+    return Projection(len(census.panels), query_layer, end_to_end)
+
+
+def other_blocker_classes(census: Census) -> Counter[str]:
+    """Panels by the non-query reasons the planner gave (one panel can have several)."""
+    out: Counter[str] = Counter()
+    for row in census.panels:
+        for reason in row.other_blockers:
+            out[reason] += 1
+    return out
+
+
+def alert_expressions(paths: list[Path]) -> list[str]:
+    """Every `expr` string in alert rule JSON files (recursively)."""
+    found: list[str] = []
+
+    def visit(value: object) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key == "expr" and isinstance(item, str) and item.strip():
+                    found.append(item)
+                else:
+                    visit(item)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+
+    for path in paths:
+        files = sorted(path.rglob("*.json")) if path.is_dir() else [path]
+        for file in files:
+            try:
+                visit(json.loads(file.read_text(encoding="utf-8")))
+            except (OSError, ValueError):
+                continue
+    return found
+
+
+def alert_table(texts: list[str]) -> tuple[int, int, list[tuple[str, int]]]:
+    """(expressions, unparsed, [(construct, expressions)]) for alert rule queries."""
+    counts: Counter[str] = Counter()
+    bad = 0
+    for text in texts:
+        try:
+            counts.update(constructs_of(parse(text), text))
+        except PromQLSyntaxError:
+            bad += 1
+    return len(texts), bad, sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+
+
+def render(census: Census, alerts: tuple[int, int, list[tuple[str, int]]] | None = None) -> str:
+    """The Markdown tables of the research note."""
+    lines: list[str] = []
     rows = table(census)
-    print(f"dashboards {census.dashboards}, panels {census.panels_total}, "
-          f"prom panels {len(census.panels)}, prom expressions {len(census.expressions)}, "
-          f"loki expressions {census.loki_expressions}")  # fmt: skip
+    lines.append(
+        f"dashboards {census.dashboards}; panels {census.panels_total}; panels with PromQL "
+        f"{len(census.panels)}; PromQL expressions {len(census.expressions)}; "
+        f"LogQL expressions skipped {census.loki_expressions}"
+    )
+    groups = Counter(
+        "community" if p.dashboard.startswith("ckg-") else "built-in" for p in census.panels
+    )
+    lines.append(f"PromQL panels by group: {dict(groups)}")
+    lines.append("")
+    lines.append(
+        "| construct | expressions | panels | sole blocker | sole, nothing else blocks | today | verdict | evidence |"
+    )
+    lines.append("|---|---:|---:|---:|---:|---|---:|---|")
     for r in rows:
-        print(r)
-    if "--json" in argv:
-        Path(argv[argv.index("--json") + 1]).write_text(json.dumps(asdict(census), indent=1))
+        name = str(r["construct"])
+        v = verdict_for(name)
+        today_ok = "yes" if r["supported_today"] else "no"
+        lines.append(
+            f"| `{name}` | {r['expressions']} | {r['panels']} | {r['sole_blocker']} | "
+            f"{r['sole_blocker_clean']} | {today_ok} | {v.code} | {v.status} |"
+        )
+    lines.append("")
+    lines.append("| scenario | PromQL panels | query layer converts | end to end converts |")
+    lines.append("|---|---:|---:|---:|")
+    for label, fn in (
+        ("today", today()),
+        ("verdict 1 and 2, any evidence", expressible(2)),
+        ("verdict 1 and 2, MEASURED or DOCS only", expressible(2, True)),
+        ("verdict 1, 2 and 3, any evidence", expressible(3)),
+    ):
+        p = project(census, fn)
+        lines.append(f"| {label} | {p.panels} | {p.query_layer} | {p.end_to_end} |")
+    lines.append("")
+    lines.append("| other blocker (planner reason) | panels |")
+    lines.append("|---|---:|")
+    for reason, n in other_blocker_classes(census).most_common():
+        lines.append(f"| {reason} | {n} |")
+    if alerts is not None:
+        total, bad, counts = alerts
+        lines += [
+            "",
+            f"alert rule expressions {total}, unparsed {bad}",
+            "",
+            "| construct | expressions |",
+            "|---|---:|",
+        ]
+        lines += [f"| `{c}` | {n} |" for c, n in counts]
+    return "\n".join(lines) + "\n"
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dashboards", nargs="+", type=Path)
+    parser.add_argument("--alerts", nargs="*", type=Path, default=[])
+    parser.add_argument("--json", type=Path)
+    parser.add_argument("--markdown", type=Path)
+    args = parser.parse_args(argv)
+    census = build(args.dashboards)
+    alerts = alert_table(alert_expressions(args.alerts)) if args.alerts else None
+    text = render(census, alerts)
+    if args.markdown:
+        args.markdown.write_text(text, encoding="utf-8")
+    else:
+        sys.stdout.write(text)
+    if args.json:
+        args.json.write_text(json.dumps(asdict(census), indent=1), encoding="utf-8")
     return 0
 
 
