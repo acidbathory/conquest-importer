@@ -10,36 +10,50 @@ the keyboard: `importer menu` with piped input prints a one-line message and exi
 8 What did I just do?   0 Quit
 ```
 
-## A source (1 to 4)
+## A source (1 to 4): everything in one pass
 
-The menu calls the same commands you would type, in order:
+Picking a source does the whole job in one go. There is no "create these or open the report"
+choice. The menu calls the same commands you would type:
 
 1. Check setup (`doctor`). A failure prints one sentence saying what to do next.
-2. Read from the source (`extract-*`, read-only).
-3. Convert and preview (`convert`, then `apply` without `--apply`). Local files only.
-4. Optional: create in New Relic, or open the HTML report.
+2. Read everything the source offers, read-only: alert rules, notifications and dashboards
+   (`extract-*`).
+3. Convert everything, local files only, and write the reports and the remediation plan
+   (`plan-remediation`, called for you). For Grafana it also writes the data-path guide
+   (`plan-grafana-datapath`), the dashboard ranking (`triage-grafana-dashboards`) and the
+   quickstart match (`plan-grafana-quickstarts`).
+4. One preview in plain language: for alerts, notifications and dashboards, "N will be created, M
+   need your attention"; the New Relic account id and name; "everything is created disabled or
+   private"; the top five reasons items need attention, with counts, and the path to the
+   remediation plan; for Grafana and Dynatrace a line that your metrics must reach New Relic
+   (when the data-path plan exists); and the quickstart and ranking results when they were
+   produced. All numbers are counted from the converter's own output files, never estimated.
+5. One confirmation. It names the account and lists the counts of each kind. Only the word `yes`
+   continues; anything else leaves nothing created.
+6. Create in a safe order: alert conditions, then notifications, then dashboards. The whole thing
+   is one run record (for example `grafana`), so one rollback undoes all of it.
+7. A short "Done" screen: what was created, where the reports are (a path; no browser is ever
+   opened), the remediation plan, how to undo (pick 5 Roll back a run) and what to do next (turn
+   on the alert conditions one by one, make sure your metrics reach New Relic).
+
+| | Alerts | Notifications | Dashboards |
+|---|---|---|---|
+| GCP | `extract-gcp`, `convert` | `convert-gcp-notifications` (manual steps, nothing created) | `convert-dashboards --source gcp`, `apply-dashboards` |
+| AWS | `extract-cloudwatch`, `convert` | `convert-notifications`, `apply-notifications` | `convert-dashboards`, `apply-dashboards` (if the account has any) |
+| Grafana | `extract-grafana`, `convert` | `extract-grafana-notifications`, `convert-grafana-notifications`, `apply-notifications` | `extract-grafana-dashboards`, `convert-grafana-dashboards`, `apply-dashboards` |
+| Dynatrace | `extract-dynatrace`, `convert` | `convert-notifications --source dynatrace`, `apply-notifications` (plans marked "needs review" are counted as needing attention, not created) | planned only (`extract-dynatrace-inventory`, `plan-dynatrace-dashboards`); nothing is created |
+
+If the alerts cannot be read or converted, the flow stops and nothing was changed. If only the
+notifications or the dashboards fail to read or convert, they are left out and the rest goes on.
+If a create fails part-way, the menu stops, says what was created so far, and offers to roll that
+back, to continue (items that already exist are skipped), or to leave it for later.
 
 Missing settings are asked for. A token is asked with a hidden prompt, kept in this process only,
 and never written to disk or to a report. Creating needs the New Relic account id (from
 `NEW_RELIC_ACCOUNT_ID`), that account in `NEW_RELIC_ALLOWED_ACCOUNT_IDS`, and you typing `yes`
-after a message that names the account. Nothing opens a browser unless you choose "Open the HTML
-report".
-
-## Dashboards and notifications (Grafana and Dynatrace)
-
-After the alert conditions have been converted, the "what next?" step of Grafana and Dynatrace also
-offers `3 Also bring over the dashboards` and `4 Also bring over the notifications`. Each one runs
-read (read-only), convert (local files), preview (a dry run that names the New Relic account),
-then optionally create. It reuses `apply-dashboards` and `apply-notifications` and their manifests.
-
-| | Grafana | Dynatrace |
-|---|---|---|
-| Dashboards | `extract-grafana-dashboards`, `convert-grafana-dashboards`, `apply-dashboards` | planned only (`extract-dynatrace-inventory`, `plan-dynatrace-dashboards`); nothing is created |
-| Notifications | `extract-grafana-notifications`, `convert-grafana-notifications` (uses the converted alerts), `apply-notifications` | `convert-notifications --source dynatrace` on the export already read, then `apply-notifications`; asks whether to include plans marked "needs review" |
-
-Creating asks for the same things as for alerts: the account in `NEW_RELIC_ALLOWED_ACCOUNT_IDS`, a
-confirmation message that names the account, and you typing `yes`. It only creates, never updates.
-Dashboards are private; workflows are disabled. No report or browser is opened.
+after a message that names the account. It only creates, never updates. Conditions and workflows
+are disabled; dashboards are private. The menu never opens a browser: the markdown and HTML
+reports are written and their folder is printed.
 
 ## What did I just do? (item 8)
 
@@ -51,7 +65,7 @@ created, how many are still in New Relic, what is private or disabled, and how t
 
 Before a create, the menu writes a run record to `out/runs/<run id>.json` (folder `0700`, files
 `0600`, written atomically; override the folder with `IMPORTER_RUNS_DIR`). After the create it
-adds what was made: type, id, name, account. Dashboard and notification creates are separate runs (for example `grafana-dashboards`), so each can be undone on its own. `importer runs` lists them.
+adds what was made: type, id, name, account. One source flow is one run (for example `grafana`) holding the conditions, workflows and dashboards it made, so one rollback undoes all of it. Runs recorded by earlier versions, such as `grafana-dashboards`, still list and roll back. `importer runs` lists them.
 
 Item 5 (or `importer rollback-run`) lists runs, shows exactly what would be deleted, and asks you
 to type `yes`. It then:
