@@ -105,7 +105,7 @@ def test_menu_lists_every_choice_and_quits(tmp_path: Path) -> None:
 
 
 def test_bad_choice_reprompts(tmp_path: Path) -> None:
-    menu, console, _, _, _ = make(tmp_path, ["x", "9", "0"])
+    menu, console, _, _, _ = make(tmp_path, ["x", "10", "0"])
     menu.run()
     assert console.text.count("Please type a number") == 2
 

@@ -8,17 +8,20 @@ to show data. Nothing is sent anywhere and the dashboards are created private by
 """
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from importer.core.dashboard_ir import IRDashboard, WidgetKind
+from importer.core.dashboard_ir import IRDashboard, IRWidget, WidgetKind
 from importer.core.dashboard_report import build_dashboard_report
 from importer.core.emit.common import CannotEmit
 from importer.core.emit.dashboard import dashboard_id, dashboards_terraform, nerdgraph_dashboard
 from importer.core.report import md_cell
 from importer.core.text import printable
+from importer.parity.labels import Labels, load_labels, verified_on
+from importer.parity.model import ParityError
 from importer.sources.grafana.dashboard_convert import reasons as r
 from importer.sources.grafana.dashboard_convert.name_map import (
     MAP_ENV,
@@ -62,7 +65,21 @@ def prerequisite_section(report: Report, map_entries: int) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _write(out: Path, dashboards: list[IRDashboard], report: Report, entries: int) -> int:
+def _parity_text(labels: Labels) -> Callable[[IRDashboard, IRWidget], str]:
+    def text(dash: IRDashboard, widget: IRWidget) -> str:
+        date = verified_on(labels, dash.source_key, widget)
+        return f"verified on {date}" if date else ""
+
+    return text
+
+
+def _write(
+    out: Path,
+    dashboards: list[IRDashboard],
+    report: Report,
+    entries: int,
+    labels: Labels | None = None,
+) -> int:
     """Write IR, NerdGraph, Terraform and the report; returns how many dashboards were emitted."""
     (out / "dashboard-ir").mkdir(parents=True, exist_ok=True)
     (out / "nerdgraph").mkdir(parents=True, exist_ok=True)
@@ -78,9 +95,9 @@ def _write(out: Path, dashboards: list[IRDashboard], report: Report, entries: in
         (out / "nerdgraph" / f"{ident}.json").write_text(json.dumps(payload, indent=2) + "\n")
     (out / "dashboards.tf").write_text(dashboards_terraform(emitted))
     keys = {d.source_key for _, d in emitted}
-    text = build_dashboard_report(dashboards, keys, "grafana") + prerequisite_section(
-        report, entries
-    )
+    text = build_dashboard_report(
+        dashboards, keys, "grafana", _parity_text(labels) if labels is not None else None
+    ) + prerequisite_section(report, entries)
     (out / "report.md").write_text(text)
     return len(emitted)
 
@@ -109,6 +126,14 @@ def register(app: typer.Typer) -> None:
                 "given more than once (one file per data source).",
             ),
         ] = None,
+        parity: Annotated[
+            Path | None,
+            typer.Option(
+                "--parity",
+                help="verified-labels.json from `verify-parity`: widgets it verified get "
+                "'verified on <date>' in report.md. Nothing else changes.",
+            ),
+        ] = None,
     ) -> None:
         """Convert Grafana dashboards to IR, NerdGraph payloads, Terraform and a report.
 
@@ -128,8 +153,9 @@ def register(app: typer.Typer) -> None:
             if not items:
                 raise ValueError(f"no Grafana dashboards found in {source}")
             dashboards, report = convert_all(items, names)
-            emitted = _write(out, dashboards, report, len(names.metrics))
-        except (ValueError, OSError, NameMapError) as exc:
+            labels = load_labels(parity) if parity else None
+            emitted = _write(out, dashboards, report, len(names.metrics), labels)
+        except (ValueError, OSError, NameMapError, ParityError) as exc:
             typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
             raise typer.Exit(code=1) from None
         widgets = [w for d in dashboards for w in d.widgets if w.source_type != "row"]

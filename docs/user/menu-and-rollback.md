@@ -7,7 +7,7 @@ the keyboard: `importer menu` with piped input prints a one-line message and exi
 ```
 1 GCP   2 AWS   3 Grafana   4 Dynatrace
 5 Roll back a run   6 Check my setup   7 Try on sample data
-8 What did I just do?   0 Quit
+8 What did I just do?   9 Check my migration (parity)   0 Quit
 ```
 
 ## A source (1 to 4): everything in one pass
