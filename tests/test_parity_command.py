@@ -2,7 +2,7 @@
 
 import json
 import shutil
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -121,11 +121,11 @@ def test_bad_settings_are_refused(converted: Path, tmp_path: Path) -> None:
         parse_variables(["no-equals"])
 
 
-def test_command_is_registered_with_the_documented_options() -> None:
-    result = CliRunner().invoke(app, ["verify-parity", "--help"])
-    assert result.exit_code == 0
+def test_command_is_registered_with_the_documented_options(help_text: Callable[..., str]) -> None:
+    text = help_text("verify-parity", "--help")  # plain text: Rich colours the help on CI
+    assert "verify-parity" in text
     for flag in ("--in", "--source-prom", "--nr-account-id", "--hours", "--step", "--watch"):
-        assert flag in result.output
+        assert flag in text
 
 
 def test_command_reports_an_error_without_a_traceback(tmp_path: Path) -> None:
