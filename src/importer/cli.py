@@ -117,7 +117,10 @@ class _Importer(typer.Typer):
 
 
 app = _Importer(
-    help="Migrate monitoring from Grafana, Dynatrace, AWS CloudWatch or Google Cloud Monitoring to New Relic.",
+    help=(
+        "Migrate monitoring from Grafana, Dynatrace, AWS CloudWatch or Google Cloud Monitoring "
+        "to New Relic."
+    ),
     no_args_is_help=True,
 )
 
