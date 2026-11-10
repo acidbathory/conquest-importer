@@ -7,7 +7,6 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from importer.cli import app
-from importer.sources.grafana.dashboards.load import load_estate
 from importer.sources.grafana.dashboards.models import Dashboard, Panel, Target
 from importer.sources.grafana.dashboards.quickstart_map import (
     CHANGE,
@@ -46,7 +45,9 @@ def test_every_entry_is_verified_and_points_at_the_public_repository() -> None:
         assert e.id not in seen
         seen.add(e.id)
         assert e.verified and e.evidence
-        assert all(u.startswith("https://github.com/newrelic/newrelic-quickstarts/") for u in e.evidence)
+        assert all(
+            u.startswith("https://github.com/newrelic/newrelic-quickstarts/") for u in e.evidence
+        )
         assert e.caveat and e.needs
         if e.quickstart:
             assert URL.match(e.quickstart.url), e.quickstart.url
@@ -68,7 +69,8 @@ def test_expected_metrics_hold_no_generic_names() -> None:
 
 def test_promql_metrics_keeps_metric_names_only() -> None:
     expr = (
-        'histogram_quantile(0.9, sum by (le, instance_name) (rate(http_request_duration_seconds_bucket'
+        "histogram_quantile(0.9, sum by (le, instance_name) "
+        "(rate(http_request_duration_seconds_bucket"
         '{job=~"$job",mode!="idle_x"}[$__rate_interval]))) / on(node_name) group_left(pod_name) '
         'label_replace(kube_pod_info, "a_b", "$1", "c_d", "(.*)")'
     )
@@ -110,7 +112,9 @@ def test_an_id_match_with_enough_overlap_is_a_replacement() -> None:
 
 
 def test_a_title_match_without_queries_is_related_because_overlap_is_unknown() -> None:
-    m = next(m for m in match_dashboard(dash("Redis Dashboard"), None) if m.entry == "redis-prometheus")
+    m = next(
+        m for m in match_dashboard(dash("Redis Dashboard"), None) if m.entry == "redis-prometheus"
+    )
     assert m.verdict == RELATED and m.overlap.total == 0
 
 
@@ -121,7 +125,12 @@ def test_a_collection_change_entry_needs_a_change_of_collector() -> None:
 
 
 def test_nginx_ingress_names_do_not_match_the_nginx_infrastructure_entry() -> None:
-    d = dash("x", "nginx_ingress_controller_a_b", "nginx_ingress_controller_c_d", "nginx_ingress_controller_e_f")
+    d = dash(
+        "x",
+        "nginx_ingress_controller_a_b",
+        "nginx_ingress_controller_c_d",
+        "nginx_ingress_controller_e_f",
+    )
     assert [m for m in match_dashboard(d, None) if m.entry == "nginx"] == []
 
 
@@ -163,7 +172,12 @@ def test_the_command_writes_markdown_and_json(tmp_path: Path) -> None:
         "gnetId": 14981,
         "schemaVersion": 39,
         "panels": [
-            {"id": i, "type": "timeseries", "title": n, "targets": [{"expr": f"sum(rate({n}[5m]))"}]}
+            {
+                "id": i,
+                "type": "timeseries",
+                "title": n,
+                "targets": [{"expr": f"sum(rate({n}[5m]))"}],
+            }
             for i, n in enumerate(names)
         ],
     }
@@ -184,7 +198,3 @@ def test_the_command_refuses_an_output_folder_inside_the_input(tmp_path: Path) -
         app, ["plan-grafana-quickstarts", "--in", str(tmp_path), "--out", str(tmp_path / "o")]
     )
     assert result.exit_code == 1 and "inside" in result.output
-
-
-def test_a_real_export_folder_loads(tmp_path: Path) -> None:
-    assert load_estate  # the planner path the command reuses
