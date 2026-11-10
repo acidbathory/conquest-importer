@@ -334,3 +334,53 @@ def test_a_failed_read_stops_the_dashboard_flow(tmp_path: Path) -> None:
     menu.run()
     assert "convert-grafana-dashboards" not in run.names()
     assert "Nothing was created" in console.text
+
+
+def _record_with(store: RunStore, source: str, objects: list[dict[str, str]]) -> str:
+    record = store.start(source=source, account_id=7, region="us", out_dir=Path("o"))
+    record.objects = [CreatedObject.model_validate(o) for o in objects]
+    record.status = "applied"
+    store.save(record)
+    return record.run_id
+
+
+def test_what_did_i_just_do_with_no_runs(tmp_path: Path) -> None:
+    menu, console, _, _, _ = make(tmp_path, ["8", "0"])
+    menu.run()
+    assert "nothing yet" in console.text.lower()
+
+
+def test_what_did_i_just_do_summarises_the_last_run(tmp_path: Path) -> None:
+    menu, console, _, _, store = make(tmp_path, ["8", "0"])
+    _record_with(store, "gcp", [{"kind": "condition", "id": "1", "name": "ckg-old"}])
+    run_id = _record_with(
+        store,
+        "grafana-dashboards",
+        [
+            {"kind": "dashboard", "id": "g1", "name": "A"},
+            {"kind": "dashboard", "id": "g2", "name": "B"},
+        ],
+    )
+    menu.run()
+    text = console.text
+    assert run_id in text and "grafana-dashboards" in text and "account 7" in text
+    assert "2 dashboard" in text and "private" in text
+    assert "Roll back a run" in text and "rollback-run" in text
+
+
+def test_what_did_i_just_do_names_disabled_things_and_rolled_back_state(tmp_path: Path) -> None:
+    menu, console, _, _, store = make(tmp_path, ["8", "0"])
+    run_id = _record_with(
+        store,
+        "grafana",
+        [
+            {"kind": "condition", "id": "1", "name": "ckg-a"},
+            {"kind": "workflow", "id": "2", "name": "Imported:w"},
+        ],
+    )
+    record = store.load(run_id)
+    record.rolled_back = ["condition:1"]
+    record.status = "partly-rolled-back"
+    store.save(record)
+    menu.run()
+    assert "1 still in New Relic" in console.text and "disabled" in console.text
