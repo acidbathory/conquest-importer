@@ -99,11 +99,12 @@ def register(app: typer.Typer) -> None:
             ),
         ] = None,
         hints: Annotated[
-            Path | None,
+            list[Path] | None,
             typer.Option(
                 "--hints",
                 help="JSON from `grafana-prom-hints`: the exact type of each metric and the "
-                "labels that name one series. Replaces the guess from the name suffix.",
+                "labels that name one series. Replaces the guess from the name suffix. May be "
+                "given more than once (one file per data source).",
             ),
         ] = None,
     ) -> None:
@@ -119,8 +120,8 @@ def register(app: typer.Typer) -> None:
             if _inside(out, source):
                 raise ValueError(f"--out {out} is inside --in {source}; choose a separate folder")
             names: NameMap = load_name_map(name_map) if name_map else active_name_map()
-            if hints:
-                names = merge_hints(names, load_name_map(hints))
+            for hint_file in hints or []:
+                names = merge_hints(names, load_name_map(hint_file))
             items = load_items(source)
             if not items:
                 raise ValueError(f"no Grafana dashboards found in {source}")

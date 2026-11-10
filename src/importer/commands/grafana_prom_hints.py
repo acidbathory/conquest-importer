@@ -69,7 +69,7 @@ def register(app: typer.Typer) -> None:
         typer.echo(
             f"Wrote {out}: {len(hints.types)} types and {len(hints.series)} series keys for "
             f"{len(wanted)} metrics ({hints.requested} requests). "
-            f"{len(hints.unknown)} not known to Prometheus (suffix guess stays)."
+            f"{len(hints.unknown)} have no type in the metadata (suffix guess stays)."
         )
         if hints.truncated:
             typer.echo(f"  {len(hints.truncated)} gauges had too many series for a key.")

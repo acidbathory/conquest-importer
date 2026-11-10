@@ -8,7 +8,7 @@ name map format (`types` and `series`, see `dashboard_convert/name_map.py`).
 
 Safeguards, on top of those of `core/safe_http.py` (no redirects, token scrubbing, response and
 run byte caps, a deadline): GET only; the host is validated like the other Grafana extractors;
-only three path shapes run, each with fixed parameter patterns; at most MAX_REQUESTS requests,
+only four path shapes run, each with fixed parameter patterns; at most MAX_REQUESTS requests,
 MAX_METRICS metrics, MAX_SERIES series per metric and MAX_RUN_BYTES bytes in all. Hints are
 optional: any shortfall leaves a metric out and the converter falls back to the suffix guess for it.
 """
@@ -34,12 +34,14 @@ SERVICE = "Grafana"
 UID = re.compile(r"[A-Za-z0-9_-]{1,40}")
 DS_NAME = re.compile(r"[A-Za-z0-9 _.()-]{1,100}")
 METRIC = re.compile(r"[A-Za-z_:][A-Za-z0-9_:]{0,200}")
-PROXY = re.compile(r"/api/datasources/proxy/uid/([A-Za-z0-9_-]{1,40})/api/v1/(metadata|series)")
+PROXY = re.compile(
+    r"/api/datasources/proxy/uid/([A-Za-z0-9_-]{1,40})/api/v1/(metadata|series|label/__name__/values)"
+)
 DS_PATH = re.compile(r"/api/datasources/(?:uid/[A-Za-z0-9_-]{1,40}|name/[A-Za-z0-9 _.()-]{1,100})")
 SERIES_MATCH = re.compile(r'\{__name__="[A-Za-z_:][A-Za-z0-9_:]{0,200}"\}')
 DIGITS = re.compile(r"[0-9]{1,10}")
 PARAMS = {"match[]": SERIES_MATCH, "limit": DIGITS, "start": DIGITS, "end": DIGITS}
-MAX_METRICS = 500
+MAX_METRICS = 1000
 MAX_REQUESTS = 600
 MAX_SERIES = 1000  # per metric; more means the label set was not seen whole and gives no hint
 MAX_RUN_BYTES = 64 * 1024 * 1024
@@ -96,7 +98,7 @@ def metrics_in_expression(expr: str) -> set[str]:
     for found in WORD.finditer(text):
         if found[2] is None:  # a word followed by "(" is a function
             names.add(found[1])
-    return {n for n in names if n not in EXPRESSION_SKIP and METRIC.fullmatch(n)}
+    return {n for n in names if n.lower() not in EXPRESSION_SKIP and METRIC.fullmatch(n)}
 
 
 def metrics_from_dashboards(path: Path) -> set[str]:
@@ -159,6 +161,8 @@ def _allowed(path: str, params: dict[str, str]) -> bool:
     found = PROXY.fullmatch(path)
     if found is None:
         return False
+    if found[2] == "label/__name__/values":
+        return not params
     if found[2] == "metadata":
         return set(params) <= {"limit"} and all(DIGITS.fullmatch(v) for v in params.values())
     return "match[]" in params and all(
@@ -236,7 +240,7 @@ class Hints:
     types: dict[str, str] = field(default_factory=dict)
     series: dict[str, list[str]] = field(default_factory=dict)
     requested: int = 0
-    unknown: list[str] = field(default_factory=list)  # named in dashboards, not in the metadata
+    unknown: list[str] = field(default_factory=list)  # named in dashboards, no type in metadata
     truncated: list[str] = field(default_factory=list)  # too many series to name a key from
     skipped: int = 0  # metrics left out by the MAX_METRICS cap
     warnings: list[str] = field(default_factory=list)
@@ -323,16 +327,25 @@ def read_hints(get: Getter, uid: str, wanted: set[str], now: float | None = None
     base = f"/api/datasources/proxy/uid/{uid}/api/v1"
     meta = _metadata_types(get(f"{base}/metadata", {"limit": str(MAX_METADATA)}))
     hints.requested += 1
+    present: set[str] = set()
+    try:  # which names exist at all; a stack without metadata still answers this
+        listed = get(f"{base}/label/__name__/values", {}).get("data")
+        hints.requested += 1
+        present = {n for n in listed if isinstance(n, str)} if isinstance(listed, list) else set()
+    except HintsError as exc:
+        _warn(hints, f"could not list metric names: {exc}")
     end = int(now if now is not None else time.time())
     window = {"start": str(end - WINDOW_SECONDS), "end": str(end), "limit": str(MAX_SERIES + 1)}
     for name in names:
         kind = type_of(name, meta)
         if kind is None:
             hints.unknown.append(name)
-            continue
-        hints.types[name] = kind
-        if kind != "gauge":
-            continue
+            if name not in present:  # no type and no data: nothing to say about it
+                continue
+        else:
+            hints.types[name] = kind
+            if kind != "gauge":
+                continue
         try:
             body = get(f"{base}/series", {"match[]": '{__name__="' + name + '"}', **window})
         except HintsError as exc:

@@ -30,6 +30,9 @@ METADATA = {
 }
 
 
+PRESENT = [*METADATA["data"], "recorded_ratio"]
+
+
 def series(name: str, *label_sets: dict[str, str]) -> dict[str, Any]:
     return {"status": "success", "data": [{"__name__": name, **ls} for ls in label_sets]}
 
@@ -41,6 +44,7 @@ SERIES = {
         {"job": "node", "instance": "b:9100"},
     ),
     "process_open_fds_total": series("process_open_fds_total", {"job": "api"}),
+    "recorded_ratio": series("recorded_ratio", {"job": "a"}, {"job": "b"}),
     "big_gauge": series("big_gauge", *({"pod": f"p{i}"} for i in range(ph.MAX_SERIES + 1))),
 }
 
@@ -57,6 +61,8 @@ def handler(seen: list[httpx.Request]):  # type: ignore[no-untyped-def]
             return httpx.Response(200, json={"uid": "loki1", "type": "loki"})
         if path == f"{PROXY}/metadata":
             return httpx.Response(200, json=METADATA)
+        if path == f"{PROXY}/label/__name__/values":
+            return httpx.Response(200, json={"status": "success", "data": PRESENT})
         if path == f"{PROXY}/series":
             match = request.url.params["match[]"]
             name = match.split('"')[1]
@@ -84,6 +90,7 @@ def test_types_and_series_keys() -> None:
         "rpc_sum",
         "rpc",
         "mystery_total",
+        "recorded_ratio",
         "big_gauge",
     }
     with getter(seen) as get:
@@ -100,7 +107,10 @@ def test_types_and_series_keys() -> None:
         "rpc": "gauge",
         "big_gauge": "gauge",
     }
-    assert found.unknown == ["mystery_total"]
+    # no type in the metadata: no type hint, but the series are still read when the name exists
+    assert found.unknown == ["mystery_total", "recorded_ratio"]
+    assert found.series["recorded_ratio"] == ["job"]
+    assert "mystery_total" not in found.series
     assert found.series["node_load1"] == ["instance"]
     assert found.series["process_open_fds_total"] == []
     assert "big_gauge" not in found.series and found.truncated == ["big_gauge"]
