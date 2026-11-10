@@ -216,4 +216,6 @@ No golden, baseline or hash file was regenerated (`tests/fixtures/*-hashes.json`
 
 ## 7. Operating the rig
 
+This run: started 10:49:26 UTC, stopped itself at 12:19:44 UTC (90 minutes), temp directory (binaries, TSDB, token file) deleted, caffeinate ended, no process left. Last watchdog reading: 437,982 samples handed to remote storage (cap 1.4 M). The New Relic data stays until retention removes it (all tagged `ckg_test=true`).
+
 Run: `bash scripts/live-test/telemetry-rig/fetch.sh` (download and verify), `bash scripts/live-test/telemetry-rig/start.sh` (needs `NEW_RELIC_LICENSE_KEY` in the repository `.env`). Stop: `bash scripts/live-test/telemetry-rig/stop.sh` (stops caffeinate, Prometheus, node_exporter, the exporter and the watchdog, deletes the temp dir with the binaries, TSDB and token file). Compare: `uv run python scripts/live-test/telemetry-rig/compare.py ENVFILE OUT.json [T0 T1]` then `report.py OUT.json`. Set `SSL_CERT_FILE` if corporate inspection breaks TLS; verification stays on.
