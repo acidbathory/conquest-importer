@@ -1,0 +1,539 @@
+# Alert behaviour (for / pending, no data) and notification routing.
+
+[[blocker]]
+key = "pending-nodata"
+title = "for / pending duration, noDataState and execErrState"
+titles = ["Grafana pending period too long", "Grafana no-data and error states", "Grafana keep firing or recovery threshold", "Grafana window too long"]
+scope = "Every alert rule has a for duration and a no-data state; 53 of 55 rules use NoData/Error defaults (2026-11-10 test estate)."
+summary = '''
+Grafana's `for` is a pending period. New Relic's threshold duration ("for at least N minutes" or "at least once in N
+minutes") sits on top of an aggregation window. No-data handling maps to loss of signal and gap filling. Query
+errors have no New Relic counterpart.
+'''
+decision = [
+  "Map `for` to threshold duration and occurrences (method 1).",
+  "Map NoData to loss of signal or gap filling (method 2).",
+  "Sparse data? Pick the streaming method (method 3).",
+  "KeepFiring and recovery thresholds are not available (method 4).",
+]
+ask = [
+  "What should happen when data stops: alert, stay quiet or keep the last state?",
+  "How often does the data arrive?",
+]
+cannot = "No keep_firing_for, no recovery threshold, no execErrState: a failing query is not alertable."
+
+[[blocker.method]]
+id = "for-to-duration"
+family = "D"
+name = "Map for to threshold duration and occurrences"
+when = '''Choose this for every rule.'''
+prerequisites = "Duration is a multiple of the aggregation window (60 to 86400 s)."
+needs_collector = false
+needs_reingest = false
+latency = "Duration plus window plus delay; the live test measured about 5 minutes more than Grafana."
+changes = '''"for 5m" becomes threshold_duration 300 with occurrences ALL. "At least once in" is AT_LEAST_ONCE. Any edit resets evaluation.'''
+effort = "10 minutes"
+risk = '''A duration over 24 hours is refused.'''
+verify = '''Firing test on a throwaway policy.'''
+status = "DOC-ONLY"
+evidence = "Terms read in the NRQL condition page and provider schema. Not created."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "hcl"
+  title = "for: 5m"
+  text = '''
+critical {
+  operator              = "above"
+  threshold             = 0
+  threshold_duration    = 300
+  threshold_occurrences = "all"
+}
+'''
+
+[[blocker.method]]
+id = "nodata-mapping"
+family = "D"
+name = "Map NoData to loss of signal and gap filling"
+when = '''Choose this to reproduce NoData=Alerting or OK.'''
+prerequisites = "A first data point."
+needs_collector = false
+needs_reingest = false
+latency = "Expiration duration."
+changes = '''NoData=Alerting: open_violation_on_expiration. NoData=OK: close_violations_on_expiration. KeepLast: fill_option last_value.'''
+effort = "15 minutes"
+risk = '''Gap filling happens only after a later point arrives.'''
+verify = '''Stop a test sender.'''
+status = "VERIFIED-VALID"
+evidence = "Query accepted 2026-11-10; settings from the loss-of-signal page."
+sources = ["https://docs.newrelic.com/docs/apis/nerdgraph/examples/nerdgraph-api-loss-signal-gap-filling/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Query that keeps NULL for empty windows"
+  text = '''
+SELECT count(*) FROM Metric WHERE metricName = 'ckg_flaky_heartbeat'
+'''
+
+  [[blocker.method.example]]
+  kind = "hcl"
+  title = "NoData=Alerting"
+  text = '''
+expiration_duration          = 300
+open_violation_on_expiration = true
+fill_option                  = "none"
+'''
+
+[[blocker.method]]
+id = "streaming-method"
+family = "D"
+name = "Choose event_flow, event_timer or cadence"
+when = '''Choose event_timer for sparse data.'''
+prerequisites = "Know the arrival pattern."
+needs_collector = false
+needs_reingest = false
+latency = "Delay default 120 s; timer default 60 s."
+changes = '''Changes when windows close.'''
+effort = "10 minutes"
+risk = '''Wrong method delays or drops evaluation.'''
+verify = '''Compare time to fire.'''
+status = "DOC-ONLY"
+evidence = "Read in the streaming concepts page."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "hcl"
+  title = "Sparse data"
+  text = '''
+aggregation_method = "event_timer"
+aggregation_timer  = 120
+'''
+
+[[blocker.method]]
+id = "no-hysteresis"
+family = "F"
+name = "Accept: no keep-firing or recovery threshold"
+when = '''Choose this and use longer durations.'''
+prerequisites = "Owner agrees."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Flapping is damped only by duration.'''
+effort = "5 minutes"
+risk = '''More flaps.'''
+verify = '''Review a week of events.'''
+status = "DOC-ONLY"
+evidence = "Absence in the condition settings."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "Wording"
+  text = '''
+No recovery threshold exists; the event closes when the signal returns inside the threshold.
+'''
+
+[[blocker]]
+key = "routing"
+title = "Label-based notification routing"
+titles = [
+  "Grafana notification policy matcher undecidable",
+  "Grafana notification policy regular expression",
+  "Grafana notification policy order",
+  "Grafana notification policy matcher not understood",
+  "Grafana notification policy rule without receiver",
+  "Grafana notification policy grouping or timing",
+  "Grafana route without a destination New Relic can create",
+]
+scope = "Routes with regex matchers or ordering on the test estate."
+summary = '''
+Grafana routes by alert labels in a policy tree. New Relic workflows filter issues by attributes such as
+accumulations.tag.team, policy ids or condition names.
+'''
+decision = [
+  "Tag conditions and filter on the tag (method 1).",
+  "One policy per route (method 2).",
+  "Route by a metric label value: one condition per value (method 3).",
+  "Accept ordering differences (method 4).",
+]
+ask = [
+  "Which labels route and how many routes?",
+  "Is the value a metric label or a rule label?",
+]
+cannot = "Workflows cannot route on a facet value; no continue/ordering semantics."
+
+[[blocker.method]]
+id = "tag-filter"
+family = "D"
+name = "Workflow filter on accumulations.tag.<key>"
+when = '''Choose this for team-style labels.'''
+prerequisites = "Entity tags on the condition or entity; channel ids."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Tags appear on the issue only after one has carried them.'''
+effort = "30 minutes"
+risk = '''Tag spelling differs between pages.'''
+verify = '''Use the workflow test.'''
+status = "DOC-ONLY"
+evidence = "Example read in the NerdGraph workflows page. Not run."
+sources = ["https://docs.newrelic.com/docs/apis/nerdgraph/examples/nerdgraph-api-workflows/"]
+
+  [[blocker.method.example]]
+  kind = "graphql"
+  title = "Workflow for team payments"
+  text = '''
+mutation {
+  aiWorkflowsCreateWorkflow(accountId: 1234567, createWorkflowData: {
+    name: "route team payments"
+    workflowEnabled: false
+    destinationsEnabled: true
+    mutingRulesHandling: DONT_NOTIFY_FULLY_MUTED_ISSUES
+    issuesFilter: { name: "team", type: FILTER,
+      predicates: [{ attribute: "accumulations.tag.team", operator: EXACTLY_MATCHES, values: ["payments"] }] }
+    destinationConfigurations: { channelId: "CHANNEL_ID", notificationTriggers: [ACTIVATED, CLOSED] }
+  }) { workflow { id } errors { description type } }
+}
+'''
+
+[[blocker.method]]
+id = "policy-per-route"
+family = "D"
+name = "One policy per route"
+when = '''Choose this for few routes.'''
+prerequisites = "Policies."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Filter on labels.policyIds.'''
+effort = "30 minutes"
+risk = '''Policy sprawl.'''
+verify = '''Fire one test.'''
+status = "DOC-ONLY"
+evidence = "Attribute listed in the notifications reference note."
+sources = ["https://docs.newrelic.com/docs/alerts/get-notified/incident-workflows/"]
+
+  [[blocker.method.example]]
+  kind = "json"
+  title = "Predicate"
+  text = '''
+{"attribute": "labels.policyIds", "operator": "EXACTLY_MATCHES", "values": ["POLICY_ID"]}
+'''
+
+[[blocker.method]]
+id = "condition-per-value"
+family = "D"
+name = "One condition per label value"
+when = '''Choose this to route by a metric label.'''
+prerequisites = "Short value list; Terraform."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Conditions multiply.'''
+effort = "1 hour"
+risk = '''New values missed.'''
+verify = '''Count conditions.'''
+status = "VERIFIED-VALID"
+evidence = "Query accepted 2026-11-10."
+sources = ["https://registry.terraform.io/providers/newrelic/newrelic/latest/docs/resources/nrql_alert_condition"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "One condition for namespace payments"
+  text = '''
+SELECT latest(kube_deployment_status_replicas_unavailable) FROM Metric WHERE namespace = 'payments' FACET deployment
+'''
+
+  [[blocker.method.example]]
+  kind = "hcl"
+  title = "Fan out"
+  text = '''
+resource "newrelic_nrql_alert_condition" "per_namespace" {
+  for_each  = toset(["payments", "web"])
+  policy_id = newrelic_alert_policy.by_ns[each.key].id
+  # name, nrql and critical blocks use each.key
+}
+'''
+
+[[blocker.method]]
+id = "accept-ordering"
+family = "F"
+name = "Accept: no continue, ordering or regex semantics"
+when = '''Choose this and list values.'''
+prerequisites = "Owner agrees."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Regex becomes value lists.'''
+effort = "15 minutes"
+risk = '''Double or missed notification.'''
+verify = '''Send test issues.'''
+status = "DOC-ONLY"
+evidence = "Operator list read."
+sources = ["https://docs.newrelic.com/docs/alerts/get-notified/incident-workflows/"]
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "Wording"
+  text = '''
+Regex matchers are replaced by explicit lists of values.
+'''
+
+[[blocker]]
+key = "mute-timings"
+title = "Mute timings with active intervals"
+titles = [
+  "Grafana mute timing days of the month",
+  "Grafana mute timing months or years",
+  "Grafana mute timing location",
+  "Grafana mute timing time range",
+  "Grafana mute timing weekdays",
+  "Grafana active time interval",
+  "Grafana mute timing with too many schedules",
+  "Grafana mute timing with combined fields",
+]
+scope = "2 of 3 mute timings did not convert on the test estate."
+summary = '''
+A muting rule has one window with a daily, weekly or monthly repeat. Grafana intervals combine weekdays, days of the
+month, months and times.
+'''
+decision = [
+  "Weekly pattern: one weekly rule (method 1).",
+  "Months or days: several rules (method 2).",
+  "Scope to a team (method 3).",
+  "Make workflows respect muting (method 4).",
+]
+ask = [
+  "Which alerts must be muted and when?",
+  "Time zone?",
+]
+cannot = "No months-of-year or days-of-month lists in one rule."
+
+[[blocker.method]]
+id = "weekly-rule"
+family = "D"
+name = "One weekly muting rule"
+when = '''Choose this for weekday windows.'''
+prerequisites = "Time zone."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Window may cross midnight.'''
+effort = "20 minutes"
+risk = '''DST.'''
+verify = '''Read back.'''
+status = "DOC-ONLY"
+evidence = "Fields read in the muting rules page."
+sources = ["https://docs.newrelic.com/docs/alerts/get-notified/muting-rules-suppress-notifications/"]
+
+  [[blocker.method.example]]
+  kind = "graphql"
+  title = "Weeknights 22:00 to 06:00"
+  text = '''
+mutation {
+  alertsMutingRuleCreate(accountId: 1234567, rule: {
+    name: "weeknights", enabled: true,
+    description: "migrated mute timing",
+    schedule: { startTime: "2026-11-16T22:00:00", endTime: "2026-11-17T06:00:00",
+      timeZone: "Europe/Amsterdam", repeat: WEEKLY,
+      weeklyRepeatDays: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY] }
+    condition: { operator: AND, conditions: [{ attribute: "policyId", operator: EQUALS, values: ["POLICY_ID"] }] }
+  }) { id }
+}
+'''
+
+[[blocker.method]]
+id = "unroll-rules"
+family = "D"
+name = "Unroll months and days into several rules"
+when = '''Choose this for monthly or seasonal windows.'''
+prerequisites = "Terraform."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''More rules.'''
+effort = "1 hour"
+risk = '''Maintenance.'''
+verify = '''List rules.'''
+status = "DOC-ONLY"
+evidence = "Schedule fields read."
+sources = ["https://registry.terraform.io/providers/newrelic/newrelic/latest/docs/resources/alert_muting_rule"]
+
+  [[blocker.method.example]]
+  kind = "hcl"
+  title = "One rule per date"
+  text = '''
+resource "newrelic_alert_muting_rule" "window" {
+  for_each = toset(["2026-12-24", "2026-12-31"])
+  name     = "mute ${each.key}"
+  enabled  = true
+  schedule {
+    start_time = "${each.key}T00:00:00"
+    end_time   = "${each.key}T23:59:59"
+    time_zone  = "Europe/Amsterdam"
+  }
+}
+'''
+
+[[blocker.method]]
+id = "scope-condition"
+family = "D"
+name = "Scope the rule to a policy or tag"
+when = '''Choose this to mute only some alerts.'''
+prerequisites = "Policy ids."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Mute only matching events.'''
+effort = "15 minutes"
+risk = '''Too broad.'''
+verify = '''Read back.'''
+status = "DOC-ONLY"
+evidence = "Condition shape read."
+sources = ["https://docs.newrelic.com/docs/alerts/get-notified/muting-rules-suppress-notifications/"]
+
+  [[blocker.method.example]]
+  kind = "json"
+  title = "Condition"
+  text = '''
+{"operator": "AND", "conditions": [{"attribute": "tags.team", "operator": "EQUALS", "values": ["payments"]}]}
+'''
+
+[[blocker.method]]
+id = "workflow-muting"
+family = "D"
+name = "Set mutingRulesHandling on workflows"
+when = '''Choose this always.'''
+prerequisites = "Workflows."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''NOTIFY_ALL_ISSUES makes muting useless.'''
+effort = "5 minutes"
+risk = '''Missed alerts.'''
+verify = '''Fire during a window.'''
+status = "DOC-ONLY"
+evidence = "Read in the workflows page."
+sources = ["https://docs.newrelic.com/docs/apis/nerdgraph/examples/nerdgraph-api-workflows/"]
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "Value"
+  text = '''
+mutingRulesHandling: DONT_NOTIFY_FULLY_MUTED_ISSUES
+'''
+
+[[blocker]]
+key = "chat-contacts"
+title = "Slack and Teams contact points"
+titles = ["Grafana contact point needs a manual step", "Grafana contact point has no New Relic destination"]
+match = 'slack|teams'
+scope = "2 of 5 contact points on the test estate."
+summary = '''
+Slack needs an OAuth click once; Teams needs the New Relic app and a security code. After that channels are API calls.
+'''
+decision = [
+  "Native destination (method 1).",
+  "Webhook (method 2).",
+  "Via an incident tool (method 3).",
+]
+ask = [
+  "May an admin authorise the New Relic app?",
+]
+cannot = "Slack and Teams destinations cannot be created from a script."
+
+[[blocker.method]]
+id = "native-destination"
+family = "E"
+name = "Native Slack or Teams destination"
+when = '''Choose this by default.'''
+prerequisites = "Admin click."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Native messages.'''
+effort = "20 minutes"
+risk = '''Admin approval.'''
+verify = '''Send a test.'''
+status = "DOC-ONLY"
+evidence = "Read in notifications reference."
+sources = ["https://docs.newrelic.com/docs/alerts/get-notified/microsoft-teams-integrations/"]
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "Steps"
+  text = '''
+Alerts > Destinations > Slack or Microsoft Teams > authorise; then create a channel.
+'''
+
+[[blocker.method]]
+id = "webhook-fallback"
+family = "D"
+name = "Webhook destination with a payload template"
+when = '''Choose this when OAuth is refused.'''
+prerequisites = "Incoming webhook URL."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Plain text message.'''
+effort = "30 minutes"
+risk = '''Secret URL.'''
+verify = '''Test.'''
+status = "DOC-ONLY"
+evidence = "Template variables read."
+sources = ["https://docs.newrelic.com/docs/alerts/get-notified/message-templates/"]
+
+  [[blocker.method.example]]
+  kind = "json"
+  title = "Payload"
+  text = '''
+{"text": "{{annotations.title.[0]}} - {{priority}}"}
+'''
+
+[[blocker.method]]
+id = "via-incident-tool"
+family = "D"
+name = "Route through PagerDuty or Opsgenie"
+when = '''Choose this if chat is already wired there.'''
+prerequisites = "Existing integration."
+needs_collector = false
+needs_reingest = false
+latency = "Extra hop."
+changes = '''Chat comes from the tool.'''
+effort = "30 minutes"
+risk = '''Dependency.'''
+verify = '''Test.'''
+status = "DOC-ONLY"
+evidence = "Integrations listed."
+sources = ["https://docs.newrelic.com/docs/alerts/get-notified/notification-integrations/"]
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "Route"
+  text = '''
+Workflow to PagerDuty service integration; its chat integration posts.
+'''
+
+[[blocker.method]]
+id = "accept-chat"
+family = "F"
+name = "Accept: message look and buttons differ"
+when = '''Choose this.'''
+prerequisites = "None."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Look changes.'''
+effort = "5 minutes"
+risk = '''Low.'''
+verify = '''Review.'''
+status = "DOC-ONLY"
+evidence = "Design."
+sources = ["https://docs.newrelic.com/docs/alerts/get-notified/message-templates/"]
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "Wording"
+  text = '''
+Grafana message templates are not carried over.
+'''

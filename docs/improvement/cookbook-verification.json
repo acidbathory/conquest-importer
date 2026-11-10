@@ -1,10 +1,25 @@
 {
  "checked_on": "2026-11-10",
  "nrql": {
+  "008ac012a3506947": {
+   "ok": true,
+   "rows": 360,
+   "where": "predict-query"
+  },
   "03eba3d8cb5457ad": {
    "ok": true,
    "rows": 0,
    "where": "in-subselect"
+  },
+  "0415a0b9c1e9a5b3": {
+   "ok": true,
+   "rows": 1,
+   "where": "nodata-mapping"
+  },
+  "044d0f331480a700": {
+   "ok": true,
+   "rows": 1,
+   "where": "never-existed"
   },
   "0fac35e653195c96": {
    "ok": true,
@@ -106,6 +121,11 @@
    "rows": 10,
    "where": "alert-threshold"
   },
+  "5af0408f9ec43983": {
+   "ok": true,
+   "rows": 4,
+   "where": "if-and"
+  },
   "6032b980ae1a5e47": {
    "ok": true,
    "rows": 1,
@@ -125,6 +145,11 @@
    "ok": true,
    "rows": 108,
    "where": "bucket-percentile"
+  },
+  "6a66fd23631dde15": {
+   "ok": true,
+   "rows": 2,
+   "where": "quantile-at-source"
   },
   "6aa59ab0575c586a": {
    "ok": true,
@@ -146,6 +171,11 @@
    "rows": 6,
    "where": "nrql-join"
   },
+  "732edf21489a464a": {
+   "ok": true,
+   "rows": 2,
+   "where": "condition-per-value"
+  },
   "74e6d797d43f39a5": {
    "ok": true,
    "rows": 2304,
@@ -156,10 +186,25 @@
    "rows": 5,
    "where": "alert-threshold"
   },
+  "768befbaf23c0814": {
+   "ok": true,
+   "rows": 10,
+   "where": "predict-option"
+  },
   "78d83433752b2ecc": {
    "ok": true,
    "rows": 3,
    "where": "rows-to-columns"
+  },
+  "79227eee74739960": {
+   "ok": true,
+   "rows": 10,
+   "where": "up-below-one"
+  },
+  "7b524c8d7ce3a1ac": {
+   "ok": true,
+   "rows": 4,
+   "where": "slow-share"
   },
   "8c4e0d9debdb1f99": {
    "ok": true,
@@ -171,6 +216,21 @@
    "ok": false,
    "where": "accept-interval-vars"
   },
+  "909c2f20e0659b2d": {
+   "ok": true,
+   "rows": 4,
+   "where": "bucketpercentile-condition"
+  },
+  "914a1cbf10f7b581": {
+   "ok": true,
+   "rows": 4,
+   "where": "traffic-guard"
+  },
+  "94da4cd9e8ff1cbf": {
+   "ok": true,
+   "rows": 10,
+   "where": "free-space-threshold"
+  },
   "9f47fa48dd7d48c6": {
    "ok": true,
    "rows": 216,
@@ -181,20 +241,35 @@
    "rows": 2,
    "where": "alert-window"
   },
+  "b4df08f275ffd921": {
+   "ok": true,
+   "rows": 108,
+   "where": "remote-write-rules"
+  },
   "b848f90a3b8ce7a8": {
    "ok": true,
    "rows": 576,
    "where": "identifier-variable"
+  },
+  "ba492442324f3a1d": {
+   "ok": true,
+   "rows": 10,
+   "where": "predict-query"
   },
   "bdbf730faa4062f1": {
    "ok": true,
    "rows": 5,
    "where": "nested-latest"
   },
+  "bde5822aaf877253": {
+   "ok": true,
+   "rows": 108,
+   "where": "recompute"
+  },
   "c0f046116633c0c2": {
    "ok": true,
    "rows": 4,
-   "where": "alert-counter"
+   "where": "one-query-ratio"
   },
   "cc1904ee18f2ea14": {
    "ok": true,
@@ -261,6 +336,11 @@
    "rows": 4,
    "where": "no-changes"
   },
+  "f8444f94e357e4c8": {
+   "ok": true,
+   "rows": 10,
+   "where": "facet-loss"
+  },
   "f85ca95a24d40544": {
    "ok": true,
    "rows": 36,
@@ -270,6 +350,11 @@
    "ok": true,
    "rows": 3,
    "where": "alert-enrich"
+  },
+  "fd9e5127d3e3c113": {
+   "ok": true,
+   "rows": 2,
+   "where": "alert-backticks"
   },
   "fe46bda7a3cde4fa": {
    "ok": true,

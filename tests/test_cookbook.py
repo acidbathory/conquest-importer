@@ -10,7 +10,7 @@ REQUIRED = {
     "transformations", "histograms", "absent", "histogram-quantile", "predict", "multi-query",
     "recording-rules", "pending-nodata", "routing", "mute-timings", "chat-contacts",
 }  # fmt: skip
-EFFORT = re.compile(r"^\d+(-\d+)? (minutes|hours|days)$")
+EFFORT = re.compile(r"^\d+(-\d+)? (minutes?|hours?|days?)$")
 
 
 def test_every_required_blocker_is_present_with_ranked_methods() -> None:
