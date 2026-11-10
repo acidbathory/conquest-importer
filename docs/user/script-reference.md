@@ -119,6 +119,7 @@ unless you give `--apply` and `--confirm-account <account-id>` and the account i
 | `importer convert-grafana-dashboards` (or `convert-dashboards --source grafana`) | Dashboards to widgets. | dashboards | `--out` | No |
 | `importer plan-grafana-datapath` | Writes remote write, Alloy and collector guidance. Sends nothing. | optional converted folders | guide folder | No |
 | `importer check-grafana-data` | Does each converted condition's data arrive? Exit 2 if not. | New Relic (NRQL) | optional markdown | No |
+| `importer verify-parity` | Do converted queries show the same numbers as the original PromQL or LogQL? Exit 2 if any is a MISMATCH. | Prometheus (GET), New Relic (NRQL) | `--out` (`parity.json`, `parity.md`, `parity.html`, `verified-labels.json`) | No |
 
 ### Dynatrace
 

@@ -221,6 +221,8 @@ Do these in a test account, in this order.
 - [ ] Data arrives. Run `importer check-grafana-data --alerts out/grafana/alerts --nr-account-id <account-id> --hours 24`.
       Exit code 0 means each condition's metric or logs were seen. Exit code 2 means at least one
       condition would be blind, or a filter attribute is missing. Fix the data path and run it again.
+- [ ] Parity. Where the same data is in Prometheus and in New Relic, let the importer compare the
+      numbers instead of by eye (section 6.1). Menu item 9 does it for the newest conversion.
 - [ ] Run each converted NRQL by hand in the New Relic query builder and compare it with Grafana for
       the same time range. Expect differences for stat widgets and `increase()` (section 9).
 - [ ] Firing test, one condition at a time. Enable one condition in the test account. Send data that
@@ -233,6 +235,50 @@ Do these in a test account, in this order.
       like this has passed for that kind of rule.
 - [ ] Notifications: nothing was tested live. Send a test notification to a throwaway address first.
 - [ ] Enable conditions one by one. Only after data and the firing test look right.
+
+### 6.1 Parity check: do the converted queries show the same numbers?
+
+`verify-parity` evaluates the original PromQL (or a LogQL count) over a window on your Prometheus,
+and the converted NRQL over the same window on New Relic, then compares them. It is read-only on
+both sides.
+
+```
+importer verify-parity --in out/guided/<run>/converted --export out/guided/<run>/export \
+  --source-prom http://127.0.0.1:9090 --nr-account-id <account-id> --hours 6 --step 60
+```
+
+- `--source-prom` is a Prometheus URL (this machine, or an https host named again with
+  `--allow-host`), or a Grafana data source uid or name, read through the data source proxy with
+  `GRAFANA_URL` and `GRAFANA_SA_TOKEN`. Only GET calls on `query_range` and the data source lookup
+  run. `--source-loki` does the same for LogQL count queries.
+- The converted folders keep only NRQL, so `--export` points at the export the conversion started
+  from. Use the same `--name-map` and `--hints` as for the conversion; a query that cannot be found
+  is reported, not guessed.
+- Dashboard variables take the dashboard default. A variable with no single default (an "all" value
+  or a query variable) must be given: `--var job=node`. Otherwise the item is NOT COMPARABLE.
+- `--watch --every 10m` repeats and rewrites the report until Ctrl-C.
+
+How the numbers are lined up: the window and the step are whole multiples of each other. New
+Relic returns one value per bucket (average or sum of the samples in it; counters as deltas).
+Prometheus returns the value at the end of each step, so each source point is moved back one step to
+the bucket it describes. The first and last buckets are dropped. Series are matched by label set,
+with `__name__` dropped and a label called `metricName` read as `metric_name`, as the data path
+does. Each point counts as agreeing when it is within `--tolerance` (default 5%) relative, or
+within 1e-9 absolute.
+
+| Verdict | Meaning |
+|---|---|
+| VERIFIED | At least 95% of the aligned points agree, over at least 10 points, no series missing |
+| CLOSE | At least 75% agree, or the median error is within twice the tolerance, or a series is missing or an answer was cut by a cap |
+| MISMATCH | Below that. The report gives the likely cause: bucket alignment, a constant ratio (counter versus gauge, a summed gauge, a rate window), labels, or missing series |
+| NO DATA | One side returned nothing. This says the data path has a gap, not that the query is wrong |
+| NOT COMPARABLE | A stat or table widget, a variable with no value, an original that was not found, too few points |
+
+Limits: it means something only where the same data is in both places. A VERIFIED widget is verified
+for that window and those variable values. Spiky series can differ by design, because a bucket
+average is not an instant value. Pass `parity/verified-labels.json` to
+`importer convert-grafana-dashboards --parity` and the report marks verified widgets
+"verified on <date>"; without `--parity` the report is unchanged.
 
 ## 7. Rollback and undo
 
