@@ -22,6 +22,7 @@ from pathlib import Path
 
 from importer.core.apply import GuardError, check_guards, get_account_name
 from importer.core.console import Console, InputEnded, confirm_yes, ensure_secret, has_terminal
+from importer.core.manifest import load_manifest
 from importer.core.menu_flow import (
     APPLY,
     KINDS,
@@ -33,6 +34,7 @@ from importer.core.menu_flow import (
     Summary,
     build_kinds,
     extra_plans,
+    planned_names,
     read_int,
     summarise,
     triage_buckets,
@@ -48,6 +50,7 @@ from importer.core.run_rollback import (
 from importer.core.runs import RunRecord, RunStore
 
 Runner = Callable[[list[str]], int]
+OBJECT_OF = {"alerts": "condition", "notifications": "workflow", "dashboards": "dashboard"}
 PRIVATE_KINDS = ("condition", "workflow", "dashboard")  # created disabled or private
 SAMPLE_DIR = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "gcp"
 
@@ -275,6 +278,8 @@ class Menu:
         self.c.say("\nStep 4 of 4: preview")
         name = self._account_name(account) if account is not None else None
         self._preview(spec, lay, summary, account, name)
+        if account is not None:
+            self._warn_existing(lay, account)
         self._show_report(lay, "before", self._write_report(spec, lay, account))
         if account is None:
             self.c.say(
@@ -342,29 +347,54 @@ class Menu:
             return None
         return path
 
-    @staticmethod
     def _rows(
-        record: RunRecord, plan: Summary | None
-    ) -> tuple[tuple[str, int, int | None, int], ...]:
-        """Per kind: created (run record), planned and need attention (from the preview)."""
+        self, record: RunRecord, plan: Summary | None
+    ) -> tuple[tuple[str, int, int, int | None, int], ...]:
+        """Per kind: created (run record), already existed (manifests), planned and attention."""
         made: Counter[str] = Counter(str(o.kind) for o in record.objects)
-        kind_of_object = {"condition": "alerts", "workflow": "notifications"}
-        kind_of_object |= {"dashboard": "dashboards"}
-        per_kind = Counter({k: made[o] for o, k in kind_of_object.items()})
-        rows = []
-        for kind in KINDS:
+        old = self._existing(record)
+        rows: list[tuple[str, int, int, int | None, int]] = []
+        for kind, obj in OBJECT_OF.items():
             found = plan.kinds.get(kind) if plan else None
-            if per_kind[kind] == 0 and (found is None or found.create == 0):
+            if made[obj] == 0 and old[obj] == 0 and (found is None or found.create == 0):
                 continue
-            rows.append(
-                (
-                    LABEL[kind].capitalize(),
-                    per_kind[kind],
-                    found.create if found else None,
-                    found.attention if found else 0,
-                )
-            )
+            planned = found.create if found else None
+            attention = found.attention if found else 0
+            rows.append((LABEL[kind].capitalize(), made[obj], old[obj], planned, attention))
         return tuple(rows)
+
+    def _existing(self, record: RunRecord) -> Counter[str]:
+        """How many planned objects the apply commands found already in New Relic, by kind."""
+        total: Counter[str] = Counter()
+        for _, folder in self._targets(record):
+            try:
+                total.update(load_manifest(folder / "manifest.json").existing)
+            except (OSError, ValueError):
+                continue
+        return total
+
+    def _earlier(self, account: int, wanted: set[tuple[str, str]]) -> dict[tuple[str, str], str]:
+        """(object kind, name) -> id of an earlier run whose record still holds that object."""
+        found: dict[tuple[str, str], str] = {}
+        for r in self.store.list():
+            if r.account_id != account:
+                continue
+            for o in r.pending():
+                if (o.kind, o.name) in wanted:
+                    found.setdefault((o.kind, o.name), r.run_id)
+        return found
+
+    def _warn_existing(self, lay: Layout, account: int) -> None:
+        """Preview: planned objects that earlier run records say are already in New Relic."""
+        names = planned_names(lay)
+        wanted = {(OBJECT_OF[k], n) for k in KINDS for n in names[k]}
+        there = self._earlier(account, wanted)
+        if there:
+            self.c.say(
+                f"{len(there)} of the planned objects already exist in New Relic account "
+                f"{account} (from earlier runs: {', '.join(sorted(set(there.values())))}) and "
+                "will be skipped."
+            )
 
     @staticmethod
     def _links(lay: Layout) -> list[tuple[str, str]]:
@@ -485,9 +515,30 @@ class Menu:
             out_dir=lay.converted,
             sandbox=is_sandbox_account(account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS")),
         )
-        if self._apply_until_done(record):
-            self._done(lay, record)
-            self._show_report(lay, "after", self._write_report(spec, lay, account, record, summary))
+        if not self._apply_until_done(record):
+            return
+        if not record.objects:
+            self._nothing_new(lay, summary, record)
+            return
+        self._done(lay, record)
+        self._show_report(lay, "after", self._write_report(spec, lay, account, record, summary))
+
+    def _nothing_new(self, lay: Layout, summary: Summary, record: RunRecord) -> None:
+        """The apply finished but every planned object was already there: not a success."""
+        old = self._existing(record)
+        parts = [f"{old[o]} {LABEL[k]}" for k, o in OBJECT_OF.items() if old[o]]
+        total = sum(old.values()) or summary.total
+        self.store.discard(record)
+        self.c.say(
+            f"\nNothing new was created: all {total} planned objects already exist in New Relic "
+            f"account {record.account_id} ({', '.join(parts) or 'see the apply output above'})."
+        )
+        names = planned_names(lay)
+        wanted = {(OBJECT_OF[k], n) for k in KINDS for n in names[k]}
+        runs = sorted(set(self._earlier(record.account_id, wanted).values()))
+        if runs:
+            self.c.say(f"They were created by the earlier run(s): {', '.join(runs)}.")
+        self.c.say("To start fresh, roll back the earlier runs (menu item 5), then run again.")
 
     def _targets(self, record: RunRecord) -> list[tuple[str, Path]]:
         """The converted folders this run creates from, in the safe order."""

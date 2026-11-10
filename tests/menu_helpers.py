@@ -29,7 +29,15 @@ CREATED = {
 class HybridRunner:
     """Real local commands (convert, plan-*, triage, report); fake read, doctor and create."""
 
-    def __init__(self, fail: set[str] | None = None, account: int = 7) -> None:
+    def __init__(
+        self,
+        fail: set[str] | None = None,
+        account: int = 7,
+        existing: dict[str, int] | None = None,
+        no_create: set[str] | None = None,
+    ) -> None:
+        self.existing = existing or {}  # apply command -> objects that "already existed"
+        self.no_create = no_create or set()  # apply commands that create nothing
         self.calls: list[list[str]] = []
         self.fail = fail or set()
         self.account = account
@@ -50,10 +58,9 @@ class HybridRunner:
             kind, oid, label = CREATED[name]
             path = Path(args[args.index("--manifest") + 1])
             obj = {"kind": kind, "id": oid, "name": label}
-            save_manifest(
-                Manifest(account_id=self.account, objects=[CreatedObject.model_validate(obj)]),
-                path,
-            )
+            made = [] if name in self.no_create else [CreatedObject.model_validate(obj)]
+            old = {kind: self.existing[name]} if name in self.existing else {}
+            save_manifest(Manifest(account_id=self.account, objects=made, existing=old), path)
             return 0
         code = self.real(args)
         if name == "convert-grafana-notifications" and code == 0:

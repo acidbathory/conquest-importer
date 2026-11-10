@@ -37,9 +37,10 @@ choice. The menu calls the same commands you would type:
    is one run record (for example `grafana`), so one rollback undoes all of it.
 7. A short "Done" screen: what was created, where the reports are, the remediation plan, how to undo (pick 5 Roll back a run) and what to do next (turn
    on the alert conditions one by one, make sure your metrics reach New Relic). After a successful
-   create a second report opens: `report-created.html`, which says that objects were created, the
-   counts per kind, how many stay disabled or private, the account id, the run id and how to roll
-   back, and has no preview banner.
+   create a second report opens: `report-created.html`, which says that objects were created, per
+   kind how many were created, how many already existed and were skipped, and how many need
+   attention, how many stay disabled or private, the account id, the run id and how to roll back.
+   It has no preview banner.
 
 | | Alerts | Notifications | Dashboards |
 |---|---|---|---|
@@ -65,7 +66,12 @@ The menu writes two pages into the run's own folder (`out/guided/<source>-<time>
 in your default browser, once per run:
 
 - `report.html` opens after the conversion and before the `yes` question. It is a forecast.
-- `report-created.html` opens only after the create finished without error. If you answered
+- `report-created.html` opens only after the create finished without error and made at least one
+  object. If every planned object already exists in New Relic, the menu prints "Nothing new was
+  created: all N planned objects already exist", names the earlier runs that made them (from the
+  local run records), says to roll those back (item 5) to start fresh, writes no created page and
+  keeps no run record. The preview also warns "N of the planned objects already exist ... and will
+  be skipped" when earlier run records show them. If you answered
   anything but `yes`, or the create failed, nothing is opened after that and the menu says nothing
   was created.
 
