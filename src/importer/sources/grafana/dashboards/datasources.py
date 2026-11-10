@@ -27,6 +27,12 @@ def family(plugin: str) -> str:
     return OTHER_LABEL if plugin else ""
 
 
+def _hint(name: str) -> str:
+    """The plugin a data source name suggests (`prom-main` is Prometheus), else ""."""
+    lowered = name.lower()
+    return next((plugin for needle, plugin in UID_HINTS if needle in lowered), "")
+
+
 def _template_plugin(uid: str, dash: Dashboard) -> str:
     found = TEMPLATE.fullmatch(uid)
     if found is None:
@@ -37,6 +43,8 @@ def _template_plugin(uid: str, dash: Dashboard) -> str:
     for variable in dash.variables:
         if variable.kind == "datasource" and variable.name == name:
             return variable.query
+        if variable.kind == "constant" and variable.name == name:
+            return _hint(variable.query)  # a constant holding a data source name
     return ""
 
 
@@ -54,8 +62,7 @@ def _from_reference(ref: DsRef, dash: Dashboard) -> str:
     plugin = _template_plugin(uid, dash)
     if plugin:
         return family(plugin)
-    lowered = uid.lower()
-    return next((family(plugin) for needle, plugin in UID_HINTS if needle in lowered), "")
+    return family(_hint(uid)) if _hint(uid) else ""
 
 
 def resolve(ref: DsRef | None, hint: str, dash: Dashboard) -> str:
