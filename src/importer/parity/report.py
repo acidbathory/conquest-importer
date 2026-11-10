@@ -147,7 +147,7 @@ GLYPH = {
     Verdict.CLOSE: ("warn", "≈"),
     Verdict.MISMATCH: ("crit", "&times;"),
     Verdict.NO_DATA: ("serious", "!"),
-    Verdict.NOT_COMPARABLE: ("na", "–"),
+    Verdict.NOT_COMPARABLE: ("na", "n/a"),
 }
 PAGE_CSS = (
     "td,th{padding:6px 10px;border-bottom:1px solid var(--rule);text-align:left;"
