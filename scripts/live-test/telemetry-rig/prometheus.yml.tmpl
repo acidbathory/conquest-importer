@@ -30,12 +30,17 @@ remote_write:
       credentials_file: __TMP__/nr.token
     write_relabel_configs:
       - source_labels: [__name__]
-        regex: "nginx_ingress_controller_requests|pg_stat_database_xact_commit|pg_stat_database_tup_inserted"
+        regex: "nginx_ingress_controller_requests|pg_stat_database_xact_commit|pg_stat_database_tup_inserted|pg_stat_activity_count|pg_locks_count|system_cpu_count"
         action: keep
       - source_labels: [__name__]
-        regex: ".*"
+        regex: "nginx_ingress_controller_requests|pg_stat_database_xact_commit|pg_stat_database_tup_inserted"
         target_label: newrelic_metric_type
         replacement: counter
+        action: replace
+      - source_labels: [__name__]
+        regex: "pg_stat_activity_count|pg_locks_count|system_cpu_count"
+        target_label: newrelic_metric_type
+        replacement: gauge
         action: replace
 
 scrape_configs:
