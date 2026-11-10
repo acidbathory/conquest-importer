@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
-from typing import Annotated, NoReturn
+from typing import Annotated, Any, NoReturn
 
 import typer
 
@@ -24,6 +24,7 @@ from importer.core.apply import (
 )
 from importer.core.apply_dashboards import apply_dashboards, load_dashboard_plan
 from importer.core.apply_notifications import apply_notifications
+from importer.core.console import has_terminal
 from importer.core.dashboard_ir import IRDashboard
 from importer.core.dashboard_report import build_dashboard_report
 from importer.core.data_check import run_data_check
@@ -104,7 +105,17 @@ from importer.sources.grafana.extract import extract as extract_grafana
 from importer.sources.grafana.extract import http_getter as grafana_getter
 from importer.sources.grafana.extract import validate_host as grafana_host
 
-app = typer.Typer(
+
+class _Importer(typer.Typer):
+    """A bare `importer` in an interactive terminal opens the menu; everything else is unchanged."""
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        if len(sys.argv) == 1 and has_terminal():
+            sys.argv.append("menu")
+        return super().__call__(*args, **kwargs)
+
+
+app = _Importer(
     help="Convert observability alerts from other platforms to New Relic alert conditions.",
     no_args_is_help=True,
 )
