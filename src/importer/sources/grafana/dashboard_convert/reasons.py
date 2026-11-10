@@ -96,7 +96,11 @@ D_TIME = "original time range: {text}"
 D_REPEAT_ROWS = "{count} repeated rows are shown once"
 D_TABS = "{count} tabs were flattened into one page with headings"
 D_PANELS = "{done} of {total} panels converted, {placeholders} are placeholders"
-D_WIDGET_CAP = "{count} widgets over the limit of 150 per page were left out"
+D_WIDGET_CAP = (
+    "{count} widgets over the limit of 25 pages of 150 widgets were left out; split the "
+    "Grafana dashboard in two (by row) and convert each, or drop the panels nobody opens"
+)
+D_PAGES = "{widgets} widgets were split over {pages} pages (150 widgets per page), at Grafana rows"
 D_VARIABLE_DROPPED = "{count} interval or data source variables were dropped"
 D_VARIABLE_MANUAL = "{count} variables were not converted"
 D_VARIABLE_NESTED = (

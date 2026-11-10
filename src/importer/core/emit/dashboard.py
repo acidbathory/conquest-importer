@@ -9,6 +9,8 @@ and pass core/dashboard_nrql.py before they get here.
 from typing import Any, NamedTuple
 
 from importer.core.dashboard_ir import (
+    MAX_PAGES,
+    PAGE_WIDGETS,
     PROVIDER_MAX_HEIGHT,
     TIMESERIES_VISUALIZATIONS,
     IRDashboard,
@@ -147,6 +149,22 @@ def emittable_widgets(dashboard: IRDashboard) -> list[EmitWidget]:
     return out
 
 
+def pages_of(
+    dashboard: IRDashboard, emitted: list[EmitWidget]
+) -> list[tuple[str, list[EmitWidget]]]:
+    """The widgets grouped by page, pages in order of first use. A widget with no page sits on
+    the dashboard's own page, so a dashboard that names no pages is one page as it always was."""
+    pages: dict[str, list[EmitWidget]] = {}
+    for item in emitted:
+        pages.setdefault(item.widget.page or dashboard.name, []).append(item)
+    if len(pages) > MAX_PAGES:
+        raise CannotEmit(f"{len(pages)} pages; New Relic holds {MAX_PAGES}")
+    for name, items in pages.items():
+        if len(items) > PAGE_WIDGETS:
+            raise CannotEmit(f"page {md_cell(name, 40)!r} has {len(items)} widgets")
+    return list(pages.items()) or [(dashboard.name, [])]
+
+
 def clamp_notes(dashboard: IRDashboard) -> str:
     """A sentence naming the widgets whose height was reduced, or an empty string."""
     clamped = [
@@ -195,11 +213,9 @@ def nerdgraph_variable(v: IRVariable) -> dict[str, Any]:
     return out
 
 
-def nerdgraph_dashboard(dashboard: IRDashboard) -> dict[str, Any]:
-    """The dashboardCreate payload. Widget options and thresholds are not written here: their
-    rawConfiguration names are UNVERIFIED, so only the Terraform output carries them."""
+def _nerdgraph_widgets(items: list[EmitWidget]) -> list[dict[str, Any]]:
     widgets: list[dict[str, Any]] = []
-    for w, viz, queries, text in emittable_widgets(dashboard):
+    for w, viz, queries, text in items:
         raw: dict[str, Any] = (
             {"text": text}
             if viz == Visualization.MARKDOWN
@@ -213,6 +229,13 @@ def nerdgraph_dashboard(dashboard: IRDashboard) -> dict[str, Any]:
                 "rawConfiguration": raw,
             }
         )
+    return widgets
+
+
+def nerdgraph_dashboard(dashboard: IRDashboard) -> dict[str, Any]:
+    """The dashboardCreate payload. Widget options and thresholds are not written here: their
+    rawConfiguration names are UNVERIFIED, so only the Terraform output carries them."""
+    pages = pages_of(dashboard, emittable_widgets(dashboard))
     description = f"Imported from a {dashboard.source_system} dashboard. Review it."
     if notes := clamp_notes(dashboard):
         description += " " + notes
@@ -220,7 +243,7 @@ def nerdgraph_dashboard(dashboard: IRDashboard) -> dict[str, Any]:
         "name": dashboard.name,
         "description": description,
         "permissions": "PRIVATE",
-        "pages": [{"name": dashboard.name, "widgets": widgets}],
+        "pages": [{"name": name, "widgets": _nerdgraph_widgets(items)} for name, items in pages],
     }
     if dashboard.variables:
         check_variable_order(dashboard)
@@ -348,10 +371,14 @@ def dashboard_resource(dashboard: IRDashboard, source_id: int) -> str:
     check_variable_order(dashboard)
     for variable in dashboard.variables:
         lines += _variable_lines(variable)
-    lines += ["  page {", f"    name = {hcl_string(dashboard.name)}"]
-    for w, viz, queries, text in emittable_widgets(dashboard):
-        lines += _widget_lines(w, viz, queries, text)
-    lines += ["  }", "}"]
+    for number, (name, items) in enumerate(pages_of(dashboard, emittable_widgets(dashboard))):
+        if number:
+            lines.append("")
+        lines += ["  page {", f"    name = {hcl_string(name)}"]
+        for w, viz, queries, text in items:
+            lines += _widget_lines(w, viz, queries, text)
+        lines.append("  }")
+    lines.append("}")
     return "\n".join(lines) + "\n"
 
 

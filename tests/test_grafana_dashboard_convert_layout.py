@@ -1,15 +1,16 @@
 """Grid conversion, headings, packing, and matching display options to panels."""
 
 import json
+from itertools import combinations
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from importer.core.dashboard_ir import PROVIDER_MAX_HEIGHT, Layout, WidgetKind
+from importer.core.dashboard_ir import PROVIDER_MAX_HEIGHT, IRWidget, Layout, WidgetKind
 from importer.core.ir import Confidence
 from importer.sources.grafana.dashboard_convert import reasons as r
-from importer.sources.grafana.dashboard_convert.layout import Placed, _fit, lay_out, pack
+from importer.sources.grafana.dashboard_convert.layout import Placed, _fit, _overlaps, lay_out, pack
 from importer.sources.grafana.dashboard_convert.name_map import NameMap
 from importer.sources.grafana.dashboard_convert.panels import Draft
 from importer.sources.grafana.dashboard_convert.raw import classic_bodies, read_raw
@@ -101,15 +102,83 @@ def test_members_of_a_collapsed_row_keep_their_relative_place() -> None:
 
 
 def test_a_tall_panel_is_clamped_by_the_ir_and_says_so() -> None:
-    widgets, _ = lay_out([placed(0, 0, 24, 60)])
+    widgets, _ = lay_out([placed(0, 0, 24, 60)], "D")
     assert widgets[0].layout.height == 30
     assert f"height 30 clamped to {PROVIDER_MAX_HEIGHT}" in widgets[0].reasons
 
 
-def test_more_widgets_than_the_limit_are_counted_not_lost_silently() -> None:
+def pages_of(widgets: list[IRWidget]) -> dict[str | None, list[IRWidget]]:
+    out: dict[str | None, list[IRWidget]] = {}
+    for w in widgets:
+        out.setdefault(w.page, []).append(w)
+    return out
+
+
+def test_a_dashboard_that_fits_stays_on_one_unnamed_page() -> None:
+    widgets, skipped = lay_out([placed(0, i * 2, 24, 2, "", f"p{i}") for i in range(150)], "D")
+    assert skipped == 0 and {w.page for w in widgets} == {None}
+
+
+def test_a_long_flat_dashboard_is_split_at_widget_boundaries() -> None:
     items = [placed(0, i * 2, 24, 2, "", f"p{i}") for i in range(155)]
-    widgets, skipped = lay_out(items)
-    assert len(widgets) == 150 and skipped == 5  # New Relic: 150 widgets per page
+    widgets, skipped = lay_out(items, "Big")
+    pages = pages_of(widgets)
+    assert skipped == 0 and list(pages) == ["Big", "Big part 2"]
+    assert [len(v) for v in pages.values()] == [150, 5]
+    assert [w.title for w in widgets] == [f"p{i}" for i in range(155)]  # order kept
+    assert min(w.layout.row for w in pages["Big part 2"]) == 1  # re-based
+
+
+def test_rows_become_pages_named_after_the_row_and_are_never_cut() -> None:
+    items = [placed(0, i * 2, 24, 2, f"row {i // 40}", f"p{i}") for i in range(160)]
+    widgets, skipped = lay_out(items, "D")
+    pages = pages_of(widgets)
+    assert skipped == 0 and list(pages) == ["row 0", "row 1", "row 2", "row 3"]
+    for page in pages.values():
+        assert len(page) == 41  # heading and 40 panels
+        assert page[0].layout.row == 1 and page[0].source_type == "row"
+
+
+def test_a_row_over_the_limit_is_split_with_part_suffix() -> None:
+    items = [placed(0, i * 2, 24, 2, "big", f"p{i}") for i in range(160)]
+    items += [placed(0, 400 + i * 2, 24, 2, "small", f"q{i}") for i in range(3)]
+    pages = pages_of(lay_out(items, "D")[0])
+    assert list(pages) == ["big", "big part 2", "small"]
+    assert [len(v) for v in pages.values()] == [150, 11, 4]
+
+
+def test_more_than_25_rows_are_packed_into_pages_without_cutting_a_row() -> None:
+    items = [placed(0, i * 2, 24, 2, f"r{i}", f"p{i}") for i in range(60)]
+    items += [placed(0, 200 + i * 2, 24, 2, "tail", f"t{i}") for i in range(120)]
+    widgets, skipped = lay_out(items, "D")
+    pages = pages_of(widgets)
+    assert skipped == 0 and len(pages) <= 25
+    assert all(len(v) <= 150 for v in pages.values())
+    assert {w.page for w in widgets if w.title == "t5"} == {
+        w.page for w in widgets if w.title == "tail"
+    }
+
+
+def test_the_25_page_limit_drops_the_rest_and_counts_it() -> None:
+    items = [placed(0, i * 2, 24, 2, "", f"p{i}") for i in range(3800)]
+    widgets, skipped = lay_out(items, "D")
+    assert len(widgets) == 3750 and skipped == 50 and len(pages_of(widgets)) == 25
+
+
+def test_pages_have_no_overlap_and_stay_in_the_grid() -> None:
+    items = [placed((i % 2) * 12, (i // 2) * 4, 12, 4, f"r{i // 100}") for i in range(400)]
+    for page in pages_of(lay_out(items, "D")[0]).values():
+        assert min(w.layout.row for w in page) == 1
+        for a, b in combinations(page, 2):
+            assert not _overlaps(a.layout, b.layout)
+        assert all(w.layout.column >= 1 and w.layout.column + w.layout.width <= 13 for w in page)
+
+
+def test_hostile_row_names_are_kept_as_text_and_made_unique() -> None:
+    evil = '"; DROP\n${var} {{x}} \x00'
+    items = [placed(0, i * 2, 24, 2, evil if i < 100 else evil + " ", "p") for i in range(200)]
+    names = [n or "" for n in pages_of(lay_out(items, "D")[0])]
+    assert len(names) == len(set(names)) and all("\x00" not in n and "\n" not in n for n in names)
 
 
 # --- matching raw display options to panels ---

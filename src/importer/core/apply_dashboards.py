@@ -45,11 +45,11 @@ def load_dashboard_plan(ir_dir: Path) -> DashboardPlan:
         except CannotEmit:
             skipped += 1
             continue
-        page = payload["variables"]["dashboard"]["pages"][0]
+        pages = payload["variables"]["dashboard"]["pages"]
         items.append(
             DashboardItem(
                 name=payload["variables"]["dashboard"]["name"],
-                widgets=len(page["widgets"]),
+                widgets=sum(len(page["widgets"]) for page in pages),
                 payload=payload,
             )
         )

@@ -9,6 +9,7 @@ thresholds, variables) default to "absent" and are left out of the serialised IR
 their default, so a dashboard that does not use them serialises exactly as before.
 """
 
+from collections import Counter
 from enum import StrEnum
 from typing import Annotated, Any, ClassVar, Self
 
@@ -71,7 +72,12 @@ OPTION_SUPPORT: dict[str, set[Visualization]] = {
     "thresholds": {Visualization.LINE, Visualization.TABLE, Visualization.BILLBOARD},
 }
 MAX_VARIABLES = 50
-MAX_WIDGETS = 300  # per dashboard (the GCP translator stops at 200)
+MAX_WIDGETS = 300  # per dashboard on one page (the GCP translator stops at 200)
+# New Relic: widgets per page, pages per dashboard. A dashboard whose widgets name pages may hold
+# MAX_PAGES full pages; one that names none keeps the limit above.
+PAGE_WIDGETS = 150
+MAX_PAGES = 25
+MAX_PAGED_WIDGETS = PAGE_WIDGETS * MAX_PAGES
 MAX_THRESHOLDS = 50
 MAX_RAW_SERIES = 50
 MAX_NUMBER = 1e15  # threshold and axis values; beyond this a float loses whole digits
@@ -185,7 +191,7 @@ class WidgetOptions(BaseModel):
 
 
 class IRWidget(OmitDefaults):
-    omit_when_default: ClassVar[tuple[str, ...]] = ("raw_series", "options", "thresholds")
+    omit_when_default: ClassVar[tuple[str, ...]] = ("raw_series", "options", "thresholds", "page")
 
     kind: WidgetKind
     source_type: str  # the source's own widget type, for the report
@@ -199,6 +205,8 @@ class IRWidget(OmitDefaults):
     raw_series: list[RawNrqlSeries] = Field(default=[], max_length=MAX_RAW_SERIES)
     options: WidgetOptions = WidgetOptions()
     thresholds: list[Threshold] = Field(default=[], max_length=MAX_THRESHOLDS)
+    # The page this widget sits on; None = the dashboard's one page. Rows restart at 1 on each page.
+    page: str | None = Field(default=None, min_length=1, max_length=MAX_TEXT)
 
     @model_validator(mode="after")
     def _options_fit_the_widget(self) -> Self:
@@ -358,10 +366,24 @@ class IRDashboard(OmitDefaults):
     source_system: str
     source_key: str  # the dashboard's name in the source system
     name: str
-    widgets: list[IRWidget] = Field(max_length=MAX_WIDGETS)
+    widgets: list[IRWidget] = Field(max_length=MAX_PAGED_WIDGETS)
     confidence: Confidence
     reasons: list[str] = []
     variables: list[IRVariable] = Field(default=[], max_length=MAX_VARIABLES)
+
+    @model_validator(mode="after")
+    def _pages_fit_the_limits(self) -> Self:
+        """Page limits only bind widgets that name a page; the old single-page limit is kept."""
+        if not any(w.page for w in self.widgets):
+            if len(self.widgets) > MAX_WIDGETS:
+                raise ValueError(f"more than {MAX_WIDGETS} widgets on one page")
+            return self
+        sizes = Counter(w.page for w in self.widgets)
+        if len(sizes) > MAX_PAGES:
+            raise ValueError(f"more than {MAX_PAGES} pages")
+        if max(sizes.values()) > PAGE_WIDGETS:
+            raise ValueError(f"more than {PAGE_WIDGETS} widgets on one page")
+        return self
 
     @model_validator(mode="after")
     def _variables_are_consistent(self) -> Self:
