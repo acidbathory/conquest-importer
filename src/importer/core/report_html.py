@@ -20,6 +20,7 @@ from html import escape
 
 from importer.core.ir import Confidence
 from importer.core.migration_summary import KINDS, MAX_REASONS, Asset, Group, Kind, Summary, percent
+from importer.core.report_brand import BRAND_CSS, logo_strip, pair_name
 from importer.core.taxonomy import Category, classify
 from importer.core.text import printable
 
@@ -618,9 +619,10 @@ def render_report(
         '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
         "style-src 'unsafe-inline'; img-src data:\">"
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        "<title>Migration report</title>"
-        f"<style>{CSS}</style></head><body><main>"
-        f'<div class="masthead"><h1>Migration report</h1><p class="where">{where}</p></div>'
+        f"<title>{pair_name(source)} migration report</title>"
+        f"<style>{CSS}{BRAND_CSS}</style></head><body><main>"
+        f'<div class="masthead"><h1>{pair_name(source)} migration report</h1>'
+        f'<p class="where">{where}</p></div>{logo_strip(source)}'
         f"{_state(summary, aws_account, nr_account, region, profile)}{hero}{chart}"
         f"{_ledger(summary, names)}"
         f"{''.join(sections)}"
