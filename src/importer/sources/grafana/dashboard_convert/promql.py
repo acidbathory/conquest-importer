@@ -369,6 +369,10 @@ class _Parse:
                     self.note(r.N_INCREASE)
         elif kind == "dynamic":
             self.note(r.N_RATE_WINDOW)
+        if function == "irate":
+            self.note(r.N_IRATE)
+        if self.opts.timeseries and not self.opts.bucket_seconds:
+            self.note(r.N_RATE_BUCKET)
         return Leaf(
             core,
             prefix,

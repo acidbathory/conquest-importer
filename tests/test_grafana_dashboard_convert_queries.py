@@ -358,3 +358,22 @@ def test_hostile_queries_are_refused_or_valid_and_quick(name: str) -> None:
     if out:
         check_raw_nrql(out)  # whatever was written passes the structural checks
         assert out.count("FACET") <= 1 and len(out) < 4096
+
+
+def test_irate_note_says_the_bucket_average_replaces_the_last_two_samples() -> None:
+    # live check (docs/research/live-grafana-counter-roundtrip.md): irate and rate give the same
+    # NRQL, so a spike that irate shows is averaged over the bucket; the widget must say so
+    converted = convert_query("irate(x_total[5m])", "prometheus", LINE)
+    assert r.N_IRATE in converted.notes
+    assert r.N_IRATE not in convert_query("rate(x_total[5m])", "prometheus", LINE).notes
+
+
+def test_rate_chart_note_warns_when_the_bucket_may_not_match_the_scrape_interval() -> None:
+    # live check: a bucket that is not a multiple of the scrape interval makes a steady rate swing
+    # between 0 and twice its value (10 s data in 5 s buckets), so an automatic bucket is flagged
+    for call in ("rate", "irate", "increase"):
+        auto = convert_query(f"{call}(x_total[5m])", "prometheus", LINE)
+        assert r.N_RATE_BUCKET in auto.notes
+    fixed = QueryOptions(variables={}, name_map=NameMap(), timeseries=True, bucket_seconds=60)
+    assert r.N_RATE_BUCKET not in convert_query("rate(x_total[5m])", "prometheus", fixed).notes
+    assert r.N_RATE_BUCKET not in convert_query("rate(x_total[5m])", "prometheus", STAT).notes
