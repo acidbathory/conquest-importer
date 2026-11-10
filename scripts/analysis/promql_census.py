@@ -21,7 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from promql_constructs import constructs_of  # noqa: E402
-from promql_verdicts import verdict_for  # noqa: E402
+from promql_verdicts import VERDICTS, verdict_for  # noqa: E402
 
 from importer.core.dashboard_ir import WidgetKind  # noqa: E402
 from importer.sources.grafana.dashboard_convert.legend import read_legend  # noqa: E402
@@ -468,12 +468,32 @@ def render(census: Census, alerts: tuple[int, int, list[tuple[str, int]]] | None
     return "\n".join(lines) + "\n"
 
 
+def render_verdicts(census: Census) -> str:
+    """The verdict table: every construct the table knows, with its count in the corpus."""
+    seen: Counter[str] = Counter(c for e in census.expressions for c in e.constructs)
+
+    def cell(text: str) -> str:
+        return text.replace("|", "\\|").replace("\n", " ")
+
+    lines = [
+        "| construct | in corpus | verdict | NRQL pattern | caveats | evidence | source |",
+        "|---|---:|---:|---|---|---|---|",
+    ]
+    for name, v in sorted(VERDICTS.items(), key=lambda kv: (kv[1].code, kv[0])):
+        lines.append(
+            f"| `{name}` | {seen[name]} | {v.code} | {cell(v.nrql) or '-'} | {cell(v.note) or '-'} | "
+            f"{v.status} | {cell(v.source) or '-'} |"
+        )
+    return "\n".join(lines) + "\n"
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dashboards", nargs="+", type=Path)
     parser.add_argument("--alerts", nargs="*", type=Path, default=[])
     parser.add_argument("--json", type=Path)
     parser.add_argument("--markdown", type=Path)
+    parser.add_argument("--verdict-table", type=Path)
     args = parser.parse_args(argv)
     census = build(args.dashboards)
     alerts = alert_table(alert_expressions(args.alerts)) if args.alerts else None
@@ -482,6 +502,8 @@ def main(argv: list[str]) -> int:
         args.markdown.write_text(text, encoding="utf-8")
     else:
         sys.stdout.write(text)
+    if args.verdict_table:
+        args.verdict_table.write_text(render_verdicts(census), encoding="utf-8")
     if args.json:
         args.json.write_text(json.dumps(asdict(census), indent=1), encoding="utf-8")
     return 0
