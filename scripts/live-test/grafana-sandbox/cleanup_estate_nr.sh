@@ -8,5 +8,5 @@ cd "$(dirname "$0")/../../.."
 MODE=()
 if [ "${1:-}" = "--apply" ]; then MODE=(--apply --confirm-account "$NEW_RELIC_ACCOUNT_ID"); fi
 for m in out/live-estate/nr-manifest.json out/live-estate/nr-manifest-alerts.json; do
-  importer rollback --manifest "$m" --account-id "$NEW_RELIC_ACCOUNT_ID" "${MODE[@]}"
+  importer rollback --manifest "$m" --account-id "$NEW_RELIC_ACCOUNT_ID" ${MODE[@]+"${MODE[@]}"}
 done
