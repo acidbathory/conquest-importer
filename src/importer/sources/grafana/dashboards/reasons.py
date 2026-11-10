@@ -88,9 +88,17 @@ V_QUERY_REGEX = (
     "dashboard variable regex uses a pattern the converter cannot verify (lookahead, "
     "a backreference, a capture group or any regex beyond plain words)"
 )
-V_QUERY_SHAPE = "dashboard variable query is not label_values(), so it has no uniques() form"
+V_QUERY_SHAPE = (
+    "dashboard variable query is not label_values(), query_result(selector) or metrics(), "
+    "so it has no uniques() form"
+)
+V_QUERY_RESULT = (
+    "dashboard variable query is query_result() of an expression, or has no regex that picks "
+    "one label value out of each series"
+)
 V_QUERY_DS = "dashboard variable query runs on a data source other than prometheus"
-V_NESTED = "dashboard variable query depends on another variable"
+V_NESTED = "dashboard variable query depends on a variable that stays manual"
+V_CYCLE = "dashboard variable query depends on itself or on a cycle of variables"
 V_ADHOC = "dashboard variable is an ad hoc filter or group-by, which has no New Relic variable"
 V_NAME = "dashboard variable name is not letters, digits and underscore"
 V_DUPLICATE = "dashboard variable name is used twice"
