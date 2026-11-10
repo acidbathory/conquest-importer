@@ -219,6 +219,7 @@ def _items_from_notifications(folder: Path) -> list[Item]:
     if not lines or lines[0] != "# Grafana notification conversion":
         return []
     from importer.sources.grafana.notifications import reasons as R
+    from importer.sources.grafana.notify_convert import reasons as C
 
     items: list[Item] = []
     for row in _rows(lines, "## Contact points"):
@@ -232,7 +233,7 @@ def _items_from_notifications(folder: Path) -> list[Item]:
         else:
             continue
         if ctype.lower() == "email" and result.startswith("manual"):
-            reason = "grafana converted email destination needs an address"
+            reason = C.R_NO_ADDRESS
         items.append(Item("grafana", "contact point", "", name, (reason,), variant=ctype.lower()))
     for row in _rows(lines, "## Mute timings"):
         if len(row) >= 3 and row[2]:

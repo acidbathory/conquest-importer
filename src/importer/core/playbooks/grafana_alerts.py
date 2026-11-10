@@ -177,7 +177,6 @@ reg(
         "Data source-managed rule",
         "Rule-file rule without a comparison",
         "Grafana rule not readable",
-        "Grafana rule file group not readable",
     ),
     Playbook(
         source="A recording rule saves a query result as a new metric; a ruler-managed rule "

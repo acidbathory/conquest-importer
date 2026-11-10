@@ -363,3 +363,18 @@ reg(
         links=(L.MUTING, L.TF_MUTING, L.GRAFANA_MUTE),
     ),
 )
+
+reg(
+    "Grafana rule file group not readable",
+    Playbook(
+        source="A group in a rule file has no name or is not an object.",
+        newrelic="Nothing to create until the file is fixed.",
+        steps=(
+            "Fix the group (it needs a name) and export again; rule files must be JSON "
+            "(`yq -o=json rules.yml`).",
+        ),
+        differs="None once the file reads.",
+        effort_minutes=10,
+        links=(L.CONDITION,),
+    ),
+)

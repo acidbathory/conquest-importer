@@ -99,5 +99,5 @@ OTEL_DELTA = Link(
 )
 GRAFANA_MUTE = Link(
     "https://grafana.com/docs/grafana/latest/alerting/configure-notifications/mute-timings/",
-    "Grafana mute timings",
+    "mute timings in the Grafana documentation",
 )
