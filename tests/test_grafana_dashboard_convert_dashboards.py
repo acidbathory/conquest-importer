@@ -163,7 +163,7 @@ def test_a_table_and_a_top_five_bar_and_a_markdown_panel() -> None:
     assert table.visualization is not None and table.visualization.value == "viz.table"
     assert "TIMESERIES" not in queries(table)[0]
     assert queries(bar) == [
-        "SELECT sum(node_filesystem_size_bytes) FROM Metric WHERE job IN ({{job}}) "
+        "SELECT latest(node_filesystem_size_bytes) FROM Metric WHERE job IN ({{job}}) "
         "FACET mountpoint LIMIT 5"
     ]
     assert notes.kind == WidgetKind.MARKDOWN
@@ -218,7 +218,7 @@ def test_kubernetes_variables_constants_and_intervals() -> None:
     assert d.variables[1].default_values == ["prod-eu"]
     w = by_title(d)
     assert queries(w["Region note"]) == [
-        "SELECT sum(up) AS 'up in' FROM Metric WHERE region = 'eu-west-1' "
+        "SELECT average(up) AS 'up in' FROM Metric WHERE region = 'eu-west-1' "
         "AND job IN ({{jobfilter}}) TIMESERIES AUTO"
     ]
     assert "interval" not in {v.name for v in d.variables}  # dropped, [$interval] is the bucket
@@ -397,6 +397,6 @@ def test_a_panel_that_shows_another_panels_result_uses_that_panels_query(tmp_pat
         }
     )
     widgets = _convert_data(data, tmp_path).widgets
-    assert queries(widgets[1]) == ["SELECT sum(up) FROM Metric"]
+    assert queries(widgets[1]) == ["SELECT latest(up) FROM Metric"]
     assert widgets[1].visualization is not None
     assert widgets[1].visualization.value == "viz.billboard"

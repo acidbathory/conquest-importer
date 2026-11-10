@@ -26,7 +26,7 @@ def nrql(expr: str, opts: QueryOptions = LINE, family: str = "prometheus") -> st
         ('up{job="api"}', "SELECT average(up) FROM Metric WHERE job = 'api' TIMESERIES AUTO"),
         (
             "sum by (instance) (node_load1)",
-            "SELECT sum(node_load1) FROM Metric FACET instance LIMIT MAX TIMESERIES AUTO",
+            "SELECT average(node_load1) FROM Metric FACET instance LIMIT MAX TIMESERIES AUTO",
         ),
         (
             "max(node_load1) by (instance, job)",
@@ -209,7 +209,7 @@ def test_legend_forms(legend: str, alias: str | None, labels: tuple[str, ...], l
 
 def test_a_static_legend_is_an_alias_and_a_label_legend_adds_a_facet_to_a_flat_selector() -> None:
     out = convert_query("sum(up)", "prometheus", LINE, read_legend("Up"))
-    assert out.nrql == "SELECT sum(up) AS 'Up' FROM Metric TIMESERIES AUTO"
+    assert out.nrql == "SELECT average(up) AS 'Up' FROM Metric TIMESERIES AUTO"
     flat = convert_query("up", "prometheus", LINE, read_legend("{{instance}}"))
     assert flat.nrql == "SELECT average(up) FROM Metric FACET instance LIMIT MAX TIMESERIES AUTO"
     grouped = convert_query("sum by (a) (up)", "prometheus", LINE, read_legend("{{b}}"))
@@ -221,7 +221,7 @@ def test_a_static_legend_is_an_alias_and_a_label_legend_adds_a_facet_to_a_flat_s
 def test_a_hostile_alias_cannot_leave_its_quotes() -> None:
     legend = read_legend("a' ) FROM Log; DROP \\")
     out = convert_query("sum(up)", "prometheus", LINE, legend).nrql
-    assert out == "SELECT sum(up) AS 'a\\' ) FROM Log; DROP \\\\' FROM Metric TIMESERIES AUTO"
+    assert out == "SELECT average(up) AS 'a\\' ) FROM Log; DROP \\\\' FROM Metric TIMESERIES AUTO"
 
 
 def test_more_than_five_labels_are_cut_with_a_note() -> None:

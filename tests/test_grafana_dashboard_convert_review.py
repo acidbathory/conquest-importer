@@ -54,11 +54,26 @@ def test_a_sum_sums_still_converts_for_rates() -> None:
     assert r.N_SUM_GAUGE not in out.notes
 
 
-@pytest.mark.parametrize("opts", [LINE, STAT])
-def test_sum_of_a_gauge_says_it_adds_every_sample(opts: QueryOptions) -> None:
-    out = convert_query("sum by (instance) (node_memory_MemFree_bytes)", "prometheus", opts)
+def test_sum_of_a_gauge_in_a_stat_is_the_latest_value_not_every_sample() -> None:
+    out = convert_query("sum(grafanacloud_org_info)", "prometheus", STAT)
+    assert out.nrql.startswith("SELECT latest(grafanacloud_org_info) FROM Metric")
+    assert "sum(" not in out.nrql
     assert r.N_SUM_GAUGE in out.notes
+
+
+def test_sum_of_a_gauge_in_a_chart_is_the_average_per_bucket() -> None:
+    out = convert_query("sum by (instance) (node_memory_MemFree_bytes)", "prometheus", LINE)
+    assert out.nrql.startswith("SELECT average(node_memory_MemFree_bytes) FROM Metric FACET")
+    assert "sum(" not in out.nrql
+    assert r.N_SUM_GAUGE in out.notes
+
+
+@pytest.mark.parametrize("opts", [LINE, STAT])
+def test_sum_note_is_only_for_gauges(opts: QueryOptions) -> None:
     assert r.N_SUM_GAUGE not in convert_query("avg(up)", "prometheus", opts).notes
+    rate = convert_query("sum(rate(x_total[5m]))", "prometheus", opts)
+    assert "sum(x_total)" in rate.nrql
+    assert r.N_SUM_GAUGE not in rate.notes
 
 
 def draft(title: str = "w") -> Draft:

@@ -37,7 +37,7 @@ N_INSTANT = f"{NOTE} the value is taken over the whole time range, Grafana showe
 N_RATE_WINDOW = f"{NOTE} the rate window of the query becomes the automatic New Relic bucket"
 N_INCREASE = f"{NOTE} increase over a variable window is the sum per bucket"
 N_SUM_GAUGE = (
-    f"{NOTE} sum() of a gauge adds every sample in the bucket, so a series counts once per scrape"
+    f"{NOTE} sum() of a gauge became latest() or average(); right for one series per group"
 )
 N_COUNT = f"{NOTE} count() counts samples, not series; use uniqueCount of a label that names one"
 N_TOPK = f"{NOTE} topk ranks over the whole time range, not at each step"

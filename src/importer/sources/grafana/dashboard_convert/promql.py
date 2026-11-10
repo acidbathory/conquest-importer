@@ -338,8 +338,9 @@ class _Parse:
             raise Unconvertible(r.C_SHAPE)
         event, metric = self.metric(name)
         func = NR_AGGREGATE[agg or "avg"]
-        if agg == "sum":
+        if agg == "sum":  # a New Relic sum() would add every sample, not the value Grafana shows
             self.note(r.N_SUM_GAUGE)
+            func = "average" if self.opts.timeseries else "latest"
         if agg is None:
             func = "latest" if not self.opts.timeseries else "average"
         return Leaf(
