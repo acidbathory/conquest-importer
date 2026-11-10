@@ -357,6 +357,17 @@ class _Parse:
             kept=agg is None,
         )
 
+    def check_stored_type(self, name: str) -> None:
+        """Note a hinted type that New Relic's name rule on remote write would get the other way."""
+        kind = self.opts.name_map.types.get(name)
+        if kind is None:
+            return
+        stored_as_count = name.endswith(COUNTER_SUFFIXES)
+        if kind == "gauge" and stored_as_count:
+            self.note(r.n_type_override(name, "gauge"))
+        elif kind == "counter" and not stored_as_count:
+            self.note(r.n_type_override(name, "counter"))
+
     def is_counter(self, name: str) -> bool:
         """The hinted type when there is one, else the name suffix."""
         kind = self.opts.name_map.types.get(name)
@@ -441,6 +452,7 @@ class _Parse:
         if VAR_TOKEN.search(name) or "VARB" in name:
             raise Unconvertible(r.C_VAR_NAME)
         self.metrics.append(name)
+        self.check_stored_type(name)
         entry = self.opts.name_map.metrics.get(name)
         if entry is not None:
             self.mapped = True

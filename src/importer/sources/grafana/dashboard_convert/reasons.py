@@ -54,6 +54,16 @@ N_SUM_GAUGE = (
     f"{NOTE} sum() of a gauge became latest() or average() because the name map says the "
     "group holds one series"
 )
+
+
+def n_type_override(name: str, want: str) -> str:
+    """Remote write stores a type guessed from the name; the hinted type needs a relabel rule."""
+    return (
+        f"{NOTE} {name} is a {want} in Prometheus but New Relic infers the other type from its "
+        f"name on remote write; add newrelic_metric_type={want} to write_relabel_configs"
+    )
+
+
 N_COUNT = f"{NOTE} count() counts samples, not series; use uniqueCount of a label that names one"
 N_TOPK = f"{NOTE} topk ranks over the whole time range, not at each step"
 N_TOPK_FLAT = f"{NOTE} topk over series that are not grouped has no FACET to rank"
