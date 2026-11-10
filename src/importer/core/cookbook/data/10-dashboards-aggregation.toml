@@ -1,0 +1,184 @@
+# Dashboard blockers about aggregation and filtering. Content is fixed text; see cookbook/__init__.py.
+
+[[blocker]]
+key = "sum-gauge"
+title = "sum() or count() of a gauge without a label list"
+titles = ["Dashboard sum or count across the series of a gauge", "PromQL aggregation across series"]
+scope = "167 widgets on 33 of 50 community dashboards (the largest single blocker); 3 alert rules (2026-11-10 test estate)."
+summary = '''
+In Prometheus `sum(kube_deployment_status_replicas)` adds the newest value of every series. NRQL aggregates
+samples, not series: `sum()` adds every sample in the bucket, so the answer grows with the number of scrapes.
+On the test estate the plain `sum()` of that gauge is 7,020 while the true total is 60 (117 times too high).
+The correct answer needs "the latest value of each series, then add them up", and that needs to know which
+labels identify one series. The converter cannot know that, so it stops and leaves the widget for a person.
+'''
+decision = [
+  "Is this a stat, table, bar or pie (one number or a list per group)? Use the nested query (method 1).",
+  "Is it a time chart and the value is steady (replica counts, limits, capacities)? average() * cardinality() (method 2).",
+  "Does the customer control Prometheus or the collector, and will the panel be used a lot? Aggregate once at the source (method 3): fastest dashboards, exact numbers, loses per-series drill-down.",
+  "Is it an alert? A nested query is not allowed in a condition: alert per series with FACET (method 4).",
+]
+ask = [
+  "Which labels make one series unique for this metric (for example cluster, namespace, deployment)? Run `SELECT keyset() FROM Metric WHERE metricName = '<metric>'` and let them pick.",
+  "Is the value steady between scrapes, or does it move quickly (a queue length, a connection count)?",
+  "Do you run Prometheus or an OpenTelemetry Collector that you are allowed to change?",
+  "Is this panel a total on a wall display, or is someone going to drill into one series?",
+]
+cannot = "New Relic cannot sum 'the latest value of every series' over time in one time-series chart. The nested query returns one number (or a list per group), not a chart with one point per bucket."
+
+[[blocker.method]]
+id = "nested-latest"
+family = "B"
+name = "Nested query: latest() of each series, then sum()"
+when = '''Choose this first for any stat, table, bar or pie. It is exactly the PromQL instant-vector meaning: one value per series, then add. No collector access and no re-ingest needed.'''
+prerequisites = "The labels that make one series unique (use keyset() to list them). Query permission only."
+needs_collector = false
+needs_reingest = false
+latency = "None. The widget reads data as it arrives."
+changes = '''Numbers become correct (60, not 7,020). The result is one number for the dashboard time range, not a point per bucket. It reads "the newest value inside the time picker window", so a series that stopped reporting an hour ago still counts if the window is wider than that.'''
+effort = "10 minutes"
+risk = '''Too few labels in the FACET merge two series into one and under-count; more than 5 labels hit the FACET attribute limit. A series that stopped reporting still counts for the whole window.'''
+verify = '''Run the query, then run `SELECT latest(kube_deployment_status_replicas) FROM Metric FACET cluster, namespace, deployment, instance LIMIT MAX` and add the rows by hand: the two numbers must be equal. In Grafana compare with the same instant value. `importer verify-parity` does not cover widgets yet; compare by eye on one panel per dashboard.'''
+status = "VERIFIED-VALUE"
+evidence = "Run 2026-11-10 on the sandbox account: the nested query returned 60.0; adding the 20 rows of the FACET query gives 60; plain sum() returned 7020 (see cookbook-verification.json)."
+sources = [
+  "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/",
+  "https://docs.newrelic.com/docs/nrql/using-nrql/nested-aggregation-make-ordered-computations-single-query/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "sum(kube_deployment_status_replicas) done right"
+  text = '''
+SELECT sum(v) FROM (SELECT latest(kube_deployment_status_replicas) AS v FROM Metric FACET cluster, namespace, deployment LIMIT MAX)
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "The wrong answer, for comparison (do not use)"
+  text = '''
+SELECT sum(kube_deployment_status_replicas) FROM Metric
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "count(...) by (namespace) done right: count series, not samples"
+  text = '''
+SELECT uniqueCount(deployment) FROM Metric WHERE metricName = 'kube_deployment_status_replicas' FACET namespace
+'''
+
+[[blocker.method]]
+id = "average-times-cardinality"
+family = "B"
+name = "average(x) * cardinality(x) for a time chart of a steady gauge"
+when = '''Choose this when the widget must be a time series and the gauge changes slowly (replica counts, limits, capacities). It is what New Relic's own PromQL translator writes for sum(gauge).'''
+prerequisites = "A gauge that holds about the same value for the whole bucket and a series count that does not change inside the window."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''The bucket average is multiplied by the number of series seen in the whole time range. It is exact for a steady gauge (60 here), approximate when values move inside the bucket, and wrong if series appear or disappear during the range because cardinality() counts every series seen in the window.'''
+effort = "10 minutes"
+risk = '''Looks right on a quiet day and drifts during rollouts, when series come and go. Use it only for steady gauges and say so in the widget title.'''
+verify = '''Compare one point of the chart with the nested query of method 1 over the same short window (SINCE 5 minutes ago). They must match for a steady gauge; a gap during a rollout shows the weakness.'''
+status = "VERIFIED-VALUE"
+evidence = "Run 2026-11-10: the stat form returned 60.0, equal to the nested query; the TIMESERIES form was accepted. Behaviour during series churn was not tested."
+sources = [
+  "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/",
+  "https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/view-query-data/translate-promql-queries-nrql/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Stat: total number of replicas"
+  text = '''
+SELECT average(kube_deployment_status_replicas) * cardinality(kube_deployment_status_replicas) FROM Metric
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Time chart of the same total"
+  text = '''
+SELECT average(kube_deployment_status_replicas) * cardinality(kube_deployment_status_replicas) FROM Metric TIMESERIES AUTO
+'''
+
+[[blocker.method]]
+id = "aggregate-at-source"
+family = "A"
+name = "Aggregate once at the source (recording rule or collector) and chart the result"
+when = '''Choose this when the panel is used all the time (wall display, SLO page), when cardinality is high, or when the customer owns Prometheus or the collector. The query stays trivial and fast and the number equals what Grafana showed.'''
+prerequisites = "Access to the Prometheus rule files or the OpenTelemetry Collector configuration, and a deploy window. New data only: history before the change is not rewritten."
+needs_collector = true
+needs_reingest = true
+latency = "One rule evaluation interval (typically 15 to 60 seconds) before the new series exists."
+changes = '''A new, small series arrives (for example one per cluster). Per-series drill-down is lost unless the raw series is kept too; keeping both costs the ingest of both. Numbers are exactly the Prometheus numbers.'''
+effort = "1-2 hours"
+risk = '''Dropping the raw series to save cost removes the ability to drill down. The new metric name must be agreed with the dashboard authors. Recording rules evaluate in Prometheus, so a Prometheus outage also stops the new series.'''
+verify = '''After a few minutes run the NRQL below and compare it with the nested query of method 1 (they must agree within one scrape interval). Then compare with the original Grafana panel.'''
+status = "DOC-ONLY"
+evidence = "Rule file and processor syntax read in the Prometheus and OpenTelemetry documentation; not run (the sandbox Prometheus holds no such rule). The NRQL below was accepted by New Relic but returns no rows."
+sources = [
+  "https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/",
+  "https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/install-configure-remote-write/set-your-prometheus-remote-write-integration/",
+  "https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor",
+]
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Prometheus rule file: one total per cluster, remote-written with everything else"
+  text = '''
+groups:
+  - name: kube-totals
+    interval: 30s
+    rules:
+      - record: cluster:kube_deployment_status_replicas:sum
+        expr: sum by (cluster) (kube_deployment_status_replicas)
+'''
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Same result in an OpenTelemetry Collector (keeps only the cluster label)"
+  text = '''
+processors:
+  transform/sum_replicas:
+    metric_statements:
+      - aggregate_on_attributes("sum", ["cluster"]) where metric.name == "kube_deployment_status_replicas"
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [transform/sum_replicas, batch]
+      exporters: [otlphttp/newrelic]
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Chart the recorded series (colon names need backticks)"
+  text = '''
+SELECT latest(`cluster:kube_deployment_status_replicas:sum`) FROM Metric FACET cluster TIMESERIES AUTO
+'''
+
+[[blocker.method]]
+id = "alert-per-series"
+family = "D"
+name = "Alert on each series (FACET) instead of on the sum"
+when = '''Choose this for alert rules. A condition cannot contain a subquery, so the nested query of method 1 is not available; New Relic evaluates every FACET value as its own signal, which is also closer to how a person thinks about "a deployment is short of replicas".'''
+prerequisites = "A query that names the identifying labels in FACET (at most 5 attributes, at most 20,000 values)."
+needs_collector = false
+needs_reingest = false
+latency = "Aggregation window plus delay (default 1 minute plus 2 minutes); the live firing test measured about 5 minutes more than Grafana's evaluation."
+changes = '''One alert per failing series instead of one for the total. More notifications when many series fail together; group them in the workflow. The threshold changes meaning from "total above N" to "any single series above N".'''
+effort = "20 minutes"
+risk = '''Alert volume. A total of 60 checked against 50 becomes 20 separate checks; pick a per-series threshold with the customer.'''
+verify = '''Run the condition query in the query builder: each FACET row is one signal. Use the condition preview to see how many would have fired in the last day. Then run the firing test of docs/research/live-alert-firing-test.md on a throwaway policy.'''
+status = "VERIFIED-VALID"
+evidence = "Query accepted by New Relic 2026-11-10 (read-only). No condition was created for this method; the NRQL follows the condition rules on the NRQL alert condition page (no LIMIT, no subquery)."
+sources = [
+  "https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Condition query: any deployment with unavailable replicas (static threshold above 0 for 5 minutes)"
+  text = '''
+SELECT latest(kube_deployment_status_replicas_unavailable) FROM Metric FACET cluster, namespace, deployment
+'''
