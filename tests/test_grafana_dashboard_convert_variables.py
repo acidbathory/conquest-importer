@@ -182,7 +182,7 @@ def test_refresh_on_load_means_the_variable_ignores_the_time_picker() -> None:
 
 def test_a_variable_the_converter_cannot_write_is_counted_and_its_panels_say_so() -> None:
     ds = DsRef(type="prometheus", uid="p")
-    var = Variable(name="pod", kind="query", query='label_values(up{job=~"a.b"}, pod)', ds=ds)
+    var = Variable(name="pod", kind="query", query='label_values(up{job=~"(?i:a)b"}, pod)', ds=ds)
     panel = Panel(
         id=1,
         type="timeseries",
@@ -321,3 +321,23 @@ def test_the_name_map_decides_the_event_of_a_parent_filter() -> None:
     assert nrql_of(out)["pod"] == (
         "FROM K8sPodSample SELECT uniques(pod) WHERE podName IS NOT NULL AND namespace IN ({{ns}})"
     )
+
+
+@pytest.mark.parametrize(
+    ("query", "tail"),
+    [
+        ('label_values(kube_pod_info{name!=""}, pod)', " AND name IS NOT NULL"),
+        ('label_values(kube_pod_info{name=~".+"}, pod)', " AND name IS NOT NULL"),
+        (
+            'label_values(kube_pod_info{version=~"vm(insert|select).*"}, pod)',
+            " AND version RLIKE 'vm(insert|select).*'",
+        ),
+    ],
+)
+def test_a_variable_query_reads_the_same_regex_matchers_as_a_panel_query(
+    query: str, tail: str
+) -> None:
+    out = build([query_var(query)])
+    assert [v.nrql for v in out.variables] == [
+        "FROM Metric SELECT uniques(pod) WHERE metricName = 'kube_pod_info'" + tail
+    ]

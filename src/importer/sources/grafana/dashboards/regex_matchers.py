@@ -60,6 +60,27 @@ def _plain(pattern: str) -> bool:
     return re.fullmatch(rf"(?:\.\*)?{WORD.pattern}(?:\.\*)?", pattern) is not None
 
 
+def unanchored(pattern: str) -> str:
+    """`pattern` without a leading `^`, a trailing `$` and one group around all of it.
+
+    PromQL and RLIKE both match the whole value, so the anchors and the outer group change
+    nothing. A pattern with a bracket expression or an escape is returned as it is.
+    """
+    if "[" in pattern or "\\" in pattern:
+        return pattern
+    out = pattern[1:] if pattern.startswith("^") else pattern
+    out = out[:-1] if out.endswith("$") else out
+    if out.startswith("(") and out.endswith(")") and not out.startswith("(?"):
+        depth = 0
+        for i, ch in enumerate(out):
+            depth += ch == "("
+            depth -= ch == ")"
+            if depth == 0 and i < len(out) - 1:
+                return out
+        out = out[1:-1]
+    return out
+
+
 def mask(text: str) -> tuple[str, dict[str, RegexUse]]:
     """`text` with every matcher RLIKE can carry replaced by a plain stand-in, and the table."""
     table: dict[str, RegexUse] = {}
@@ -75,9 +96,9 @@ def mask(text: str) -> tuple[str, dict[str, RegexUse]]:
                 return found[0]
             pattern, new_op = PRESENT, "=~"
         else:
-            pattern, new_op = raw, op
+            pattern, new_op = unanchored(raw), op
             if pattern != PRESENT and (_plain(pattern) or not _carried(pattern)):
-                return found[0]
+                return found[0] if pattern == raw or not pattern else f'{key}{op}"{pattern}"'
         word = f"{MARK}{len(table)}"
         table[word] = RegexUse(pattern)
         return f'{key}{new_op}"{word}"'

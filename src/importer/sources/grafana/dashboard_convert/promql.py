@@ -53,6 +53,7 @@ from importer.sources.grafana.dashboards.query_tier import (
     HISTOGRAM,
     SUM_BY,
     TOPK,
+    peel_math,
 )
 from importer.sources.grafana.dashboards.regex_matchers import PRESENT, RegexUse, mask
 
@@ -538,6 +539,7 @@ def convert_query(
     legend = legend or Legend(None, (), False)
     if len(expr) > MAX_EXPRESSION:
         raise Unconvertible(r.C_SHAPE)
+    function, expr = peel_math(expr) if family == "prometheus" else ("", expr)
     text, names = tokenize(" ".join(expr.split()), opts)
     text, regexes = mask(text) if family == "prometheus" else (text, {})
     parse = _Parse(opts, names, regexes)
@@ -561,7 +563,10 @@ def convert_query(
         notes.append(r.N_NAME_MAP)
     if not opts.timeseries and any(not leaf.core.startswith("latest(") for leaf in found):
         notes.append(r.N_INSTANT)
-    nrql = _statement(strip_outer(render(node, common)), first, common, labels, parse, legend)
+    select = strip_outer(render(node, common))
+    if function:
+        select = f"{function}({select})"
+    nrql = _statement(select, first, common, labels, parse, legend)
     try:
         check_raw_nrql(nrql)
     except ValueError:

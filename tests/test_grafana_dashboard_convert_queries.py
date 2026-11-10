@@ -11,6 +11,7 @@ from importer.sources.grafana.dashboard_convert.name_map import NameEntry, NameM
 from importer.sources.grafana.dashboard_convert.nrql import cond_sql
 from importer.sources.grafana.dashboard_convert.promql import QueryOptions, convert_query
 from importer.sources.grafana.dashboard_convert.reuse import Cond, Unconvertible
+from importer.sources.grafana.dashboards.query_tier import classify_query
 
 LINE = QueryOptions(variables={"job": None, "env": "prod"}, name_map=NameMap(), timeseries=True)
 STAT = QueryOptions(variables={"job": None, "env": "prod"}, name_map=NameMap(), timeseries=False)
@@ -373,3 +374,24 @@ def test_rate_chart_note_warns_when_the_bucket_may_not_match_the_scrape_interval
     fixed = QueryOptions(variables={}, name_map=NameMap(), timeseries=True, bucket_seconds=60)
     assert r.N_RATE_BUCKET not in convert_query("rate(x_total[5m])", "prometheus", fixed).notes
     assert r.N_RATE_BUCKET not in convert_query("rate(x_total[5m])", "prometheus", STAT).notes
+
+
+@pytest.mark.parametrize(
+    ("expr", "select"),
+    [
+        ("round(sum(irate(up[5m])))", "round(rate(sum(up), 1 second))"),
+        ("ceil(sum by (pod) (rate(x_total[5m])))", "ceil(rate(sum(x_total), 1 second))"),
+        ("floor(up)", "floor(average(up))"),
+        ("abs(max(up))", "abs(max(up))"),
+        ("round(sum(rate(a_total[5m])) / sum(rate(b_total[5m])))", "round("),
+    ],
+)
+def test_round_ceil_floor_and_abs_around_a_whole_query_are_written(expr: str, select: str) -> None:
+    out = nrql(expr, LINE)
+    assert select in out
+    assert classify_query(expr, "prometheus").tier in (2, 3)
+
+
+@pytest.mark.parametrize("expr", ["round(up, 0.5)", "round(up) + 1 > 2", "sum(round(up))"])
+def test_round_with_a_second_argument_or_inside_an_aggregation_stays_manual(expr: str) -> None:
+    assert classify_query(expr, "prometheus").tier is None
