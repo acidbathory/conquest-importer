@@ -110,6 +110,8 @@ NAMESPACES = ["default", "kube-system", "monitoring", "payments", "web"]
 
 
 def ksm(p: Page) -> None:
+    # a label named metricName collides with the New Relic attribute that holds the metric name
+    p.gauge("ckg_metricname_probe", {"metricName": "orders_total", "env": "rig"}, 7)
     pods = []
     for c, nodes in CLUSTERS.items():
         for ni, node in enumerate(nodes):
