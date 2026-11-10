@@ -38,6 +38,7 @@ CONVERTER_ONLY = {
     r.C_EVENTS,
     r.C_FILTERS,
     r.C_AGG_RATE,
+    r.C_GAUGE_SERIES,
     r.C_VARIABLE_UNDEFINED,
 }
 
@@ -164,7 +165,7 @@ def test_converter_only_reasons_on_the_corpus_are_listed_and_few() -> None:
             refused += 1
     # `up{job="x$job"}`, `sum(up) * $__interval` and the three averages of a rate (refused on
     # purpose: rate(average()) reads too low by the scrapes in a bucket) at most
-    assert refused <= 5
+    assert refused <= 20
 
 
 def test_queries_the_planner_refuses_are_never_converted_by_accident() -> None:
@@ -223,5 +224,7 @@ def test_the_extra_widget_types_convert_when_their_queries_do() -> None:
             extra = plan.tier is None and plan.extra_tier is not None
             if extra and panel_type(panel.type).label in EXTRA_CONVERTIBLE:
                 converted += draft.kind != WidgetKind.UNSUPPORTED
-                refused += draft.kind == WidgetKind.UNSUPPORTED
-    assert converted >= 3 and refused == 0
+                refused += (
+                    draft.kind == WidgetKind.UNSUPPORTED and r.C_GAUGE_SERIES not in draft.reasons
+                )
+    assert converted >= 2 and refused == 0  # one used sum() of a gauge: now manual

@@ -147,7 +147,7 @@ def test_the_metric_table_is_bounded(tmp_path: Path) -> None:
             "title": f"p{i}",
             "gridPos": {"x": 0, "y": i, "w": 24, "h": 1},
             "datasource": {"type": "prometheus", "uid": "p"},
-            "targets": [{"refId": "A", "expr": f"sum(metric_{i})"}],
+            "targets": [{"refId": "A", "expr": f"avg(metric_{i})"}],
         }
         for i in range(120)
     ]

@@ -208,26 +208,26 @@ def test_a_static_legend_is_an_alias_and_a_label_legend_adds_a_facet_to_a_flat_s
     assert out.nrql == "SELECT average(up) AS 'Up' FROM Metric TIMESERIES AUTO"
     flat = convert_query("up", "prometheus", LINE, read_legend("{{instance}}"))
     assert flat.nrql == "SELECT average(up) FROM Metric FACET instance LIMIT MAX TIMESERIES AUTO"
-    grouped = convert_query("sum by (a) (up)", "prometheus", LINE, read_legend("{{b}}"))
+    grouped = convert_query("avg by (a) (up)", "prometheus", LINE, read_legend("{{b}}"))
     assert "FACET a LIMIT" in grouped.nrql and r.N_LEGEND_LABEL in grouped.notes
-    mixed = convert_query("sum by (a) (up)", "prometheus", LINE, read_legend("x {{a}}"))
+    mixed = convert_query("avg by (a) (up)", "prometheus", LINE, read_legend("x {{a}}"))
     assert r.N_LEGEND_TEXT in mixed.notes
 
 
 def test_a_hostile_alias_cannot_leave_its_quotes() -> None:
     legend = read_legend("a' ) FROM Log; DROP \\")
-    out = convert_query("sum(up)", "prometheus", LINE, legend).nrql
+    out = convert_query("avg(up)", "prometheus", LINE, legend).nrql
     assert out == "SELECT average(up) AS 'a\\' ) FROM Log; DROP \\\\' FROM Metric TIMESERIES AUTO"
 
 
 def test_more_than_five_labels_are_cut_with_a_note() -> None:
-    out = convert_query("sum by (a,b,c,d,e,f) (up)", "prometheus", LINE)
+    out = convert_query("avg by (a,b,c,d,e,f) (up)", "prometheus", LINE)
     assert "FACET a, b, c, d, e LIMIT MAX" in out.nrql and r.N_FACET_LIMIT in out.notes
 
 
 def test_a_fixed_bucket_replaces_auto() -> None:
     opts = QueryOptions(variables={}, name_map=NameMap(), timeseries=True, bucket_seconds=60)
-    assert nrql("sum(up)", opts).endswith("TIMESERIES 60 SECONDS")
+    assert nrql("avg(up)", opts).endswith("TIMESERIES 60 SECONDS")
 
 
 def test_the_name_map_changes_event_and_attribute() -> None:
@@ -275,7 +275,7 @@ def test_a_percentile_cannot_be_next_to_a_term_with_other_filters() -> None:
 
 
 def test_a_variable_inside_a_string_alias_is_not_a_variable_reference() -> None:
-    out = convert_query("sum(up)", "prometheus", LINE, read_legend("{{a}} {{b}}"))
+    out = convert_query("avg(up)", "prometheus", LINE, read_legend("{{a}} {{b}}"))
     assert "{{" not in out.nrql.split("FROM")[0]
 
 
@@ -288,7 +288,7 @@ def test_a_like_pattern_with_a_percent_sign_is_refused() -> None:
 def test_a_flat_selector_says_series_are_merged_unless_a_label_keeps_them_apart() -> None:
     assert r.N_MERGED in convert_query("up", "prometheus", LINE).notes
     assert r.N_MERGED not in convert_query("up", "prometheus", LINE, read_legend("{{a}}")).notes
-    assert r.N_MERGED not in convert_query("sum(up)", "prometheus", LINE).notes
+    assert r.N_MERGED not in convert_query("avg(up)", "prometheus", LINE).notes
 
 
 @pytest.mark.parametrize("value", ["x" * 201, "a\nb", "a\x00b"])

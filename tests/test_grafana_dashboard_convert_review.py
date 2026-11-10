@@ -191,7 +191,7 @@ def _panel(count: int) -> dict[str, Any]:
                 "title": "many",
                 "datasource": {"type": "prometheus", "uid": "p"},
                 "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8},
-                "targets": [{"refId": f"R{i}", "expr": f"sum(m{i})"} for i in range(count)],
+                "targets": [{"refId": f"R{i}", "expr": f"avg(m{i})"} for i in range(count)],
             }
         ],
     }

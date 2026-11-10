@@ -7,6 +7,7 @@ Relic picks differs from the Grafana step, counter versus gauge is read from the
 and an instant value is the latest point in Grafana but a whole-range value in New Relic.
 """
 
+import json
 from pathlib import Path
 
 import pytest
@@ -77,7 +78,12 @@ def test_a_chart_draft_cannot_carry_exact() -> None:
         draft.widget(Layout(column=1, row=1, width=4, height=3))
 
 
-def test_the_synthetic_dashboard_converts_as_designed() -> None:
+def test_the_synthetic_dashboard_converts_as_designed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    hints = {"container_memory_working_set_bytes": ["namespace"], "http_errors": ["code"]}
+    (tmp_path / "map.json").write_text(json.dumps({"series": hints}))
+    monkeypatch.setenv("IMPORTER_GRAFANA_NAME_MAP", str(tmp_path / "map.json"))
     dashboards, _ = convert_all(load_items(FIXTURES / "grafana-dashboard-exact"))
     by_title = {w.title: w for w in dashboards[0].widgets}
     queries = {t: [s.nrql for s in w.raw_series] for t, w in by_title.items()}

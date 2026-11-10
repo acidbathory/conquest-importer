@@ -30,6 +30,13 @@ def convert(folder: Path, name: str) -> IRDashboard:
     return found[0]
 
 
+def hint(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, **series: list[str]) -> None:
+    """Tell the converter which labels name one series, as an owner would in the name map."""
+    path = tmp_path / "name-map.json"
+    path.write_text(json.dumps({"series": series}))
+    monkeypatch.setenv("IMPORTER_GRAFANA_NAME_MAP", str(path))
+
+
 def by_title(d: IRDashboard) -> dict[str, IRWidget]:
     return {w.title: w for w in d.widgets}
 
@@ -128,7 +135,10 @@ def test_a_section_starts_under_the_one_before() -> None:
     assert rows["Memory"].row == cpu.row + cpu.height
 
 
-def test_stacked_memory_is_an_area_with_alias_and_unit_and_the_gauge_is_a_billboard() -> None:
+def test_stacked_memory_is_an_area_with_alias_and_unit_and_the_gauge_is_a_billboard(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    hint(monkeypatch, tmp_path, node_memory_MemAvailable_bytes=[], node_memory_MemTotal_bytes=[])
     d = convert(MINE, "node-exporter-rows.json")
     mem = by_title(d)["Memory"]
     assert mem.source_type == "timeseries" and mem.visualization is not None
@@ -155,7 +165,10 @@ def test_the_cpu_panel_has_a_threshold_line_only_because_the_style_is_set() -> N
     assert (cpu.options.y_min, cpu.options.y_max) == (0.0, 1.0)
 
 
-def test_a_table_and_a_top_five_bar_and_a_markdown_panel() -> None:
+def test_a_table_and_a_top_five_bar_and_a_markdown_panel(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    hint(monkeypatch, tmp_path, node_filesystem_size_bytes=["mountpoint"])
     d = convert(MINE, "node-exporter-rows.json")
     table, bar, notes = (
         by_title(d)[t] for t in ("Filesystems", "Largest filesystems used", "Notes")
@@ -211,7 +224,10 @@ def test_a_dashboard_where_nothing_converts_is_not_emitted_but_is_listed() -> No
 # --- variables, repeats, logs, thresholds on other fixtures ---
 
 
-def test_kubernetes_variables_constants_and_intervals() -> None:
+def test_kubernetes_variables_constants_and_intervals(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    hint(monkeypatch, tmp_path, up=[])
     d = convert(MINE, "kubernetes-variables.json")
     kinds = {v.name: v.type.value for v in d.variables}
     assert kinds == {"namespace": "nrql", "cluster": "enum", "jobfilter": "string"}
@@ -266,7 +282,10 @@ def test_stat_thresholds_and_the_legacy_singlestat() -> None:
     assert w["Weekly delta"].kind == WidgetKind.UNSUPPORTED  # offset
 
 
-def test_a_repeated_panel_is_one_widget_with_a_facet_on_the_repeat_label() -> None:
+def test_a_repeated_panel_is_one_widget_with_a_facet_on_the_repeat_label(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    hint(monkeypatch, tmp_path, up=[])
     w = by_title(convert(MINE, "repeated-panels.json"))
     cpu = w["CPU of $instance"]
     assert queries(cpu) == [
@@ -344,7 +363,7 @@ def _one_panel(**panel: Any) -> dict[str, Any]:
         "title": "p",
         "datasource": {"type": "prometheus", "uid": "p"},
         "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8},
-        "targets": [{"refId": "A", "expr": "sum(up)"}],
+        "targets": [{"refId": "A", "expr": "avg(up)"}],
     }
     body.update(panel)
     return {"uid": "d", "title": "d", "schemaVersion": 39, "panels": [body]}
@@ -369,7 +388,7 @@ def _convert_data(data: dict[str, Any], tmp_path: Path) -> IRDashboard:
 def test_a_fixed_query_interval_is_the_bucket_only_when_it_is_a_sane_literal(
     interval: str, tail: str, tmp_path: Path
 ) -> None:
-    data = _one_panel(targets=[{"refId": "A", "expr": "sum(up)", "interval": interval}])
+    data = _one_panel(targets=[{"refId": "A", "expr": "avg(up)", "interval": interval}])
     widget = _convert_data(data, tmp_path).widgets[0]
     assert queries(widget)[0].endswith(tail)
     assert (r.N_FIXED_INTERVAL in widget.reasons) == (tail != "TIMESERIES AUTO")
@@ -397,6 +416,6 @@ def test_a_panel_that_shows_another_panels_result_uses_that_panels_query(tmp_pat
         }
     )
     widgets = _convert_data(data, tmp_path).widgets
-    assert queries(widgets[1]) == ["SELECT latest(up) FROM Metric"]
+    assert queries(widgets[1]) == ["SELECT average(up) FROM Metric"]
     assert widgets[1].visualization is not None
     assert widgets[1].visualization.value == "viz.billboard"

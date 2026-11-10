@@ -126,6 +126,28 @@ ROWS: list[tuple[str, str, list[str], Category]] = [
         C.UNSUPPORTED_QUERY,
     ),
     (
+        r.C_GAUGE_SERIES,
+        "Dashboard sum or count across the series of a gauge",
+        [
+            "A New Relic `sum()` of a gauge adds every sample, not the latest value of each "
+            "series: measured on real node_exporter data it was 4x too high per 60 s bucket "
+            "(4 scrapes) and 41x as a stat over 10 minutes (41 scrapes), and 60 against 1 on "
+            "a single series. `latest()` or `average()` is right only when the group holds "
+            "one series, which the converter cannot see, so it did not guess.",
+            "Per-series latest, summed: `SELECT sum(v) FROM (SELECT latest(metric) AS v FROM "
+            "Metric FACET <labels that name one series> LIMIT MAX) SINCE 5 minutes ago`. "
+            "Per-series values alone: `SELECT latest(metric) FROM Metric FACET <labels> "
+            "LIMIT MAX`.",
+            "For a chart where each series reports once per bucket, `SELECT sum(metric) ... "
+            "TIMESERIES <your scrape interval>` is exact; check the interval first. A sum over "
+            "a one-sample window (`SINCE <scrape interval> ago`) is also exact.",
+            "To let the importer convert it, add the labels that name one series to the name "
+            'map: `{"series": {"<metric>": ["<label>"]}}`, and group or pin by them. '
+            "For count(), use `uniqueCount(<label that names one series>)`.",
+        ],
+        C.UNSUPPORTED_QUERY,
+    ),
+    (
         r.C_REUSE,
         "Dashboard panel reusing a query that did not convert",
         [

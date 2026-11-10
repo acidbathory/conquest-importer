@@ -6,6 +6,11 @@ another event, the owner writes a map; it is read as strictly as the Dynatrace m
 unknown keys are refused, names must be NRQL identifiers, and a bad file fails at load time.
 
     {"metrics": {"node_load1": {"event": "Metric", "attribute": "node.load.1m"}}}
+
+The optional "series" key says which labels name exactly one series of a gauge, for example
+`{"series": {"node_load1": ["instance"], "grafanacloud_org_info": []}}`. sum() of a gauge adds
+every sample, so it is converted (to latest() or average()) only when the query groups by or pins
+those labels; the converter cannot see the series count in New Relic and never guesses it.
 """
 
 import json
@@ -44,6 +49,19 @@ class NameMap(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     metrics: dict[str, NameEntry] = {}
+    # gauge metric -> the labels that together name exactly one series (an empty list: the metric
+    # has one series). Only with this hint is sum() of a gauge converted.
+    series: dict[str, list[str]] = {}
+
+    @field_validator("series")
+    @classmethod
+    def _series(cls, found: dict[str, list[str]]) -> dict[str, list[str]]:
+        for key, labels in found.items():
+            if not METRIC_NAME.fullmatch(key):
+                raise ValueError("a key is not a Prometheus metric name")
+            for label in labels:
+                identifier(label)
+        return found
 
     @field_validator("metrics")
     @classmethod
