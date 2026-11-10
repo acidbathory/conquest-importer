@@ -16,10 +16,12 @@ def sent() -> float:
     """Samples sent to the remote endpoint so far, from Prometheus's own /metrics page."""
     with urllib.request.urlopen("http://127.0.0.1:9090/metrics", timeout=10) as r:
         text = r.read().decode()
+    # samples_in_total counts everything handed to remote storage and survives a config reload
+    # (the per-queue counters restart when the queue is renamed)
     return sum(
         float(ln.rsplit(" ", 1)[1])
         for ln in text.splitlines()
-        if ln.startswith("prometheus_remote_storage_samples_total{")
+        if ln.startswith("prometheus_remote_storage_samples_in_total ")
     )
 
 
