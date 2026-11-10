@@ -216,7 +216,7 @@ def _items_from_notifications(folder: Path) -> list[Item]:
     if not path.is_file() or path.stat().st_size > MAX_FILE_BYTES:
         return []
     lines = path.read_text().splitlines()[:MAX_REPORT_LINES]
-    if not lines or lines[0] != "# Grafana notification conversion":
+    if not lines or not lines[0].startswith("# Grafana notification conversion"):
         return []
     from importer.sources.grafana.notifications import reasons as R
     from importer.sources.grafana.notify_convert import reasons as C
