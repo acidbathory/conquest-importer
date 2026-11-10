@@ -71,6 +71,8 @@ def main(src: Path, manifest_path: Path) -> int:
             out = json.loads(text)
             created.append({"uid": out.get("uid", uid), "title": dash["title"], "source_id": gid})
             print("created", uid)
+        elif code == 412:  # the uid exists already; overwrite is off, so it is left untouched
+            print("already there, left alone", uid)
         else:
             failed += 1
             print("FAIL", uid, code, text[:300])
