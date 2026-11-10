@@ -25,7 +25,7 @@ def nrql(expr: str, opts: QueryOptions = LINE, family: str = "prometheus") -> st
     [
         ('up{job="api"}', "SELECT average(up) FROM Metric WHERE job = 'api' TIMESERIES AUTO"),
         (
-            "sum by (instance) (node_load1)",
+            "avg by (instance) (node_load1)",
             "SELECT average(node_load1) FROM Metric FACET instance LIMIT MAX TIMESERIES AUTO",
         ),
         (
@@ -117,10 +117,6 @@ def test_rate_increase_histogram_topk_tier_two(expr: str, expected: str) -> None
             "(a_free + b_free) / 2",
             "SELECT (average(a_free) + average(b_free)) / 2 FROM Metric TIMESERIES AUTO",
         ),
-        (
-            "count by (job) (up)",
-            "SELECT count(up) FROM Metric FACET job LIMIT MAX TIMESERIES AUTO",
-        ),
     ],
 )
 def test_arithmetic_and_count_tier_three(expr: str, expected: str) -> None:
@@ -208,7 +204,7 @@ def test_legend_forms(legend: str, alias: str | None, labels: tuple[str, ...], l
 
 
 def test_a_static_legend_is_an_alias_and_a_label_legend_adds_a_facet_to_a_flat_selector() -> None:
-    out = convert_query("sum(up)", "prometheus", LINE, read_legend("Up"))
+    out = convert_query("avg(up)", "prometheus", LINE, read_legend("Up"))
     assert out.nrql == "SELECT average(up) AS 'Up' FROM Metric TIMESERIES AUTO"
     flat = convert_query("up", "prometheus", LINE, read_legend("{{instance}}"))
     assert flat.nrql == "SELECT average(up) FROM Metric FACET instance LIMIT MAX TIMESERIES AUTO"

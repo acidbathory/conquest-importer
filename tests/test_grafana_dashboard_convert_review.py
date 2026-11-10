@@ -54,18 +54,100 @@ def test_a_sum_sums_still_converts_for_rates() -> None:
     assert r.N_SUM_GAUGE not in out.notes
 
 
-def test_sum_of_a_gauge_in_a_stat_is_the_latest_value_not_every_sample() -> None:
-    out = convert_query("sum(grafanacloud_org_info)", "prometheus", STAT)
+def hinted(**series: list[str]) -> list[QueryOptions]:
+    names = NameMap(series=series)
+    return [
+        QueryOptions(variables={}, name_map=names, timeseries=True),
+        QueryOptions(variables={}, name_map=names, timeseries=False),
+    ]
+
+
+@pytest.mark.parametrize("opts", [LINE, STAT])
+@pytest.mark.parametrize(
+    "expr",
+    [
+        "sum(grafanacloud_org_info)",
+        "sum by (instance) (node_memory_MemFree_bytes)",
+        'sum(node_load1{instance="a"})',
+        "count(up)",
+        "count by (job) (up)",
+    ],
+)
+def test_sum_or_count_of_a_gauge_is_manual_unless_one_series_is_proven(
+    expr: str, opts: QueryOptions
+) -> None:
+    with pytest.raises(Unconvertible) as stop:
+        convert_query(expr, "prometheus", opts)
+    assert stop.value.reason == r.C_GAUGE_SERIES
+
+
+def test_with_a_hint_a_group_that_names_one_series_converts_to_latest_or_average() -> None:
+    chart, stat = hinted(node_load1=["instance"])
+    out = convert_query("sum by (instance) (node_load1)", "prometheus", chart)
+    assert out.nrql == (
+        "SELECT average(node_load1) FROM Metric FACET instance LIMIT MAX TIMESERIES AUTO"
+    )
+    out = convert_query("sum(node_load1) by (instance)", "prometheus", stat)
+    assert out.nrql.startswith("SELECT latest(node_load1) FROM Metric FACET instance")
+    assert r.N_SUM_GAUGE in out.notes
+
+
+def test_with_a_hint_equality_matchers_count_as_naming_the_series() -> None:
+    chart, _ = hinted(node_load1=["instance", "job"])
+    out = convert_query('sum by (job) (node_load1{instance="a"})', "prometheus", chart)
+    assert out.nrql.startswith("SELECT average(node_load1) FROM Metric WHERE instance = 'a'")
+    for expr in (
+        "sum(node_load1)",
+        'sum by (job) (node_load1{instance=~"a|b"})',
+        'sum by (job) (node_load1{instance!="a"})',
+    ):
+        with pytest.raises(Unconvertible) as stop:
+            convert_query(expr, "prometheus", chart)
+        assert stop.value.reason == r.C_GAUGE_SERIES
+
+
+def test_a_dashboard_variable_may_hold_several_values_so_it_does_not_pin_a_series() -> None:
+    names = NameMap(series={"node_load1": ["instance"]})
+    opts = QueryOptions(variables={"instance": None}, name_map=names, timeseries=True)
+    with pytest.raises(Unconvertible) as stop:
+        convert_query('sum(node_load1{instance="$instance"})', "prometheus", opts)
+    assert stop.value.reason == r.C_GAUGE_SERIES
+
+
+def test_a_hint_with_no_labels_says_the_metric_has_exactly_one_series() -> None:
+    _, stat = hinted(grafanacloud_org_info=[])
+    out = convert_query("sum(grafanacloud_org_info)", "prometheus", stat)
     assert out.nrql.startswith("SELECT latest(grafanacloud_org_info) FROM Metric")
     assert "sum(" not in out.nrql
-    assert r.N_SUM_GAUGE in out.notes
 
 
-def test_sum_of_a_gauge_in_a_chart_is_the_average_per_bucket() -> None:
-    out = convert_query("sum by (instance) (node_memory_MemFree_bytes)", "prometheus", LINE)
-    assert out.nrql.startswith("SELECT average(node_memory_MemFree_bytes) FROM Metric FACET")
-    assert "sum(" not in out.nrql
-    assert r.N_SUM_GAUGE in out.notes
+def test_a_hint_for_another_metric_or_a_missing_label_does_not_help() -> None:
+    chart, _ = hinted(node_load1=["instance"])
+    for expr in ("sum(node_load5)", "sum by (job) (node_load1)"):
+        with pytest.raises(Unconvertible):
+            convert_query(expr, "prometheus", chart)
+
+
+def test_a_count_stays_manual_even_with_a_hint() -> None:
+    chart, _ = hinted(up=["instance"])
+    with pytest.raises(Unconvertible) as stop:
+        convert_query("count by (instance) (up)", "prometheus", chart)
+    assert stop.value.reason == r.C_GAUGE_SERIES
+
+
+@pytest.mark.parametrize("agg", ["avg", "min", "max"])
+def test_avg_min_max_of_a_gauge_still_convert(agg: str) -> None:
+    out = convert_query(f"{agg}(node_load1)", "prometheus", LINE)
+    assert out.nrql.startswith("SELECT ") and "(node_load1)" in out.nrql
+
+
+def test_the_manual_steps_name_the_patterns_and_the_measured_factors() -> None:
+    from importer.sources.grafana.dashboard_convert import remediation_rules as rules
+
+    row = next(x for x in rules.ROWS if x[0] == r.C_GAUGE_SERIES)
+    text = " ".join(row[2])
+    for needle in ("FACET", "latest(", "4x", "41x", "SINCE", "series"):
+        assert needle in text
 
 
 @pytest.mark.parametrize("opts", [LINE, STAT])
