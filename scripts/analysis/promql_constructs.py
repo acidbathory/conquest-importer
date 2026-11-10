@@ -156,6 +156,8 @@ def _aggregate(node: Aggregate, out: set[str]) -> None:
         isinstance(n, Call) and n.func.lower() in RATE_FUNCTIONS for n in inner
     ):
         out.add("shape.avg_min_max_of_rate")
+    if node.op in ("sum", "count") and not any(isinstance(n, Call) for n in inner):
+        out.add("shape.sum_of_gauge")  # the converter refuses it without a series hint
 
 
 def constructs_of(node: Node, text: str = "") -> set[str]:

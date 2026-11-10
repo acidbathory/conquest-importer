@@ -372,6 +372,14 @@ VERDICTS: dict[str, Verdict] = {
         "DOCS",
         "R-C 4.3",
     ),
+    "shape.sum_of_gauge": _v(
+        3,
+        "SELECT sum(x) FROM (SELECT latest(x) AS x FROM Metric FACET dimensions() LIMIT MAX)",
+        "sum() of a gauge over a window adds every sample (measured 4x per bucket, 41x as a "
+        "stat); the converter refuses it without a series hint",
+        "MEASURED",
+        "live-grafana-counter-roundtrip",
+    ),
     # --- binary operators ---
     "binop.+": _v(
         1, "x + y inside one SELECT", "division by zero gives null, not Inf (N1)", "DOCS", "R-A F57"
