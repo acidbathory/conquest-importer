@@ -4,6 +4,11 @@ Reuses `core.rollback.rollback`, which re-reads each object and deletes it only 
 has the recorded name. On top of that this module deletes only what is in the run record and whose
 name starts with an allowed prefix, so a record can never lead to deleting something that is not
 clearly this tool's.
+
+The one exception is a dashboard of a real migration (record.sandbox is False, and the person gave
+`--real-migration`): it keeps its source title, so it is accepted by kind when the record entry has
+its New Relic guid and the creation marker (the description the tool sent), and a fresh read still
+shows the same name and description.
 """
 
 import os
@@ -26,6 +31,12 @@ from importer.core.text import printable
 ALLOWED_PREFIXES = ("ckg-", "Imported by Conquest Importer", "Imported:")
 
 
+MARKER_START = "Imported from a "  # what the dashboard emitter writes at the start of a description
+DASHBOARD_DETAIL = (
+    "query($g: EntityGuid!) { actor { entity(guid: $g) { guid name "
+    "... on DashboardEntity { description } } } }"
+)
+
 ClientFactory = Callable[[str], AbstractContextManager[Any]]
 
 
@@ -35,11 +46,49 @@ def real_client(region: str) -> Any:
         yield client
 
 
+def is_sandbox_account(account_id: int, allowed: str | None) -> bool:
+    """True when the account is in NEW_RELIC_ALLOWED_ACCOUNT_IDS. With no list at all the answer
+    is also True: when in doubt a run counts as sandbox, which is the strict rule."""
+    ids = {part.strip() for part in (allowed or "").split(",") if part.strip()}
+    return not ids or str(account_id) in ids
+
+
 def is_ours_by_name(obj: CreatedObject) -> bool:
-    """A dashboard keeps the title it had in the source, so it is accepted by kind: it is in the
-    record only because this tool created it (existing names are skipped), and `rollback` still
-    re-reads it and deletes it only if the id has the recorded name."""
-    return obj.kind == "dashboard" or obj.name.startswith(ALLOWED_PREFIXES)
+    return obj.name.startswith(ALLOWED_PREFIXES)
+
+
+def has_marker(obj: CreatedObject) -> bool:
+    """A dashboard entry that carries a guid and the description this tool wrote."""
+    return bool(obj.id) and obj.description.startswith(MARKER_START)
+
+
+def refusal(record: RunRecord, obj: CreatedObject, real_migration: bool) -> str | None:
+    """Why this recorded object may not be deleted, or None when it may (before the live read)."""
+    if is_ours_by_name(obj):
+        return None
+    if obj.kind != "dashboard" or record.sandbox:
+        return "name not ours"
+    if not real_migration:
+        return "name not ours (use --real-migration for dashboards of a real migration)"
+    if not has_marker(obj):
+        return "the record has no guid and creation marker for it"
+    return None
+
+
+def _live_mismatch(client: Any, obj: CreatedObject) -> str | None:
+    """Re-read a by-kind dashboard; say what no longer matches the record, else None."""
+    if is_ours_by_name(obj):
+        return None
+    entity = (client.run(DASHBOARD_DETAIL, {"g": obj.id}, is_write=False).get("actor") or {}).get(
+        "entity"
+    )
+    if not isinstance(entity, dict):
+        return "it can no longer be read"
+    if entity.get("name") != obj.name:
+        return "its name changed since it was created"
+    if entity.get("description") != obj.description:
+        return "its description changed since it was created"
+    return None
 
 
 def _merge_interrupted(console: Console, store: RunStore, record: RunRecord) -> None:
@@ -76,6 +125,22 @@ def _read_back(
     return gone, left
 
 
+def _drop_mismatched(
+    console: Console, client: Any, ours: list[CreatedObject]
+) -> list[CreatedObject]:
+    keep: list[CreatedObject] = []
+    for o in ours:
+        try:
+            why = _live_mismatch(client, o)
+        except NewRelicAPIError as exc:
+            why = f"it could not be read ({printable(str(exc), 80)})"
+        if why is None:
+            keep.append(o)
+        else:
+            console.say(f"  Refusing {o.kind} {o.id} {printable(o.name, 40)}: {why}; left alone.")
+    return keep
+
+
 def _finish(store: RunStore, record: RunRecord, gone: list[CreatedObject]) -> None:
     record.rolled_back += [record.key(o) for o in gone if record.key(o) not in record.rolled_back]
     record.status = "rolled-back" if not record.pending() else "partly-rolled-back"
@@ -89,6 +154,7 @@ def rollback_run(
     client_factory: ClientFactory = real_client,
     *,
     sleep: Callable[[float], None] = time.sleep,
+    real_migration: bool = False,
 ) -> None:
     configured = os.environ.get("NEW_RELIC_ACCOUNT_ID", "").strip()
     if configured != str(record.account_id):
@@ -100,10 +166,13 @@ def rollback_run(
         return
     _merge_interrupted(console, store, record)
     pending = record.pending()
-    ours = [o for o in pending if is_ours_by_name(o)]
+    ours: list[CreatedObject] = []
     for o in pending:
-        if not is_ours_by_name(o):
-            console.say(f"  Not touching {o.kind} {o.id} {printable(o.name, 40)}: name not ours.")
+        why = refusal(record, o, real_migration)
+        if why is None:
+            ours.append(o)
+        else:
+            console.say(f"  Not touching {o.kind} {o.id} {printable(o.name, 40)}: {why}.")
     if not ours:
         console.say("There is nothing left in this run that can be deleted.")
         return
@@ -114,13 +183,20 @@ def rollback_run(
         console.say("Cancelled. Nothing was deleted.")
         return
     try:
-        check_guards(
-            record.account_id, record.account_id, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS")
-        )
+        if record.sandbox:
+            check_guards(
+                record.account_id,
+                record.account_id,
+                os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS"),
+            )
         if not ensure_secret(console, "NEW_RELIC_API_KEY", "delete these objects"):
             console.say("No New Relic key, so nothing was deleted.")
             return
         with client_factory(record.region) as client:
+            ours = _drop_mismatched(console, client, ours)
+            if not ours:
+                console.say("Nothing was deleted.")
+                return
             result = rollback(
                 client,
                 record.account_id,

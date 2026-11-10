@@ -110,5 +110,10 @@ def apply_dashboards(client: NewRelicClient, account_id: int, plan: DashboardPla
         result.created.append(item.name)
         guid = (created.get("entityResult") or {}).get("guid")
         if guid:
-            result.objects.append(CreatedObject(kind="dashboard", id=str(guid), name=item.name))
+            description = str(payload["variables"]["dashboard"].get("description", ""))
+            result.objects.append(
+                CreatedObject(
+                    kind="dashboard", id=str(guid), name=item.name, description=description
+                )
+            )
     return result

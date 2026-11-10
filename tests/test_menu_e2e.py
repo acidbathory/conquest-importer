@@ -12,7 +12,7 @@ from test_run_rollback import FakeNR
 
 CREATED = {
     "apply": ("condition", "10", "ckg-grafana-cpu"),
-    "apply-dashboards": ("dashboard", "g1", "Checkout latency"),
+    "apply-dashboards": ("dashboard", "g1", "ckg-Checkout latency"),
     "apply-notifications": ("workflow", "w1", "Imported:route 1"),
 }
 

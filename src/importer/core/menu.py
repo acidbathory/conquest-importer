@@ -16,7 +16,12 @@ from pathlib import Path
 
 from importer.core.apply import GuardError, check_guards
 from importer.core.console import Console, InputEnded, confirm_yes, ensure_secret
-from importer.core.run_rollback import ClientFactory, real_client, rollback_run
+from importer.core.run_rollback import (
+    ClientFactory,
+    is_sandbox_account,
+    real_client,
+    rollback_run,
+)
 from importer.core.runs import RunRecord, RunStore
 
 Runner = Callable[[list[str]], int]
@@ -172,6 +177,7 @@ class Menu:
         opener: Callable[[str], object] = webbrowser.open,
         sample_dir: Path = SAMPLE_DIR,
         client_factory: ClientFactory | None = None,
+        real_migration: bool = False,
     ) -> None:
         self.c = console
         self.runner = runner
@@ -180,6 +186,7 @@ class Menu:
         self.opener = opener
         self.sample_dir = sample_dir
         self.client_factory = client_factory or real_client
+        self.real_migration = real_migration
 
     # -- main loop ---------------------------------------------------------------------------
     def run(self) -> int:
@@ -363,7 +370,12 @@ class Menu:
             return False
         source = spec.source if kind == "alerts" else f"{spec.source}-{kind}"
         record = self.store.start(
-            source=source, account_id=account, region="us", out_dir=out, include_review=review
+            source=source,
+            account_id=account,
+            region="us",
+            out_dir=out,
+            include_review=review,
+            sandbox=is_sandbox_account(account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS")),
         )
         self._apply(record)
         return True
@@ -462,7 +474,9 @@ class Menu:
                 return
             if choice != "2":
                 return
-        rollback_run(self.c, self.store, record, self.client_factory)
+        rollback_run(
+            self.c, self.store, record, self.client_factory, real_migration=self.real_migration
+        )
 
     def _continue(self, record: RunRecord) -> None:
         if not self._guards_ok(record.account_id):

@@ -1,5 +1,7 @@
 """Commands for the guided menu: menu, runs, rollback-run."""
 
+from typing import Annotated
+
 import typer
 
 from importer.core.console import TerminalConsole, has_terminal
@@ -55,12 +57,20 @@ def register(app: typer.Typer) -> None:
             )
 
     @app.command("rollback-run")
-    def rollback_run_command() -> None:
+    def rollback_run_command(
+        real_migration: Annotated[
+            bool,
+            typer.Option(
+                "--real-migration",
+                help="Also allow dashboards of a real (non-sandbox) run to be deleted by kind.",
+            ),
+        ] = False,
+    ) -> None:
         """Pick a recorded run, preview what would be deleted, and delete it after you type yes."""
         if not has_terminal():
             typer.echo(NEEDS_TERMINAL, err=True)
             raise typer.Exit(code=1)
-        menu = Menu(TerminalConsole(), make_runner(app), RunStore())
+        menu = Menu(TerminalConsole(), make_runner(app), RunStore(), real_migration=real_migration)
         try:
             menu.rollback_menu()
         except KeyboardInterrupt:

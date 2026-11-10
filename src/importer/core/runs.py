@@ -33,6 +33,7 @@ class RunRecord(BaseModel):
     status: Status = "in-progress"
     objects: list[CreatedObject] = []
     rolled_back: list[str] = []  # ids (kind:id) already deleted
+    sandbox: bool = True  # False only for a real migration; older records count as sandbox
     include_review: bool = False  # notifications: the person chose to include "needs review" plans
 
     def key(self, o: CreatedObject) -> str:
@@ -79,6 +80,7 @@ class RunStore:
         region: str,
         out_dir: Path,
         include_review: bool = False,
+        sandbox: bool = True,
     ) -> RunRecord:
         now = datetime.now(UTC)
         record = RunRecord(
@@ -88,6 +90,7 @@ class RunStore:
             region=region,
             out_dir=str(out_dir),
             include_review=include_review,
+            sandbox=sandbox,
             started=now.isoformat(timespec="seconds"),
         )
         self.save(record)

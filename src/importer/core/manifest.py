@@ -26,6 +26,7 @@ class CreatedObject(BaseModel):
     kind: Kind
     id: str
     name: str
+    description: str = ""  # dashboards: the description sent at creation; the creation marker
 
 
 class FailedObject(BaseModel):

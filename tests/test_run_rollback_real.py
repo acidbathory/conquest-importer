@@ -8,7 +8,7 @@ import pytest
 from importer.core.manifest import CreatedObject
 from importer.core.run_rollback import DASHBOARD_DETAIL, is_sandbox_account, rollback_run
 from importer.core.runs import RunRecord, RunStore
-from tests.test_run_rollback import FakeNR, ScriptConsole, factory
+from test_run_rollback import FakeNR, ScriptConsole, factory
 
 MARKER = "Imported from a Grafana dashboard. Review it."
 
@@ -37,7 +37,9 @@ def dash(guid: str = "g1", name: str = "Checkout latency", description: str = MA
     )
 
 
-def setup(tmp_path: Path, objects: list[CreatedObject], *, sandbox: bool) -> tuple[RunStore, RunRecord]:
+def setup(
+    tmp_path: Path, objects: list[CreatedObject], *, sandbox: bool
+) -> tuple[RunStore, RunRecord]:
     store = RunStore(tmp_path / "runs")
     record = store.start(
         source="grafana-dashboards",
@@ -73,7 +75,7 @@ def test_sandbox_flag_from_allowed_list() -> None:
 
 
 def test_old_records_are_sandbox(tmp_path: Path) -> None:
-    store, record = setup(tmp_path, [], sandbox=True)
+    _, record = setup(tmp_path, [], sandbox=True)
     text = (tmp_path / "runs" / f"{record.run_id}.json").read_text().replace('"sandbox": true,', "")
     assert RunRecord.model_validate_json(text).sandbox is True
 

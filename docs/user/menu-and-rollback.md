@@ -57,8 +57,8 @@ Item 5 (or `importer rollback-run`) lists runs, shows exactly what would be dele
 to type `yes`. It then:
 
 - deletes only objects in that record whose name starts with `ckg-`, with `Imported:` (the default
-  prefix of notification objects), or is the default policy name `Imported by Conquest Importer`,
-  plus recorded dashboards, which keep their source title (anything else is listed and left alone);
+  prefix of notification objects), or is the default policy name `Imported by Conquest Importer`;
+  anything else is listed and left alone (see the next section for dashboards);
 - reuses `core/rollback.py`: each object is re-read and deleted only if its id still has the
   recorded name; a policy with conditions that are not ours stays;
 - reads each object back from New Relic and records only those that are gone;
@@ -67,5 +67,23 @@ to type `yes`. It then:
 A run whose create was interrupted shows as `in-progress`. Choosing it offers "continue" (the
 create runs again; existing items are skipped) or "roll back" (the run's `manifest.json` is merged
 in first, so objects made before the interruption are covered).
+
+### Sandbox runs and real migrations
+
+Each run record stores a `sandbox` flag. It is true when the New Relic account was in
+`NEW_RELIC_ALLOWED_ACCOUNT_IDS` when the run was made, and also when that list is not set (when in
+doubt the strict rule applies). Records from before this flag count as sandbox.
+
+- A sandbox record is strict: only names starting with `ckg-` or the prefixes above are deleted,
+  dashboards included. A dashboard with its normal source title is listed and left alone.
+- A real migration (`sandbox` is false) keeps the source title on its dashboards, so there rollback
+  accepts a dashboard by kind, but only if you run `importer rollback-run --real-migration` and
+  the record entry has the New Relic guid and the creation marker the tool wrote: the description
+  it sent ("Imported from a Grafana dashboard. Review it." and any notes). The run id is not in
+  the description, because that would change the converted output.
+- Just before deleting, each such dashboard is read again. If its name or description is no longer
+  the recorded one (someone renamed or edited it), or it cannot be read, it is refused with the
+  reason and left alone.
+- Without `--real-migration`, a real-migration record is treated as strictly as a sandbox one.
 
 The existing `importer rollback --manifest` command is unchanged.

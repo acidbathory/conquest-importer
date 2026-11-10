@@ -192,7 +192,7 @@ def test_nothing_to_delete(tmp_path: Path) -> None:
 @pytest.mark.usefixtures("env")
 def test_dashboards_and_notifications_made_by_the_menu_are_rolled_back(tmp_path: Path) -> None:
     objects = [
-        obj("dashboard", "g1", "Checkout latency"),  # a dashboard keeps its Grafana title
+        obj("dashboard", "g1", "ckg-Checkout latency"),  # sandbox run: strict prefix rule
         obj("workflow", "w1", "Imported: Grafana route 1"),
         obj("channel", "c1", "Imported: email"),
         obj("destination", "d1", "Imported: email dest"),
