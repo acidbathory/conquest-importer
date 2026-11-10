@@ -82,6 +82,7 @@ def _dashboard_reasons(
     raw: RawDashboard,
     counts: tuple[int, int],
     skipped: int,
+    pages: int = 1,
 ) -> list[str]:
     done, total = counts
     notes = [r.D_DATA, r.D_PANELS.format(done=done, total=total, placeholders=total - done)]
@@ -92,6 +93,7 @@ def _dashboard_reasons(
         (plan.annotations_dropped, r.D_ANNOTATIONS),
         (dash.links, r.D_LINKS),
         (raw.time_range, r.D_TIME.format(text=printable(raw.time_range, 80))),
+        (pages > 1, r.D_PAGES.format(widgets=total - skipped, pages=pages)),
         (skipped, r.D_WIDGET_CAP.format(count=skipped)),
     ]
     return [*notes, *(text for present, text in pairs if present), *plan.warnings]
@@ -152,10 +154,12 @@ def translate_dashboard(item: Item, names: NameMap, metrics: Counter[str]) -> IR
         return _unreadable(item)
     found = draft_panels(dash, item.raw, names)
     placed = [_placed(d, dash, i) for i, d in enumerate(found.drafts)]
-    widgets, skipped = lay_out(placed)
+    widgets, skipped = lay_out(placed, printable(dash.title or "Grafana dashboard", MAX_NAME))
     done = sum(d.kind != WidgetKind.UNSUPPORTED for d in found.drafts)
     metrics.update(found.ctx.metrics)
-    reasons = _dashboard_reasons(dash, found.plan, found.raw, (done, len(placed)), skipped)
+    reasons = _dashboard_reasons(
+        dash, found.plan, found.raw, (done, len(placed)), skipped, len({w.page for w in widgets})
+    )
     reasons += _variable_reasons(found.variables)
     variables = found.variables.with_numeric(found.ctx.numeric)
     return _build(dash, item, widgets, variables, reasons, done)

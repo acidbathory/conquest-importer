@@ -1,6 +1,7 @@
 """Findings of the independent review: wrong numbers, silent approximations and NR limits."""
 
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -164,14 +165,15 @@ def draft(title: str = "w") -> Draft:
 
 def test_one_page_never_holds_more_than_150_widgets() -> None:
     items = [Placed(draft(f"p{i}"), 0, i * 2, 24, 2, "") for i in range(155)]
-    widgets, skipped = lay_out(items)
-    assert len(widgets) == 150 and skipped == 5
+    widgets, skipped = lay_out(items, "D")
+    assert skipped == 0 and len(widgets) == 155
+    assert max(Counter(w.page for w in widgets).values()) == 150
 
 
 def test_headings_count_toward_the_page_limit() -> None:
     items = [Placed(draft(f"p{i}"), 0, i * 2, 24, 2, f"row {i // 10}") for i in range(150)]
-    widgets, skipped = lay_out(items)
-    assert len(widgets) == 150 and skipped == 15
+    widgets, skipped = lay_out(items, "D")
+    assert skipped == 0 and len(widgets) == 165 and len({w.page for w in widgets}) == 15
 
 
 def _convert(data: dict[str, Any], tmp_path: Path) -> IRDashboard:

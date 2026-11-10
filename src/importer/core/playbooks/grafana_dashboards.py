@@ -225,13 +225,14 @@ reg(
     "Dashboard over the widget limit",
     Playbook(
         source="A dashboard with more panels than one New Relic page holds.",
-        newrelic="A second page in the same dashboard (150 widgets per page).",
+        newrelic="More pages in the same dashboard (150 widgets per page, 25 pages).",
         steps=(
-            "Re-run the conversion on a split dashboard, or add a page by hand and move "
-            "the widgets that were left out (they are listed as placeholders in the IR).",
+            "The converter already splits a large dashboard into pages at the Grafana rows. "
+            "Only widgets beyond 25 pages are left out: split the Grafana dashboard by row and "
+            "convert each part, or add a page by hand.",
             "Drop panels nobody opens: check the Grafana usage data first.",
         ),
-        differs="The page is split where you choose, not where the Grafana rows were.",
+        differs="A Grafana row becomes a page named after it; a row over 150 widgets is split.",
         effort_minutes=2,
         links=(L.CHARTS,),
     ),
