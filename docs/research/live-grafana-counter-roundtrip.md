@@ -48,7 +48,7 @@ Two expectations per row. `NR`: what the sent points must give (sum of deltas pe
 | `node_filesystem_avail_bytes{fstype!="tmpfs"}` | chart `average(...)`, stat `latest(...)`, no FACET | chart exact (merges 9 mounts) | stat: one arbitrary mount returned (0.5 GB) while Prometheus shows 9 series | mismatch by design | series merged (existing note: add a FACET) |
 | `sum by (mountpoint) (node_filesystem_avail_bytes)` | `SELECT sum(...) FACET mountpoint ...` | exact against NR math | chart 4.01x (4 scrapes per minute), stat 41x (41 scrapes) | **mismatch** | `sum()` of a gauge adds every sample (existing note); exact count = number of scrapes in the bucket |
 
-Overall: for the 22 chart/stat pairs, the NRQL result equals the arithmetic on the sent points to floating-point precision in 21 of 22; the one exception is the merged `latest()` on a multi-series gauge, where "latest" is not defined. Counter rates and increases are right in the stat form within the rounding of the window, and in the chart form per bucket.
+Overall: for the 10 expressions run as chart and stat (20 runs), the NRQL result equals the arithmetic on the sent points to floating-point precision in 19 of 20; the one exception is the merged `latest()` on a multi-series gauge, where "latest" is not defined. Counter rates and increases are right in the stat form within the rounding of the window, and in the chart form per bucket.
 
 ## Fixes made
 
