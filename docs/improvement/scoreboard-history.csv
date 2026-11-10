@@ -1,0 +1,2 @@
+date,metrics
+2026-11-10,fixtures/cloudwatch/alerts_converted=27;fixtures/cloudwatch/alerts_manual=3;fixtures/cloudwatch/alerts_unsupported=2;fixtures/gcp/alerts_converted=2;fixtures/gcp/alerts_manual=2;live/cloudwatch/verified=1;live/gcp/verified=1;live/grafana/verified=5;tests/test_functions=2525

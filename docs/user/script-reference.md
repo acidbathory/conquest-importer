@@ -18,6 +18,7 @@ Use `uv run --active importer ...`, or activate `.venv` and type `importer ...`.
 |---|---|---|---|---|---|
 | `scripts/migrate.sh` | Loads `.env`, then opens `importer menu`. Sets `SSL_CERT_FILE=/tmp/q/ca.pem` only if that file exists. | Practitioner. This is the one-command start. | `.env`, then whatever the menu reads | `out/guided/...` and, after you type `yes`, New Relic objects | Asks |
 | `scripts/improve/gate.sh` | The quality gate: ruff, format check, mypy strict, vulture, pytest, `improve-measure`, and a check that golden files are untouched. | Contributor | repository | `/tmp/improve-measure.json` | Safe |
+| `scripts/improve/scoreboard.py` | Same as `importer scoreboard`, runnable without installing: conversion, placeholders, parity and live evidence in one table. | Contributor | output folders, `docs/improvement/` | `docs/improvement/scoreboard.md`, `.json`, `scoreboard-history.csv` | Safe. Offline. |
 | `scripts/improve/overlap.sh` | Lists files changed by more than one branch, before merging parallel work. | Contributor | git history | prints only | Safe |
 | `scripts/generate_cloudwatch_fixtures.py` | Writes synthetic CloudWatch alarm fixtures. | Contributor | nothing | `tests/fixtures/cloudwatch` | Safe. Regenerating fixtures can change golden tests: a human must review. |
 | `scripts/generate_cloudwatch_dashboard_fixtures.py` | Writes synthetic CloudWatch dashboard fixtures. | Contributor | nothing | `tests/fixtures/cloudwatch-dashboards` | Safe. Same warning. |
@@ -71,6 +72,7 @@ unless you give `--apply` and `--confirm-account <account-id>` and the account i
 | `importer report <run> --source <s>` | Writes `report.html`. | a run folder (reads its `alerts/`) | `report.html` | No |
 | `importer stats <runs>...` | Conversion rates and top reasons, no names. | converted folders | optional markdown | No |
 | `importer plan-remediation --in <folder>` | Every item that did not convert, grouped by reason, with steps. | converted IR | `remediation-plan.md`, `.csv` | No |
+| `importer scoreboard [--in <folder>] [--compare <previous.json>] [--ci] [--no-write]` | One table of what converted (placeholders are not counted), parity verdicts, live-verified items and the remediation top 5. Says plainly when no outcome metric moved. `--ci` asks `gh` for the last CI run. | converter output, `docs/improvement/` | `docs/improvement/scoreboard.md`, `.json`, `scoreboard-history.csv` | No |
 | `importer apply` | Creates converted conditions (disabled). | converted folder | `manifest.json` | Yes with `--apply` |
 | `importer apply-dashboards` | Creates converted dashboards (private). | dashboard folder | `manifest.json` | Yes with `--apply` |
 | `importer apply-notifications` | Creates destinations, channels, disabled workflows. | plans folder | `manifest.json` | Yes with `--apply` |
