@@ -6,7 +6,7 @@ from importer.sources.grafana.dashboard_convert import reasons as r
 from importer.sources.grafana.dashboard_convert.name_map import NameMap, NameMapError, load_name_map
 from importer.sources.grafana.dashboard_convert.promql import QueryOptions, convert_query
 from importer.sources.grafana.dashboard_convert.reuse import Unconvertible
-from importer.sources.grafana.dashboards.models import Dashboard, Panel, Target
+from importer.sources.grafana.dashboards.models import Dashboard, DsRef, Panel, Target
 from importer.sources.grafana.dashboards.plan import plan_dashboard
 
 
@@ -21,7 +21,9 @@ def nrql(expr: str, names: NameMap) -> str:
 def test_types_are_optional_and_checked(tmp_path) -> None:  # type: ignore[no-untyped-def]
     assert NameMap().types == {}
     good = tmp_path / "h.json"
-    good.write_text('{"types": {"up": "gauge", "x_total": "counter", "l_bucket": "histogram_bucket"}}')
+    good.write_text(
+        '{"types": {"up": "gauge", "x_total": "counter", "l_bucket": "histogram_bucket"}}'
+    )
     assert load_name_map(good).types["x_total"] == "counter"
     bad = tmp_path / "b.json"
     bad.write_text('{"types": {"up": "dial"}}')
@@ -66,7 +68,14 @@ def plan_reason(expr: str, names: NameMap) -> str:
     dash = Dashboard(
         uid="d",
         title="t",
-        panels=[Panel(id=1, type="timeseries", title="p", targets=[Target(ref_id="A", expr=expr)])],
+        panels=[
+            Panel(
+                id=1,
+                type="timeseries",
+                title="p",
+                targets=[Target(ref_id="A", expr=expr, ds=DsRef(type="prometheus", uid="p"))],
+            )
+        ],
     )
     plan = plan_dashboard(dash, names.types)
     return plan.panels[0].reasons[0] if plan.panels[0].reasons else ""
@@ -74,6 +83,7 @@ def plan_reason(expr: str, names: NameMap) -> str:
 
 def test_planner_follows_the_hints() -> None:
     assert "counter" in plan_reason("process_open_fds_total", NameMap())
-    assert plan_reason("process_open_fds_total", NameMap(types={"process_open_fds_total": "gauge"})) == ""
+    gauge = NameMap(types={"process_open_fds_total": "gauge"})
+    assert plan_reason("process_open_fds_total", gauge) == ""
     assert "counter" in plan_reason("requests", NameMap(types={"requests": "counter"}))
     assert plan_reason("requests", NameMap()) == ""

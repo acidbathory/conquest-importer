@@ -9,7 +9,7 @@ New Relic has but the IR cannot create yet are counted separately ("with extra w
 
 import re
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
 from pydantic import BaseModel, Field
@@ -32,6 +32,7 @@ from importer.sources.grafana.dashboards.panels import (
     panel_type,
 )
 from importer.sources.grafana.dashboards.query_tier import (
+    METRIC_TYPES,
     Verdict,
     classify_log_lines,
     classify_query,
@@ -355,7 +356,16 @@ def _usage(
     out.variables_undefined = sorted(mentioned - known)[:MAX_LISTED]
 
 
-def plan_dashboard(dash: Dashboard) -> DashboardPlan:
+def plan_dashboard(dash: Dashboard, types: Mapping[str, str] | None = None) -> DashboardPlan:
+    """Plan a dashboard; `types` (metric -> exact type) replaces the counter-suffix guess."""
+    token = METRIC_TYPES.set(types or {})
+    try:
+        return _plan_dashboard(dash)
+    finally:
+        METRIC_TYPES.reset(token)
+
+
+def _plan_dashboard(dash: Dashboard) -> DashboardPlan:
     known = frozenset(v.name for v in dash.variables if v.name)
     variables: list[VariablePlan] = []
     seen: set[str] = set()

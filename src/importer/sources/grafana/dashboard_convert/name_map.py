@@ -11,12 +11,20 @@ The optional "series" key says which labels name exactly one series of a gauge, 
 `{"series": {"node_load1": ["instance"], "grafanacloud_org_info": []}}`. sum() of a gauge adds
 every sample, so it is converted (to latest() or average()) only when the query groups by or pins
 those labels; the converter cannot see the series count in New Relic and never guesses it.
+
+The optional "types" key gives a metric's exact type: "counter", "gauge" or "histogram_bucket"
+(the `_bucket` series of a histogram). `grafana-prom-hints` writes it from Prometheus metadata
+and the series it observed. With a type the converter stops guessing from the name suffix
+(`_total`, `_count`, `_sum`, `_bucket`): a gauge that happens to end in `_total` converts, and a
+counter without a suffix is refused when read without rate(). A metric with no type keeps the
+suffix guess. A hints file is an ordinary name map that has only "types" and "series".
 """
 
 import json
 import os
 import re
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
@@ -52,6 +60,18 @@ class NameMap(BaseModel):
     # gauge metric -> the labels that together name exactly one series (an empty list: the metric
     # has one series). Only with this hint is sum() of a gauge converted.
     series: dict[str, list[str]] = {}
+    # metric -> its exact type; absent means the converter guesses from the name suffix
+    types: dict[str, Literal["counter", "gauge", "histogram_bucket"]] = {}
+
+    @field_validator("types")
+    @classmethod
+    def _types(cls, found: dict[str, str]) -> dict[str, str]:
+        if len(found) > MAX_ENTRIES:
+            raise ValueError(f"more than {MAX_ENTRIES} metrics")
+        for key in found:
+            if not METRIC_NAME.fullmatch(key):
+                raise ValueError("a key is not a Prometheus metric name")
+        return found
 
     @field_validator("series")
     @classmethod
@@ -72,6 +92,16 @@ class NameMap(BaseModel):
             if not METRIC_NAME.fullmatch(key):
                 raise ValueError("a key is not a Prometheus metric name")
         return found
+
+
+def merge_hints(base: NameMap, hints: NameMap) -> NameMap:
+    """`base` with the types and series of `hints` added; what the owner wrote in `base` wins."""
+    return base.model_copy(
+        update={
+            "types": {**hints.types, **base.types},
+            "series": {**hints.series, **base.series},
+        }
+    )
 
 
 def load_name_map(path: Path) -> NameMap:

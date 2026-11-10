@@ -19,8 +19,10 @@ refused before the translator's own patterns see it.
 """
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from contextvars import ContextVar
 from dataclasses import dataclass
+from types import MappingProxyType
 
 from importer.sources.grafana.dashboards import reasons as r
 from importer.sources.grafana.dashboards.regex_matchers import mask
@@ -56,6 +58,11 @@ PLACEHOLDER = "VARV"  # stands for a dashboard variable in the rewritten text
 LONG_WORD = re.compile(r"\w{201}")  # no metric name is this long; keeps later patterns fast
 AGG_MIX_PREFIX = R_AGG_MIX.split("{", 1)[0]  # the alert-only complaint about aggregate + reducer
 LANGUAGES = ("prometheus", "loki")
+# metric -> exact type from `grafana-prom-hints`; set by plan_dashboard for the length of one plan
+METRIC_TYPES: ContextVar[Mapping[str, str]] = ContextVar(
+    "METRIC_TYPES", default=MappingProxyType({})
+)
+NAME_TOKEN = re.compile(r"(?<![\w:$.])[A-Za-z_:][A-Za-z0-9_:]*")
 
 NAME = r"[A-Za-z_:][A-Za-z0-9_:]*"
 NUMBER = re.compile(rf"(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|{PLACEHOLDER}")
@@ -376,8 +383,29 @@ def _group_of(plain: str) -> frozenset[str]:
     return frozenset(x.strip() for x in labels.split(",") if x.strip())
 
 
+def _hinted(text: str, types: Mapping[str, str]) -> tuple[str, bool]:
+    """(text with every hinted gauge made free of a counter suffix, True if a hinted counter is
+    read without rate). Hints replace the name-suffix guess of the alert handler."""
+    bare = _sub_outside_strings(RATE_CALL, lambda _m: " ", text)
+    counter = False
+    for found in NAME_TOKEN.finditer(re.sub(QUOTED, '""', bare)):
+        counter = counter or types.get(found[0], "gauge") != "gauge"
+
+    def one(match: re.Match[str]) -> str:
+        name = match[0]
+        gauge = types.get(name) == "gauge" and name.endswith(COUNTER_SUFFIXES)
+        return name + "_gauge" if gauge else name
+
+    return _sub_outside_strings(NAME_TOKEN, one, text), counter
+
+
 def _selector_query(text: str, floor: int) -> _Result:
     """A selector, optionally aggregated, possibly with rate calls inside; tier 2 if it had any."""
+    types = METRIC_TYPES.get()
+    if types:
+        text, counter = _hinted(text, types)
+        if counter:
+            return _fail(r.Q_COUNTER)
     plain = _unrate(text)
     if _has_outside_strings(RATE_LEFT, plain):
         return _fail(r.Q_RATE_SHAPE)
