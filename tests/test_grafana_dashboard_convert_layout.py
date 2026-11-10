@@ -184,7 +184,7 @@ def test_a_dashboard_whose_extras_are_missing_is_converted_with_a_note_per_widge
         "title": "cpu",
         "datasource": {"type": "prometheus", "uid": "p"},
         "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8},
-        "targets": [{"refId": "A", "expr": "sum(up)"}],
+        "targets": [{"refId": "A", "expr": "avg(up)"}],
     }
     dash = estate_of(classic([panel]))
     made, _ = convert_all([Item(dash=dash, raw=None)], NameMap())

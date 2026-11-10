@@ -34,6 +34,10 @@ C_METRICS_RENAMED = (
 )
 C_LIKE_PERCENT = f"{PREFIX}: a pattern contains % which NRQL LIKE cannot match literally"
 C_AGG_RATE = f"{PREFIX}: an average, minimum or maximum of rates has no correct New Relic form"
+C_GAUGE_SERIES = (
+    f"{PREFIX}: sum() or count() across the series of a gauge cannot be written without knowing "
+    "which labels name one series"
+)
 C_REUSE = f"{PREFIX}: the panel reuses a query that did not convert"
 C_UNEXPECTED = f"{PREFIX}: the panel could not be read"
 
@@ -47,7 +51,8 @@ N_RATE_BUCKET = (
 )
 N_INCREASE = f"{NOTE} increase over a variable window is the sum per bucket"
 N_SUM_GAUGE = (
-    f"{NOTE} sum() of a gauge adds every sample in the bucket, so a series counts once per scrape"
+    f"{NOTE} sum() of a gauge became latest() or average() because the name map says the "
+    "group holds one series"
 )
 N_COUNT = f"{NOTE} count() counts samples, not series; use uniqueCount of a label that names one"
 N_TOPK = f"{NOTE} topk ranks over the whole time range, not at each step"

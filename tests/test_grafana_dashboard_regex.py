@@ -34,7 +34,7 @@ def test_regex_matchers_become_rlike_or_presence(expr: str, where: str) -> None:
 
 
 def test_a_variable_matcher_next_to_a_regex_matcher_still_converts() -> None:
-    out = nrql('sum(up{ns=~"$ns", code=~"5.."})')
+    out = nrql('avg(up{ns=~"$ns", code=~"5.."})')
     assert "ns IN ({{ns}}) AND code RLIKE '5..'" in out
 
 

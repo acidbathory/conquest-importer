@@ -338,8 +338,13 @@ class _Parse:
             raise Unconvertible(r.C_SHAPE)
         event, metric = self.metric(name)
         func = NR_AGGREGATE[agg or "avg"]
-        if agg == "sum":
+        if agg == "count":  # counts samples, not series
+            raise Unconvertible(r.C_GAUGE_SERIES)
+        if agg == "sum":  # a New Relic sum() would add every sample, not the value Grafana shows
+            if not self.one_series(name, labels, body):
+                raise Unconvertible(r.C_GAUGE_SERIES)
             self.note(r.N_SUM_GAUGE)
+            func = "average" if self.opts.timeseries else "latest"
         if agg is None:
             func = "latest" if not self.opts.timeseries else "average"
         return Leaf(
@@ -349,6 +354,21 @@ class _Parse:
             event=event,
             kept=agg is None,
         )
+
+    def one_series(self, name: str, labels: list[str], body: str) -> bool:
+        """True when the name map says these labels name one series and the query fixes them."""
+        needed = self.opts.name_map.series.get(name)
+        if needed is None:
+            return False
+        pinned = {
+            c.key
+            for c in prom_conditions(body, r.C_SHAPE)
+            if c.kind == "eq"
+            and not c.negate
+            and len(c.values) == 1
+            and not VAR_TOKEN.search(c.values[0])
+        }
+        return set(needed) <= pinned | set(labels)
 
     def rate_leaf(self, agg: str | None, labels: list[str], call: re.Match[str]) -> Leaf:
         function, name, body, window = call[1], call[2], (call[3] or "")[1:-1], call[4]
