@@ -24,7 +24,7 @@ Names, types and labels of the exporter come from the six converted community da
 | jvm (2 apps) | 242 | | node (real) | 142 |
 | postgres (2 instances) | 216 | | flaky, missing | 6, 7 |
 
-2,131 series after drops (head series 2,145, 262 metric names; New Relic saw 273 names, the extra ones are `up`, `ALERTS` and the rule outputs). At 15 s that is about 142 samples per second, so a full 90 minutes would send about 770 k samples, under the 1.5 M cap. The real count is lower because the Mac slept (section 2.9): Prometheus counted 395,723 samples handed to remote storage after 80 minutes (the main queue plus the small type-experiment queue).
+2,131 series after drops (head series 2,145, 262 metric names; New Relic saw 273 names, the extra ones are `up`, `ALERTS` and the rule outputs). At 15 s that is about 142 samples per second, so a full 90 minutes would send about 770 k samples, under the 1.5 M cap. The real count is lower because the Mac slept (section 2.9): Prometheus counted 510,698 samples handed to remote storage by the end of the run (the main queue plus the small type-experiment queue).
 
 ## 2. What arrives in New Relic (read-only NRQL)
 
@@ -216,6 +216,6 @@ No golden, baseline or hash file was regenerated (`tests/fixtures/*-hashes.json`
 
 ## 7. Operating the rig
 
-This run: started 10:49:26 UTC, stopped itself at 12:19:44 UTC (90 minutes), temp directory (binaries, TSDB, token file) deleted, caffeinate ended, no process left. Last watchdog reading: 437,982 samples handed to remote storage (cap 1.4 M). The New Relic data stays until retention removes it (all tagged `ckg_test=true`).
+This run: started 10:49:26 UTC, stopped itself at 12:19:44 UTC (90 minutes), temp directory (binaries, TSDB, token file) deleted, caffeinate ended, no process left. Last watchdog reading: 510,698 samples handed to remote storage (cap 1.4 M). The New Relic data stays until retention removes it (all tagged `ckg_test=true`).
 
 Run: `bash scripts/live-test/telemetry-rig/fetch.sh` (download and verify), `bash scripts/live-test/telemetry-rig/start.sh` (needs `NEW_RELIC_LICENSE_KEY` in the repository `.env`). Stop: `bash scripts/live-test/telemetry-rig/stop.sh` (stops caffeinate, Prometheus, node_exporter, the exporter and the watchdog, deletes the temp dir with the binaries, TSDB and token file). Compare: `uv run python scripts/live-test/telemetry-rig/compare.py ENVFILE OUT.json [T0 T1]` then `report.py OUT.json`. Set `SSL_CERT_FILE` if corporate inspection breaks TLS; verification stays on.
