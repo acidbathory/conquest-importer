@@ -13,8 +13,8 @@ label. Forbidden: gradients, shadows, radius above 4px, pure black, emoji, card 
 """
 
 import re
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from html import escape
 
@@ -267,6 +267,7 @@ padding:32px 0;border-top:1px solid var(--rule)}
 h3{font:700 22px/1.3 var(--serif);margin:0}
 .count{font:12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);
 white-space:nowrap}
+ul.links{margin:8px 0 0;padding-left:18px}
 ol.steps{list-style:none;counter-reset:s;margin:12px 0 20px;padding:0;max-width:66ch}
 ol.steps>li{counter-increment:s;position:relative;padding-left:36px;margin-bottom:12px}
 ol.steps>li::before{content:counter(s);position:absolute;left:0;top:2px;font:600 12px var(--mono);
@@ -434,8 +435,49 @@ def _stage(mark: str, name: str, text: str) -> str:
     return f'<li><span class="mark">{mark}</span><span><b>{name}</b> {text}</span></li>'
 
 
+@dataclass(frozen=True)
+class RunInfo:
+    """Set by the guided menu after a create: which run made the objects and how many stay off."""
+
+    run_id: str
+    private: int  # created conditions, workflows and dashboards still disabled or private
+
+
+def _created_state(summary: Summary, nr_account: int | None, info: RunInfo, made: str) -> str:
+    account = f" in New Relic account <b>{nr_account}</b>" if nr_account else " in New Relic"
+    lines = (
+        f"<p><b>Objects were created</b>{account}: {e(made)}. "
+        f"<b>{info.private}</b> of them are disabled or private; nothing is turned on. "
+        f"Run id: <code>{e(info.run_id, 80)}</code>.</p>"
+        "<p><b>To roll back</b>, open <code>importer menu</code> and pick "
+        "<b>5 Roll back a run</b>, or run <code>importer rollback-run</code>, then choose this "
+        "run. You see exactly what will be deleted and must type yes.</p>"
+    )
+    if summary.refused:
+        lines += f"<p>New Relic refused <b>{summary.refused}</b>; they are listed below.</p>"
+    return f'<section class="state"><p class="label">Created in New Relic</p>{lines}</section>'
+
+
+def _links(links: Sequence[tuple[str, str]]) -> str:
+    if not links:
+        return ""
+    items = "".join(
+        f'<li><a href="{e(href, 400)}">{e(label, 80)}</a></li>' for label, href in links
+    )
+    return (
+        '<section class="state"><p class="label">Plans and guides</p>'
+        f'<ul class="links">{items}</ul></section>'
+    )
+
+
 def _state(
-    summary: Summary, aws_account: str, nr_account: int | None, region: str, profile: Profile
+    summary: Summary,
+    aws_account: str,
+    nr_account: int | None,
+    region: str,
+    profile: Profile,
+    info: RunInfo | None = None,
+    guided: bool = False,
 ) -> str:
     """Where the migration stands: what has happened, what has not, and the next command."""
     nr = str(nr_account) if nr_account else "&lt;new relic account id&gt;"
@@ -443,6 +485,13 @@ def _state(
     area = e(region, 30) if region else "us-east-1"
     if summary.created is None:
         create = profile.create_command(aws, nr, area)
+        how = (
+            "Nothing is created until you answer <b>yes</b> in the terminal. Everything is made "
+            "<b>disabled or private</b> and can be rolled back.</p>"
+            if guided
+            else "To create it, everything is made <b>disabled or private</b> and can be rolled "
+            f'back:</p><pre class="cmd">{create}</pre>'
+        )
         stages = (
             _stage(
                 "✓ Done",
@@ -464,9 +513,7 @@ def _state(
             '<section class="state"><p class="label">Preview · nothing has changed in New Relic'
             "</p>"
             "<p>This report is a <b>forecast</b>. The percentages show what the tool expects to "
-            f"create from {profile.source_phrase}, not what exists in New Relic. To create it, "
-            "everything is made <b>disabled or private</b> and can be rolled back:</p>"
-            f'<pre class="cmd">{create}</pre>'
+            f"create from {profile.source_phrase}, not what exists in New Relic. {how}"
             f'<ol class="stages">{stages}</ol></section>'
         )
     plural = {"policy": "policies"}
@@ -488,6 +535,8 @@ def _state(
         if summary.refused
         else ""
     )
+    if info is not None:
+        return _created_state(summary, nr_account, info, made)
     undo = (
         f"importer rollback --manifest &lt;run folder&gt;/manifest.json --account-id {nr} "
         f"--apply --confirm-account {nr}"
@@ -540,8 +589,17 @@ def render_report(
     region: str = "",
     generated: datetime | None = None,
     source: str = "cloudwatch",
+    info: RunInfo | None = None,
+    guided: bool = False,
+    links: Sequence[tuple[str, str]] = (),
 ) -> str:
     profile = PROFILES[source]
+    if guided:  # the guided menu reads and converts every kind, not only the alerts
+        profile = replace(
+            profile,
+            read_phrase="Your alert rules, notifications and dashboards were read and converted.",
+            share_label="Share of alert rules, notifications and dashboards converted",
+        )
     names: dict[Kind, tuple[str, str]] = {**KIND_NAMES, "alarm": profile.alarm_title}
     stamp = (generated or datetime.now(UTC)).strftime("%Y-%m-%d %H:%M UTC")
     overall = _kind_counts(summary, None)
@@ -623,7 +681,8 @@ def render_report(
         f"<style>{CSS}{BRAND_CSS}</style></head><body><main>"
         f'<div class="masthead"><h1>{pair_name(source)} migration report</h1>'
         f'<p class="where">{where}</p></div>{logo_strip(source)}'
-        f"{_state(summary, aws_account, nr_account, region, profile)}{hero}{chart}"
+        f"{_state(summary, aws_account, nr_account, region, profile, info, guided)}"
+        f"{hero}{chart}{_links(links)}"
         f"{_ledger(summary, names)}"
         f"{''.join(sections)}"
         f"<footer><p><b>How this is counted.</b> {profile.unit_sentence} "

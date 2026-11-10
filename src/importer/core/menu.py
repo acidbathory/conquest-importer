@@ -4,10 +4,16 @@ one preview, one typed `yes`, create in a safe order, one combined run record.
 Every step calls an existing command through `runner`, so the menu adds no new way to talk to a
 cloud or to New Relic. All questions go through a `Console`, so tests drive it with scripted
 answers. Nothing is created without the word `yes` typed after a message that names the New Relic
-account and the counts. The menu never opens a browser: report paths are only printed.
+account and the counts.
+
+The HTML report opens in the default browser twice per source: before the question (the plan) and
+after a successful create (what was made). The path is always printed too. Opening is skipped
+without a terminal, with IMPORTER_NO_BROWSER=1 or `--no-open`; a failure to open never stops the
+flow, and only the report file inside the run's own folder is ever opened.
 """
 
 import os
+import webbrowser
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -15,7 +21,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from importer.core.apply import GuardError, check_guards, get_account_name
-from importer.core.console import Console, InputEnded, confirm_yes, ensure_secret
+from importer.core.console import Console, InputEnded, confirm_yes, ensure_secret, has_terminal
 from importer.core.menu_flow import (
     APPLY,
     KINDS,
@@ -31,6 +37,8 @@ from importer.core.menu_flow import (
     summarise,
     triage_buckets,
 )
+from importer.core.migration_summary import load_summary
+from importer.core.report_html import PROFILES, RunInfo, render_report
 from importer.core.run_rollback import (
     ClientFactory,
     is_sandbox_account,
@@ -40,6 +48,7 @@ from importer.core.run_rollback import (
 from importer.core.runs import RunRecord, RunStore
 
 Runner = Callable[[list[str]], int]
+PRIVATE_KINDS = ("condition", "workflow", "dashboard")  # created disabled or private
 SAMPLE_DIR = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "gcp"
 
 
@@ -137,6 +146,9 @@ class Menu:
         sample_dir: Path = SAMPLE_DIR,
         client_factory: ClientFactory | None = None,
         real_migration: bool = False,
+        opener: Callable[[str], object] | None = None,
+        open_reports: bool = True,
+        terminal: Callable[[], bool] = has_terminal,
     ) -> None:
         self.c = console
         self.runner = runner
@@ -145,6 +157,10 @@ class Menu:
         self.sample_dir = sample_dir
         self.client_factory = client_factory or real_client
         self.real_migration = real_migration
+        self.opener = opener or webbrowser.open
+        self.open_reports = open_reports
+        self.terminal = terminal
+        self._opened: set[tuple[Path, str]] = set()
 
     # -- main loop ---------------------------------------------------------------------------
     def run(self) -> int:
@@ -259,6 +275,7 @@ class Menu:
         self.c.say("\nStep 4 of 4: preview")
         name = self._account_name(account) if account is not None else None
         self._preview(spec, lay, summary, account, name)
+        self._show_report(lay, "before", self._write_report(spec, lay, account))
         if account is None:
             self.c.say(
                 "Set NEW_RELIC_ACCOUNT_ID in .env (or enter it) to create. Nothing was created."
@@ -290,8 +307,66 @@ class Menu:
         for args in extra_plans(spec.key, lay):
             self.runner(args)
         self.runner(["plan-remediation", "--in", str(lay.converted), "--out", str(lay.remediation)])
-        if (lay.out("alerts") / "report.md").is_file():
-            self.runner(["report", str(lay.converted), "--source", spec.source])
+
+    # -- the HTML report ---------------------------------------------------------------------
+    def _write_report(
+        self, spec: Spec, lay: Layout, account: int | None, record: RunRecord | None = None
+    ) -> Path | None:
+        """Write the plan report (before) or the created report (after) into the run folder."""
+        if spec.source not in PROFILES:
+            return None
+        try:
+            summary = load_summary(lay.converted)
+            info = None
+            if record is not None:
+                summary.created = dict(Counter(o.kind for o in record.objects))
+                private = sum(o.kind in PRIVATE_KINDS for o in record.pending())
+                info = RunInfo(record.run_id, private)
+            path = lay.folder / ("report-created.html" if record else "report.html")
+            html = render_report(
+                summary,
+                nr_account=account,
+                source=spec.source,
+                info=info,
+                guided=True,
+                links=self._links(lay),
+            )
+            path.write_text(html)
+        except (OSError, ValueError) as exc:
+            self.c.say(f"The HTML report could not be written: {exc}")
+            return None
+        return path
+
+    @staticmethod
+    def _links(lay: Layout) -> list[tuple[str, str]]:
+        wanted = [
+            ("Remediation plan: what to do for each item", lay.remediation / "remediation-plan.md"),
+            ("Data-path guide: get your metrics into New Relic", lay.datapath / "datapath-plan.md"),
+            ("Dashboard ranking", lay.triage / "triage-report.md"),
+        ]
+        return [(t, p.relative_to(lay.folder).as_posix()) for t, p in wanted if p.is_file()]
+
+    def _show_report(self, lay: Layout, phase: str, path: Path | None) -> None:
+        """Print the report's file:// path; open it once per phase when a person is here."""
+        if path is None:
+            return
+        try:
+            target = path.resolve()
+            if not target.is_file() or not target.is_relative_to(lay.folder.resolve()):
+                return  # only ever a file inside this run's own folder
+            uri = target.as_uri()
+        except (OSError, ValueError):
+            return
+        self.c.say(f"HTML report: {uri}")
+        key = (lay.folder, phase)
+        quiet = os.environ.get("IMPORTER_NO_BROWSER") == "1"
+        if key in self._opened or quiet or not self.open_reports or not self.terminal():
+            return
+        self._opened.add(key)
+        try:
+            self.opener(uri)
+        except Exception:  # a missing browser must never stop the migration
+            self.c.say("The browser could not be opened; open the file above yourself.")
 
     def _account_name(self, account: int) -> str | None:
         """The account's name when a key is already set; any failure just leaves the id."""
@@ -383,6 +458,7 @@ class Menu:
         )
         if self._apply_until_done(record):
             self._done(lay, record)
+            self._show_report(lay, "after", self._write_report(spec, lay, account, record))
 
     def _targets(self, record: RunRecord) -> list[tuple[str, Path]]:
         """The converted folders this run creates from, in the safe order."""

@@ -111,7 +111,7 @@ Screens, in order:
    and how many need attention. The New Relic account id (asked for if `NEW_RELIC_ACCOUNT_ID` is not set).
 7. One question naming the account. Only `yes` continues. Conditions and workflows are created disabled,
    dashboards private.
-8. Done screen. Reports are under `out/guided/cloudwatch-<timestamp>/`.
+8. Done screen. Reports are under `out/guided/cloudwatch-<timestamp>/`. The HTML report opens in your browser after the preview and again after a successful create (not without a terminal, with `IMPORTER_NO_BROWSER=1`, or with `importer menu --no-open`); the `file://` path is always printed. See [menu and rollback](menu-and-rollback.md).
 
 The menu does not write the Metric Streams Terraform and does not run `validate`. It creates in the US
 data centre only. Use 3b or the manual way for those. More detail: [menu and rollback](menu-and-rollback.md).
