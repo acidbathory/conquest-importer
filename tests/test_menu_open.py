@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+from importer.core.manifest import CreatedObject
 from importer.core.menu import Menu
 from menu_helpers import HybridRunner
 from test_menu_onego import _grafana, _menu  # noqa: F401  (autouse fixture is re-used)
@@ -175,3 +176,80 @@ def test_before_report_keeps_the_forecast_wording(tmp_path: Path) -> None:
     before, _ = _reports(tmp_path)
     assert "What was migrated" in before and "assets can be migrated" in before
     assert "planned objects were created" not in before
+
+
+ALL_THERE = {"apply": 5, "apply-notifications": 1, "apply-dashboards": 15}
+
+
+def _all_existing() -> HybridRunner:
+    return HybridRunner(existing=ALL_THERE, no_create=set(ALL_THERE))
+
+
+def test_all_existing_creates_nothing_so_no_created_report_and_no_run_record(
+    tmp_path: Path,
+) -> None:
+    runner = _all_existing()
+    menu, console, store, _ = _menu(tmp_path, ["3", "yes", "0"], runner)
+    events: list[str] = []
+    _wire(menu, runner, events)
+    assert menu.run() == 0
+    assert [e for e in events if e.startswith("open")] == ["open:report.html"]
+    text = console.text
+    assert "Nothing new was created: all " in text
+    assert "already exist in New Relic account 7" in text
+    assert "5 alert conditions" in text and "15 dashboards" in text
+    assert "roll back the earlier runs (menu item 5)" in text
+    assert "Done." not in text and "Objects were created" not in text
+    assert store.list() == []
+    assert not list(Path(tmp_path).rglob("report-created.html"))
+
+
+def test_all_existing_names_the_earlier_runs_that_created_them(tmp_path: Path) -> None:
+    runner = _all_existing()
+    menu, console, store, _ = _menu(tmp_path, ["3", "yes", "0"], runner)
+    earlier = store.start(
+        source="grafana", account_id=7, region="us", out_dir=tmp_path / "x", sandbox=True
+    )
+    earlier.objects = [
+        CreatedObject(kind="condition", id="10", name="ckg-prom-absent"),
+    ]
+    store.save(earlier)
+    menu.run()
+    assert earlier.run_id in console.text
+    assert [r.run_id for r in store.list()] == [earlier.run_id]
+
+
+def test_partly_existing_says_created_and_already_existed_per_kind(tmp_path: Path) -> None:
+    runner = HybridRunner(existing={"apply": 4, "apply-dashboards": 13})
+    _run(tmp_path, ["3", "yes", "0"], runner=runner)
+    _, after = _reports(tmp_path)
+    assert "<b>3</b> created, <b>17</b> already existed" in after
+    assert "Already existed" in after and "Created" in after and "Need attention" in after
+    assert "Objects were created" in after and ": nothing" not in after
+
+
+def test_none_existing_report_has_no_already_existed_claim(tmp_path: Path) -> None:
+    _run(tmp_path, ["3", "yes", "0"])
+    _, after = _reports(tmp_path)
+    assert "already existed" not in after
+
+
+def test_preview_warns_when_planned_objects_exist_from_earlier_runs(tmp_path: Path) -> None:
+    runner = HybridRunner()
+    menu, console, store, _ = _menu(tmp_path, ["3", "no", "0"], runner)
+    earlier = store.start(
+        source="grafana", account_id=7, region="us", out_dir=tmp_path / "x", sandbox=True
+    )
+    earlier.objects = [
+        CreatedObject(kind="condition", id="10", name="ckg-prom-absent"),
+        CreatedObject(kind="workflow", id="9", name="Imported:route 1"),
+    ]
+    store.save(earlier)
+    menu.run()
+    assert "2 of the planned objects already exist in New Relic account 7" in console.text
+    assert "will be skipped" in console.text and earlier.run_id in console.text
+
+
+def test_preview_has_no_warning_without_earlier_runs(tmp_path: Path) -> None:
+    _, console, _ = _run(tmp_path, ["3", "no", "0"])
+    assert "already exist" not in console.text

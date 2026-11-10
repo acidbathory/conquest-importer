@@ -441,19 +441,21 @@ class RunInfo:
 
     run_id: str
     private: int  # created conditions, workflows and dashboards still disabled or private
-    # label -> (created, planned, need attention); planned is None when it is not known
-    rows: tuple[tuple[str, int, int | None, int], ...] = ()
+    # (label, created, already existed, planned, need attention); planned None = not known
+    rows: tuple[tuple[str, int, int, int | None, int], ...] = ()
 
 
 def _created_hero(info: RunInfo) -> str:
     made = sum(r[1] for r in info.rows)
-    known = [r[2] for r in info.rows]
+    there = sum(r[2] for r in info.rows)
+    known = [r[3] for r in info.rows]
     planned = sum(p for p in known if p is not None) if None not in known else None
-    line = (
-        f"<b>{made} of {planned}</b> planned objects were created in New Relic."
-        if planned is not None
-        else f"<b>{made}</b> objects were created in New Relic."
-    )
+    if there:
+        line = f"<b>{made}</b> created, <b>{there}</b> already existed and were left unchanged."
+    elif planned is not None:
+        line = f"<b>{made} of {planned}</b> planned objects were created in New Relic."
+    else:
+        line = f"<b>{made}</b> objects were created in New Relic."
     return (
         '<div class="hero"><div><p class="label">Created in New Relic</p>'
         f'<p class="big">{made}</p></div><div><p class="lede">{line}</p>'
@@ -463,26 +465,36 @@ def _created_hero(info: RunInfo) -> str:
 
 
 def _created_table(info: RunInfo) -> str:
+    there = any(r[2] for r in info.rows)
     rows = "".join(
         f'<tr><td>{e(label, 60)}</td><td class="n">{made}</td>'
-        f'<td class="n">{"n/a" if planned is None else planned}</td>'
+        + (f'<td class="n">{old}</td>' if there else "")
+        + f'<td class="n">{"n/a" if planned is None else planned}</td>'
         f'<td class="n">{attention}</td></tr>'
-        for label, made, planned, attention in info.rows
+        for label, made, old, planned, attention in info.rows
     )
+    extra = '<th class="n" scope="col">Already existed</th>' if there else ""
     return (
         '<table><caption class="label">Counts per kind</caption><thead><tr>'
         '<th scope="col">Kind</th><th class="n" scope="col">Created</th>'
-        '<th class="n" scope="col">Planned</th><th class="n" scope="col">Need attention</th>'
+        f'{extra}<th class="n" scope="col">Planned</th>'
+        '<th class="n" scope="col">Need attention</th>'
         f"</tr></thead><tbody>{rows}</tbody></table>"
     )
 
 
 def _created_state(summary: Summary, nr_account: int | None, info: RunInfo, made: str) -> str:
     account = f" in New Relic account <b>{nr_account}</b>" if nr_account else " in New Relic"
-    lines = (
-        f"<p><b>Objects were created</b>{account}: {e(made)}. "
+    existing = sum(r[2] for r in info.rows)
+    head = (
+        f"<b>Objects were created</b>{account}: {e(made)}. "
         f"<b>{info.private}</b> of them are disabled or private; nothing is turned on. "
-        f"Run id: <code>{e(info.run_id, 80)}</code>.</p>"
+        if made != "nothing"
+        else f"<b>Nothing new was created</b>{account}. "
+    )
+    kept = f"{existing} more already existed and were left unchanged. " if existing else ""
+    lines = (
+        f"<p>{head}{kept}Run id: <code>{e(info.run_id, 80)}</code>.</p>"
         "<p><b>To roll back</b>, open <code>importer menu</code> and pick "
         "<b>5 Roll back a run</b>, or run <code>importer rollback-run</code>, then choose this "
         "run. You see exactly what will be deleted and must type yes.</p>"

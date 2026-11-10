@@ -96,6 +96,10 @@ class RunStore:
         self.save(record)
         return record
 
+    def discard(self, record: RunRecord) -> None:
+        """Forget a run that created nothing, so it never shows up as a success."""
+        self._path(record.run_id).unlink(missing_ok=True)
+
     def load(self, run_id: str) -> RunRecord:
         return RunRecord.model_validate_json(self._path(run_id).read_text())
 

@@ -192,6 +192,24 @@ def _notification_plans(folder: Path) -> list[NotificationPlan]:
     return out
 
 
+def planned_names(lay: Layout) -> dict[str, list[str]]:
+    """The names the apply commands would create, per kind, from the converter's own files."""
+    out: dict[str, list[str]] = {k: [] for k in KINDS}
+    try:
+        out["alerts"] = [i.name for i in load_plan(lay.out("alerts") / "ir").items]
+        out["dashboards"] = [
+            i.name for i in load_dashboard_plan(lay.out("dashboards") / "dashboard-ir").items
+        ]
+    except (OSError, ValueError):
+        pass
+    out["notifications"] = [
+        p.workflow.name
+        for p in _notification_plans(lay.out("notifications"))
+        if p.workflow is not None and not p.needs_review
+    ]
+    return out
+
+
 def _count_create(kind: str, folder: Path) -> int:
     """How many objects the apply command would create from this folder (its own readers)."""
     try:
