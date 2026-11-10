@@ -81,9 +81,11 @@ def _int(value: Any) -> int | None:
 
 
 def signals_for(doc: dict[str, Any], folder_titles: dict[str, str]) -> Signals | None:
-    dash = doc.get("dashboard") if isinstance(doc.get("dashboard"), dict) else doc
-    meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
-    if not isinstance(dash, dict) or ("panels" not in dash and "rows" not in dash):
+    inner = doc.get("dashboard")
+    dash: dict[str, Any] = inner if isinstance(inner, dict) else doc
+    raw_meta = doc.get("meta")
+    meta: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
+    if "panels" not in dash and "rows" not in dash:
         return None
     title = printable(str(dash.get("title") or ""), 200)
     uid = printable(str(dash.get("uid") or meta.get("uid") or title), 200)

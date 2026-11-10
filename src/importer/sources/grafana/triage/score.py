@@ -39,6 +39,7 @@ def quickstart_for(sig: Signals) -> str | None:
     grafana.com id for community dashboards, else by datasource and metric prefix) and return
     the quickstart name; `decide` then buckets it as "replace with quickstart".
     """
+    del sig  # unused until the map exists
     return None
 
 
