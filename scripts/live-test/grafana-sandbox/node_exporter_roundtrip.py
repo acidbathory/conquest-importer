@@ -23,7 +23,7 @@ KEEP = re.compile(
     r"node_(cpu_seconds_total|memory_\w+|load(1|5|15)|network_(receive|transmit)_bytes_total|"
     r"filesystem_(avail|size|free)_bytes|boot_time_seconds|time_seconds)$"
 )
-SAMPLE = re.compile(r'([A-Za-z_:][\w:]*)(?:\{(.*)\})? (\S+)')
+SAMPLE = re.compile(r"([A-Za-z_:][\w:]*)(?:\{(.*)\})? (\S+)")
 LABEL = re.compile(r'(\w+)="((?:[^"\\]|\\.)*)"')
 MAX_SERIES = 400
 
@@ -33,7 +33,7 @@ def scrape(out: str, seconds: int, interval: int) -> None:
     with open(out, "w") as fh:
         while time.time() < end:
             t = time.time()
-            text = urllib.request.urlopen(URL, timeout=10).read().decode()  # noqa: S310
+            text = urllib.request.urlopen(URL, timeout=10).read().decode()
             fh.write(json.dumps({"ts": t, "text": text}) + "\n")
             fh.flush()
             time.sleep(max(0.0, interval - (time.time() - t)))
@@ -77,11 +77,26 @@ def convert(raw: str) -> list[dict]:
                     continue
                 before = prev[key][1]
                 delta = val if val < before else val - before
-                points.append({"name": name, "type": "count", "value": delta, "timestamp": ts,
-                               "interval.ms": int((s["ts"] - prev_ts) * 1000), "attributes": attrs})
+                points.append(
+                    {
+                        "name": name,
+                        "type": "count",
+                        "value": delta,
+                        "timestamp": ts,
+                        "interval.ms": int((s["ts"] - prev_ts) * 1000),
+                        "attributes": attrs,
+                    }
+                )
             else:
-                points.append({"name": name, "type": "gauge", "value": val, "timestamp": ts,
-                               "attributes": attrs})
+                points.append(
+                    {
+                        "name": name,
+                        "type": "gauge",
+                        "value": val,
+                        "timestamp": ts,
+                        "attributes": attrs,
+                    }
+                )
         prev, prev_ts = cur, s["ts"]
     return points
 

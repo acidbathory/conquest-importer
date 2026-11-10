@@ -20,10 +20,25 @@ def build(end: int) -> list[dict]:
         attrs = {"job": "ckg_synth", "code": code}
         for i in range(STEPS):
             ts = end - (STEPS - 1 - i) * STEP
-            pts.append({"name": "ckg_synth_requests_total", "type": "count", "value": inc,
-                        "interval.ms": STEP * 1000, "timestamp": ts, "attributes": dict(attrs)})
-            pts.append({"name": "ckg_synth_requests_gauge_total", "type": "gauge",
-                        "value": inc * (i + 1), "timestamp": ts, "attributes": dict(attrs)})
+            pts.append(
+                {
+                    "name": "ckg_synth_requests_total",
+                    "type": "count",
+                    "value": inc,
+                    "interval.ms": STEP * 1000,
+                    "timestamp": ts,
+                    "attributes": dict(attrs),
+                }
+            )
+            pts.append(
+                {
+                    "name": "ckg_synth_requests_gauge_total",
+                    "type": "gauge",
+                    "value": inc * (i + 1),
+                    "timestamp": ts,
+                    "attributes": dict(attrs),
+                }
+            )
     return pts
 
 

@@ -16,7 +16,7 @@ import time
 import urllib.request
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.parent))
-import nrcommon  # noqa: E402
+import nrcommon
 
 
 def gql(query: str, variables: dict) -> dict:
@@ -74,30 +74,62 @@ def main() -> None:
         for i in range(n):
             ts = end - (n - 1 - i) * 10
             if kind == "cpu":
-                pts.append({"name": "ckg_synth_cpu", "type": "gauge", "value": val,
-                            "timestamp": ts, "attributes": {"job": "ckg_synth"}})
+                pts.append(
+                    {
+                        "name": "ckg_synth_cpu",
+                        "type": "gauge",
+                        "value": val,
+                        "timestamp": ts,
+                        "attributes": {"job": "ckg_synth"},
+                    }
+                )
             else:
-                pts.append({"name": "ckg_synth_requests_total", "type": "count", "value": val * 10,
-                            "interval.ms": 10000, "timestamp": ts,
-                            "attributes": {"job": "ckg_synth", "code": "200"}})
+                pts.append(
+                    {
+                        "name": "ckg_synth_requests_total",
+                        "type": "count",
+                        "value": val * 10,
+                        "interval.ms": 10000,
+                        "timestamp": ts,
+                        "attributes": {"job": "ckg_synth", "code": "200"},
+                    }
+                )
         print(kind, val, n, "points ending", end)
         nrcommon.post_points(pts)
     elif cmd == "drive":
         log, mins = sys.argv[4], [float(x) for x in sys.argv[5:8]]
-        phases = [("low", 30, 1.2, mins[0]), ("high", 95, 3.0, mins[1]), ("recover", 30, 1.2, mins[2])]
+        phases = [
+            ("low", 30, 1.2, mins[0]),
+            ("high", 95, 3.0, mins[1]),
+            ("recover", 30, 1.2, mins[2]),
+        ]
         for name, cpu, rate, minutes in phases:
             with open(log, "a") as f:
-                f.write(f"{time.strftime('%H:%M:%S', time.gmtime())}Z phase {name} cpu={cpu} rate={rate}/s\n")
+                f.write(
+                    f"{time.strftime('%H:%M:%S', time.gmtime())}Z phase {name} cpu={cpu} rate={rate}/s\n"
+                )
             until = time.time() + minutes * 60
             while time.time() < until:
                 ts = int(time.time())
-                nrcommon.post_points([
-                    {"name": "ckg_synth_cpu", "type": "gauge", "value": cpu, "timestamp": ts,
-                     "attributes": {"job": "ckg_synth"}},
-                    {"name": "ckg_synth_requests_total", "type": "count", "value": rate * 10,
-                     "interval.ms": 10000, "timestamp": ts,
-                     "attributes": {"job": "ckg_synth", "code": "200"}},
-                ])
+                nrcommon.post_points(
+                    [
+                        {
+                            "name": "ckg_synth_cpu",
+                            "type": "gauge",
+                            "value": cpu,
+                            "timestamp": ts,
+                            "attributes": {"job": "ckg_synth"},
+                        },
+                        {
+                            "name": "ckg_synth_requests_total",
+                            "type": "count",
+                            "value": rate * 10,
+                            "interval.ms": 10000,
+                            "timestamp": ts,
+                            "attributes": {"job": "ckg_synth", "code": "200"},
+                        },
+                    ]
+                )
                 time.sleep(10)
         with open(log, "a") as f:
             f.write(f"{time.strftime('%H:%M:%S', time.gmtime())}Z done\n")

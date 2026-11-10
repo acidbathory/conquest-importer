@@ -42,7 +42,10 @@ def post_points(points: list[dict]) -> None:
             METRIC_API,
             data=body,
             method="POST",
-            headers={"Api-Key": os.environ["NEW_RELIC_LICENSE_KEY"], "Content-Type": "application/json"},
+            headers={
+                "Api-Key": os.environ["NEW_RELIC_LICENSE_KEY"],
+                "Content-Type": "application/json",
+            },
         )
         with urllib.request.urlopen(req, timeout=60) as resp:
             print("metric api:", resp.status)
@@ -50,9 +53,7 @@ def post_points(points: list[dict]) -> None:
 
 def nrql(query: str) -> list[dict]:
     """Read-only NRQL through NerdGraph (query passed as a GraphQL variable)."""
-    gql = (
-        "query($id:Int!,$q:Nrql!){actor{account(id:$id){nrql(query:$q,timeout:60){results}}}}"
-    )
+    gql = "query($id:Int!,$q:Nrql!){actor{account(id:$id){nrql(query:$q,timeout:60){results}}}}"
     body = json.dumps({"query": gql, "variables": {"id": int(account()), "q": query}}).encode()
     req = urllib.request.Request(
         GRAPHQL,

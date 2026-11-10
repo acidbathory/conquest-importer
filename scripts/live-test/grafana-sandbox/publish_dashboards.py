@@ -57,8 +57,12 @@ def main(src: Path, manifest_path: Path) -> int:
         dash["uid"] = uid
         dash["title"] = f"ckg-{dash.get('title', gid)}"
         inputs = [
-            {"name": i["name"], "type": i["type"], "pluginId": i.get("pluginId"),
-             "value": DATASOURCE if i["type"] == "datasource" else i.get("value", DATASOURCE)}
+            {
+                "name": i["name"],
+                "type": i["type"],
+                "pluginId": i.get("pluginId"),
+                "value": DATASOURCE if i["type"] == "datasource" else i.get("value", DATASOURCE),
+            }
             for i in dash.get("__inputs", [])
         ]
         body = {"dashboard": dash, "overwrite": False, "folderUid": FOLDER_UID, "inputs": inputs}

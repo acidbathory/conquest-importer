@@ -98,7 +98,10 @@ def main() -> int:
         METRIC_API,
         data=body,
         method="POST",
-        headers={"Api-Key": os.environ["NEW_RELIC_LICENSE_KEY"], "Content-Type": "application/json"},
+        headers={
+            "Api-Key": os.environ["NEW_RELIC_LICENSE_KEY"],
+            "Content-Type": "application/json",
+        },
     )
     with urllib.request.urlopen(req, timeout=60) as resp:
         print("metric api:", resp.status, resp.read().decode()[:200])

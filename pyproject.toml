@@ -55,6 +55,12 @@ max-complexity = 15
 "tests/**" = ["S101", "ARG001", "ARG002"]
 # CLI helper scripts report to the terminal.
 "scripts/**" = ["T201"]
+# Throwaway analysis and live-test scripts: wide data tables and plain urllib calls to fixed
+# https hosts. They are not shipped code and are not imported by the package.
+"scripts/analysis/**" = ["E501", "PERF401", "C901", "C416", "RUF007"]
+"scripts/live-test/grafana-sandbox/**" = [
+  "E501", "S310", "SIM115", "ARG001", "ARG005", "PERF401", "C901", "C416", "RUF007",
+]
 # Lambda handler signature is fixed by AWS.
 "scripts/live-test/aws/handler.py" = ["ARG001"]
 # Terraform template text contains long lines that cannot be wrapped.

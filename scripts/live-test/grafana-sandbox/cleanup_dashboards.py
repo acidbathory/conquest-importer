@@ -21,7 +21,9 @@ from pathlib import Path
 PREFIX = "ckg-"
 
 
-def request(url: str, headers: dict[str, str], method: str, body: dict | None = None) -> tuple[int, str]:
+def request(
+    url: str, headers: dict[str, str], method: str, body: dict | None = None
+) -> tuple[int, str]:
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
@@ -73,15 +75,25 @@ def new_relic(manifest: dict, yes: bool) -> int:
     if os.environ.get("NEW_RELIC_ACCOUNT_ID") not in allowed:
         print("REFUSED: NEW_RELIC_ACCOUNT_ID is not in NEW_RELIC_ALLOWED_ACCOUNT_IDS")
         return 1
-    host = "api.eu.newrelic.com" if os.environ.get("NEW_RELIC_REGION", "us") == "eu" else "api.newrelic.com"
+    host = (
+        "api.eu.newrelic.com"
+        if os.environ.get("NEW_RELIC_REGION", "us") == "eu"
+        else "api.newrelic.com"
+    )
     headers = {"API-Key": os.environ["NEW_RELIC_API_KEY"], "Content-Type": "application/json"}
-    query = "mutation($g: EntityGuid!) { dashboardDelete(guid: $g) { status errors { description } } }"
+    query = (
+        "mutation($g: EntityGuid!) { dashboardDelete(guid: $g) { status errors { description } } }"
+    )
     failed = 0
     for e in entries:
         print("new relic delete", e["id"], e["name"])
         if yes:
-            code, text = request(f"https://{host}/graphql", headers, "POST",
-                                 {"query": query, "variables": {"g": e["id"]}})
+            code, text = request(
+                f"https://{host}/graphql",
+                headers,
+                "POST",
+                {"query": query, "variables": {"g": e["id"]}},
+            )
             answer = (json.loads(text).get("data") or {}).get("dashboardDelete") or {}
             if code != 200 or answer.get("errors") or answer.get("status") != "SUCCESS":
                 failed += 1

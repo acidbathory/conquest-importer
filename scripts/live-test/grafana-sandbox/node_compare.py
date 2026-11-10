@@ -36,7 +36,9 @@ def load(raw: str) -> tuple[list[float], dict[str, list[tuple[Labels, list[tuple
             series.setdefault(name, {}).setdefault(labels, []).append((s["ts"], val))
     out: dict[str, list[tuple[Labels, list[tuple[float, float]]]]] = {}
     for name, d in series.items():
-        out[name] = [({**dict(k), "job": "ckg_node", "instance": "127.0.0.1:9100"}, v) for k, v in d.items()]
+        out[name] = [
+            ({**dict(k), "job": "ckg_node", "instance": "127.0.0.1:9100"}, v) for k, v in d.items()
+        ]
     return times, out
 
 
@@ -56,7 +58,9 @@ class Ctx:
     def k(self, ts: float) -> int:
         return int((ts - self.since) // B)
 
-    def pick(self, metric: str, filt: Callable[[Labels], bool]) -> list[tuple[Labels, list[tuple[float, float]]]]:
+    def pick(
+        self, metric: str, filt: Callable[[Labels], bool]
+    ) -> list[tuple[Labels, list[tuple[float, float]]]]:
         return [(lab, v) for lab, v in self.data[metric] if filt(lab)]
 
     # --- expectations: dict group -> dict bucket -> value (None bucket = whole window)
@@ -80,7 +84,9 @@ class Ctx:
                     cell[kk] = cell[None]
         return nr, prom
 
-    def gauge(self, metric: str, filt: Callable[[Labels], bool], by: list[str], agg: str) -> tuple[dict, dict]:
+    def gauge(
+        self, metric: str, filt: Callable[[Labels], bool], by: list[str], agg: str
+    ) -> tuple[dict, dict]:
         samples: dict[Group, dict[int, list[float]]] = {}
         lastper: dict[Group, dict[int, dict[int, float]]] = {}
         allv: dict[Group, list[float]] = {}
@@ -120,31 +126,76 @@ def run(raw: str, env: str, out: str) -> None:
     notidle = lambda lab: lab.get("mode") != "idle"  # noqa: E731
     cpu = "node_cpu_seconds_total"
     tests: list[tuple[str, str, Callable[[], tuple[dict, dict]]]] = [
-        ("cpu by mode", f'sum by (mode) (rate({cpu}{{job="ckg_node"}}[5m]))', lambda: c.rate(cpu, job, ["mode"])),
-        ("cpu not idle by instance",
-         f'sum by (instance) (rate({cpu}{{job="ckg_node", mode!="idle"}}[$__rate_interval]))',
-         lambda: c.rate(cpu, notidle, ["instance"])),
-        ("mem used", 'node_memory_total_bytes{job="ckg_node"} - node_memory_free_bytes{job="ckg_node"}',
-         lambda: tuple(combine(x, y, lambda p, q: p - q) for x, y in zip(  # type: ignore[return-value]
-             c.gauge("node_memory_total_bytes", job, [], "avg"), c.gauge("node_memory_free_bytes", job, [], "avg"), strict=True))),
-        ("mem free", 'node_memory_free_bytes{job="ckg_node"}', lambda: c.gauge("node_memory_free_bytes", job, [], "avg")),
-        ("mem used percent",
-         '100 * (1 - sum(node_memory_free_bytes{job="ckg_node"}) / sum(node_memory_total_bytes{job="ckg_node"}))',
-         lambda: tuple(combine(x, y, lambda p, q: 100 * (1 - p / q)) for x, y in zip(  # type: ignore[return-value]
-             c.gauge("node_memory_free_bytes", job, [], "sum"), c.gauge("node_memory_total_bytes", job, [], "sum"), strict=True))),
-        ("load1 avg", 'avg(node_load1{job="ckg_node"})', lambda: c.gauge("node_load1", job, [], "avg")),
+        (
+            "cpu by mode",
+            f'sum by (mode) (rate({cpu}{{job="ckg_node"}}[5m]))',
+            lambda: c.rate(cpu, job, ["mode"]),
+        ),
+        (
+            "cpu not idle by instance",
+            f'sum by (instance) (rate({cpu}{{job="ckg_node", mode!="idle"}}[$__rate_interval]))',
+            lambda: c.rate(cpu, notidle, ["instance"]),
+        ),
+        (
+            "mem used",
+            'node_memory_total_bytes{job="ckg_node"} - node_memory_free_bytes{job="ckg_node"}',
+            lambda: tuple(
+                combine(x, y, lambda p, q: p - q)
+                for x, y in zip(  # type: ignore[return-value]
+                    c.gauge("node_memory_total_bytes", job, [], "avg"),
+                    c.gauge("node_memory_free_bytes", job, [], "avg"),
+                    strict=True,
+                )
+            ),
+        ),
+        (
+            "mem free",
+            'node_memory_free_bytes{job="ckg_node"}',
+            lambda: c.gauge("node_memory_free_bytes", job, [], "avg"),
+        ),
+        (
+            "mem used percent",
+            '100 * (1 - sum(node_memory_free_bytes{job="ckg_node"}) / sum(node_memory_total_bytes{job="ckg_node"}))',
+            lambda: tuple(
+                combine(x, y, lambda p, q: 100 * (1 - p / q))
+                for x, y in zip(  # type: ignore[return-value]
+                    c.gauge("node_memory_free_bytes", job, [], "sum"),
+                    c.gauge("node_memory_total_bytes", job, [], "sum"),
+                    strict=True,
+                )
+            ),
+        ),
+        (
+            "load1 avg",
+            'avg(node_load1{job="ckg_node"})',
+            lambda: c.gauge("node_load1", job, [], "avg"),
+        ),
         ("load1", 'node_load1{job="ckg_node"}', lambda: c.gauge("node_load1", job, [], "avg")),
-        ("net rx by device", 'sum by (device) (rate(node_network_receive_bytes_total{job="ckg_node", device!="lo"}[5m]))',
-         lambda: c.rate("node_network_receive_bytes_total", nolo, ["device"])),
-        ("fs avail (no facet)", 'node_filesystem_avail_bytes{job="ckg_node", fstype!="tmpfs"}',
-         lambda: c.gauge("node_filesystem_avail_bytes", notmp, [], "avg")),
-        ("fs avail sum by mountpoint", 'sum by (mountpoint) (node_filesystem_avail_bytes{job="ckg_node"})',
-         lambda: c.gauge("node_filesystem_avail_bytes", job, ["mountpoint"], "sum")),
+        (
+            "net rx by device",
+            'sum by (device) (rate(node_network_receive_bytes_total{job="ckg_node", device!="lo"}[5m]))',
+            lambda: c.rate("node_network_receive_bytes_total", nolo, ["device"]),
+        ),
+        (
+            "fs avail (no facet)",
+            'node_filesystem_avail_bytes{job="ckg_node", fstype!="tmpfs"}',
+            lambda: c.gauge("node_filesystem_avail_bytes", notmp, [], "avg"),
+        ),
+        (
+            "fs avail sum by mountpoint",
+            'sum by (mountpoint) (node_filesystem_avail_bytes{job="ckg_node"})',
+            lambda: c.gauge("node_filesystem_avail_bytes", job, ["mountpoint"], "sum"),
+        ),
     ]
     results: list[dict[str, Any]] = []
     for name, expr, expect in tests:
         for chart in (True, False):
-            opts = QueryOptions(variables={}, name_map=NameMap(), timeseries=chart, bucket_seconds=B if chart else None)
+            opts = QueryOptions(
+                variables={},
+                name_map=NameMap(),
+                timeseries=chart,
+                bucket_seconds=B if chart else None,
+            )
             conv = convert_query(expr, "prometheus", opts)
             window = f" SINCE {c.since} UNTIL {c.until if chart else c.stat_until}"
             q = conv.nrql
@@ -155,11 +206,22 @@ def run(raw: str, env: str, out: str) -> None:
             nr, prom = expect()
             if not chart and conv.nrql.startswith("SELECT latest"):
                 nr, prom = _latest(c, name, nr, prom)
-            res = {"name": name, "promql": expr, "nrql": conv.nrql, "chart": chart, "notes": conv.notes,
-                   "facet": conv.facet, "rows": len(rows)}
+            res = {
+                "name": name,
+                "promql": expr,
+                "nrql": conv.nrql,
+                "chart": chart,
+                "notes": conv.notes,
+                "facet": conv.facet,
+                "rows": len(rows),
+            }
             res.update(_compare(c, conv.facet, rows, nr, prom, chart))
             results.append(res)
-            print(name, "chart" if chart else "stat", {k: res[k] for k in res if k.startswith(("max", "stat", "error"))})
+            print(
+                name,
+                "chart" if chart else "stat",
+                {k: res[k] for k in res if k.startswith(("max", "stat", "error"))},
+            )
     json.dump(results, open(out, "w"), indent=1)
 
 
@@ -168,10 +230,23 @@ def _latest(c: Ctx, name: str, nr: dict, prom: dict) -> tuple[dict, dict]:
     return {g: {None: cells.get(-1, cells[None])} for g, cells in nr.items()}, prom
 
 
-def _compare(c: Ctx, facet: list[str], rows: list[dict], nr: dict, prom: dict, chart: bool) -> dict[str, Any]:
+def _compare(
+    c: Ctx, facet: list[str], rows: list[dict], nr: dict, prom: dict, chart: bool
+) -> dict[str, Any]:
     if rows and "error" in rows[0]:
         return {"error": rows[0]["error"][:200]}
-    value_key = next((k for k in rows[0] if k not in ("beginTimeSeconds", "endTimeSeconds", "facet", *facet)), None) if rows else None
+    value_key = (
+        next(
+            (
+                k
+                for k in rows[0]
+                if k not in ("beginTimeSeconds", "endTimeSeconds", "facet", *facet)
+            ),
+            None,
+        )
+        if rows
+        else None
+    )
     got: dict[Group, dict[int | None, float]] = {}
     for r in rows:
         g = tuple(str(r.get(f, "")) for f in facet)
@@ -197,7 +272,12 @@ def _compare(c: Ctx, facet: list[str], rows: list[dict], nr: dict, prom: dict, c
                 worst_prom = max(worst_prom, abs(cells[kk] - e_pr[kk]) / (abs(e_pr[kk]) or 1.0))
         if not sample:
             kk = keys[len(keys) // 2] if keys else None
-            sample = {"group": list(g), "observed": cells.get(kk), "expected_nr": e_nr.get(kk), "expected_prom": (e_pr or {}).get(kk)}
+            sample = {
+                "group": list(g),
+                "observed": cells.get(kk),
+                "expected_nr": e_nr.get(kk),
+                "expected_prom": (e_pr or {}).get(kk),
+            }
         if chart and 0 in cells and 0 in e_nr:
             out.setdefault("first_bucket", []).append([cells[0], e_nr[0], (e_pr or {}).get(0)])
     out["max_rel_err_vs_nr"] = round(worst_nr, 6)

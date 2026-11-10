@@ -20,24 +20,24 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from promql_constructs import constructs_of  # noqa: E402
-from promql_verdicts import VERDICTS, verdict_for  # noqa: E402
+from promql_constructs import constructs_of
+from promql_verdicts import VERDICTS, verdict_for
 
-from importer.core.dashboard_ir import WidgetKind  # noqa: E402
-from importer.sources.grafana.dashboard_convert.legend import read_legend  # noqa: E402
-from importer.sources.grafana.dashboard_convert.promql import (  # noqa: E402
+from importer.core.dashboard_ir import WidgetKind
+from importer.sources.grafana.dashboard_convert.legend import read_legend
+from importer.sources.grafana.dashboard_convert.name_map import active_name_map
+from importer.sources.grafana.dashboard_convert.promql import (
     QueryOptions,
     convert_query,
 )
-from importer.sources.grafana.dashboard_convert.reuse import Unconvertible  # noqa: E402
-from importer.sources.grafana.dashboard_convert.translate import (  # noqa: E402
+from importer.sources.grafana.dashboard_convert.reuse import Unconvertible
+from importer.sources.grafana.dashboard_convert.translate import (
     Item,
     draft_panels,
     load_items,
 )
-from importer.sources.grafana.dashboard_convert.name_map import active_name_map  # noqa: E402
-from importer.sources.grafana.dashboards.datasources import resolve_target  # noqa: E402
-from importer.sources.grafana.promql_ast import PromQLSyntaxError, parse  # noqa: E402
+from importer.sources.grafana.dashboards.datasources import resolve_target
+from importer.sources.grafana.promql_ast import PromQLSyntaxError, parse
 
 # Constructs the converter writes today (read from dashboard_convert/promql.py; the census test
 # checks each one and each excluded one against `convert_query`).
@@ -106,7 +106,7 @@ def _options(
 ) -> QueryOptions:  # type: ignore[no-untyped-def]
     """Query options in which every dashboard variable is a plain variable (not "unavailable"),
     so that the converter judges the query text and not the variable plan."""
-    variables = {**{n: None for n in names}, **draft_ctx_variables}
+    variables = {**dict.fromkeys(names), **draft_ctx_variables}
     return QueryOptions(
         variables=variables,
         name_map=drafted.ctx.name_map,
@@ -150,7 +150,7 @@ def analyse_item(item: Item, census: Census, index: int) -> None:
                 exp.converts = True
             except Unconvertible as stop:
                 exp.reason = stop.reason
-            except Exception as error:  # noqa: BLE001 - a census must not stop on one odd query
+            except Exception as error:
                 exp.reason = f"error: {type(error).__name__}"
             row_ids.append(len(census.expressions))
             census.expressions.append(exp)

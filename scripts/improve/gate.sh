@@ -5,8 +5,8 @@ set -u
 fail=0
 run() { printf '== %s\n' "$*"; "$@" || { echo "FAILED: $*"; fail=1; }; }
 
-run uv run ruff check src tests
-run uv run ruff format --check src tests
+run uv run ruff check .
+run uv run ruff format --check .
 run uv run mypy --strict src tests
 run uv run vulture src --min-confidence 80
 run uv run pytest -q

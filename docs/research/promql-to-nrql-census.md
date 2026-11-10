@@ -381,13 +381,13 @@ Every rule module defines:
 
 ```python
 PROOF = Proof(
-    claim=Claim.EXACT | Claim.BUCKETED | Claim.SHAPE_ONLY,   # what is preserved
-    preconditions=[...],      # named facts about the data the rule assumes, each checkable:
-                              #   "bucket is a multiple of the scrape interval",
-                              #   "both operands carry the same label set",
-                              #   "metric is a delta count",  "at most 5 facet labels"
-    downgrade=...,            # what the translator does when a precondition cannot be shown:
-                              #   add a named note (today's N_* notes) or refuse
+    claim=Claim.EXACT | Claim.BUCKETED | Claim.SHAPE_ONLY,  # what is preserved
+    preconditions=[...],  # named facts about the data the rule assumes, each checkable:
+    #   "bucket is a multiple of the scrape interval",
+    #   "both operands carry the same label set",
+    #   "metric is a delta count",  "at most 5 facet labels"
+    downgrade=...,  # what the translator does when a precondition cannot be shown:
+    #   add a named note (today's N_* notes) or refuse
     cases=["rate_counter_steady", "rate_counter_reset", ...],  # ids in cases/
     sources=["N1 func-rate", "LIVE-C part 1"],
 )

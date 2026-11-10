@@ -71,8 +71,12 @@ def literal(expr: str) -> str:
     def repl(m: re.Match[str]) -> str:
         whole = m.group(0)
         if whole.startswith("["):
-            return sub_text(whole, "range") if not whole.startswith("[[") else fill(name_of(m) or "", "number")
-        if whole[0] in "\"`":
+            return (
+                sub_text(whole, "range")
+                if not whole.startswith("[[")
+                else fill(name_of(m) or "", "number")
+            )
+        if whole[0] in '"`':
             return whole  # string literals are handled with their matcher below
         return fill(name_of(m) or "", "number")
 
@@ -119,7 +123,15 @@ def collect(src: Path, cap: int) -> list[dict[str, Any]]:
                     continue
                 lit = literal(" ".join(raw.split()))
                 entry = seen.setdefault(
-                    lit, {"expr": lit, "raw": raw, "dashboard": f.stem, "panel": p.get("title", ""), "type": p.get("type", ""), "uses": 0}
+                    lit,
+                    {
+                        "expr": lit,
+                        "raw": raw,
+                        "dashboard": f.stem,
+                        "panel": p.get("title", ""),
+                        "type": p.get("type", ""),
+                        "uses": 0,
+                    },
                 )
                 entry["uses"] += 1
     items = list(seen.values())
@@ -156,11 +168,22 @@ def synthetic(batch: list[dict[str, Any]], account: int, n: int) -> dict[str, An
             "title": f"e{i['id']}",
             "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8 * k},
             "datasource": {"type": "prometheus", "uid": "ckgprom"},
-            "targets": [{"refId": "A", "expr": i["expr"], "datasource": {"type": "prometheus", "uid": "ckgprom"}}],
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": i["expr"],
+                    "datasource": {"type": "prometheus", "uid": "ckgprom"},
+                }
+            ],
         }
         for k, i in enumerate(batch)
     ]
-    dash = {"title": f"ckg-promql-baseline-{n}", "schemaVersion": 39, "templating": {"list": []}, "panels": panels}
+    dash = {
+        "title": f"ckg-promql-baseline-{n}",
+        "schemaVersion": 39,
+        "templating": {"list": []},
+        "panels": panels,
+    }
     return {"accountId": account, "dashboard": dash}
 
 
@@ -176,12 +199,26 @@ def read_response(resp: dict[str, Any]) -> dict[int, dict[str, Any]]:
                 continue
             qs = [q.get("query", "") for q in w.get("rawConfiguration", {}).get("nrqlQueries", [])]
             if not qs:
-                out[int(m[1])] = {"status": "rejected", "error": "no query in widget", "viz": w.get("visualization", {}).get("id")}
+                out[int(m[1])] = {
+                    "status": "rejected",
+                    "error": "no query in widget",
+                    "viz": w.get("visualization", {}).get("id"),
+                }
             elif any(q.startswith(FAIL) for q in qs):
-                err = next((ln[5:] for q in qs for ln in q.splitlines() if ln.startswith("// - ")), "")
-                out[int(m[1])] = {"status": "rejected", "error": err[:400], "viz": w.get("visualization", {}).get("id")}
+                err = next(
+                    (ln[5:] for q in qs for ln in q.splitlines() if ln.startswith("// - ")), ""
+                )
+                out[int(m[1])] = {
+                    "status": "rejected",
+                    "error": err[:400],
+                    "viz": w.get("visualization", {}).get("id"),
+                }
             else:
-                out[int(m[1])] = {"status": "translated", "nrql": qs, "viz": w.get("visualization", {}).get("id")}
+                out[int(m[1])] = {
+                    "status": "translated",
+                    "nrql": qs,
+                    "viz": w.get("visualization", {}).get("id"),
+                }
     return out
 
 
@@ -207,11 +244,19 @@ def translate(items: list[dict[str, Any]], max_requests: int) -> list[dict[str, 
         try:
             got = read_response(post(synthetic(batch, account, n)))
         except urllib.error.HTTPError as e:
-            got = {i["id"]: {"status": "error", "error": f"HTTP {e.code}: {e.read().decode()[:200]}"} for i in batch}
+            got = {
+                i["id"]: {"status": "error", "error": f"HTTP {e.code}: {e.read().decode()[:200]}"}
+                for i in batch
+            }
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
-            got = {i["id"]: {"status": "error", "error": f"{type(e).__name__}: {str(e)[:200]}"} for i in batch}
+            got = {
+                i["id"]: {"status": "error", "error": f"{type(e).__name__}: {str(e)[:200]}"}
+                for i in batch
+            }
         for i in batch:
-            results[i["id"]] = got.get(i["id"], {"status": "error", "error": "widget missing from response"})
+            results[i["id"]] = got.get(
+                i["id"], {"status": "error", "error": "widget missing from response"}
+            )
         print(f"request {n + 1}/{len(batches)} done", file=sys.stderr)
     return [{**i, **results[i["id"]]} for i in items]
 
@@ -246,7 +291,7 @@ def ours(expr: str) -> dict[str, Any]:
         c = convert_query(expr, "prometheus", opts)
     except Unconvertible as e:
         return {"ours": "refused", "ours_reason": str(e.args[0]) if e.args else ""}
-    except Exception as e:  # noqa: BLE001 - recorded, not hidden
+    except Exception as e:
         return {"ours": "crash", "ours_reason": f"{type(e).__name__}: {e}"}
     return {"ours": "converted", "ours_nrql": c.nrql, "ours_notes": c.notes}
 
@@ -262,7 +307,8 @@ def classify(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "status": dict(Counter(r["status"] for r in rows)),
         "class": dict(Counter(r["class"] for r in rows)),
         "by_dashboard": {
-            d: dict(Counter(r["class"] for r in rows if r["dashboard"] == d)) for d in sorted({r["dashboard"] for r in rows})
+            d: dict(Counter(r["class"] for r in rows if r["dashboard"] == d))
+            for d in sorted({r["dashboard"] for r in rows})
         },
     }
 
@@ -273,7 +319,9 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=Path("out/promql-baseline"))
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--max-expressions", type=int, default=MAX_EXPRESSIONS)
-    ap.add_argument("--validate", type=int, default=0, help="run up to N translated NRQL statements read-only")
+    ap.add_argument(
+        "--validate", type=int, default=0, help="run up to N translated NRQL statements read-only"
+    )
     ap.add_argument("--max-requests", type=int, default=MAX_REQUESTS)
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
@@ -289,7 +337,9 @@ def main() -> None:
         validate(rows, min(a.validate, MAX_EXPRESSIONS))
         cache.write_text(json.dumps(rows, indent=1))
     summary = classify(rows)
-    summary["nrql_check"] = dict(Counter(str(r.get("check", "not run"))[:7] for r in rows if r["status"] == "translated"))
+    summary["nrql_check"] = dict(
+        Counter(str(r.get("check", "not run"))[:7] for r in rows if r["status"] == "translated")
+    )
     (a.out / "comparison.json").write_text(json.dumps({"summary": summary, "rows": rows}, indent=1))
     print(json.dumps(summary, indent=1))
 
