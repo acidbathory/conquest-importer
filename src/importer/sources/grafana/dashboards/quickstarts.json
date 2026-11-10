@@ -1,0 +1,1146 @@
+{
+ "version": 1,
+ "retrieved": "2026-11-10",
+ "source": "https://github.com/newrelic/newrelic-quickstarts",
+ "branch": "main",
+ "note": "Every quickstart field was read from quickstarts/**/config.yml and dashboards/*/*.json in the public repository on the retrieval date. mapping_verified true means the quickstart is built on the same Prometheus metric names; the Grafana id to quickstart pairing is a judgement from docs/research/grafana-complex-dashboards-repos.md section 5.3 and the overlap check decides at run time.",
+ "entries": [
+  {
+   "id": "node-exporter",
+   "grafana_ids": [
+    1860
+   ],
+   "title_patterns": [
+    "\\bnode exporter"
+   ],
+   "metric_prefixes": [
+    "node_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. Needs node_exporter on each host and an external_label such as clusterName if you filter by it.",
+   "mapping_verified": true,
+   "mapping_basis": "quickstart is built on node_exporter metric names (config.yml dataSourceIds prometheus); overlap measured at run time",
+   "caveat": "Prometheus metric names are kept by remote write or the New Relic Prometheus agent, but label names, units and aggregation can differ from the Grafana dashboard. The quickstart dashboard has 27 widgets against the 124 panels of Node Exporter Full, so install it for its alert policy and keep converting for the rest.",
+   "quickstart": {
+    "title": "Node Exporter",
+    "slug": "node-exporter",
+    "id": "63f7cc4c-57d8-41e5-a496-a2e61efa992f",
+    "url": "https://newrelic.com/instant-observability/node-exporter/63f7cc4c-57d8-41e5-a496-a2e61efa992f",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/node-exporter/config.yml",
+    "dashboards": [
+     "node-exporter"
+    ],
+    "alert_policies": [
+     "node-exporter"
+    ]
+   },
+   "expected_metrics": [
+    "node_boot_time_seconds",
+    "node_cpu_seconds_total",
+    "node_disk_io_time_seconds_total",
+    "node_disk_read_bytes_total",
+    "node_disk_written_bytes_total",
+    "node_filesystem_avail_bytes",
+    "node_filesystem_size_bytes",
+    "node_load1",
+    "node_load15",
+    "node_load5",
+    "node_memory_MemFree_bytes",
+    "node_memory_MemTotal_bytes",
+    "node_memory_SwapTotal_bytes",
+    "node_network_receive_bytes_total",
+    "node_network_receive_drop_total",
+    "node_network_transmit_bytes_total",
+    "node_network_transmit_drop_total",
+    "node_os_info",
+    "node_time_seconds"
+   ],
+   "also": [
+    {
+     "title": "Linux",
+     "slug": "linux",
+     "url": "https://newrelic.com/instant-observability/linux/5b420314-fbfb-4c62-85ed-42200d76cf9a",
+     "note": "Infrastructure agent host monitoring, if you drop node_exporter"
+    },
+    {
+     "title": "Linux (OpenTelemetry Collector)",
+     "slug": "linux-otel",
+     "url": "https://newrelic.com/instant-observability/linux-otel/0325dc58-46d5-4f2b-a937-7bfdfc2a2484",
+     "note": "OpenTelemetry collector hostmetrics"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/node-exporter/config.yml"
+   ]
+  },
+  {
+   "id": "kubernetes-prometheus",
+   "grafana_ids": [
+    747,
+    15661,
+    315,
+    741,
+    8171,
+    6417
+   ],
+   "title_patterns": [
+    "\\bkubernetes.*(compute resources|cluster|pod|node|kubelet)"
+   ],
+   "metric_prefixes": [
+    "kube_",
+    "kubelet_",
+    "container_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. The default configurator does not scrape every metric these dashboards use; enable the extra jobs from the newrelic-prometheus-configurator Kubernetes example.",
+   "mapping_verified": true,
+   "mapping_basis": "quickstart dashboards are ports of kubernetes-mixin Compute Resources and kubelet",
+   "caveat": "Prometheus metric names are kept by remote write or the New Relic Prometheus agent, but label names, units and aggregation can differ from the Grafana dashboard. kube-state-metrics v1 names (kube_node_status_capacity_cpu_cores) and old cAdvisor names are not in the quickstart; the overlap check decides.",
+   "quickstart": {
+    "title": "Kubernetes (Prometheus)",
+    "slug": "kubernetes-prometheus",
+    "id": "8e026e99-1418-4521-a582-8ea1bb65ad68",
+    "url": "https://newrelic.com/instant-observability/kubernetes-prometheus/8e026e99-1418-4521-a582-8ea1bb65ad68",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/kubernetes-prometheus/config.yml",
+    "dashboards": [
+     "kubernetes-prometheus-compute-resources",
+     "kubernetes-prometheus-kubelet"
+    ],
+    "alert_policies": []
+   },
+   "expected_metrics": [
+    "container_cpu_usage_seconds_total",
+    "container_fs_reads_bytes_total",
+    "container_fs_reads_total",
+    "container_fs_writes_bytes_total",
+    "container_fs_writes_total",
+    "container_memory_working_set_bytes",
+    "container_network_receive_bytes_total",
+    "container_network_receive_packets_dropped_total",
+    "container_network_receive_packets_total",
+    "container_network_transmit_bytes_total",
+    "container_network_transmit_packets_dropped_total",
+    "container_network_transmit_packets_total",
+    "kube_node_status_allocatable",
+    "kube_pod_container_resource_limits",
+    "kube_pod_container_resource_requests",
+    "kubelet_cgroup_manager_duration_seconds_bucket",
+    "kubelet_cgroup_manager_duration_seconds_count",
+    "kubelet_pleg_relist_duration_seconds_bucket",
+    "kubelet_pleg_relist_duration_seconds_count",
+    "kubelet_pleg_relist_interval_seconds_bucket",
+    "kubelet_pod_start_duration_seconds_bucket",
+    "kubelet_pod_start_duration_seconds_count",
+    "kubelet_pod_worker_duration_seconds_bucket",
+    "kubelet_pod_worker_duration_seconds_count",
+    "kubelet_running_containers",
+    "kubelet_running_pods",
+    "kubelet_runtime_operations_duration_seconds_bucket",
+    "kubelet_runtime_operations_errors_total",
+    "kubelet_runtime_operations_total",
+    "rest_client_request_duration_seconds_bucket",
+    "rest_client_requests_total",
+    "storage_operation_duration_seconds_bucket",
+    "storage_operation_duration_seconds_count",
+    "storage_operation_errors_total",
+    "volume_manager_total_volumes"
+   ],
+   "also": [],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/kubernetes-prometheus/config.yml"
+   ]
+  },
+  {
+   "id": "kubernetes-integration",
+   "grafana_ids": [],
+   "title_patterns": [],
+   "metric_prefixes": [
+    "kube_",
+    "kubelet_",
+    "container_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "collection-change",
+   "needs": "New Relic Kubernetes integration (infrastructure agent plus kube-state-metrics bundle); data lands in K8sPodSample, K8sNodeSample and K8sContainerSample, not in Prometheus-named metrics.",
+   "mapping_verified": false,
+   "mapping_basis": "quickstart exists; no metric parity measured",
+   "caveat": "Different data path: dashboards read K8s*Sample events, not kube_* Prometheus metrics, so nothing converted carries over.",
+   "quickstart": {
+    "title": "Kubernetes",
+    "slug": "kubernetes",
+    "id": "88a79f52-81c1-4fa2-99f8-3cb5b012f160",
+    "url": "https://newrelic.com/instant-observability/kubernetes/88a79f52-81c1-4fa2-99f8-3cb5b012f160",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/kubernetes/kubernetes/config.yml",
+    "dashboards": [
+     "kubernetes"
+    ],
+    "alert_policies": [
+     "kubernetes"
+    ]
+   },
+   "expected_metrics": [],
+   "also": [],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/kubernetes/kubernetes/config.yml"
+   ]
+  },
+  {
+   "id": "redis-prometheus",
+   "grafana_ids": [
+    11835,
+    763
+   ],
+   "title_patterns": [
+    "\\bredis"
+   ],
+   "metric_prefixes": [
+    "redis_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. Needs redis_exporter.",
+   "mapping_verified": true,
+   "mapping_basis": "quickstart built on redis_exporter names",
+   "caveat": "Prometheus metric names are kept by remote write or the New Relic Prometheus agent, but label names, units and aggregation can differ from the Grafana dashboard.",
+   "quickstart": {
+    "title": "Redis (Prometheus)",
+    "slug": "redis-prometheus",
+    "id": "547a0d7c-e01c-4dab-ada7-c9dc5d2a3a71",
+    "url": "https://newrelic.com/instant-observability/redis-prometheus/547a0d7c-e01c-4dab-ada7-c9dc5d2a3a71",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/redis-prometheus/config.yml",
+    "dashboards": [
+     "redis-prometheus"
+    ],
+    "alert_policies": [
+     "redis-prometheus"
+    ]
+   },
+   "expected_metrics": [
+    "prometheus_server",
+    "redis_blocked_clients",
+    "redis_commands_processed_total",
+    "redis_connected_clients",
+    "redis_evicted_keys_total",
+    "redis_expired_keys_total",
+    "redis_keyspace_hits_total",
+    "redis_keyspace_misses_total",
+    "redis_memory_used_bytes",
+    "redis_net_input_bytes_total",
+    "redis_net_output_bytes_total",
+    "redis_rdb_changes_since_last_save"
+   ],
+   "also": [
+    {
+     "title": "Redis (Infrastructure Agent)",
+     "slug": "redis",
+     "url": "https://newrelic.com/instant-observability/redis/289983fe-378e-4690-9302-2490e2afe11c",
+     "note": "Infrastructure agent Redis integration (RedisSample)"
+    },
+    {
+     "title": "Redis (OpenTelemetry Collector)",
+     "slug": "redis-otel",
+     "url": "https://newrelic.com/instant-observability/redis-otel/6d07c47a-6b4d-4369-98c5-3736ec6d2000",
+     "note": "OpenTelemetry collector redis receiver"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/redis-prometheus/config.yml"
+   ]
+  },
+  {
+   "id": "mongodb-prometheus",
+   "grafana_ids": [
+    2583
+   ],
+   "title_patterns": [
+    "\\bmongodb"
+   ],
+   "metric_prefixes": [
+    "mongodb_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. Needs percona mongodb_exporter (collstats and dbstats names such as mongodb_collstats_latencyStats_*).",
+   "mapping_verified": true,
+   "mapping_basis": "quickstart built on percona exporter names",
+   "caveat": "Prometheus metric names are kept by remote write or the New Relic Prometheus agent, but label names, units and aggregation can differ from the Grafana dashboard. Older mongodb_exporter dashboards use mongodb_op_counters_total, which the quickstart does not contain.",
+   "quickstart": {
+    "title": "MongoDB (Prometheus)",
+    "slug": "mongodb-prometheus",
+    "id": "04f45b0a-e326-4095-be0e-850de867982e",
+    "url": "https://newrelic.com/instant-observability/mongodb-prometheus/04f45b0a-e326-4095-be0e-850de867982e",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/mongodb-prometheus/config.yml",
+    "dashboards": [
+     "mongodb-prometheus"
+    ],
+    "alert_policies": []
+   },
+   "expected_metrics": [
+    "mongodb_collstats_latencyStats_commands_latency",
+    "mongodb_collstats_latencyStats_commands_ops",
+    "mongodb_collstats_latencyStats_reads_latency",
+    "mongodb_collstats_latencyStats_reads_ops",
+    "mongodb_collstats_latencyStats_transactions_latency",
+    "mongodb_collstats_latencyStats_transactions_ops",
+    "mongodb_collstats_latencyStats_writes_latency",
+    "mongodb_collstats_latencyStats_writes_ops",
+    "mongodb_collstats_storageStats_size",
+    "mongodb_dbstats_dataSize",
+    "mongodb_dbstats_indexSize",
+    "mongodb_dbstats_indexes",
+    "mongodb_dbstats_objects",
+    "mongodb_dbstats_views",
+    "mongodb_indexstats_accesses_ops",
+    "mongodb_members_lastHeartbeat",
+    "mongodb_members_lastHeartbeatRecv",
+    "mongodb_members_optimeDate",
+    "mongodb_oplog_stats_size",
+    "mongodb_oplog_stats_storageSize",
+    "mongodb_rs_members_pingMs",
+    "mongodb_ss_connections",
+    "mongodb_ss_metrics_document",
+    "mongodb_ss_metrics_queryExecutor_scanned",
+    "mongodb_ss_metrics_queryExecutor_scannedObjects",
+    "mongodb_ss_opcounters",
+    "mongodb_ss_opcountersRepl",
+    "mongodb_top_getmore_count",
+    "mongodb_top_getmore_time",
+    "mongodb_top_insert_count",
+    "mongodb_top_insert_time",
+    "mongodb_top_queries_count",
+    "mongodb_top_queries_time",
+    "mongodb_top_readLock_count",
+    "mongodb_top_readLock_time",
+    "mongodb_top_remove_count",
+    "mongodb_top_remove_time",
+    "mongodb_top_update_count",
+    "mongodb_top_update_time",
+    "mongodb_top_writeLock_count",
+    "mongodb_top_writeLock_time"
+   ],
+   "also": [
+    {
+     "title": "MongoDB",
+     "slug": "mongodb",
+     "url": "https://newrelic.com/instant-observability/mongodb/6183e12f-a398-48e6-8431-a48db03e4443",
+     "note": "Infrastructure agent MongoDB integration"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/mongodb-prometheus/config.yml"
+   ]
+  },
+  {
+   "id": "argocd",
+   "grafana_ids": [
+    14584
+   ],
+   "title_patterns": [
+    "\\bargo ?cd"
+   ],
+   "metric_prefixes": [
+    "argocd_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. Needs the Argo CD metrics endpoints scraped.",
+   "mapping_verified": true,
+   "mapping_basis": "quickstart built on argocd_* names",
+   "caveat": "Prometheus metric names are kept by remote write or the New Relic Prometheus agent, but label names, units and aggregation can differ from the Grafana dashboard.",
+   "quickstart": {
+    "title": "Argo CD",
+    "slug": "argocd-quickstart",
+    "id": "03b4a3b9-3a59-4603-91dd-6b0ced1d62de",
+    "url": "https://newrelic.com/instant-observability/argocd-quickstart/03b4a3b9-3a59-4603-91dd-6b0ced1d62de",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/argocd/config.yml",
+    "dashboards": [
+     "argocd-dashboard"
+    ],
+    "alert_policies": [
+     "argocd"
+    ]
+   },
+   "expected_metrics": [
+    "app_kubernetes_io_name",
+    "argocd_app_info",
+    "argocd_app_k8s_request_total",
+    "argocd_app_reconcile_bucket",
+    "argocd_app_reconcile_count",
+    "argocd_app_sync_total",
+    "argocd_git_request_duration_seconds_bucket",
+    "argocd_git_request_total",
+    "argocd_kubectl_exec_pending",
+    "dest_server",
+    "grpc_server_handled_total",
+    "health_status",
+    "prometheus_server",
+    "resource_kind",
+    "sync_status",
+    "workqueue_depth"
+   ],
+   "also": [],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/argocd/config.yml"
+   ]
+  },
+  {
+   "id": "coredns",
+   "grafana_ids": [
+    14981
+   ],
+   "title_patterns": [
+    "\\bcoredns"
+   ],
+   "metric_prefixes": [
+    "coredns_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. Needs the CoreDNS prometheus plugin scraped.",
+   "mapping_verified": true,
+   "mapping_basis": "quickstart built on coredns_* names",
+   "caveat": "Prometheus metric names are kept by remote write or the New Relic Prometheus agent, but label names, units and aggregation can differ from the Grafana dashboard.",
+   "quickstart": {
+    "title": "CoreDNS (Prometheus)",
+    "slug": "coredns",
+    "id": "c9ac4abb-4a61-4eee-9e1e-79506806684e",
+    "url": "https://newrelic.com/instant-observability/coredns/c9ac4abb-4a61-4eee-9e1e-79506806684e",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/coredns/config.yml",
+    "dashboards": [
+     "coredns"
+    ],
+    "alert_policies": [
+     "coredns"
+    ]
+   },
+   "expected_metrics": [
+    "coredns_cache_entries",
+    "coredns_cache_hits_total",
+    "coredns_cache_misses_total",
+    "coredns_dns_do_requests_total",
+    "coredns_dns_request_duration_seconds_bucket",
+    "coredns_dns_request_size_bytes_bucket",
+    "coredns_dns_requests_total",
+    "coredns_dns_response_size_bytes_bucket",
+    "coredns_dns_responses_total",
+    "coredns_panics_total",
+    "prometheus_server"
+   ],
+   "also": [],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/coredns/config.yml"
+   ]
+  },
+  {
+   "id": "traefik",
+   "grafana_ids": [
+    4475
+   ],
+   "title_patterns": [
+    "\\btraefik"
+   ],
+   "metric_prefixes": [
+    "traefik_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. Needs the Traefik metrics entry point scraped.",
+   "mapping_verified": true,
+   "mapping_basis": "quickstart built on traefik_* names",
+   "caveat": "Prometheus metric names are kept by remote write or the New Relic Prometheus agent, but label names, units and aggregation can differ from the Grafana dashboard.",
+   "quickstart": {
+    "title": "Traefik (Prometheus)",
+    "slug": "traefik",
+    "id": "9b39d6c5-8623-4fa6-9fef-96305b5ab875",
+    "url": "https://newrelic.com/instant-observability/traefik/9b39d6c5-8623-4fa6-9fef-96305b5ab875",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/traefik/config.yml",
+    "dashboards": [
+     "traefik"
+    ],
+    "alert_policies": [
+     "traefik"
+    ]
+   },
+   "expected_metrics": [
+    "prometheus_server",
+    "traefik_config_last_reload_failure",
+    "traefik_config_last_reload_success",
+    "traefik_config_reloads_failure_total",
+    "traefik_config_reloads_total",
+    "traefik_entrypoint_open_connections",
+    "traefik_entrypoint_request_duration_seconds_bucket",
+    "traefik_entrypoint_request_duration_seconds_sum",
+    "traefik_entrypoint_requests_tls_total",
+    "traefik_entrypoint_requests_total",
+    "traefik_service_open_connections",
+    "traefik_service_request_duration_seconds_bucket",
+    "traefik_service_request_duration_seconds_sum",
+    "traefik_service_requests_tls_total",
+    "traefik_service_requests_total",
+    "traefik_tls_certs_not_after"
+   ],
+   "also": [],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/traefik/config.yml"
+   ]
+  },
+  {
+   "id": "nginx-ingress",
+   "grafana_ids": [
+    9614
+   ],
+   "title_patterns": [
+    "\\bnginx ingress"
+   ],
+   "metric_prefixes": [
+    "nginx_ingress_controller_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. Needs the ingress-nginx controller metrics scraped. The repository has a dashboard and alert policy but no quickstart bundle for it, so it is imported as JSON.",
+   "mapping_verified": true,
+   "mapping_basis": "dashboard built on nginx_ingress_controller_* names",
+   "caveat": "Prometheus metric names are kept by remote write or the New Relic Prometheus agent, but label names, units and aggregation can differ from the Grafana dashboard. Dashboard and alert policy only: not a quickstart you install from Instant Observability.",
+   "quickstart": null,
+   "dashboard_only": {
+    "name": "nginx-ingress",
+    "url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/dashboards/nginx-ingress/nginx-ingress.json",
+    "alert_policies_url": "https://github.com/newrelic/newrelic-quickstarts/tree/main/alert-policies/nginx-ingress"
+   },
+   "expected_metrics": [
+    "controller_pod",
+    "nginx_ingress_controller_config_last_reload_successful",
+    "nginx_ingress_controller_config_last_reload_successful_timestamp_seconds",
+    "nginx_ingress_controller_ingress_upstream_latency_seconds_sum",
+    "nginx_ingress_controller_nginx_process_connections_total",
+    "nginx_ingress_controller_nginx_process_cpu_seconds_total",
+    "nginx_ingress_controller_nginx_process_resident_memory_bytes",
+    "nginx_ingress_controller_request_duration_seconds_bucket",
+    "nginx_ingress_controller_request_size_bucket",
+    "nginx_ingress_controller_request_size_count",
+    "nginx_ingress_controller_requests",
+    "nginx_ingress_controller_response_duration_seconds_bucket",
+    "nginx_ingress_controller_response_size_bucket",
+    "prometheus_server"
+   ],
+   "also": [],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/dashboards/nginx-ingress/nginx-ingress.json"
+   ]
+  },
+  {
+   "id": "nvidia-dcgm",
+   "grafana_ids": [
+    12239
+   ],
+   "title_patterns": [
+    "nvidia|dcgm"
+   ],
+   "metric_prefixes": [
+    "DCGM_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. Needs dcgm-exporter.",
+   "mapping_verified": true,
+   "mapping_basis": "quickstart built on DCGM_FI_* names",
+   "caveat": "Prometheus metric names are kept by remote write or the New Relic Prometheus agent, but label names, units and aggregation can differ from the Grafana dashboard.",
+   "quickstart": {
+    "title": "NVIDIA DCGM",
+    "slug": "nvidia-dcgm",
+    "id": "7f86bb7f-0502-418b-aae7-4ad327964874",
+    "url": "https://newrelic.com/instant-observability/nvidia-dcgm/7f86bb7f-0502-418b-aae7-4ad327964874",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/nvidia-dcgm/config.yml",
+    "dashboards": [
+     "nvidia-dcgm"
+    ],
+    "alert_policies": []
+   },
+   "expected_metrics": [
+    "DCGM_FI_DEV_FB_FREE",
+    "DCGM_FI_DEV_FB_USED",
+    "DCGM_FI_DEV_GPU_TEMP",
+    "DCGM_FI_DEV_GPU_UTIL",
+    "DCGM_FI_DEV_MEM_CLOCK",
+    "DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL",
+    "DCGM_FI_DEV_POWER_USAGE",
+    "DCGM_FI_DEV_SM_CLOCK",
+    "DCGM_FI_DEV_XID_ERRORS"
+   ],
+   "also": [],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/nvidia-dcgm/config.yml"
+   ]
+  },
+  {
+   "id": "envoy",
+   "grafana_ids": [
+    11022,
+    6693
+   ],
+   "title_patterns": [
+    "\\benvoy"
+   ],
+   "metric_prefixes": [
+    "envoy_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. Needs the Envoy admin Prometheus endpoint scraped.",
+   "mapping_verified": true,
+   "mapping_basis": "quickstart built on envoy_* names",
+   "caveat": "Prometheus metric names are kept by remote write or the New Relic Prometheus agent, but label names, units and aggregation can differ from the Grafana dashboard.",
+   "quickstart": {
+    "title": "Envoy",
+    "slug": "envoy",
+    "id": "fd72a021-aa96-413a-ab0a-e4a9609102cc",
+    "url": "https://newrelic.com/instant-observability/envoy/fd72a021-aa96-413a-ab0a-e4a9609102cc",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/envoy/config.yml",
+    "dashboards": [
+     "envoy"
+    ],
+    "alert_policies": [
+     "envoy"
+    ]
+   },
+   "expected_metrics": [
+    "envoy_cluster_bind_errors",
+    "envoy_cluster_manager_active_clusters",
+    "envoy_cluster_manager_warming_clusters",
+    "envoy_cluster_membership_degraded",
+    "envoy_cluster_membership_excluded",
+    "envoy_cluster_membership_healthy",
+    "envoy_cluster_membership_total",
+    "envoy_cluster_update_failure",
+    "envoy_cluster_update_success",
+    "envoy_cluster_upstream_cx_active",
+    "envoy_cluster_upstream_cx_rx_bytes_buffered",
+    "envoy_cluster_upstream_cx_total",
+    "envoy_cluster_upstream_cx_tx_bytes_buffered",
+    "envoy_cluster_upstream_rq_active",
+    "envoy_cluster_upstream_rq_pending_active",
+    "envoy_cluster_upstream_rq_total",
+    "envoy_http_downstream_cx_active",
+    "envoy_http_downstream_cx_length_ms_bucket",
+    "envoy_http_downstream_cx_rx_bytes_buffered",
+    "envoy_http_downstream_cx_rx_bytes_total",
+    "envoy_http_downstream_cx_total",
+    "envoy_http_downstream_cx_tx_bytes_buffered",
+    "envoy_http_downstream_cx_tx_bytes_total",
+    "envoy_http_downstream_rq_active",
+    "envoy_http_downstream_rq_timeout",
+    "envoy_http_downstream_rq_total",
+    "envoy_listener_admin_downstream_cx_active",
+    "envoy_listener_downstream_pre_cx_active",
+    "envoy_listener_manager_listener_added",
+    "envoy_listener_manager_listener_modified",
+    "envoy_listener_manager_listener_removed",
+    "envoy_listener_manager_listener_stopped",
+    "envoy_listener_manager_total_listeners_active",
+    "envoy_listener_manager_total_listeners_draining",
+    "envoy_listener_manager_total_listeners_warming",
+    "envoy_listener_manager_workers_started",
+    "envoy_server_live",
+    "envoy_server_memory_allocated",
+    "envoy_server_memory_heap_size",
+    "envoy_server_memory_physical_size",
+    "envoy_server_uptime"
+   ],
+   "also": [],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/envoy/config.yml"
+   ]
+  },
+  {
+   "id": "velero-prometheus",
+   "grafana_ids": [],
+   "title_patterns": [
+    "\\bvelero"
+   ],
+   "metric_prefixes": [
+    "velero_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. Needs the Velero metrics endpoint scraped.",
+   "mapping_verified": true,
+   "mapping_basis": "quickstart built on velero_* names",
+   "caveat": "Prometheus metric names are kept by remote write or the New Relic Prometheus agent, but label names, units and aggregation can differ from the Grafana dashboard.",
+   "quickstart": {
+    "title": "Velero (Prometheus)",
+    "slug": "velero-prometheus",
+    "id": "dbca2b58-f754-49a2-af7f-0ceca8a9978a",
+    "url": "https://newrelic.com/instant-observability/velero-prometheus/dbca2b58-f754-49a2-af7f-0ceca8a9978a",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/velero-prometheus/config.yml",
+    "dashboards": [
+     "velero-prometheus"
+    ],
+    "alert_policies": [
+     "velero-prometheus"
+    ]
+   },
+   "expected_metrics": [
+    "prometheus_server",
+    "velero_backup_active_total",
+    "velero_backup_attempt_total",
+    "velero_backup_duration_seconds_bucket",
+    "velero_backup_failure_total",
+    "velero_backup_success_total",
+    "velero_backup_tarball_size_bytes",
+    "velero_backup_validation_failure_total",
+    "velero_restore_attempt_total",
+    "velero_restore_failed_total",
+    "velero_restore_success_total"
+   ],
+   "also": [],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/velero-prometheus/config.yml"
+   ]
+  },
+  {
+   "id": "prometheus-agent",
+   "grafana_ids": [],
+   "title_patterns": [],
+   "metric_prefixes": [
+    "prometheus_agent_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "prometheus-same-names",
+   "needs": "Prometheus remote write or the New Relic Prometheus agent. Monitors the New Relic Prometheus agent itself, not a Prometheus server.",
+   "mapping_verified": true,
+   "mapping_basis": "quickstart built on prometheus_agent_* names",
+   "caveat": "Covers prometheus_agent_* only; do not use it to replace Prometheus server dashboards.",
+   "quickstart": {
+    "title": "Prometheus Agent",
+    "slug": "prometheus-agent",
+    "id": "6ce97424-85e0-41c5-b300-afa54bcb6180",
+    "url": "https://newrelic.com/instant-observability/prometheus-agent/6ce97424-85e0-41c5-b300-afa54bcb6180",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/prometheus-agent/config.yml",
+    "dashboards": [
+     "prometheus-agent"
+    ],
+    "alert_policies": [
+     "prometheus-agent"
+    ]
+   },
+   "expected_metrics": [
+    "prometheus_agent_active_series",
+    "prometheus_agent_checkpoint_creations_failed_total",
+    "prometheus_agent_checkpoint_deletions_failed_total",
+    "prometheus_agent_corruptions_total",
+    "prometheus_remote_storage_samples_failed_total",
+    "prometheus_remote_storage_samples_in_total",
+    "prometheus_remote_storage_samples_pending",
+    "prometheus_remote_storage_samples_retried_total",
+    "prometheus_remote_storage_shards",
+    "prometheus_sd_kubernetes_events_total",
+    "prometheus_sd_kubernetes_http_request_total",
+    "prometheus_server",
+    "prometheus_target_interval_length_seconds"
+   ],
+   "also": [],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/prometheus-agent/config.yml"
+   ]
+  },
+  {
+   "id": "postgresql",
+   "grafana_ids": [
+    9628,
+    12485
+   ],
+   "title_patterns": [
+    "\\bpostgre"
+   ],
+   "metric_prefixes": [
+    "pg_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "collection-change",
+   "needs": "Infrastructure agent PostgreSQL integration (PostgresqlInstanceSample, PostgresqlDatabaseSample).",
+   "mapping_verified": false,
+   "mapping_basis": "quickstart exists; no metric parity measured",
+   "caveat": "Different data path: the metrics come from another collector, so metric names, units and dimensions differ and converted queries do not carry over.",
+   "quickstart": {
+    "title": "PostgreSQL",
+    "slug": "postresql",
+    "id": "18ee5d2e-f5dd-4e0a-9616-af9deaa12cb2",
+    "url": "https://newrelic.com/instant-observability/postresql/18ee5d2e-f5dd-4e0a-9616-af9deaa12cb2",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/postgresql/config.yml",
+    "dashboards": [
+     "postgresql"
+    ],
+    "alert_policies": []
+   },
+   "expected_metrics": [],
+   "also": [
+    {
+     "title": "PostgreSQL (OpenTelemetry)",
+     "slug": "postgresql-otel",
+     "url": "https://newrelic.com/instant-observability/postgresql-otel/66c9f0f6-2856-4e1f-a105-2c76a9ab531f",
+     "note": "OpenTelemetry collector postgresql receiver"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/postgresql/config.yml"
+   ]
+  },
+  {
+   "id": "mysql",
+   "grafana_ids": [
+    7362,
+    14057,
+    7371
+   ],
+   "title_patterns": [
+    "\\bmysql"
+   ],
+   "metric_prefixes": [
+    "mysql_",
+    "mysqld_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "collection-change",
+   "needs": "Infrastructure agent MySQL integration (MysqlSample).",
+   "mapping_verified": false,
+   "mapping_basis": "quickstart exists; no metric parity measured",
+   "caveat": "Different data path: the metrics come from another collector, so metric names, units and dimensions differ and converted queries do not carry over.",
+   "quickstart": {
+    "title": "MySQL",
+    "slug": "mysql",
+    "id": "ad9f635b-6496-48a8-b373-9fab81a7f719",
+    "url": "https://newrelic.com/instant-observability/mysql/ad9f635b-6496-48a8-b373-9fab81a7f719",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/mysql/config.yml",
+    "dashboards": [
+     "mysql"
+    ],
+    "alert_policies": [
+     "mysql"
+    ]
+   },
+   "expected_metrics": [],
+   "also": [
+    {
+     "title": "MySQL (OpenTelemetry)",
+     "slug": "mysql-otel",
+     "url": "https://newrelic.com/instant-observability/mysql-otel/7c71081b-085c-4193-8299-8b8aef43a6ea",
+     "note": "OpenTelemetry collector mysql receiver"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/mysql/config.yml"
+   ]
+  },
+  {
+   "id": "nginx",
+   "grafana_ids": [
+    14900
+   ],
+   "title_patterns": [
+    "\\bnginx(?! ingress)"
+   ],
+   "metric_prefixes": [
+    "nginx_"
+   ],
+   "exclude_prefixes": [
+    "nginx_ingress_controller_"
+   ],
+   "data_path": "collection-change",
+   "needs": "Infrastructure agent NGINX integration (NginxSample).",
+   "mapping_verified": false,
+   "mapping_basis": "quickstart exists; no metric parity measured",
+   "caveat": "Different data path: the metrics come from another collector, so metric names, units and dimensions differ and converted queries do not carry over.",
+   "quickstart": {
+    "title": "NGINX (Infrastructure Agent)",
+    "slug": "nginx",
+    "id": "2567c5e0-06de-4ff6-a4f2-6cbe5aed07b3",
+    "url": "https://newrelic.com/instant-observability/nginx/2567c5e0-06de-4ff6-a4f2-6cbe5aed07b3",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/nginx/config.yml",
+    "dashboards": [
+     "nginx"
+    ],
+    "alert_policies": []
+   },
+   "expected_metrics": [],
+   "also": [
+    {
+     "title": "NGINX (OpenTelemetry Collector)",
+     "slug": "nginx-opentelemetry",
+     "url": "https://newrelic.com/instant-observability/nginx-opentelemetry/543a078e-4c92-42e7-b58a-b3bfe24704be",
+     "note": "OpenTelemetry collector nginx receiver"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/nginx/config.yml"
+   ]
+  },
+  {
+   "id": "haproxy",
+   "grafana_ids": [
+    12693
+   ],
+   "title_patterns": [
+    "\\bhaproxy"
+   ],
+   "metric_prefixes": [
+    "haproxy_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "collection-change",
+   "needs": "Infrastructure agent HAProxy integration (HAProxyBackendSample and related).",
+   "mapping_verified": false,
+   "mapping_basis": "quickstart exists; no metric parity measured",
+   "caveat": "Different data path: the metrics come from another collector, so metric names, units and dimensions differ and converted queries do not carry over.",
+   "quickstart": {
+    "title": "HAProxy (Infrastructure Agent)",
+    "slug": "haproxy",
+    "id": "9ce1d531-ac54-4c70-809f-1e4e04db1fd2",
+    "url": "https://newrelic.com/instant-observability/haproxy/9ce1d531-ac54-4c70-809f-1e4e04db1fd2",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/haproxy/config.yml",
+    "dashboards": [
+     "haproxy"
+    ],
+    "alert_policies": []
+   },
+   "expected_metrics": [],
+   "also": [
+    {
+     "title": "HAProxy (OpenTelemetry Collector)",
+     "slug": "haproxy-opentelemetry",
+     "url": "https://newrelic.com/instant-observability/haproxy-opentelemetry/d7a3f1e2-8b4c-4f6d-9e1a-2c5b7d8f3a01",
+     "note": "OpenTelemetry collector haproxy receiver"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/haproxy/config.yml"
+   ]
+  },
+  {
+   "id": "rabbitmq",
+   "grafana_ids": [
+    10991
+   ],
+   "title_patterns": [
+    "\\brabbitmq"
+   ],
+   "metric_prefixes": [
+    "rabbitmq_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "collection-change",
+   "needs": "Infrastructure agent RabbitMQ integration (RabbitmqQueueSample).",
+   "mapping_verified": false,
+   "mapping_basis": "quickstart exists; no metric parity measured",
+   "caveat": "Different data path: the metrics come from another collector, so metric names, units and dimensions differ and converted queries do not carry over.",
+   "quickstart": {
+    "title": "RabbitMQ (Infrastructure Agent)",
+    "slug": "rabbitmq",
+    "id": "523d091a-7949-433b-91cf-ae2736251af7",
+    "url": "https://newrelic.com/instant-observability/rabbitmq/523d091a-7949-433b-91cf-ae2736251af7",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/rabbitmq/config.yml",
+    "dashboards": [
+     "rabbitmq"
+    ],
+    "alert_policies": []
+   },
+   "expected_metrics": [],
+   "also": [
+    {
+     "title": "RabbitMQ (OpenTelemetry Collector)",
+     "slug": "rabbitmq-opentelemetry",
+     "url": "https://newrelic.com/instant-observability/rabbitmq-opentelemetry/e82c2e4d-2a15-4f67-b89e-5c1d8f4e3a2b",
+     "note": "OpenTelemetry collector rabbitmq receiver"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/rabbitmq/config.yml"
+   ]
+  },
+  {
+   "id": "kafka",
+   "grafana_ids": [],
+   "title_patterns": [
+    "\\bkafka"
+   ],
+   "metric_prefixes": [
+    "kafka_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "collection-change",
+   "needs": "Infrastructure agent Kafka integration (KafkaBrokerSample).",
+   "mapping_verified": false,
+   "mapping_basis": "quickstart exists; no metric parity measured",
+   "caveat": "Different data path: the metrics come from another collector, so metric names, units and dimensions differ and converted queries do not carry over.",
+   "quickstart": {
+    "title": "Kafka (Infrastructure Agent)",
+    "slug": "kafka",
+    "id": "9c559112-90e1-4ff4-b38b-90c0ba3c56fe",
+    "url": "https://newrelic.com/instant-observability/kafka/9c559112-90e1-4ff4-b38b-90c0ba3c56fe",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/kafka/config.yml",
+    "dashboards": [
+     "kafka"
+    ],
+    "alert_policies": []
+   },
+   "expected_metrics": [],
+   "also": [
+    {
+     "title": "Kafka (OpenTelemetry Collector)",
+     "slug": "kafka-opentelemetry",
+     "url": "https://newrelic.com/instant-observability/kafka-opentelemetry/f0f94ef1-bc91-4cad-b0d6-229bd069bdb8",
+     "note": "OpenTelemetry collector kafka metrics receiver"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/kafka/config.yml"
+   ]
+  },
+  {
+   "id": "elasticsearch",
+   "grafana_ids": [],
+   "title_patterns": [
+    "\\belasticsearch"
+   ],
+   "metric_prefixes": [
+    "elasticsearch_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "collection-change",
+   "needs": "Infrastructure agent Elasticsearch integration.",
+   "mapping_verified": false,
+   "mapping_basis": "quickstart exists; no metric parity measured",
+   "caveat": "Different data path: the metrics come from another collector, so metric names, units and dimensions differ and converted queries do not carry over.",
+   "quickstart": {
+    "title": "Elasticsearch (Infrastructure Agent)",
+    "slug": "elasticsearch",
+    "id": "d42f2744-3d69-4860-97af-ec9e75885038",
+    "url": "https://newrelic.com/instant-observability/elasticsearch/d42f2744-3d69-4860-97af-ec9e75885038",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/elasticsearch/config.yml",
+    "dashboards": [
+     "elasticsearch-elasticsearch"
+    ],
+    "alert_policies": [
+     "elasticsearch"
+    ]
+   },
+   "expected_metrics": [],
+   "also": [
+    {
+     "title": "Elasticsearch (OpenTelemetry Collector)",
+     "slug": "elasticsearch-opentelemetry",
+     "url": "https://newrelic.com/instant-observability/elasticsearch-opentelemetry/4b8900d1-df3b-496c-a22e-8e419e4c2776",
+     "note": "OpenTelemetry collector elasticsearch receiver"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/elasticsearch/config.yml"
+   ]
+  },
+  {
+   "id": "docker",
+   "grafana_ids": [
+    14282
+   ],
+   "title_patterns": [
+    "cadvisor|^docker"
+   ],
+   "metric_prefixes": [
+    "container_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "collection-change",
+   "needs": "Infrastructure agent Docker integration (ContainerSample).",
+   "mapping_verified": false,
+   "mapping_basis": "quickstart exists; cAdvisor-to-ContainerSample parity not measured",
+   "caveat": "Different data path: the metrics come from another collector, so metric names, units and dimensions differ and converted queries do not carry over. cAdvisor on Kubernetes is covered by kubernetes-prometheus instead.",
+   "quickstart": {
+    "title": "Docker (Infrastructure Agent)",
+    "slug": "docker",
+    "id": "ba8030a4-7351-4798-ae36-d74d08f39e4e",
+    "url": "https://newrelic.com/instant-observability/docker/ba8030a4-7351-4798-ae36-d74d08f39e4e",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/docker/config.yml",
+    "dashboards": [],
+    "alert_policies": []
+   },
+   "expected_metrics": [],
+   "also": [
+    {
+     "title": "Docker (OpenTelemetry Collector)",
+     "slug": "docker-otel",
+     "url": "https://newrelic.com/instant-observability/docker-otel/67298fce-4bbe-40d0-8cda-b80aad183794",
+     "note": "OpenTelemetry collector docker stats receiver"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/docker/config.yml"
+   ]
+  },
+  {
+   "id": "java-apm",
+   "grafana_ids": [
+    4701
+   ],
+   "title_patterns": [
+    "jvm|micrometer"
+   ],
+   "metric_prefixes": [
+    "jvm_"
+   ],
+   "exclude_prefixes": [],
+   "data_path": "collection-change",
+   "needs": "New Relic Java APM agent (JVM metrics under the agent, not jvm_* Micrometer names).",
+   "mapping_verified": false,
+   "mapping_basis": "quickstart exists; no metric parity measured",
+   "caveat": "Different data path: the metrics come from another collector, so metric names, units and dimensions differ and converted queries do not carry over. Micrometer jvm_* gauges from a Prometheus scrape are not the same as APM JVM metrics.",
+   "quickstart": {
+    "title": "Java",
+    "slug": "java",
+    "id": "3ebfb315-d0a6-4b27-9f89-b16a9a1ada5f",
+    "url": "https://newrelic.com/instant-observability/java/3ebfb315-d0a6-4b27-9f89-b16a9a1ada5f",
+    "config_url": "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/java/java/config.yml",
+    "dashboards": [
+     "java"
+    ],
+    "alert_policies": [
+     "java"
+    ]
+   },
+   "expected_metrics": [],
+   "also": [
+    {
+     "title": "Micrometer",
+     "slug": "micrometer",
+     "url": "https://newrelic.com/instant-observability/micrometer/95e7fd2d-b9a9-4088-ba1d-a2f5d208dbdc",
+     "note": "Micrometer New Relic registry sends dimensional metrics; metric names not verified against jvm_* Prometheus names"
+    }
+   ],
+   "verified": true,
+   "evidence": [
+    "https://github.com/newrelic/newrelic-quickstarts/blob/main/quickstarts/java/java/config.yml"
+   ]
+  }
+ ]
+}
