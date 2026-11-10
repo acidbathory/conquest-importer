@@ -1,0 +1,639 @@
+# Variables that stay manual; without(); raw counters.
+
+[[blocker]]
+key = "variables"
+title = "Dashboard variables that stay manual"
+titles = [
+  "Dashboard panel using a variable that stays manual",
+  "Dashboard variable query",
+  "Dashboard variable regex",
+  "Dashboard nested variable",
+  "Dashboard ad hoc variable",
+  "Dashboard query using a variable that did not convert",
+  "Dashboard interval or data source variables dropped",
+  "Dashboard variable type",
+  "Dashboard variable name",
+]
+scope = "153 widgets on 9 dashboards wait for a variable that stayed manual; 21 variables use query_result() or another unreadable form (2026-11-10 test estate)."
+summary = '''
+Most Grafana variables convert (label_values, custom, textbox, chained). The ones that do not are
+`query_result()` of an expression, ad hoc filters, regexes with capture groups, `${var:csv}` formats, variables
+inside a label name, and the interval and data source variables. A New Relic dashboard variable runs one NRQL
+query (type nrql), shows a fixed list (enum) or takes free text (string); it is substituted whole into the
+WHERE, FACET, SELECT or FROM of a widget, never into TIMESERIES, LIMIT, SINCE or COMPARE WITH. Every panel that
+uses a manual variable is stuck until the variable exists, so this is where to start a dashboard.
+'''
+decision = [
+  "Is the Grafana variable a list of label values? Write it as a query variable with uniques() (method 1).",
+  "Is it an ad hoc filter, or a group-by chooser? Use a text variable with LIKE, or an identifier variable after FACET (method 2).",
+  "Does the list come from an expression (query_result) or a regex capture? Replace it with a static list generated once (method 3).",
+  "Is the label missing from the New Relic data (cluster, environment, tenant)? Add it at ingest so the variable has something to list (method 4).",
+  "Is it an interval, data source or `allValue` variable? Accept the difference (method 5).",
+]
+ask = [
+  "Open the Grafana variable: is it label_values, an expression, a regex, or free text? What does a user pick from it?",
+  "Do users really use 'All' and multi-select, or always one value?",
+  "Is the label present on the metric in New Relic? (`SELECT keyset() FROM Metric WHERE metricName = '<metric>'`)",
+  "Is the New Relic plan one that supports nested variables (Pro, Enterprise, Core Compute)?",
+]
+cannot = "New Relic has no ad hoc filter variable, no variable in TIMESERIES, LIMIT, SINCE, COMPARE WITH or SLIDE BY (so no $__interval as a bucket), no text mixed with a variable (`\"x-$job\"`), and no 'allValue' regex."
+
+[[blocker.method]]
+id = "query-variable"
+family = "C"
+name = "A query variable with uniques(), used as IN ({{name}})"
+when = '''Choose this for every label_values() style variable the converter could not read: write the list query by hand and tick multi-select. It is the direct counterpart and keeps the dashboard fully interactive.'''
+prerequisites = "The label exists on the metric. Nested variables (a child that uses {{parent}}) need Pro, Enterprise or Core Compute and a parent with a selection."
+needs_collector = false
+needs_reingest = false
+latency = "None; the list is refreshed when the dashboard loads (query variables ignore the time picker by default and read one hour)."
+changes = '''uniques() returns up to 5,000 values by default (10,000 at most), over the variable's window, not the 'latest sample'. Widgets must say `IN ({{name}})`, never `=`, when multi-select is on. Selecting 'All' is `["*"]`.'''
+effort = "15 minutes"
+risk = '''A widget that uses `=` breaks when two values are picked. A child variable shows nothing until the parent has a value.'''
+verify = '''Run the list query alone and compare with Grafana's dropdown. Pick two values and check that both appear in the widget result.'''
+status = "VERIFIED-VALID"
+evidence = "Both queries accepted by New Relic 2026-11-10 with the variable replaced by a literal; the variable block follows the repository's own emitter and the Terraform provider schema."
+sources = [
+  "https://docs.newrelic.com/docs/query-your-data/explore-query-data/dashboards/dashboard-template-variables/",
+  "https://docs.newrelic.com/docs/query-your-data/explore-query-data/dashboards/nested-variables/",
+  "https://docs.newrelic.com/docs/apis/nerdgraph/examples/nerdgraph-dashboards/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Variable query: label_values(kube_pod_info{cluster=~\"$cluster\"}, namespace)"
+  subst = { cluster = "'prod-a'" }
+  text = '''
+SELECT uniques(namespace) FROM Metric WHERE metricName = 'kube_pod_info' AND cluster IN ({{cluster}})
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Widget that uses the multi-select variable"
+  subst = { namespace = "'web', 'payments'" }
+  text = '''
+SELECT uniqueCount(pod) FROM Metric WHERE metricName = 'kube_pod_info' AND namespace IN ({{namespace}}) FACET node
+'''
+
+  [[blocker.method.example]]
+  kind = "hcl"
+  title = "The same variable in Terraform (inside a newrelic_one_dashboard resource)"
+  text = '''
+variable {
+  name                 = "namespace"
+  title                = "Namespace"
+  type                 = "nrql"
+  replacement_strategy = "default"
+  default_values       = ["*"]
+  is_multi_selection   = true
+
+  nrql_query {
+    account_ids = [var.account_id]
+    query       = "SELECT uniques(namespace) FROM Metric WHERE metricName = 'kube_pod_info' AND cluster IN ({{cluster}})"
+  }
+}
+'''
+
+[[blocker.method]]
+id = "text-and-identifier"
+family = "C"
+name = "Ad hoc filters and group-by choosers: a text variable with LIKE, an identifier variable after FACET"
+when = '''Choose this when users typed a free filter ('pod name contains ...') or picked the label to group by. The two New Relic variable kinds that cover most of an ad hoc filter bar.'''
+prerequisites = "Text variables cannot be multi-select. An identifier variable lists attribute names (a list variable or a keyset() query)."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''One free-text filter and one group-by instead of an open-ended filter bar. A text variable can hold a LIKE pattern such as %web%; an identifier variable is placed into FACET or SELECT as a name, not a value.'''
+effort = "20 minutes"
+risk = '''A text variable with an unescaped quote breaks the query for that user only. Identifier variables must be restricted to a list of safe attribute names.'''
+verify = '''Type a pattern that matches nothing and one that matches everything; pick each group-by value in turn.'''
+status = "VERIFIED-VALID"
+evidence = "Both queries accepted 2026-11-10 after replacing the variables by literals; the replacement strategies are described on the variables page."
+sources = [
+  "https://docs.newrelic.com/docs/query-your-data/explore-query-data/dashboards/dashboard-template-variables/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Text variable 'podfilter' (value %web%)"
+  subst = { podfilter = "'%web%'" }
+  text = '''
+SELECT latest(kube_pod_info) FROM Metric WHERE metricName = 'kube_pod_info' AND pod LIKE {{podfilter}} FACET pod, node LIMIT 50
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Identifier variable 'groupby' (list: node, namespace, cluster) chosen after FACET"
+  subst = { groupby = "node" }
+  text = '''
+SELECT uniqueCount(pod) FROM Metric WHERE metricName = 'kube_pod_info' FACET {{groupby}} LIMIT 50
+'''
+
+[[blocker.method]]
+id = "static-list"
+family = "C"
+name = "Replace an unreadable variable (query_result, regex capture) by a generated static list"
+when = '''Choose this when the Grafana variable is computed by an expression (`query_result(topk(5, ...))`) or by a regex that New Relic cannot run, and the list changes rarely. The list is generated once from the data and pasted in as an enum.'''
+prerequisites = "A one-time NRQL query to list the values; a person to refresh the list when it goes stale."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''The list is frozen at generation time (a new namespace does not appear until someone adds it). Computed lists (top 5 by CPU) become fixed lists; if the ranking matters, put the ranking in a table widget instead.'''
+effort = "20 minutes"
+risk = '''Stale list. Document the refresh in the dashboard description and put a calendar reminder on it.'''
+verify = '''Compare the generated list with the Grafana dropdown at the same moment; open the dashboard as a user who has never seen it.'''
+status = "VERIFIED-VALID"
+evidence = "Generator query accepted 2026-11-10; the Terraform enum block follows the repository emitter."
+sources = [
+  "https://docs.newrelic.com/docs/query-your-data/explore-query-data/dashboards/dashboard-template-variables/",
+  "https://registry.terraform.io/providers/newrelic/newrelic/latest/docs/resources/one_dashboard",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Generate the values once (copy the output into the enum)"
+  text = '''
+SELECT uniques(namespace, 200) FROM Metric WHERE metricName = 'kube_pod_info'
+'''
+
+  [[blocker.method.example]]
+  kind = "hcl"
+  title = "Enum variable in Terraform"
+  text = '''
+variable {
+  name                 = "namespace"
+  title                = "Namespace"
+  type                 = "enum"
+  replacement_strategy = "default"
+  default_values       = ["web"]
+  is_multi_selection   = true
+
+  item { value = "web" }
+  item { value = "payments" }
+  item { value = "monitoring" }
+}
+'''
+
+[[blocker.method]]
+id = "add-label-at-ingest"
+family = "A"
+name = "Add the missing label at ingest (cluster, environment) so the variable has something to list"
+when = '''Choose this when the Grafana variable filters on a label that Prometheus adds at query time or through external_labels (cluster, region, tenant) and the label is not on the series in New Relic. Without it no variable query can list the values.'''
+prerequisites = "Access to the Prometheus remote_write block, or the Alloy / collector pipeline."
+needs_collector = true
+needs_reingest = true
+latency = "None; applies from the next scrape."
+changes = '''New data carries the label; old data does not (the variable lists only periods after the change). One more attribute per point has no per-point price in New Relic (cost follows bytes ingested), but raises cardinality only if the value varies.'''
+effort = "1 hour"
+risk = '''Label name collisions with attributes New Relic uses (metricName, entity.*). A relabel rule that matches too widely rewrites every metric.'''
+verify = '''After 5 minutes: `SELECT uniques(cluster) FROM Metric WHERE metricName = 'up'` lists the new value. Then refresh the dashboard variable.'''
+status = "DOC-ONLY"
+evidence = "write_relabel_configs read on the New Relic remote write page; the Alloy block follows the prometheus.relabel reference. Not run."
+sources = [
+  "https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/install-configure-remote-write/set-your-prometheus-remote-write-integration/",
+  "https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.relabel/",
+]
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Prometheus remote_write: stamp every series with the cluster name"
+  text = '''
+remote_write:
+  - url: https://metric-api.newrelic.com/prometheus/v1/write?prometheus_server=prod-a
+    authorization:
+      credentials_file: /etc/prometheus/nr-license-key
+    write_relabel_configs:
+      - target_label: cluster
+        replacement: prod-a
+'''
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "Grafana Alloy: the same with prometheus.relabel"
+  text = '''
+prometheus.relabel "stamp" {
+  forward_to = [prometheus.remote_write.newrelic.receiver]
+  rule {
+    target_label = "cluster"
+    replacement  = "prod-a"
+  }
+}
+'''
+
+[[blocker.method]]
+id = "accept-interval-vars"
+family = "F"
+name = "Accept: interval, data source and allValue variables disappear"
+when = '''Choose this for $__interval, $__rate_interval, data source pickers and Grafana's allValue regex. There is nothing to convert; the dashboard behaves differently on purpose.'''
+prerequisites = "Tell the dashboard owners before cut-over."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''TIMESERIES AUTO picks the bucket from the time picker (no user control, and it ignores the scrape interval). One account is queried. 'All' means ["*"]; the allValue regex is ignored.'''
+effort = "5 minutes"
+risk = '''Rate charts can swing if the automatic bucket is not a multiple of the scrape interval; fix the bucket in the widget (TIMESERIES 1 minute) when it matters.'''
+verify = '''Open the migrated chart at two time ranges and check that the rate stays level (not alternating).'''
+status = "VERIFIED-VALID"
+evidence = "Fixed-bucket query accepted 2026-11-10. The swing was measured earlier (docs/research/live-grafana-counter-roundtrip.md: 5 s buckets on 10 s data alternate 0 and 2.4 around 1.2)."
+sources = [
+  "https://docs.newrelic.com/docs/query-your-data/explore-query-data/dashboards/dashboard-template-variables/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Fix the bucket to a multiple of the scrape interval when the automatic one swings"
+  text = '''
+SELECT rate(sum(nginx_ingress_controller_requests), 1 second) FROM Metric FACET ingress TIMESERIES 1 minute
+'''
+
+[[blocker]]
+key = "without"
+title = "without() grouping"
+titles = [
+  "Dashboard query time or range function",
+  "PromQL feature with no alert-condition equivalent",
+  "Dashboard query grouping",
+]
+match = '\bwithout\b'
+scope = "67 widgets on 3 dashboards (Vault, Node Exporter variants, kube-state); 1 of 55 alert rules (2026-11-10 test estate)."
+summary = '''
+`sum without (cpu) (rate(node_cpu_seconds_total[5m]))` means 'group by every label except cpu'. NRQL can
+only say which labels to keep (FACET a, b, c, up to 5), never which to drop, so the converter needs the full label
+list of the series. `SELECT keyset()` gives that list; the rest is a decision about which labels matter.
+Dropping a label in the pipeline looks like a shortcut but is wrong unless the pipeline also adds the values up.
+'''
+decision = [
+  "Dashboard and 5 or fewer labels remain after removing the dropped ones? Write them in FACET (method 1).",
+  "More than 5 remain, or users want to choose the grouping? Keep the 2-3 labels that matter, or use an identifier variable (method 2).",
+  "The panel is hot or the label set is huge? Aggregate at the source (method 3) with a recording rule or aggregate_on_attributes, NOT a plain labeldrop.",
+  "Alert? FACET on the identifying labels; each facet is its own signal (method 4).",
+]
+ask = [
+  "Which labels does the metric have and which of them does anyone use to read the chart? (keyset)",
+  "Is the dropped label high-cardinality (cpu, pod, container id) and the remaining set small?",
+  "Do you own the scrape and remote write configuration?",
+]
+cannot = "NRQL cannot express 'all labels except'. FACET takes at most 5 attributes, so a metric whose useful identity needs 6 or more labels cannot be grouped exactly in one query."
+
+[[blocker.method]]
+id = "facet-remaining"
+family = "B"
+name = "List the remaining labels in FACET (found with keyset())"
+when = '''Choose this when the remaining labels are 5 or fewer. Step 1 finds the labels; step 2 writes them into FACET. This is the faithful translation.'''
+prerequisites = "keyset() on the metric to see the label list. Constant labels (job, prometheus_server) can be left out because they do not split anything."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Numbers equal Prometheus when every label that varies is in FACET; labels left out are merged (summed), which is what without() would have done only for the dropped label.'''
+effort = "15 minutes"
+risk = '''Leaving out a label that varies merges series that Prometheus kept apart (under-reading each group). More than 5 labels cannot be written.'''
+verify = '''Add up the FACET rows: the total must equal the same query without FACET. Compare one row with the Grafana legend value.'''
+status = "VERIFIED-VALUE"
+evidence = "Run 2026-11-10: sum of the per-(instance, mode) rates equals the unfaceted total rate on node_cpu_seconds_total."
+sources = [
+  "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Step 1: which labels does the metric have?"
+  text = '''
+SELECT keyset() FROM Metric WHERE metricName = 'node_cpu_seconds_total'
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Step 2: sum without (cpu) (rate(node_cpu_seconds_total[5m]))  keeps instance and mode"
+  text = '''
+SELECT rate(sum(node_cpu_seconds_total), 1 second) FROM Metric FACET instance, mode LIMIT MAX TIMESERIES 5 minutes
+'''
+
+[[blocker.method]]
+id = "identifier-variable"
+family = "C"
+name = "Let the user choose the grouping (identifier variable) or keep the two labels that matter"
+when = '''Choose this when more than 5 labels remain, or when nobody reads more than two of them. Grafana's without() was usually a convenience, not a requirement.'''
+prerequisites = "A short list of attribute names for the variable."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''The chart shows the grouping the user picked, not 'everything except cpu'. Series that differ only in labels outside the grouping are summed.'''
+effort = "20 minutes"
+risk = '''Hidden merges: say in the widget title which labels are summed together.'''
+verify = '''Switch the variable through every value; the grand total must not change.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10 with the variable replaced by a literal."
+sources = [
+  "https://docs.newrelic.com/docs/query-your-data/explore-query-data/dashboards/dashboard-template-variables/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Identifier variable 'by' (list: mode, cpu, instance)"
+  subst = { by = "mode" }
+  text = '''
+SELECT rate(sum(node_cpu_seconds_total), 1 second) FROM Metric FACET {{by}} LIMIT MAX TIMESERIES 5 minutes
+'''
+
+[[blocker.method]]
+id = "aggregate-without-at-source"
+family = "A"
+name = "Drop the label at the source by aggregating (not by labeldrop)"
+when = '''Choose this when the label is useless downstream (per-cpu, per-pod-uid) and the volume matters. The aggregation must add the values; a plain labeldrop creates duplicate series with the same labels and the backend keeps one sample, losing data.'''
+prerequisites = "Prometheus rule files or an OpenTelemetry Collector; a decision whether to keep the raw series."
+needs_collector = true
+needs_reingest = true
+latency = "One rule interval."
+changes = '''Cuts the series count and the ingest bill by the dropped label's cardinality. History keeps the old shape. The aggregate is a rate or a sum computed outside New Relic.'''
+effort = "1-2 hours"
+risk = '''labeldrop without aggregation collapses series silently: duplicates are rejected or one value wins. Test on one metric first.'''
+verify = '''Compare `SELECT rate(sum(raw), 1 second)` on the raw series with `SELECT latest(recorded)` on the new series: equal within the rule interval.'''
+status = "DOC-ONLY"
+evidence = "Syntax read in the Prometheus rules page and the transformprocessor README (aggregate_on_attributes). Not run. The NRQL form was accepted but the recorded series does not exist in the sandbox."
+sources = [
+  "https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/",
+  "https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor",
+]
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Prometheus recording rule: the exact sum without (cpu)(rate(...))"
+  text = '''
+groups:
+  - name: cpu
+    rules:
+      - record: instance_mode:node_cpu_seconds:rate5m
+        expr: sum without (cpu) (rate(node_cpu_seconds_total[5m]))
+'''
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "OpenTelemetry Collector: keep instance and mode, add the rest up"
+  text = '''
+processors:
+  transform/no_cpu:
+    metric_statements:
+      - aggregate_on_attributes("sum", ["instance", "mode"]) where metric.name == "node_cpu_seconds_total"
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Chart the recorded series"
+  text = '''
+SELECT latest(`instance_mode:node_cpu_seconds:rate5m`) FROM Metric FACET instance, mode TIMESERIES 5 minutes
+'''
+
+[[blocker.method]]
+id = "alert-facet-identity"
+family = "D"
+name = "Alerts: FACET on the identifying labels; every facet is its own signal"
+when = '''Choose this for an alert rule with without(). A condition cannot use 'all except', but a faceted condition evaluates each combination separately, which is what the Grafana rule did per series.'''
+prerequisites = "At most 5 identifying labels; at most 20,000 facet values; no LIMIT in a condition."
+needs_collector = false
+needs_reingest = false
+latency = "Aggregation window plus delay."
+changes = '''Each facet is a separate signal and opens its own alert event. Labels you leave out are summed or averaged by the function you use.'''
+effort = "20 minutes"
+risk = '''Alert storm if the FACET has many values; set a threshold duration and group in the workflow.'''
+verify = '''Preview the condition: the number of lines equals the number of series Grafana evaluated.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10 (read-only). Not created as a condition."
+sources = [
+  "https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Per-instance load, without caring about the other labels"
+  text = '''
+SELECT average(node_load1) FROM Metric FACET instance
+'''
+
+[[blocker]]
+key = "raw-counter"
+title = "Counters read without rate()"
+titles = [
+  "Dashboard query on a raw counter",
+  "PromQL counter metric",
+  "PromQL counter name",
+  "PromQL counter rate without sum",
+  "PromQL counter rate aggregation",
+  "PromQL counter rate reducer",
+  "PromQL counter range",
+]
+scope = "66 widgets on 16 dashboards; 4 alert rules with rate() but no sum() (2026-11-10 test estate)."
+summary = '''
+Prometheus counters only ever grow; Grafana panels show them through rate()/increase(), and a few show the raw
+running total. New Relic stores a Prometheus counter as a delta: each point is the increase since the previous
+scrape. Remote write decides this from the name: `_total`, `_count` and `_bucket` become 'count' metrics, `_sum` a
+summary, everything else a gauge. So `sum(x)` per bucket already IS the increase, `rate(sum(x), 1 second)` is the
+per-second rate, and the raw running total cannot be drawn. A counter without one of those suffixes is stored as a
+gauge, and then rate(sum()) is wrong.
+'''
+decision = [
+  "Panel wants a per-second rate? rate(sum(x), 1 second) (method 1).",
+  "Panel wants 'how many in this period' (stat or bar)? sum(x) over the picker window (method 2).",
+  "The metric name has no _total/_count/_bucket suffix? Tell remote write it is a counter (method 3).",
+  "Data arrives over OTLP with cumulative temporality? Convert to delta in the collector (method 4).",
+  "Alert on a counter? Use sum() per window or a ratio, not rate() (method 5).",
+  "Someone truly needs the raw running total? There is no way to draw it from deltas (method 6).",
+]
+ask = [
+  "Is the panel a rate, an increase or the raw value?",
+  "How does the data reach New Relic: Prometheus remote write, OTLP, or a New Relic integration?",
+  "Does the metric name end in _total, _count or _bucket? If not, is it still a counter?",
+]
+cannot = "A raw, ever-growing counter line cannot be drawn from delta data: there is no cumulative-sum function in NRQL (none in the NRQL function reference)."
+
+[[blocker.method]]
+id = "rate-of-sum"
+family = "B"
+name = "rate(sum(x), 1 second) for the per-second rate"
+when = '''Choose this for every `rate()`, `irate()` and `increase()/seconds` panel on a counter that remote write recognised. It is the baseline translation New Relic itself uses and was measured exact against the sent data.'''
+prerequisites = "The metric is stored as a count (name ends in _total, _count or _bucket, or was tagged by newrelic_metric_type)."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Per bucket, exact when the bucket is a multiple of the scrape interval; otherwise the chart swings around the right mean (5 s buckets on 10 s data alternate 0 and 2.4 around 1.2). `irate` becomes the same average rate, not the last two samples. A stat divides by the window, so a window longer than the data lowers the value.'''
+effort = "10 minutes"
+risk = '''A counter stored as a gauge (no suffix) gives a rate that is too high by the number of scrapes. A bucket shorter than the scrape interval swings.'''
+verify = '''Over a window with data: sum of the per-bucket sums must equal sum() for the whole window (method 2). Compare with Grafana at the same step. See docs/research/live-grafana-counter-roundtrip.md for the measured match.'''
+status = "VERIFIED-VALUE"
+evidence = "Run 2026-11-10: sum over 1 day equals the sum of the 1-hour bucket sums for nginx_ingress_controller_requests. Earlier live round trip (2026-11-10, counter-roundtrip note) matched rate and increase to the arithmetic."
+sources = [
+  "https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/install-configure-remote-write/set-your-prometheus-remote-write-integration/",
+  "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "sum by (ingress) (rate(nginx_ingress_controller_requests[5m]))"
+  text = '''
+SELECT rate(sum(nginx_ingress_controller_requests), 1 second) FROM Metric FACET ingress LIMIT MAX TIMESERIES 5 minutes
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Error ratio from two counters"
+  text = '''
+SELECT filter(sum(nginx_ingress_controller_requests), WHERE status LIKE '5%') / sum(nginx_ingress_controller_requests) * 100 AS 'error percent' FROM Metric FACET ingress TIMESERIES 5 minutes
+'''
+
+[[blocker.method]]
+id = "sum-for-increase"
+family = "B"
+name = "sum(x) for 'how many in the period' (increase, stat of a counter)"
+when = '''Choose this for stat, bar and table widgets that show the increase over the dashboard time range: `increase(x[$__range])` and 'total requests today'.'''
+prerequisites = "The metric is a delta count in New Relic."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Exactly the increase seen in the range (Prometheus extrapolates at the edges; New Relic does not). `rate(sum(x), 1 hour)` is NOT the same: it scales the window's rate to an hour (measured 4,386 for 720 events seen).'''
+effort = "5 minutes"
+risk = '''Choosing rate(sum(), 1 hour) by mistake overstates a short window.'''
+verify = '''`SELECT sum(x)` for the range equals the sum of its TIMESERIES buckets.'''
+status = "VERIFIED-VALUE"
+evidence = "Run 2026-11-10: the total over 1 day equals the sum of the hourly buckets (nginx_ingress_controller_requests)."
+sources = [
+  "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "increase(http_server_requests_seconds_count[$__range]) by (status)"
+  text = '''
+SELECT sum(http_server_requests_seconds_count) FROM Metric FACET status LIMIT MAX
+'''
+
+[[blocker.method]]
+id = "tag-counter-type"
+family = "A"
+name = "Tell remote write that an oddly named metric is a counter"
+when = '''Choose this when the counter has no _total, _count or _bucket suffix (exporters with legacy names) and so was stored as a gauge. The rate or increase of such a metric is wrong until it is tagged.'''
+prerequisites = "Access to the Prometheus remote_write block. New data only."
+needs_collector = true
+needs_reingest = true
+latency = "None; applies from the next remote write batch."
+changes = '''New points are stored as count (delta). Old points stay gauge: charts that span the change are wrong around it; start comparison after the change. The label is removed by New Relic on receipt.'''
+effort = "30 minutes"
+risk = '''A regex that also matches real gauges turns them into counters and their values into deltas.'''
+verify = '''After the change, `SELECT min(x), max(x) FROM Metric WHERE metricName = '<name>'`: a delta counter has small values and many zeros; a gauge shows the running total.'''
+status = "DOC-ONLY"
+evidence = "The newrelic_metric_type override and the suffix rule are quoted from the New Relic remote write page (read 2026-11-10). Not run."
+sources = [
+  "https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/install-configure-remote-write/set-your-prometheus-remote-write-integration/",
+]
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Prometheus remote_write: declare process_cpu_seconds as a counter (example of a name without a recognised suffix)"
+  text = '''
+remote_write:
+  - url: https://metric-api.newrelic.com/prometheus/v1/write?prometheus_server=prod-a
+    authorization:
+      credentials_file: /etc/prometheus/nr-license-key
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: "^(legacy_events_processed|node_network_receive_bytes)$"
+        target_label: newrelic_metric_type
+        replacement: counter
+        action: replace
+'''
+
+[[blocker.method]]
+id = "cumulative-to-delta"
+family = "A"
+name = "OTLP sources: convert cumulative counters to delta in the collector"
+when = '''Choose this when the counters come in over OpenTelemetry (not Prometheus remote write) with cumulative temporality. New Relic prefers delta; cumulative works but costs more memory and ingest.'''
+prerequisites = "An OpenTelemetry Collector (contrib build) in the path; SDKs can instead set OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta."
+needs_collector = true
+needs_reingest = true
+latency = "None; the first point after a restart is dropped or kept depending on initial_value."
+changes = '''Stateful: the processor remembers the last value per series, so a restart loses one interval (initial_value controls it). Monotonic sums only; gauges and non-monotonic sums are left alone.'''
+effort = "1 hour"
+risk = '''The collector must see every point of a series (do not load-balance one series across replicas). State grows with cardinality; max_staleness trims it.'''
+verify = '''Compare `SELECT sum(x)` over 10 minutes with the increase of the source counter over the same 10 minutes.'''
+status = "DOC-ONLY"
+evidence = "Options read in the cumulativetodeltaprocessor README and the New Relic OTLP page (read 2026-11-10). Not run."
+sources = [
+  "https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/cumulativetodeltaprocessor",
+  "https://docs.newrelic.com/docs/opentelemetry/best-practices/opentelemetry-otlp/",
+]
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Collector: convert every monotonic sum to delta before export"
+  text = '''
+processors:
+  cumulativetodelta:
+    include:
+      metric_types: [sum]
+    initial_value: auto
+    max_staleness: 1h
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [cumulativetodelta, batch]
+      exporters: [otlphttp/newrelic]
+'''
+
+[[blocker.method]]
+id = "alert-counter"
+family = "D"
+name = "Alerts on counters: sum() per window, or a ratio of counters"
+when = '''Choose this for every counter-based alert. `rate()` is not in the documented list of functions allowed in a condition, so avoid it; a sum per aggregation window is the same signal with a threshold in 'events per window'.'''
+prerequisites = "A window that matches the Grafana rate window (aggregation_window 60 to 300 seconds)."
+needs_collector = false
+needs_reingest = false
+latency = "Aggregation window plus delay."
+changes = '''The threshold is in events per window, not per second: multiply the per-second threshold by the window length. Per-series tests (each pod alone) use FACET; a total hides one bad series.'''
+effort = "20 minutes"
+risk = '''Using sum() across series when Prometheus tested each series on its own (the converter refuses these on purpose).'''
+verify = '''Preview the condition and compare its line with `rate(...)*window` in Grafana for the same hour.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10. Whether rate() is accepted inside a condition is UNVERIFIED (not in the condition page's function list)."
+sources = [
+  "https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Requests per window for each ingress (1 minute window; threshold 'above 600 for 5 minutes' = 10 per second)"
+  text = '''
+SELECT sum(nginx_ingress_controller_requests) FROM Metric FACET ingress
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "5xx percentage per ingress"
+  text = '''
+SELECT filter(sum(nginx_ingress_controller_requests), WHERE status LIKE '5%') / sum(nginx_ingress_controller_requests) * 100 FROM Metric FACET ingress
+'''
+
+[[blocker.method]]
+id = "no-raw-total"
+family = "F"
+name = "Accept: the raw running total cannot be drawn"
+when = '''Choose this when someone insists on the ever-growing line (a counter plotted directly). There is no cumulative-sum function in NRQL; the delta storage has thrown the running total away.'''
+prerequisites = "Agree with the dashboard owner that rate or increase is the useful view."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''The line becomes a rate or a per-bucket increase. The only way to keep a running total is to store the metric as a gauge (newrelic_metric_type = gauge), which gives up rate(sum()) for that metric; use derivative(x, 1 second) instead.'''
+effort = "5 minutes"
+risk = '''Mixed storage: points before the change are deltas, after it cumulative; do not chart across the change.'''
+verify = '''Show the owner the rate chart next to the old panel at one incident.'''
+status = "VERIFIED-VALID"
+evidence = "derivative() form accepted 2026-11-10; the gauge override value is listed on the remote write page. The absence of a cumulative function was checked in the NRQL reference (no hits for 'cumulativeSum')."
+sources = [
+  "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/",
+  "https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/install-configure-remote-write/set-your-prometheus-remote-write-integration/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "If the counter was stored as a gauge on purpose: rate from the cumulative value"
+  text = '''
+SELECT derivative(process_cpu_seconds_total, 1 second) FROM Metric TIMESERIES 5 minutes
+'''

@@ -1,0 +1,391 @@
+# Comparison filters and set operators; joins with on() / group_left.
+
+[[blocker]]
+key = "comparison"
+title = "Comparison filters and set operators (== 1, > 0, and, unless)"
+titles = [
+  "Dashboard query comparison or vector matching",
+  "PromQL operator or comparison",
+  "PromQL equality test on a bare selector",
+  "PromQL comparison inside the query",
+]
+scope = "166 widgets on 27 dashboards; 8 of 55 alert rules (2026-11-10 test estate). Also the top blocker of 'remediation: comparison or vector matching' (unlocks 204 items)."
+summary = '''
+In PromQL a comparison is a filter: `kube_node_status_condition{condition="Ready",status="true"} == 1` keeps
+only the series whose newest value is 1 and drops the others, and `a and on(cluster) b` keeps the series of `a`
+that have a partner in `b`. NRQL has no operator that filters series after the fact. It has three honest
+substitutes: a WHERE on the sample value, a nested query that filters the per-series result, and filter() inside
+an aggregate. They differ in what "value" means (any sample in the window, or the newest one), and that
+difference is the main thing to explain to the customer.
+'''
+decision = [
+  "Do you need 'series whose NEWEST value matches' (instant PromQL meaning)? Nested query (method 2).",
+  "Is 'ever matched during the time range' acceptable, or is the data one sample per series per bucket? WHERE on the value (method 1).",
+  "Do you need a count or a percentage of matching series next to the total? filter() inside the aggregate (method 3).",
+  "Is it `and`, `unless` or `or` between two selectors on a shared label? IN (SELECT uniques()) (method 4).",
+  "Is it an alert? Put the bound in the threshold (method 5) rather than in the query.",
+]
+ask = [
+  "Does the panel mean 'right now' (instant) or 'at any time in the range'?",
+  "Which label do the two sides of the set operator share (cluster, instance, pod)? How many distinct values does it have (the sub-select returns at most 1,000)?",
+  "Is the compared value an exact state (0 or 1) or a measurement? Exact comparisons on raw values need a range (see method 1).",
+]
+cannot = "New Relic has no post-aggregation filter on series and no `bool` modifier. Set operators only exist as a filter on one shared attribute (IN or NOT IN a sub-select); matching on several labels at once is not possible in a single operator."
+
+[[blocker.method]]
+id = "where-on-value"
+family = "B"
+name = "WHERE on the sample value"
+when = '''Choose this for 'was it ever above/below the bound in the time range' panels, or for state metrics whose value does not flip often. It is the cheapest rewrite and works with FACET, TIMESERIES and alert conditions.'''
+prerequisites = "The metric name is an attribute you can compare in WHERE (it is for Prometheus data in the Metric event type)."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''The filter applies to every sample, not to the newest one. A deployment that had unavailable replicas for one minute an hour ago still counts for a one-hour range. Grafana's instant `> 0` looks at now. Equality on raw values is unreliable: `WHERE kube_node_status_condition = 1` matched nothing on the test account although the newest value was 1.0; use a range (`>= 1`, or `> 0.5 AND < 1.5`).'''
+effort = "5 minutes"
+risk = '''Reading 'ever' as 'now' shows alarms that already cleared. Equality filters silently return nothing.'''
+verify = '''Run the query with `> 0` and with `>= 1` on the same metric and compare with the nested form of method 2 over SINCE 5 minutes ago: for a state that does not flip they agree. Add `SINCE 1 minute ago` to a copy to look at 'now'.'''
+status = "VERIFIED-VALUE"
+evidence = "Run 2026-11-10: `kube_node_status_condition >= 1` counted 6 Ready nodes (same as the nested newest-value form); `= 1` counted 0; `kube_deployment_status_replicas_unavailable > 0` counted 1 deployment over an hour in which the newest value was 0 for all."
+sources = [
+  "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "kube_node_status_condition{condition='Ready',status='true'} == 1  (count the ready nodes)"
+  text = '''
+SELECT uniqueCount(node) FROM Metric WHERE metricName = 'kube_node_status_condition' AND condition = 'Ready' AND status = 'true' AND kube_node_status_condition >= 1
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Deployments that had unavailable replicas at any time in the range, per cluster"
+  text = '''
+SELECT uniqueCount(deployment) FROM Metric WHERE kube_deployment_status_replicas_unavailable > 0 FACET cluster
+'''
+
+[[blocker.method]]
+id = "nested-then-filter"
+family = "B"
+name = "Nested query: newest value per series, then filter"
+when = '''Choose this when the panel means 'right now' (the PromQL instant meaning) or when the value flips often. It is the faithful translation of `x == 1`, `x > 0`, `x != 0` for stat, table and bar widgets.'''
+prerequisites = "The labels that identify one series (FACET list). Not usable in alert conditions or time charts."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Exact instant semantics: one value per series, then the filter. The result is a single number or a list, not a time series. A series that stopped reporting still counts until the window passes it.'''
+effort = "10 minutes"
+risk = '''Same as the sum-of-gauge nested query: too few labels in FACET merge series. A big window keeps stale series alive.'''
+verify = '''Count the rows of `SELECT latest(kube_node_status_condition) FROM Metric WHERE condition = 'Ready' AND status = 'true' FACET node LIMIT MAX` that equal 1 by hand; the nested count must match.'''
+status = "VERIFIED-VALUE"
+evidence = "Run 2026-11-10: nested count with `WHERE v = 1` returned 6; the FACET query shows 6 nodes with latest 1.0."
+sources = [
+  "https://docs.newrelic.com/docs/nrql/using-nrql/nested-aggregation-make-ordered-computations-single-query/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Number of Ready nodes, newest value only"
+  text = '''
+SELECT count(*) FROM (SELECT latest(kube_node_status_condition) AS v FROM Metric WHERE condition = 'Ready' AND status = 'true' FACET node LIMIT MAX) WHERE v = 1
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Which deployments are short of replicas right now"
+  text = '''
+SELECT * FROM (SELECT latest(kube_deployment_status_replicas_unavailable) AS unavailable FROM Metric FACET cluster, namespace, deployment LIMIT MAX) WHERE unavailable > 0
+'''
+
+[[blocker.method]]
+id = "filter-in-aggregate"
+family = "B"
+name = "filter() inside the aggregate (counts and percentages next to the total)"
+when = '''Choose this for 'bad / total' panels, percentages and charts over time, where a comparison is only used to count matching series.'''
+prerequisites = "None beyond the metric and a label to count (uniqueCount) or the samples to count (count)."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Gives a time series (add TIMESERIES), so it is the only one of the three rewrites that charts over time. Like method 1 it tests samples, so it means 'at any sample inside each bucket'.'''
+effort = "10 minutes"
+risk = '''Percentages divide by distinct series seen in the bucket, which can differ from Prometheus' count if series are missing in some buckets.'''
+verify = '''Run `SELECT uniqueCount(deployment) ...` for the numerator and denominator separately over the same range and check the ratio by hand.'''
+status = "VERIFIED-VALUE"
+evidence = "Run 2026-11-10: filter() form returned bad=1, total=2, equal to the two separate queries."
+sources = [
+  "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Share of deployments with unavailable replicas, as a chart"
+  text = '''
+SELECT filter(uniqueCount(deployment), WHERE kube_deployment_status_replicas_unavailable > 0) / uniqueCount(deployment) * 100 AS 'percent unavailable' FROM Metric WHERE metricName LIKE 'kube_deployment_status_replicas%' TIMESERIES 10 minutes
+'''
+
+[[blocker.method]]
+id = "in-subselect"
+family = "B"
+name = "Set operators: IN / NOT IN (SELECT uniques(...))"
+when = '''Choose this for `a and on(label) b` (keep a where b exists) and `a unless on(label) b` (keep a where b does not exist) when both sides share exactly one label.'''
+prerequisites = "One shared label with at most 1,000 values in the time range (uniques() default is 1,000). Not allowed in alert conditions."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''The sub-select is evaluated over the whole time range, not per timestamp, so 'a and b' becomes 'a, where b existed at some time in the range'. `or` has no equivalent; use two series in one chart.'''
+effort = "15 minutes"
+risk = '''More than 1,000 distinct values are silently cut. Matching on two labels (on(cluster, namespace)) cannot be written.'''
+verify = '''Count a with and without the IN clause. Run the sub-select alone and check the number of values against the PromQL `count(b)`.'''
+status = "VERIFIED-VALID"
+evidence = "Run 2026-11-10: the IN sub-select form was accepted and returned the same count as the plain query (all clusters present). No negative case was compared."
+sources = [
+  "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "kube_deployment_status_replicas_unavailable and on(cluster) kube_pod_info"
+  text = '''
+SELECT latest(kube_deployment_status_replicas_unavailable) FROM Metric WHERE cluster IN (SELECT uniques(cluster) FROM Metric WHERE metricName = 'kube_pod_info') FACET cluster, namespace, deployment
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "The unless form: clusters that have deployments but no pod_info"
+  text = '''
+SELECT uniqueCount(deployment) FROM Metric WHERE metricName = 'kube_deployment_status_replicas' AND cluster NOT IN (SELECT uniques(cluster) FROM Metric WHERE metricName = 'kube_pod_info') FACET cluster
+'''
+
+[[blocker.method]]
+id = "alert-threshold"
+family = "D"
+name = "Alerts: move the comparison into the threshold"
+when = '''Choose this for every alert whose PromQL ends in `> n`, `== 0`, `< 1`. In New Relic the comparison is the condition's threshold, not part of the query, so the query returns the raw number.'''
+prerequisites = "A query that returns one number per signal; FACET if the PromQL grouped."
+needs_collector = false
+needs_reingest = false
+latency = "Aggregation window plus delay, as for any condition."
+changes = '''The query no longer drops series: all series are evaluated, those that pass are simply below the bound. `x == 0` becomes 'below 1' for integers, never 'equals 0' on a float. The Grafana `for:` becomes the threshold duration.'''
+effort = "15 minutes"
+risk = '''Equality thresholds on floats. A comparison between two selectors (`a > b`) cannot be a threshold: compute `a - b` or `a / b` in the query and threshold that.'''
+verify = '''In the condition preview check the line against the threshold. Fire it once with a deliberately low threshold on a throwaway policy.'''
+status = "VERIFIED-VALID"
+evidence = "Queries accepted 2026-11-10. Conditions not created."
+sources = [
+  "https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "up == 0  becomes: query latest(up) per instance, threshold 'below 1 for 5 minutes'"
+  text = '''
+SELECT latest(up) FROM Metric WHERE job IS NOT NULL FACET job, instance
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "memory_used > memory_limit  becomes a ratio with the threshold at 1"
+  text = '''
+SELECT latest(jvm_memory_used_bytes) / latest(jvm_memory_max_bytes) FROM Metric WHERE area = 'heap' FACET application, instance
+'''
+
+[[blocker]]
+key = "joins"
+title = "Joins with on() / ignoring() / group_left()"
+titles = [
+  "Dashboard query comparison or vector matching",
+  "PromQL feature with no alert-condition equivalent",
+  "PromQL ratio not converted",
+]
+match = 'vector matching|group_left|group_right|\bon\s*\(|\bignoring\s*\('
+scope = "100 widgets on 14 dashboards; 5 of 55 alert rules (2026-11-10 test estate). Typical joins: kube_pod_info (pod to node), node_uname_info (instance to host name), kube_*_labels."
+summary = '''
+PromQL joins two series by matching labels and can copy a label from one side to the other
+(`kube_pod_status_phase * on(namespace, pod) group_left(node) kube_pod_info`). Almost every real use is an
+'info metric' join: attach a friendly name or an owner label to a numeric series. New Relic has three answers.
+NRQL JOIN lets a dashboard query use an attribute of another query as a facet (measured below). Ingest-time
+enrichment puts the label on the series once and is the only way for alerts. Everything else is a table next
+to a chart.
+'''
+decision = [
+  "Dashboard widget, join key is ONE label that is unique on the info side (instance, pod)? NRQL JOIN (method 1).",
+  "You only need to FILTER by the joined label (a 'node' variable)? Semi-join with IN (method 2).",
+  "The series is used in alerts, or the join key is two labels, or the dashboard is slow? Join once at the source (method 3) or in the collector (method 4).",
+  "It is an alert and you only need the friendly name in the message? Alert on the raw label and enrich the notification (method 5).",
+]
+ask = [
+  "Which two metrics are joined and which label is copied across (group_left(node))?",
+  "Is the join key unique on the info side? (One node name per instance? pod names reused across clusters?)",
+  "Is the joined label needed in an alert condition, or only on dashboards?",
+  "Who owns the Prometheus or collector configuration, and can a new recording rule be deployed?",
+]
+cannot = "A join cannot be used inside an alert condition, and a JOIN subquery cannot be a time series; the join key must be one attribute and may match at most 100 rows. There is no `group_right`, no `ignoring()` and no multi-label match."
+
+[[blocker.method]]
+id = "nrql-join"
+family = "B"
+name = "NRQL JOIN with the info metric as the subquery"
+when = '''Choose this first for dashboard widgets: the info metric is read once as a subquery and its labels (node, nodename) become facets of the outer query. No collector access, no new data.'''
+prerequisites = "One join key that is unique on the info side. Not allowed in alert conditions. The subquery cannot be a time series (it gives one result for the whole range)."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Works with TIMESERIES on the outer query. The info labels are fixed for the whole time range (a pod that moved nodes is attributed to the node in the subquery's result). Subquery LIMIT defaults to 10: always write LIMIT MAX (maximum 5,000). One key may map to at most 100 rows.'''
+effort = "20 minutes"
+risk = '''Key collisions: pod names repeated in two clusters join to both. Silent truncation if LIMIT is left at 10. Slower than a plain query on large estates.'''
+verify = '''Run the outer query without the join and facet by the join key; sum of the per-node rows must equal the total. Compare the per-node count with `SELECT uniqueCount(pod) FROM Metric WHERE metricName = 'kube_pod_info' FACET node`.'''
+status = "VERIFIED-VALUE"
+evidence = "Run 2026-11-10: pods per node through the JOIN (5 for each of 6 nodes) equal the direct per-node count on kube_pod_info; the node_uname_info join returned one series per host name."
+sources = [
+  "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Running pods per node: kube_pod_status_phase * on(pod) group_left(node) kube_pod_info"
+  text = '''
+FROM Metric JOIN (FROM Metric SELECT latest(kube_pod_info) AS info WHERE metricName = 'kube_pod_info' FACET pod, node LIMIT MAX) ON pod SELECT uniqueCount(pod) WHERE metricName = 'kube_pod_status_phase' AND phase = 'Running' AND kube_pod_status_phase >= 1 FACET node LIMIT MAX
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "CPU busy rate per host name: node_cpu_seconds_total * on(instance) group_left(nodename) node_uname_info"
+  text = '''
+FROM Metric JOIN (FROM Metric SELECT latest(node_uname_info) WHERE metricName = 'node_uname_info' FACET instance, nodename LIMIT MAX) ON instance SELECT rate(sum(node_cpu_seconds_total), 1 second) WHERE mode != 'idle' FACET nodename LIMIT MAX TIMESERIES 5 minutes
+'''
+
+[[blocker.method]]
+id = "semi-join-filter"
+family = "B"
+name = "Semi-join: filter by a label that lives on the info metric"
+when = '''Choose this when the joined label is only used to choose which series to show (a 'node' or 'owner' variable), not to group by.'''
+prerequisites = "A dashboard variable or a literal value for the joined label."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''One query, no JOIN limits. You cannot group by the joined label with it; use method 1 for that. At most 1,000 values come back from the sub-select.'''
+effort = "10 minutes"
+risk = '''Sub-select over a long range includes pods that have since moved.'''
+verify = '''Count the pods returned and compare with `SELECT uniqueCount(pod) FROM Metric WHERE metricName = 'kube_pod_info' AND node = 'node-a1'`.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted by New Relic 2026-11-10 (variable replaced by a literal for the read-only run)."
+sources = [
+  "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/",
+  "https://docs.newrelic.com/docs/query-your-data/explore-query-data/dashboards/dashboard-template-variables/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Restarts of the pods that run on the selected node(s)"
+  subst = { node = "'node-a1'" }
+  text = '''
+SELECT sum(kube_pod_container_status_restarts_total) FROM Metric WHERE pod IN (SELECT uniques(pod) FROM Metric WHERE metricName = 'kube_pod_info' AND node IN ({{node}})) FACET pod LIMIT MAX
+'''
+
+[[blocker.method]]
+id = "join-at-source"
+family = "A"
+name = "Do the join once in Prometheus (recording rule) and ship the result"
+when = '''Choose this when the joined label is needed in alerts, when the join key is two labels (namespace, pod), or when many widgets use the same join. It moves the join to the system that is good at it.'''
+prerequisites = "Access to Prometheus rule files (or Mimir / VictoriaMetrics ruler) and a deploy window. The info metric must be scraped by the same Prometheus."
+needs_collector = true
+needs_reingest = true
+latency = "One rule interval."
+changes = '''A new series with the extra label arrives; the original stays unless you drop it. Costs the ingest of the new series (same cardinality as the left side). History is not rewritten: old data lacks the label.'''
+effort = "1-2 hours"
+risk = '''Two copies of the same data if the raw metric is also sent. Many-to-many info metrics (duplicate kube_pod_info rows) make Prometheus reject the rule evaluation: fix the duplicates first.'''
+verify = '''Compare `SELECT latest(...) FROM Metric FACET node` on the new series with the NRQL JOIN of method 1 for the same time: the per-node numbers must be equal.'''
+status = "DOC-ONLY"
+evidence = "Rule syntax read in the Prometheus documentation; the NRQL on the recorded name was accepted but returns no rows on the sandbox (no such rule runs there)."
+sources = [
+  "https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/",
+  "https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/install-configure-remote-write/set-your-prometheus-remote-write-integration/",
+]
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Prometheus rule: copy the node label onto the pod phase series"
+  text = '''
+groups:
+  - name: joins
+    interval: 30s
+    rules:
+      - record: namespace_pod_node:kube_pod_status_phase:info
+        expr: |
+          kube_pod_status_phase
+            * on (namespace, pod) group_left (node)
+          kube_pod_info
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Query the joined series; node is now a normal attribute (usable in alert conditions)"
+  text = '''
+SELECT uniqueCount(pod) FROM Metric WHERE phase = 'Running' AND `namespace_pod_node:kube_pod_status_phase:info` >= 1 FACET node
+'''
+
+[[blocker.method]]
+id = "enrich-in-collector"
+family = "A"
+name = "Add the label in the collector (k8sattributes, or a fixed map for small fleets)"
+when = '''Choose this for application and host telemetry that goes through an OpenTelemetry Collector, where the label you want (node name, pod owner, namespace labels) is known to the collector or is a short fixed list.'''
+prerequisites = "An OpenTelemetry Collector in the path (Alloy or the contrib build), RBAC to read pods for k8sattributes."
+needs_collector = true
+needs_reingest = true
+latency = "None for the data; a collector restart to deploy."
+changes = '''New attributes appear on new data only. k8sattributes enriches by pod IP or UID, so it works for telemetry sent by the pod itself, not for kube-state-metrics series (those describe other pods; use method 3).'''
+effort = "1-2 hours"
+risk = '''A fixed map goes stale. k8sattributes adds load on the Kubernetes API and needs RBAC.'''
+verify = '''Query the new attribute: `SELECT count(*) FROM Metric FACET k8s.node.name`. Compare the node list with `kubectl get nodes`.'''
+status = "DOC-ONLY"
+evidence = "Processor options read in the contrib READMEs (transformprocessor). k8sattributes not fetched or run."
+sources = [
+  "https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor",
+  "https://docs.newrelic.com/docs/opentelemetry/get-started/collector-processing/opentelemetry-collector-processing-intro/",
+]
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Collector: add the host name from a fixed map (small, stable fleets only)"
+  text = '''
+processors:
+  transform/hostname:
+    metric_statements:
+      - set(datapoint.attributes["nodename"], "web-1") where datapoint.attributes["instance"] == "10.0.0.11:9100"
+      - set(datapoint.attributes["nodename"], "web-2") where datapoint.attributes["instance"] == "10.0.0.12:9100"
+'''
+
+[[blocker.method]]
+id = "alert-enrich"
+family = "D"
+name = "Alerts: threshold on the raw series, add the joined label in the notification"
+when = '''Choose this when the join only provides a friendly name or owner for the message. The condition stays simple (FACET on the key); a workflow enrichment query adds the name when the notification is sent.'''
+prerequisites = "A workflow with enrichments enabled; the enrichment is an NRQL query run when the issue opens."
+needs_collector = false
+needs_reingest = false
+latency = "None for the condition; the enrichment runs when the notification is built."
+changes = '''The condition cannot filter or group by the joined label. The notification carries the extra data as a query result. Routing by the joined label is not possible (see the routing blocker).'''
+effort = "30 minutes"
+risk = '''Enrichment queries are single queries run once; if the join key is unknown to the enrichment the result is empty.'''
+verify = '''Use the workflow 'test' function in the UI or the NerdGraph test mutation against a past issue and read the rendered message.'''
+status = "VERIFIED-VALID"
+evidence = "Enrichment query accepted by New Relic 2026-11-10 (read-only). Enrichments themselves were not created."
+sources = [
+  "https://docs.newrelic.com/docs/alerts/get-notified/incident-workflows/",
+  "https://docs.newrelic.com/docs/apis/nerdgraph/examples/nerdgraph-api-workflows/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Condition: node load per instance (no join needed)"
+  text = '''
+SELECT latest(node_load1) FROM Metric FACET instance
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Workflow enrichment: host name for the instances (JOIN is allowed here, it is not a condition)"
+  text = '''
+FROM Metric JOIN (FROM Metric SELECT latest(node_uname_info) WHERE metricName = 'node_uname_info' FACET instance, nodename LIMIT MAX) ON instance SELECT latest(node_load1) AS load1 WHERE metricName = 'node_load1' FACET instance, nodename LIMIT 20
+'''

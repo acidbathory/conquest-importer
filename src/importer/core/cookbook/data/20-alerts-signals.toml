@@ -1,0 +1,660 @@
+# Alert rules: absent(), histogram_quantile, predict_linear, multi-query math, recording rules.
+
+[[blocker]]
+key = "absent"
+title = "absent() and missing series"
+titles = ["PromQL absent()", "PromQL absent() threshold"]
+scope = "1 alert rule converted, 2 more use absent-style tests (2026-11-10 test estate)."
+summary = '''
+absent(x) fires when no series matches. New Relic cannot count rows that do not exist, so an empty window gives
+NULL, never 0. The answer is loss of signal: a condition with an expiration duration opens an event when no data
+arrives for that long. It only works for a signal that existed before (it needs a first data point), and in a
+faceted query each facet is its own signal, which gives per-target absence.
+'''
+decision = [
+  "One metric must keep arriving? Loss of signal on a count(*) query (method 1).",
+  "Prometheus targets? Alert on `up` below 1 per instance (method 2).",
+  "Detect one missing member of a fleet? FACET plus loss of signal (method 3).",
+  "Host or service that New Relic already monitors natively? Use its not-reporting condition (method 4).",
+  "A target that never existed cannot be detected (method 5).",
+]
+ask = [
+  "How long may the series be silent before it matters?",
+  "Is there a list of expected targets?",
+  "Does the scrape itself report `up`?",
+]
+cannot = "New Relic cannot alert on something that has never reported. Loss of signal needs a first data point, and it does not work with nested aggregation or subqueries."
+
+[[blocker.method]]
+id = "loss-of-signal"
+family = "D"
+name = "Loss of signal on a count(*) condition"
+when = '''Choose this for a heartbeat metric.'''
+prerequisites = "The metric has reported at least once after the condition is enabled."
+needs_collector = false
+needs_reingest = false
+latency = "Expiration duration (30 s to 48 h; 3-5 minutes recommended), measured from arrival time."
+changes = '''absent() looks at one evaluation; loss of signal looks at time since the last point arrived. Do not wrap the count in filter(): the NULL is the signal.'''
+effort = "20 minutes"
+risk = '''Enabling the condition while the data is already gone detects nothing.'''
+verify = '''Stop the sender of a test metric (ckg_flaky_heartbeat style) and wait for the expiration.'''
+status = "VERIFIED-VALID"
+evidence = "Query accepted 2026-11-10 against ckg_flaky_heartbeat; Terraform attributes from the provider schema and the NRQL conditions page. Condition not created."
+sources = [
+  "https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/",
+  "https://docs.newrelic.com/docs/apis/nerdgraph/examples/nerdgraph-api-loss-signal-gap-filling/",
+]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Heartbeat query"
+  text = '''
+SELECT count(*) FROM Metric WHERE metricName = 'ckg_flaky_heartbeat'
+'''
+
+  [[blocker.method.example]]
+  kind = "hcl"
+  title = "Terraform condition"
+  text = '''
+resource "newrelic_nrql_alert_condition" "heartbeat_absent" {
+  account_id                   = var.account_id
+  policy_id                    = newrelic_alert_policy.p.id
+  type                         = "static"
+  name                         = "heartbeat absent"
+  enabled                      = false
+  expiration_duration          = 300
+  open_violation_on_expiration = true
+
+  nrql {
+    query = "SELECT count(*) FROM Metric WHERE metricName = 'ckg_flaky_heartbeat'"
+  }
+
+  critical {
+    operator              = "below"
+    threshold             = 1
+    threshold_duration    = 300
+    threshold_occurrences = "all"
+  }
+}
+'''
+
+[[blocker.method]]
+id = "up-below-one"
+family = "D"
+name = "Alert on up below 1 per target"
+when = '''Choose this for Prometheus-scraped targets; the scrape reports its own failure.'''
+prerequisites = "`up` is remote-written."
+needs_collector = false
+needs_reingest = false
+latency = "Aggregation window plus delay."
+changes = '''Detects a failing scrape immediately, not only silence.'''
+effort = "15 minutes"
+risk = '''If the whole Prometheus stops, up stops too: pair with method 1.'''
+verify = '''Stop an exporter and watch the value drop to 0.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "up per instance"
+  text = '''
+SELECT latest(up) FROM Metric FACET job, instance
+'''
+
+[[blocker.method]]
+id = "facet-loss"
+family = "D"
+name = "Faceted loss of signal: one signal per member"
+when = '''Choose this to catch one missing instance while others report.'''
+prerequisites = "Each member reported before."
+needs_collector = false
+needs_reingest = false
+latency = "Expiration duration."
+changes = '''Every facet value is a separate signal; no LIMIT allowed.'''
+effort = "20 minutes"
+risk = '''Decommissioned instances alert; use close_violations_on_expiration for ephemeral ones.'''
+verify = '''Remove one target and check one event opens.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Per-instance heartbeat"
+  text = '''
+SELECT count(*) FROM Metric WHERE metricName = 'up' FACET instance
+'''
+
+[[blocker.method]]
+id = "native-not-reporting"
+family = "E"
+name = "Use the native not-reporting condition for monitored hosts and services"
+when = '''Choose this when the entity is already monitored by an agent or integration.'''
+prerequisites = "Agent installed."
+needs_collector = false
+needs_reingest = false
+latency = "Per the condition."
+changes = '''Entity-based, tied to the entity's health status.'''
+effort = "15 minutes"
+risk = '''Only for entities New Relic monitors natively.'''
+verify = '''Stop the agent in a test host.'''
+status = "DOC-ONLY"
+evidence = "Condition types listed on the alert conditions overview page. Not run."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "Where"
+  text = '''
+Alerts > Alert conditions > New condition > Infrastructure > Host not reporting.
+'''
+
+[[blocker.method]]
+id = "never-existed"
+family = "F"
+name = "Accept: a target that never reported cannot be detected"
+when = '''Choose this and add an inventory check.'''
+prerequisites = "A list of expected targets."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''A count of distinct members below the expected number covers the gap.'''
+effort = "15 minutes"
+risk = '''The expected number goes stale.'''
+verify = '''Lower the expected number to see it fire.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Fewer than the expected number of instances report"
+  text = '''
+SELECT uniqueCount(instance) FROM Metric WHERE metricName = 'up'
+'''
+
+[[blocker]]
+key = "histogram-quantile"
+title = "histogram_quantile in an alert"
+titles = ["PromQL histogram_quantile"]
+scope = "1 alert rule (KubeAPILatencyHigh) on the test estate."
+summary = '''
+bucketPercentile() is documented for queries, but the condition page does not list it among functions a condition
+accepts. Three routes avoid the question: the share of slow requests, a quantile computed at the source, or
+OpenTelemetry distributions with percentile().
+'''
+decision = [
+  "Try bucketPercentile in the condition editor (method 1).",
+  "Else alert on the share of slow requests (method 2).",
+  "Customer owns Prometheus? Record the quantile (method 3).",
+]
+ask = [
+  "Which quantile and what latency bound?",
+  "Who owns Prometheus?",
+]
+cannot = "Whether bucketPercentile is accepted inside a condition is not stated in the documentation read."
+
+[[blocker.method]]
+id = "slow-share"
+family = "D"
+name = "Alert on the percentage of requests slower than the bound"
+when = '''Choose this first: it uses only functions the condition page lists.'''
+prerequisites = "A bucket boundary at the latency bound."
+needs_collector = false
+needs_reingest = false
+latency = "Aggregation window plus delay."
+changes = '''A share instead of a quantile: 'more than 1 percent slower than 0.5 s' is the same promise as p99 under 0.5 s.'''
+effort = "20 minutes"
+risk = '''Bound must be a bucket edge.'''
+verify = '''Compare with histogram_quantile in Grafana for the same hour.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Percent of requests slower than 0.5 s per ingress (threshold above 1)"
+  text = '''
+SELECT (filter(sum(nginx_ingress_controller_request_duration_seconds_bucket), WHERE le = '+Inf') - filter(sum(nginx_ingress_controller_request_duration_seconds_bucket), WHERE le = '0.5')) / filter(sum(nginx_ingress_controller_request_duration_seconds_bucket), WHERE le = '+Inf') * 100 FROM Metric FACET ingress
+'''
+
+[[blocker.method]]
+id = "bucketpercentile-condition"
+family = "D"
+name = "bucketPercentile in the condition (try it)"
+when = '''Choose this if the editor accepts it.'''
+prerequisites = "Test in the condition editor."
+needs_collector = false
+needs_reingest = false
+latency = "Aggregation window plus delay."
+changes = '''Closest to the original rule.'''
+effort = "15 minutes"
+risk = '''May be refused; the docs are silent.'''
+verify = '''Save the condition disabled; read it back.'''
+status = "VERIFIED-VALID"
+evidence = "Query accepted 2026-11-10; condition acceptance UNVERIFIED."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "p99 per ingress"
+  text = '''
+SELECT bucketPercentile(nginx_ingress_controller_request_duration_seconds_bucket, 99) FROM Metric FACET ingress
+'''
+
+[[blocker.method]]
+id = "quantile-at-source"
+family = "A"
+name = "Record the quantile in Prometheus and alert on the gauge"
+when = '''Choose this for exact Prometheus numbers.'''
+prerequisites = "Prometheus rule files."
+needs_collector = true
+needs_reingest = true
+latency = "One rule interval."
+changes = '''The condition reads a plain gauge.'''
+effort = "1 hour"
+risk = '''One more series per label set.'''
+verify = '''The sandbox already receives application:http_server_requests_seconds:p95_5m.'''
+status = "VERIFIED-VALID"
+evidence = "Query on the existing recorded series accepted 2026-11-10."
+sources = ["https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/"]
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Rule"
+  text = '''
+groups:
+  - name: latency
+    rules:
+      - record: ingress:request_duration_seconds:p99_5m
+        expr: histogram_quantile(0.99, sum by (le, ingress) (rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])))
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Condition on a recorded p95"
+  text = '''
+SELECT max(`application:http_server_requests_seconds:p95_5m`) FROM Metric FACET application
+'''
+
+[[blocker]]
+key = "predict"
+title = "predict_linear and deriv"
+titles = ["PromQL rate or over-time function", "PromQL feature with no alert-condition equivalent", "PromQL not converted"]
+match = 'predict_linear|deriv'
+scope = "1 alert rule (KubePersistentVolumeFillingUpPredicted) on the test estate."
+summary = '''
+NRQL has predictLinear() and derivative() for queries, and static conditions have a "predict future behavior"
+option. Whether those functions work inside a condition is not stated in the pages read.
+'''
+decision = [
+  "Native prediction option (method 1).",
+  "Fixed threshold proxy (method 2).",
+  "Exact numbers at the source (method 3).",
+]
+ask = [
+  "How far ahead must the prediction look?",
+  "Is a low-free-space threshold acceptable instead?",
+]
+cannot = "predictLinear inside a condition is UNVERIFIED."
+
+[[blocker.method]]
+id = "predict-option"
+family = "D"
+name = "Static condition with the predict-future-behavior option"
+when = '''Choose this for disks filling up.'''
+prerequisites = "A static condition; the option is beta."
+needs_collector = false
+needs_reingest = false
+latency = "Prediction horizon."
+changes = '''New Relic extrapolates; not the same regression window.'''
+effort = "20 minutes"
+risk = '''Beta.'''
+verify = '''Preview.'''
+status = "VERIFIED-VALID"
+evidence = "Query accepted 2026-11-10; the prediction block is from the provider schema."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Available bytes per mount"
+  text = '''
+SELECT latest(node_filesystem_avail_bytes) FROM Metric FACET instance, mountpoint
+'''
+
+  [[blocker.method.example]]
+  kind = "hcl"
+  title = "Prediction block"
+  text = '''
+critical {
+  operator              = "below"
+  threshold             = 0
+  threshold_duration    = 300
+  threshold_occurrences = "all"
+  prediction {
+    predict_by = 14400
+  }
+}
+'''
+
+[[blocker.method]]
+id = "free-space-threshold"
+family = "D"
+name = "Alert on percent free instead"
+when = '''Choose this for a robust proxy.'''
+prerequisites = "None."
+needs_collector = false
+needs_reingest = false
+latency = "Window plus delay."
+changes = '''Not predictive.'''
+effort = "10 minutes"
+risk = '''Late for fast fills.'''
+verify = '''Compare with df.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Percent free below 10"
+  text = '''
+SELECT latest(node_filesystem_avail_bytes) / latest(node_filesystem_size_bytes) * 100 FROM Metric FACET instance, mountpoint
+'''
+
+[[blocker.method]]
+id = "predict-at-source"
+family = "A"
+name = "Record predict_linear in Prometheus"
+when = '''Choose this for exact numbers.'''
+prerequisites = "Rule files."
+needs_collector = true
+needs_reingest = true
+latency = "One rule interval."
+changes = '''Gauge of predicted bytes.'''
+effort = "1 hour"
+risk = '''More series.'''
+verify = '''Compare with Grafana.'''
+status = "DOC-ONLY"
+evidence = "Rule syntax read. Not run."
+sources = ["https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/"]
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Rule"
+  text = '''
+groups:
+  - name: disk
+    rules:
+      - record: instance_mountpoint:node_filesystem_avail_bytes:predict4h
+        expr: predict_linear(node_filesystem_avail_bytes[6h], 4 * 3600)
+'''
+
+[[blocker.method]]
+id = "predict-query"
+family = "B"
+name = "predictLinear() in a chart for triage"
+when = '''Choose this to look at the forecast.'''
+prerequisites = "None."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Chart only.'''
+effort = "5 minutes"
+risk = '''Not an alert.'''
+verify = '''Eyeball.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Forecast 4 hours ahead"
+  text = '''
+SELECT predictLinear(node_filesystem_avail_bytes, 4 hours) FROM Metric FACET instance, mountpoint TIMESERIES 10 minutes
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "deriv() as derivative"
+  text = '''
+SELECT derivative(node_filesystem_avail_bytes, 1 hour) FROM Metric FACET instance, mountpoint
+'''
+
+[[blocker]]
+key = "multi-query"
+title = "Multi-query math in alerts"
+titles = ["Grafana math expression", "Grafana rule with several queries", "Grafana pipeline not converted"]
+scope = "3 alert rules on the test estate."
+summary = '''
+A condition reads one query. Math between metrics in the Metric event type is one query. Math across data sources
+cannot be a condition.
+'''
+decision = [
+  "Same event type: one query (method 1).",
+  "AND of two tests: if() indicator (method 2).",
+  "Minimum traffic guard: if() (method 3).",
+  "Different sources: compute at the source (method 4).",
+]
+ask = [
+  "Which queries and which data sources?",
+  "Is the math a ratio, a sum or an AND?",
+]
+cannot = "No cross-data-source math, and no subquery or JOIN in a condition."
+
+[[blocker.method]]
+id = "one-query-ratio"
+family = "D"
+name = "One query with math on aggregates"
+when = '''Choose this for ratios.'''
+prerequisites = "Both sides in Metric."
+needs_collector = false
+needs_reingest = false
+latency = "Window plus delay."
+changes = '''One signal.'''
+effort = "15 minutes"
+risk = '''Labels must match.'''
+verify = '''Each side alone.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "5xx share"
+  text = '''
+SELECT filter(sum(nginx_ingress_controller_requests), WHERE status LIKE '5%') / sum(nginx_ingress_controller_requests) * 100 FROM Metric FACET ingress
+'''
+
+[[blocker.method]]
+id = "if-and"
+family = "D"
+name = "AND of two tests with if()"
+when = '''Choose this for errors high AND traffic high.'''
+prerequisites = "if() documented."
+needs_collector = false
+needs_reingest = false
+latency = "Window plus delay."
+changes = '''Indicator 1 or 0.'''
+effort = "20 minutes"
+risk = '''Hard to read.'''
+verify = '''Force each side.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "1 when 5xx share above 5 percent and requests above 100"
+  text = '''
+SELECT if(filter(sum(nginx_ingress_controller_requests), WHERE status LIKE '5%') / sum(nginx_ingress_controller_requests) * 100 > 5 AND sum(nginx_ingress_controller_requests) > 100, 1, 0) FROM Metric FACET ingress
+'''
+
+[[blocker.method]]
+id = "traffic-guard"
+family = "D"
+name = "Minimum traffic guard"
+when = '''Choose this to avoid low-traffic noise.'''
+prerequisites = "None."
+needs_collector = false
+needs_reingest = false
+latency = "Window plus delay."
+changes = '''NULL when traffic is low.'''
+effort = "10 minutes"
+risk = '''NULL resets duration.'''
+verify = '''Low traffic window.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Ratio only when there are 100 requests"
+  text = '''
+SELECT if(sum(nginx_ingress_controller_requests) > 100, filter(sum(nginx_ingress_controller_requests), WHERE status LIKE '5%') / sum(nginx_ingress_controller_requests) * 100) FROM Metric FACET ingress
+'''
+
+[[blocker.method]]
+id = "cross-source-at-source"
+family = "A"
+name = "Compute cross-source math where both sides live"
+when = '''Choose this for different data sources.'''
+prerequisites = "A system that sees both."
+needs_collector = true
+needs_reingest = true
+latency = "Rule interval."
+changes = '''One series.'''
+effort = "1 day"
+risk = '''Moves logic.'''
+verify = '''Compare.'''
+status = "DOC-ONLY"
+evidence = "Design advice."
+sources = ["https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/"]
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "Idea"
+  text = '''
+Record the combined value in the system that holds both inputs and remote-write it.
+'''
+
+[[blocker]]
+key = "recording-rules"
+title = "References to recording-rule series"
+titles = ["Grafana recording rule", "Data source-managed rule", "Rule-file rule without a comparison", "PromQL name not valid in NRQL", "Dashboard name that NRQL rejects"]
+scope = "15 widgets and 2 alert rules on the test estate."
+summary = '''
+Recording-rule series have colons in the name. They exist in New Relic only if the Prometheus that evaluates the
+rule remote-writes the output. Colon names work in NRQL inside backticks (measured).
+'''
+decision = [
+  "Remote-write the output (method 1).",
+  "Recompute from raw (method 2).",
+  "Alert with backticks (method 3).",
+  "Rename at ingest (method 4).",
+]
+ask = [
+  "Does the Prometheus that runs the rules remote-write?",
+  "Is the rule expression simple?",
+]
+cannot = "New Relic does not evaluate recording rules."
+
+[[blocker.method]]
+id = "remote-write-rules"
+family = "A"
+name = "Remote-write the rule output and query with backticks"
+when = '''Choose this first.'''
+prerequisites = "Rule evaluator with remote write."
+needs_collector = true
+needs_reingest = true
+latency = "Rule interval."
+changes = '''Exact Prometheus values.'''
+effort = "30 minutes"
+risk = '''Dropped by write_relabel.'''
+verify = '''Query.'''
+status = "VERIFIED-VALID"
+evidence = "Recorded series exist and queries accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/install-configure-remote-write/set-your-prometheus-remote-write-integration/"]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Read a recorded series"
+  text = '''
+SELECT average(`ingress:nginx_requests:rate2m`) FROM Metric FACET ingress TIMESERIES 10 minutes
+'''
+
+[[blocker.method]]
+id = "recompute"
+family = "B"
+name = "Recompute the rule from raw metrics"
+when = '''Choose this when rules are not shipped.'''
+prerequisites = "Raw metrics present."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Slightly different window.'''
+effort = "20 minutes"
+risk = '''Cost per query.'''
+verify = '''Compare both.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "ingress:nginx_requests:rate2m recomputed"
+  text = '''
+SELECT rate(sum(nginx_ingress_controller_requests), 1 second) FROM Metric FACET ingress TIMESERIES 10 minutes
+'''
+
+[[blocker.method]]
+id = "alert-backticks"
+family = "D"
+name = "Alert on the recorded series"
+when = '''Choose this for alert rules.'''
+prerequisites = "Series arrives."
+needs_collector = false
+needs_reingest = false
+latency = "Window plus delay."
+changes = '''Backticks required.'''
+effort = "10 minutes"
+risk = '''Silent if rule stops: add loss of signal.'''
+verify = '''Preview.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Recorded CPU utilisation"
+  text = '''
+SELECT latest(`instance:node_cpu_utilisation:rate5m`) FROM Metric FACET instance
+'''
+
+[[blocker.method]]
+id = "rename-colon"
+family = "A"
+name = "Rename the metric at ingest"
+when = '''Choose this to avoid backticks.'''
+prerequisites = "Remote write relabel."
+needs_collector = true
+needs_reingest = true
+latency = "None."
+changes = '''New name.'''
+effort = "30 minutes"
+risk = '''Names diverge.'''
+verify = '''Query new name.'''
+status = "DOC-ONLY"
+evidence = "Relabel syntax per Prometheus."
+sources = ["https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/install-configure-remote-write/set-your-prometheus-remote-write-integration/"]
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Replace colons with underscores"
+  text = '''
+write_relabel_configs:
+  - source_labels: [__name__]
+    regex: "([^:]+):([^:]+):([^:]+)"
+    target_label: __name__
+    replacement: "${1}_${2}_${3}"
+'''

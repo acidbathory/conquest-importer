@@ -55,6 +55,8 @@ max-complexity = 15
 "tests/**" = ["S101", "ARG001", "ARG002"]
 # CLI helper scripts report to the terminal.
 "scripts/**" = ["T201"]
+# Read-only verifier: NRQL text is fixed cookbook content, value checks are long one-line queries.
+"scripts/improve/verify_cookbook.py" = ["E501", "S608", "S101", "DTZ011"]
 # Throwaway analysis and live-test scripts: wide data tables and plain urllib calls to fixed
 # https hosts. They are not shipped code and are not imported by the package.
 "scripts/analysis/**" = ["E501", "PERF401", "C901", "C416", "RUF007"]

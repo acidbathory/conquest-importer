@@ -157,3 +157,34 @@ def test_a_template_gets_the_items_own_metric(plan: Plan) -> None:
     ]
     assert rows
     assert all("<metric>" not in row["template"] for row in rows)
+
+
+def test_plan_prints_recommended_method_first_then_alternatives(plan: Plan) -> None:
+    from importer.core.remediation_plan import render_markdown
+
+    text = render_markdown(plan)
+    assert "Cookbook methods (ranked)" in text
+    assert "What to ask the customer" in text
+    assert "recommended method:" in text
+    block = text.split("Cookbook methods (ranked)")[1]
+    assert block.index("1. ") < block.index("2. ")
+
+
+def test_csv_keeps_old_columns_and_appends_the_recommended_method(plan: Plan) -> None:
+    from importer.core.remediation_plan import render_csv
+
+    header = next(csv.reader(io.StringIO(render_csv(plan))))
+    assert header[:12] == [
+        "source", "kind", "container", "item", "count", "reason", "also_blocked_by",
+        "effort", "effort_minutes", "steps", "template", "done",
+    ]  # fmt: skip
+    assert header[12:] == ["cookbook_recommended", "cookbook_alternatives"]
+    rows = list(csv.DictReader(io.StringIO(render_csv(plan))))
+    assert any(r["cookbook_recommended"] for r in rows)
+
+
+def test_items_without_a_cookbook_entry_print_as_before(plan: Plan) -> None:
+    from importer.core.remediation_plan import render_markdown
+
+    text = render_markdown(plan)
+    assert "Template (edit the parts in angle brackets)" in text or "Steps:" in text

@@ -113,7 +113,8 @@ command by command.
 you answer `y`). The other sources use the menu or the runbook commands (`extract-<source>`,
 `convert --source <source>`, `report ... --source <source>`). Every script and command is in the
 [script reference](docs/user/script-reference.md); the menu and rollback are in
-[the menu guide](docs/user/menu-and-rollback.md). To undo a run, pick "Roll back a run" in the menu,
+[the menu guide](docs/user/menu-and-rollback.md). What to do about items that did not convert is in
+the [remediation cookbook](docs/user/remediation-cookbook.md). To undo a run, pick "Roll back a run" in the menu,
 or `importer rollback` for an `importer migrate` run.
 
 Creating needs the New Relic key and your account on `NEW_RELIC_ALLOWED_ACCOUNT_IDS`, so a mistyped

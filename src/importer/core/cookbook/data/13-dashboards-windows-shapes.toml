@@ -1,0 +1,402 @@
+# _over_time functions; transformations; heatmaps and histograms.
+
+[[blocker]]
+key = "over-time"
+title = "_over_time functions (avg_over_time, max_over_time, ...)"
+titles = ["Dashboard query time or range function", "PromQL rate or over-time function"]
+match = '_over_time|offset'
+scope = "44 widgets on 10 dashboards; 3 alert rules (2026-11-10 test estate)."
+summary = '''
+`avg_over_time(x[15m])` is a rolling aggregate: at every point, the average of the last 15 minutes. NRQL has the
+same thing as a sliding window: the TIMESERIES size is the window and SLIDE BY is the step. Most _over_time
+functions have a direct aggregate (average, max, min, sum, count, latest, stddev, percentile). Only changes(),
+resets() and quantile-of-a-counter have no counterpart.
+'''
+decision = [
+  "Chart with a rolling window (avg_over_time[15m] drawn every minute)? Sliding window (method 1).",
+  "Single number over the last N minutes? A stat with its own SINCE (method 2), remembering it ignores the time picker.",
+  "Alert? Aggregation window plus slide_by in the condition (method 3).",
+  "Heavy panel or must equal Prometheus exactly? Compute at the source (method 4).",
+  "changes(), resets(), deriv-style functions? Check method 5.",
+]
+ask = [
+  "Is the window in the PromQL the same as the dashboard step, or longer (a rolling window)?",
+  "Does the panel need to follow the time picker, or is the window fixed (always the last hour)?",
+]
+cannot = "changes() and resets() have no NRQL counterpart (New Relic's own translator rejects changes() with 'not currently supported')."
+
+[[blocker.method]]
+id = "sliding-window"
+family = "B"
+name = "Sliding window: TIMESERIES <window> SLIDE BY <step>"
+when = '''Choose this for any rolling _over_time chart. Mapping: avg_over_time to average, max_over_time to max, min_over_time to min, sum_over_time to sum, count_over_time to count, last_over_time to latest, stddev_over_time to stddev, quantile_over_time(q) to percentile(x, 100*q).'''
+prerequisites = "A window that is a whole multiple of the step; the step must divide the window."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Each point averages the last window of samples, as Prometheus does. Points are weighted by sample count, not by time, so uneven scrapes weigh differently. SLIDE BY multiplies the number of points returned and counts against the 366-bucket limit.'''
+effort = "10 minutes"
+risk = '''Too small a step on a long range exceeds the bucket limit.'''
+verify = '''A non-sliding query with the same window size must give the same value at the points where the windows coincide.'''
+status = "VERIFIED-VALID"
+evidence = "Queries accepted by New Relic 2026-11-10. Values were not compared with Prometheus."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "avg_over_time(system_cpu_usage[15m]) drawn every minute"
+  text = '''
+SELECT average(system_cpu_usage) FROM Metric FACET application TIMESERIES 15 minutes SLIDE BY 1 minute
+'''
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "max_over_time and quantile_over_time(0.95, ...)"
+  text = '''
+SELECT max(system_cpu_usage), percentile(system_cpu_usage, 95) FROM Metric TIMESERIES 15 minutes SLIDE BY 5 minutes
+'''
+
+[[blocker.method]]
+id = "fixed-window-stat"
+family = "B"
+name = "Stat with its own window (SINCE 15 minutes ago)"
+when = '''Choose this for billboard and table widgets that always show the last N minutes.'''
+prerequisites = "Accept that the widget ignores the dashboard time picker."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''A SINCE in the widget overrides the time picker. Matches Prometheus at the moment of the query.'''
+effort = "5 minutes"
+risk = '''Users change the picker and see no change.'''
+verify = '''Compare with Grafana's stat at the same moment.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-full"
+  title = "max_over_time(jvm_memory_used_bytes[15m]) by application"
+  text = '''
+SELECT max(jvm_memory_used_bytes) FROM Metric FACET application SINCE 15 minutes ago
+'''
+
+[[blocker.method]]
+id = "alert-window"
+family = "D"
+name = "Alerts: aggregation window with slide_by"
+when = '''Choose this for alerts on avg/max_over_time. The condition's aggregation window is the range; slide_by evaluates it more often.'''
+prerequisites = "slide_by must divide the window and be at least 30 s when the window is an hour or less."
+needs_collector = false
+needs_reingest = false
+latency = "Window plus delay; sliding windows build a buffer first, so nothing opens until one full window has passed."
+changes = '''Prometheus 'for: 10m' on top of avg_over_time[15m] is two time layers; New Relic has the window and the threshold duration. Keep the window and set the duration to the Grafana pending period.'''
+effort = "20 minutes"
+risk = '''Any edit resets evaluation and the condition cannot fire until a full window has passed.'''
+verify = '''Preview, then run the firing test on a throwaway policy.'''
+status = "VERIFIED-VALID"
+evidence = "Query accepted 2026-11-10; Terraform attribute names from the provider schema recorded in the notifications reference note. Condition not created."
+sources = ["https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql-alert"
+  title = "Condition query for avg_over_time(system_cpu_usage[15m]) > 0.8"
+  text = '''
+SELECT average(system_cpu_usage) FROM Metric FACET application
+'''
+
+  [[blocker.method.example]]
+  kind = "hcl"
+  title = "Window settings in Terraform"
+  text = '''
+aggregation_window = 900
+slide_by           = 60
+aggregation_method = "event_flow"
+aggregation_delay  = 120
+'''
+
+[[blocker.method]]
+id = "range-at-source"
+family = "A"
+name = "Compute the range function in Prometheus and ship the result"
+when = '''Choose this when numbers must equal Prometheus exactly, for offset comparisons, or when the panel is heavy.'''
+prerequisites = "Prometheus rule files."
+needs_collector = true
+needs_reingest = true
+latency = "One rule interval."
+changes = '''New series with the rolled-up value; exact Prometheus numbers.'''
+effort = "1 hour"
+risk = '''More series to pay for.'''
+verify = '''Chart the new series next to the NRQL sliding window; they should agree.'''
+status = "DOC-ONLY"
+evidence = "Rule syntax read in the Prometheus documentation. Not run."
+sources = ["https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/"]
+
+  [[blocker.method.example]]
+  kind = "yaml"
+  title = "Recording rule for the rolling average"
+  text = '''
+groups:
+  - name: rolling
+    rules:
+      - record: application:system_cpu_usage:avg_over_time15m
+        expr: avg_over_time(system_cpu_usage[15m])
+'''
+
+[[blocker.method]]
+id = "no-changes"
+family = "F"
+name = "Accept: changes() and resets() have no counterpart"
+when = '''Choose this when the panel counts value changes or counter resets.'''
+prerequisites = "Agree on a proxy with the owner."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''uniqueCount(x) approximates 'how many distinct values'; it is not a change count. For counter resets, count zero-valued delta samples if the exporter reports restarts that way.'''
+effort = "15 minutes"
+risk = '''A proxy that looks right and is not.'''
+verify = '''Check against Grafana during a known restart.'''
+status = "VERIFIED-VALID"
+evidence = "Proxy query accepted 2026-11-10. The lack of changes() is from the PromQL baseline note."
+sources = ["https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/view-query-data/translate-promql-queries-nrql/"]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Distinct values seen (a proxy, not changes())"
+  text = '''
+SELECT uniqueCount(jvm_threads_live_threads) FROM Metric FACET application
+'''
+
+[[blocker]]
+key = "transformations"
+title = "Panel transformations"
+titles = ["Dashboard panel with transformations"]
+scope = "40 widgets on 19 dashboards (2026-11-10 test estate)."
+summary = '''
+Grafana transformations reshape the result in the browser. About half have an NRQL form: filter by value,
+group by, sort, limit, rename, calculate a field, merge two queries by a key, rows to columns. The rest
+(config from query, partition by values, time formatting) have none.
+'''
+decision = [
+  "Merge or join by field? One query with several SELECT items faceted by the key (method 1).",
+  "Rows to columns? filter() per column (method 2).",
+  "Filter by value or reduce? Nested query with WHERE (method 3).",
+  "Anything else? Split the panel or accept (methods 4 and 5).",
+]
+ask = [
+  "Which transformations are on the panel, in order?",
+  "Does the panel need all of them or just the final look?",
+]
+cannot = "Config from query results, partition by values and join of different time grains have no NRQL equivalent."
+
+[[blocker.method]]
+id = "one-query-merge"
+family = "B"
+name = "Merge by key: several metrics in one SELECT, faceted by the key"
+when = '''Choose this for 'join by field' and 'merge' on metrics that share a label.'''
+prerequisites = "All metrics are in the Metric event type with the shared key."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Calculated fields are plain math; AS names the columns. Each metric is an aggregate of its own samples.'''
+effort = "15 minutes"
+risk = '''A key missing on one metric yields nulls.'''
+verify = '''Run each metric alone and compare the columns.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Memory table: two metrics merged by instance, with a calculated column"
+  text = '''
+SELECT latest(node_memory_MemTotal_bytes) AS total, latest(node_memory_MemAvailable_bytes) AS available, (1 - latest(node_memory_MemAvailable_bytes) / latest(node_memory_MemTotal_bytes)) * 100 AS 'used percent' FROM Metric FACET instance
+'''
+
+[[blocker.method]]
+id = "rows-to-columns"
+family = "B"
+name = "Rows to columns with filter()"
+when = '''Choose this for pivot-like transformations such as one column per CPU mode.'''
+prerequisites = "A short, known list of values."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''The column list is fixed in the query; a new value needs a new column.'''
+effort = "10 minutes"
+risk = '''New label values are not shown.'''
+verify = '''Row total equals the unfiltered sum.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "CPU time per instance with a column per mode"
+  text = '''
+SELECT filter(sum(node_cpu_seconds_total), WHERE mode = 'user') AS user, filter(sum(node_cpu_seconds_total), WHERE mode = 'system') AS system, filter(sum(node_cpu_seconds_total), WHERE mode = 'idle') AS idle FROM Metric FACET instance
+'''
+
+[[blocker.method]]
+id = "filter-by-value"
+family = "B"
+name = "Filter by value, sort, limit: nested WHERE, ORDER BY, LIMIT"
+when = '''Choose this for 'filter data by values', 'sort by' and 'limit' transformations.'''
+prerequisites = "None."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''The filter acts on the aggregated value of the nested query.'''
+effort = "10 minutes"
+risk = '''Top N with LIMIT is chosen by the first aggregate.'''
+verify = '''Row count and order equal the Grafana table.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Instances with load above 1, busiest first, top 5"
+  text = '''
+SELECT * FROM (SELECT average(node_load1) AS load FROM Metric FACET instance LIMIT MAX) WHERE load > 1 LIMIT 5
+'''
+
+[[blocker.method]]
+id = "split-panel"
+family = "C"
+name = "Split the panel: one widget per query, link them with a variable"
+when = '''Choose this for transformations that combine queries with different groupings.'''
+prerequisites = "A shared variable."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Two widgets instead of one table.'''
+effort = "30 minutes"
+risk = '''Layout drift.'''
+verify = '''Pick the same value in both widgets.'''
+status = "DOC-ONLY"
+evidence = "Design advice; no query specific to it."
+sources = ["https://docs.newrelic.com/docs/query-your-data/explore-query-data/dashboards/dashboard-template-variables/"]
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "Plan"
+  text = '''
+Widget 1: totals per instance. Widget 2: detail for {{instance}}. Both read the same dashboard variable.
+'''
+
+[[blocker.method]]
+id = "accept-transformations"
+family = "F"
+name = "Accept: no equivalent for config-from-query, partition and time formatting"
+when = '''Choose this when the transformation only changes looks.'''
+prerequisites = "Owner agrees."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Data is the same; presentation differs.'''
+effort = "5 minutes"
+risk = '''Low.'''
+verify = '''Owner signs off a screenshot.'''
+status = "DOC-ONLY"
+evidence = "Absence of an NRQL form per the converter notes."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "Wording"
+  text = '''
+This panel's browser-side transformation is not reproduced; values are unchanged.
+'''
+
+[[blocker]]
+key = "histograms"
+title = "Heatmaps and histogram_quantile panels"
+titles = ["Dashboard histogram_quantile shape", "Dashboard panel type the importer cannot create yet"]
+match = 'heatmap|histogram'
+scope = "22 heatmap widgets on 5 dashboards; histogram_quantile panels (2026-11-10 test estate)."
+summary = '''
+Prometheus classic histograms are counters per `le` bucket. New Relic has bucketPercentile() for quantiles, and the
+bucket counters can be shown per bucket with filter() arithmetic. A heatmap chart exists for histogram() output.
+'''
+decision = [
+  "Quantile panel? bucketPercentile (method 1).",
+  "Distribution bars? Per-bucket arithmetic (method 2).",
+  "True heatmap? Send as distribution (method 3).",
+]
+ask = [
+  "Is the panel a quantile or a distribution?",
+  "Can the app send OpenTelemetry histograms?",
+]
+cannot = "A heatmap from classic `le` bucket counters is not drawn natively; histogram() needs raw values or distributions."
+
+[[blocker.method]]
+id = "bucket-percentile"
+family = "B"
+name = "bucketPercentile() for histogram_quantile"
+when = '''Choose this for quantile panels on Prometheus _bucket data.'''
+prerequisites = "Metric ends in _bucket with le."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Reports the percentile (quantile times 100) along bucket boundaries.'''
+effort = "10 minutes"
+risk = '''Interpolation may differ slightly from Prometheus.'''
+verify = '''Compare with Grafana for one ingress and hour.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10; the function is documented as the histogram_quantile equivalent."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "p50, p95, p99 per ingress"
+  text = '''
+SELECT bucketPercentile(nginx_ingress_controller_request_duration_seconds_bucket, 50, 95, 99) FROM Metric FACET ingress TIMESERIES 10 minutes
+'''
+
+[[blocker.method]]
+id = "per-bucket-bars"
+family = "B"
+name = "Per-bucket counts with filter() differences"
+when = '''Choose this for bar charts of how many requests fell in each latency band.'''
+prerequisites = "Know the le values."
+needs_collector = false
+needs_reingest = false
+latency = "None."
+changes = '''Buckets are cumulative; differences give bands.'''
+effort = "20 minutes"
+risk = '''le may be written 1 and 1.0 by different exporters.'''
+verify = '''Bands sum to the +Inf total.'''
+status = "VERIFIED-VALID"
+evidence = "Accepted 2026-11-10."
+sources = ["https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/"]
+
+  [[blocker.method.example]]
+  kind = "nrql"
+  title = "Requests under 100 ms, 100-500 ms, over 500 ms"
+  text = '''
+SELECT filter(sum(http_server_requests_seconds_bucket), WHERE le = '0.1') AS 'under 100ms', filter(sum(http_server_requests_seconds_bucket), WHERE le = '0.5') - filter(sum(http_server_requests_seconds_bucket), WHERE le = '0.1') AS '100-500ms', filter(sum(http_server_requests_seconds_bucket), WHERE le = '+Inf') - filter(sum(http_server_requests_seconds_bucket), WHERE le = '0.5') AS 'over 500ms' FROM Metric TIMESERIES 10 minutes
+'''
+
+[[blocker.method]]
+id = "send-distribution"
+family = "A"
+name = "Send OpenTelemetry histograms so histogram() and percentile() work"
+when = '''Choose this for real heatmaps.'''
+prerequisites = "Collector or SDK access."
+needs_collector = true
+needs_reingest = true
+latency = "None."
+changes = '''New metric names; history stays classic.'''
+effort = "1 day"
+risk = '''Two parallel series during migration.'''
+verify = '''percentile on the new metric matches bucketPercentile on the old.'''
+status = "DOC-ONLY"
+evidence = "Read in the New Relic OTLP page. Not run."
+sources = ["https://docs.newrelic.com/docs/opentelemetry/best-practices/opentelemetry-otlp/"]
+
+  [[blocker.method.example]]
+  kind = "text"
+  title = "SDK setting"
+  text = '''
+OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta
+'''
