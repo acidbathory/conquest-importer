@@ -41,7 +41,6 @@ reg(
     (
         "Dashboard variable query",
         "Dashboard variable regex",
-        "Dashboard variable query depends on a variable",
     ),
     Playbook(
         grafana="A variable fills its drop-down from a data source query (label_values, "
