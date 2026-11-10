@@ -291,7 +291,7 @@ class Menu:
             self.runner(args)
         self.runner(["plan-remediation", "--in", str(lay.converted), "--out", str(lay.remediation)])
         if (lay.out("alerts") / "report.md").is_file():
-            self.runner(["report", str(lay.out("alerts")), "--source", spec.source])
+            self.runner(["report", str(lay.converted), "--source", spec.source])
 
     def _account_name(self, account: int) -> str | None:
         """The account's name when a key is already set; any failure just leaves the id."""

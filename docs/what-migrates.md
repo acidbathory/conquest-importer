@@ -637,8 +637,10 @@ payload or object was tested against a live account or a live receiving service 
   PagerDuty key is a name such as `GRAFANA_OPS_1A2B_URL`, and the Terraform declares a sensitive
   variable `nr_secret_<name in lower case>` for each. Supply the values in the environment
   (`export TF_VAR_nr_secret_grafana_ops_1a2b_url=...`) or in a `*.tfvars` file that stays out of
-  git; `secrets.tfvars.example` lists them all. `apply-notifications` does not take secrets yet and
-  cannot create a webhook with a secure URL, so these plans are applied through Terraform. A
+  git; `secrets.tfvars.example` lists them all. `apply-notifications` reads a destination's secret
+  from the environment variable named after it in the plan (a missing variable stops the run before
+  the first write; the values are never printed); see its `--help`. Whether it can create every
+  kind of webhook with a secure URL is UNVERIFIED, so Terraform remains the safe route. A
   header or basic credential is one Authorization header whose whole value is the secret (the
   user name is not exported).
 - **Contact points:** `email` becomes an EMAIL destination from the exported addresses (checked
