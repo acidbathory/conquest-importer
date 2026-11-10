@@ -28,7 +28,7 @@ def converted(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 def test_dashboard_widgets_are_paired_with_their_promql(converted: Path) -> None:
     pairs = build_pairs(converted, None)
-    tiles = {p.title: p for p in pairs if p.kind == "tile"}
+    tiles = {p.title: p for p in pairs if p.kind == "widget"}
     cpu = tiles["CPU busy by instance"]
     assert cpu.original.startswith("sum by (instance) (rate(node_cpu_seconds_total")
     assert cpu.timeseries and not cpu.skip and cpu.family == "prometheus"
@@ -50,7 +50,7 @@ def test_a_different_export_is_reported_not_guessed(converted: Path, tmp_path: P
         '{"uid": "other", "title": "Other", "panels": [], "schemaVersion": 39}'
     )
     shutil.copytree(FIX / "grafana", other / "alerts")
-    pairs = [p for p in build_pairs(converted, other) if p.kind == "tile"]
+    pairs = [p for p in build_pairs(converted, other) if p.kind == "widget"]
     assert pairs and all("not found in the export" in p.skip for p in pairs)
 
 

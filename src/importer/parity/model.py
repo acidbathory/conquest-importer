@@ -34,7 +34,7 @@ class Fetched:
 class Pair:
     """An original query and the NRQL it was converted to."""
 
-    kind: str  # tile | alert
+    kind: str  # widget | alert
     owner: str  # dashboard or alert name
     owner_key: str  # the source's own key (dashboard uid or rule uid)
     title: str  # widget title, or the alert name

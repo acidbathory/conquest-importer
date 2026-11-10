@@ -127,7 +127,7 @@ def dashboard_pairs(
                     skip = NOT_SERIES
                 pairs.append(
                     Pair(
-                        "tile", dash.name, dash.source_key, widget.title,
+                        "widget", dash.name, dash.source_key, widget.title,
                         hit[2] if hit else "prometheus", hit[1] if hit else "", series.nrql,
                         has_timeseries(series.nrql), variables, skip,
                     )
