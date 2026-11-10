@@ -163,7 +163,7 @@ def verify(
     else:
         cycle(int(clock()))
     echo(
-        f"Read {o.out / 'parity.html'}. It means something only where both sides hold the same data."
+        f"Read {o.out / 'parity.html'}. It is only meaningful where both sides hold the same data."
     )
     return 2 if any(i.outcome.verdict is Verdict.MISMATCH for i in last) else 0
 
