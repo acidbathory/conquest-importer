@@ -232,7 +232,7 @@ reg(
             "convert each part, or add a page by hand.",
             "Drop panels nobody opens: check the Grafana usage data first.",
         ),
-        differs="Each Grafana row becomes a page named after it; a row over 150 widgets is split in parts.",
+        differs="A Grafana row becomes a page named after it; a row over 150 widgets is split.",
         effort_minutes=2,
         links=(L.CHARTS,),
     ),
