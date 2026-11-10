@@ -310,7 +310,12 @@ class Menu:
 
     # -- the HTML report ---------------------------------------------------------------------
     def _write_report(
-        self, spec: Spec, lay: Layout, account: int | None, record: RunRecord | None = None
+        self,
+        spec: Spec,
+        lay: Layout,
+        account: int | None,
+        record: RunRecord | None = None,
+        plan: Summary | None = None,
     ) -> Path | None:
         """Write the plan report (before) or the created report (after) into the run folder."""
         if spec.source not in PROFILES:
@@ -321,7 +326,7 @@ class Menu:
             if record is not None:
                 summary.created = dict(Counter(o.kind for o in record.objects))
                 private = sum(o.kind in PRIVATE_KINDS for o in record.pending())
-                info = RunInfo(record.run_id, private)
+                info = RunInfo(record.run_id, private, self._rows(record, plan))
             path = lay.folder / ("report-created.html" if record else "report.html")
             html = render_report(
                 summary,
@@ -336,6 +341,30 @@ class Menu:
             self.c.say(f"The HTML report could not be written: {exc}")
             return None
         return path
+
+    @staticmethod
+    def _rows(
+        record: RunRecord, plan: Summary | None
+    ) -> tuple[tuple[str, int, int | None, int], ...]:
+        """Per kind: created (run record), planned and need attention (from the preview)."""
+        made: Counter[str] = Counter(str(o.kind) for o in record.objects)
+        kind_of_object = {"condition": "alerts", "workflow": "notifications"}
+        kind_of_object |= {"dashboard": "dashboards"}
+        per_kind = Counter({k: made[o] for o, k in kind_of_object.items()})
+        rows = []
+        for kind in KINDS:
+            found = plan.kinds.get(kind) if plan else None
+            if per_kind[kind] == 0 and (found is None or found.create == 0):
+                continue
+            rows.append(
+                (
+                    LABEL[kind].capitalize(),
+                    per_kind[kind],
+                    found.create if found else None,
+                    found.attention if found else 0,
+                )
+            )
+        return tuple(rows)
 
     @staticmethod
     def _links(lay: Layout) -> list[tuple[str, str]]:
@@ -458,7 +487,7 @@ class Menu:
         )
         if self._apply_until_done(record):
             self._done(lay, record)
-            self._show_report(lay, "after", self._write_report(spec, lay, account, record))
+            self._show_report(lay, "after", self._write_report(spec, lay, account, record, summary))
 
     def _targets(self, record: RunRecord) -> list[tuple[str, Path]]:
         """The converted folders this run creates from, in the safe order."""

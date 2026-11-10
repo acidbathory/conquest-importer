@@ -441,6 +441,40 @@ class RunInfo:
 
     run_id: str
     private: int  # created conditions, workflows and dashboards still disabled or private
+    # label -> (created, planned, need attention); planned is None when it is not known
+    rows: tuple[tuple[str, int, int | None, int], ...] = ()
+
+
+def _created_hero(info: RunInfo) -> str:
+    made = sum(r[1] for r in info.rows)
+    known = [r[2] for r in info.rows]
+    planned = sum(p for p in known if p is not None) if None not in known else None
+    line = (
+        f"<b>{made} of {planned}</b> planned objects were created in New Relic."
+        if planned is not None
+        else f"<b>{made}</b> objects were created in New Relic."
+    )
+    return (
+        '<div class="hero"><div><p class="label">Created in New Relic</p>'
+        f'<p class="big">{made}</p></div><div><p class="lede">{line}</p>'
+        '<p class="label">Conditions and workflows are disabled; dashboards are private</p>'
+        "</div></div>"
+    )
+
+
+def _created_table(info: RunInfo) -> str:
+    rows = "".join(
+        f'<tr><td>{e(label, 60)}</td><td class="n">{made}</td>'
+        f'<td class="n">{"n/a" if planned is None else planned}</td>'
+        f'<td class="n">{attention}</td></tr>'
+        for label, made, planned, attention in info.rows
+    )
+    return (
+        '<table><caption class="label">Counts per kind</caption><thead><tr>'
+        '<th scope="col">Kind</th><th class="n" scope="col">Created</th>'
+        '<th class="n" scope="col">Planned</th><th class="n" scope="col">Need attention</th>'
+        f"</tr></thead><tbody>{rows}</tbody></table>"
+    )
 
 
 def _created_state(summary: Summary, nr_account: int | None, info: RunInfo, made: str) -> str:
@@ -638,20 +672,21 @@ def render_report(
         chart = _bar(overall, name="All assets") + _legend()
     groups = summary.groups()
     n = 1
-    sections = [
-        f'<h2><span class="no">{n:02d}</span>What was migrated</h2>{_table(summary, names)}'
-    ]
+    made_title = "What was created" if info else "What was migrated"
+    todo_title = "What still needs you" if info else "What was not migrated"
+    table = _created_table(info) if info else _table(summary, names)
+    sections = [f'<h2><span class="no">{n:02d}</span>{made_title}</h2>{table}']
     n += 1
     if groups:
         sections.append(
-            f'<h2><span class="no">{n:02d}</span>What was not migrated, and how to fix it</h2>'
+            f'<h2><span class="no">{n:02d}</span>{todo_title}, and how to fix it</h2>'
             '<p class="intro">Grouped by problem, largest first. The steps are written once per '
             "problem; open an asset to see why it failed.</p>"
             + "".join(_group(g, i) for i, g in enumerate(groups, start=1))
         )
     else:
         sections.append(
-            f'<h2><span class="no">{n:02d}</span>What was not migrated</h2>'
+            f'<h2><span class="no">{n:02d}</span>{todo_title}</h2>'
             '<p class="intro">Everything found was converted.</p>'
         )
     n += 1
@@ -682,8 +717,8 @@ def render_report(
         f'<div class="masthead"><h1>{pair_name(source)} migration report</h1>'
         f'<p class="where">{where}</p></div>{logo_strip(source)}'
         f"{_state(summary, aws_account, nr_account, region, profile, info, guided)}"
-        f"{hero}{chart}{_links(links)}"
-        f"{_ledger(summary, names)}"
+        f"{_created_hero(info) if info else hero + chart}{_links(links)}"
+        f"{'' if info else _ledger(summary, names)}"
         f"{''.join(sections)}"
         f"<footer><p><b>How this is counted.</b> {profile.unit_sentence} "
         "Migrated means converted exactly or approximately; "

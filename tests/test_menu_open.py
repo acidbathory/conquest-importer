@@ -154,3 +154,24 @@ def test_after_report_states_what_was_created_without_the_preview_banner(tmp_pat
     assert "1 condition" in after and "1 dashboard" in after and "1 workflow" in after
     assert "<b>3</b> of them are disabled or private" in after
     assert "Roll back a run" in after
+
+
+def test_after_report_describes_what_exists_not_conversion_quality(tmp_path: Path) -> None:
+    _, _, menu = _run(tmp_path, ["3", "yes", "0"])
+    _, after = _reports(tmp_path)
+    record = menu.store.list()[0]
+    made = len(record.objects)
+    assert re.search(rf'class="big">{made}</p>', after)
+    assert f"<b>{made} of " in after and "planned objects were created" in after
+    assert "assets migrated" not in after and "assets can be migrated" not in after
+    assert "What was created" in after and "What still needs you" in after
+    assert "What was migrated" not in after and "What was not migrated" not in after
+    assert "Need attention" in after and "Planned" in after
+    assert "Roll back a run" in after and 'href="remediation/remediation-plan.md"' in after
+
+
+def test_before_report_keeps_the_forecast_wording(tmp_path: Path) -> None:
+    _run(tmp_path, ["3", "yes", "0"])
+    before, _ = _reports(tmp_path)
+    assert "What was migrated" in before and "assets can be migrated" in before
+    assert "planned objects were created" not in before
