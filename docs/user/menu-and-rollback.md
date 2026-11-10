@@ -1,11 +1,13 @@
 # The guided menu and rollback
 
-Run `importer menu` in a terminal. It needs a person at the keyboard: with piped input it prints
-a one-line message and exits.
+Run `importer menu` in a terminal, or just `importer` with no arguments. The menu needs a person at
+the keyboard: `importer menu` with piped input prints a one-line message and exits, and a bare
+`importer` with piped input (or `importer --help`) behaves as it always did and shows the help.
 
 ```
 1 GCP   2 AWS   3 Grafana   4 Dynatrace
-5 Roll back a run   6 Check my setup   7 Try on sample data   0 Quit
+5 Roll back a run   6 Check my setup   7 Try on sample data
+8 What did I just do?   0 Quit
 ```
 
 ## A source (1 to 4)
@@ -23,17 +25,40 @@ and never written to disk or to a report. Creating needs the New Relic account i
 after a message that names the account. Nothing opens a browser unless you choose "Open the HTML
 report".
 
+## Dashboards and notifications (Grafana and Dynatrace)
+
+After the alert conditions have been converted, the "what next?" step of Grafana and Dynatrace also
+offers `3 Also bring over the dashboards` and `4 Also bring over the notifications`. Each one runs
+read (read-only), convert (local files), preview (a dry run that names the New Relic account),
+then optionally create. It reuses `apply-dashboards` and `apply-notifications` and their manifests.
+
+| | Grafana | Dynatrace |
+|---|---|---|
+| Dashboards | `extract-grafana-dashboards`, `convert-grafana-dashboards`, `apply-dashboards` | planned only (`extract-dynatrace-inventory`, `plan-dynatrace-dashboards`); nothing is created |
+| Notifications | `extract-grafana-notifications`, `convert-grafana-notifications` (uses the converted alerts), `apply-notifications` | `convert-notifications --source dynatrace` on the export already read, then `apply-notifications`; asks whether to include plans marked "needs review" |
+
+Creating asks for the same things as for alerts: the account in `NEW_RELIC_ALLOWED_ACCOUNT_IDS`, a
+confirmation message that names the account, and you typing `yes`. It only creates, never updates.
+Dashboards are private; workflows are disabled. No report or browser is opened.
+
+## What did I just do? (item 8)
+
+Shows the last run: its id, source, New Relic account, status, how many objects of each kind it
+created, how many are still in New Relic, what is private or disabled, and how to undo it
+(item 5, or `importer rollback-run`). It reads only the local run record.
+
 ## Runs and rollback
 
 Before a create, the menu writes a run record to `out/runs/<run id>.json` (folder `0700`, files
 `0600`, written atomically; override the folder with `IMPORTER_RUNS_DIR`). After the create it
-adds what was made: type, id, name, account. `importer runs` lists them.
+adds what was made: type, id, name, account. Dashboard and notification creates are separate runs (for example `grafana-dashboards`), so each can be undone on its own. `importer runs` lists them.
 
 Item 5 (or `importer rollback-run`) lists runs, shows exactly what would be deleted, and asks you
 to type `yes`. It then:
 
-- deletes only objects in that record whose name starts with `ckg-` or is the default policy name
-  `Imported by Conquest Importer` (anything else is listed and left alone);
+- deletes only objects in that record whose name starts with `ckg-`, with `Imported:` (the default
+  prefix of notification objects), or is the default policy name `Imported by Conquest Importer`;
+  anything else is listed and left alone (see the next section for dashboards);
 - reuses `core/rollback.py`: each object is re-read and deleted only if its id still has the
   recorded name; a policy with conditions that are not ours stays;
 - reads each object back from New Relic and records only those that are gone;
@@ -42,5 +67,23 @@ to type `yes`. It then:
 A run whose create was interrupted shows as `in-progress`. Choosing it offers "continue" (the
 create runs again; existing items are skipped) or "roll back" (the run's `manifest.json` is merged
 in first, so objects made before the interruption are covered).
+
+### Sandbox runs and real migrations
+
+Each run record stores a `sandbox` flag. It is true when the New Relic account was in
+`NEW_RELIC_ALLOWED_ACCOUNT_IDS` when the run was made, and also when that list is not set (when in
+doubt the strict rule applies). Records from before this flag count as sandbox.
+
+- A sandbox record is strict: only names starting with `ckg-` or the prefixes above are deleted,
+  dashboards included. A dashboard with its normal source title is listed and left alone.
+- A real migration (`sandbox` is false) keeps the source title on its dashboards, so there rollback
+  accepts a dashboard by kind, but only if you run `importer rollback-run --real-migration` and
+  the record entry has the New Relic guid and the creation marker the tool wrote: the description
+  it sent ("Imported from a Grafana dashboard. Review it." and any notes). The run id is not in
+  the description, because that would change the converted output.
+- Just before deleting, each such dashboard is read again. If its name or description is no longer
+  the recorded one (someone renamed or edited it), or it cannot be read, it is refused with the
+  reason and left alone.
+- Without `--real-migration`, a real-migration record is treated as strictly as a sandbox one.
 
 The existing `importer rollback --manifest` command is unchanged.

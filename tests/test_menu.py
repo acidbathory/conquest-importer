@@ -223,3 +223,164 @@ def test_interrupted_run_offers_continue_or_roll_back(tmp_path: Path) -> None:
 
 
 def _unused(*_: Any) -> None: ...
+
+
+def _write_manifest_for(kind: str, name: str) -> Callable[[list[str]], None]:
+    def write(args: list[str]) -> None:
+        path = Path(args[args.index("--manifest") + 1])
+        obj = {"kind": kind, "id": "g1", "name": name}
+        save_manifest(Manifest(account_id=7, objects=[CreatedObject.model_validate(obj)]), path)
+
+    return write
+
+
+def _apply_calls(run: FakeRunner, command: str) -> list[list[str]]:
+    return [c for c in run.calls if c[0] == command]
+
+
+class ManifestRunner(FakeRunner):
+    """Writes a manifest the way an apply command does, for one command and one object kind."""
+
+    def __init__(self, command: str, kind: str, name: str) -> None:
+        super().__init__()
+        self.command, self.kind, self.name = command, kind, name
+
+    def __call__(self, args: list[str]) -> int:
+        if args[0] == self.command and "--apply" in args:
+            _write_manifest_for(self.kind, self.name)(args)
+        return super().__call__(args)
+
+
+@pytest.fixture
+def grafana_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GRAFANA_URL", "https://x.grafana.net")
+    monkeypatch.setenv("GRAFANA_SA_TOKEN", "t")
+
+
+@pytest.mark.usefixtures("grafana_env")
+def test_grafana_dashboards_read_convert_preview_create_and_record(tmp_path: Path) -> None:
+    run = ManifestRunner("apply-dashboards", "dashboard", "Latency")
+    menu, console, _, opened, store = make(tmp_path, ["3", "3", "1", "yes", "0", "0"], run)
+    menu.run()
+    names = run.names()
+    i = names.index("extract-grafana-dashboards")
+    assert names[i : i + 3] == [
+        "extract-grafana-dashboards",
+        "convert-grafana-dashboards",
+        "apply-dashboards",
+    ]
+    assert "--apply" not in run.calls[i + 2]  # the preview writes nothing
+    assert "account 7" in console.text and "private" in console.text
+    assert opened == []
+    (record,) = store.list()
+    assert record.source == "grafana-dashboards" and record.status == "applied"
+    assert [(o.kind, o.id, o.name) for o in record.objects] == [("dashboard", "g1", "Latency")]
+
+
+@pytest.mark.usefixtures("grafana_env")
+def test_grafana_notifications_use_the_converted_alerts_and_apply_notifications(
+    tmp_path: Path,
+) -> None:
+    run = ManifestRunner("apply-notifications", "workflow", "Imported:wf")
+    menu, console, _, _, store = make(tmp_path, ["3", "4", "1", "yes", "0", "0"], run)
+    menu.run()
+    convert = next(c for c in run.calls if c[0] == "convert-grafana-notifications")
+    assert convert[convert.index("--alerts") + 1].endswith("alerts")
+    (record,) = store.list()
+    assert record.source == "grafana-notifications"
+    assert record.objects[0].kind == "workflow"
+    assert "disabled" in console.text
+
+
+def test_dynatrace_notifications_ask_about_needs_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DYNATRACE_ENV_URL", "https://x.apps.dynatrace.com")
+    monkeypatch.setenv("DYNATRACE_API_TOKEN", "t")
+    menu, _, run, _, store = make(tmp_path, ["4", "4", "1", "yes", "yes", "0", "0"])
+    menu.run()
+    convert = next(c for c in run.calls if c[0] == "convert-notifications")
+    assert convert[:3] == ["convert-notifications", "--source", "dynatrace"]
+    last = _apply_calls(run, "apply-notifications")[-1]
+    assert "--apply" in last and "--include-needs-review" in last
+    (record,) = store.list()
+    assert record.include_review and record.source == "dynatrace-notifications"
+
+
+def test_dynatrace_dashboards_are_planned_never_created(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DYNATRACE_ENV_URL", "https://x.apps.dynatrace.com")
+    monkeypatch.setenv("DYNATRACE_API_TOKEN", "t")
+    menu, console, run, _, store = make(tmp_path, ["4", "3", "0", "0"])
+    menu.run()
+    assert "plan-dynatrace-dashboards" in run.names()
+    assert "apply-dashboards" not in run.names() and store.list() == []
+    assert "nothing to create" in console.text
+
+
+@pytest.mark.usefixtures("grafana_env")
+def test_declining_a_dashboard_create_writes_nothing(tmp_path: Path) -> None:
+    menu, _, run, _, store = make(tmp_path, ["3", "3", "1", "no", "0", "0"])
+    menu.run()
+    assert not any("--apply" in c for c in run.calls) and store.list() == []
+
+
+@pytest.mark.usefixtures("grafana_env")
+def test_a_failed_read_stops_the_dashboard_flow(tmp_path: Path) -> None:
+    menu, console, run, _, _ = make(
+        tmp_path, ["3", "3", "0", "0"], FakeRunner({"extract-grafana-dashboards": 1})
+    )
+    menu.run()
+    assert "convert-grafana-dashboards" not in run.names()
+    assert "Nothing was created" in console.text
+
+
+def _record_with(store: RunStore, source: str, objects: list[dict[str, str]]) -> str:
+    record = store.start(source=source, account_id=7, region="us", out_dir=Path("o"))
+    record.objects = [CreatedObject.model_validate(o) for o in objects]
+    record.status = "applied"
+    store.save(record)
+    return record.run_id
+
+
+def test_what_did_i_just_do_with_no_runs(tmp_path: Path) -> None:
+    menu, console, _, _, _ = make(tmp_path, ["8", "0"])
+    menu.run()
+    assert "nothing yet" in console.text.lower()
+
+
+def test_what_did_i_just_do_summarises_the_last_run(tmp_path: Path) -> None:
+    menu, console, _, _, store = make(tmp_path, ["8", "0"])
+    _record_with(store, "gcp", [{"kind": "condition", "id": "1", "name": "ckg-old"}])
+    run_id = _record_with(
+        store,
+        "grafana-dashboards",
+        [
+            {"kind": "dashboard", "id": "g1", "name": "A"},
+            {"kind": "dashboard", "id": "g2", "name": "B"},
+        ],
+    )
+    menu.run()
+    text = console.text
+    assert run_id in text and "grafana-dashboards" in text and "account 7" in text
+    assert "2 dashboard" in text and "private" in text
+    assert "Roll back a run" in text and "rollback-run" in text
+
+
+def test_what_did_i_just_do_names_disabled_things_and_rolled_back_state(tmp_path: Path) -> None:
+    menu, console, _, _, store = make(tmp_path, ["8", "0"])
+    run_id = _record_with(
+        store,
+        "grafana",
+        [
+            {"kind": "condition", "id": "1", "name": "ckg-a"},
+            {"kind": "workflow", "id": "2", "name": "Imported:w"},
+        ],
+    )
+    record = store.load(run_id)
+    record.rolled_back = ["condition:1"]
+    record.status = "partly-rolled-back"
+    store.save(record)
+    menu.run()
+    assert "1 still in New Relic" in console.text and "disabled" in console.text

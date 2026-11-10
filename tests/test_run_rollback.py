@@ -187,3 +187,25 @@ def test_nothing_to_delete(tmp_path: Path) -> None:
     console = ScriptConsole([])
     rollback_run(console, store, record, factory(FakeNR({})), sleep=lambda _: None)
     assert "nothing" in console.text.lower()
+
+
+@pytest.mark.usefixtures("env")
+def test_dashboards_and_notifications_made_by_the_menu_are_rolled_back(tmp_path: Path) -> None:
+    objects = [
+        obj("dashboard", "g1", "ckg-Checkout latency"),  # sandbox run: strict prefix rule
+        obj("workflow", "w1", "Imported: Grafana route 1"),
+        obj("channel", "c1", "Imported: email"),
+        obj("destination", "d1", "Imported: email dest"),
+        obj("condition", "9", "someone-elses"),  # still refused
+    ]
+    store, record = setup(tmp_path, objects)
+    nr = FakeNR({(o.kind, o.id): o.name for o in objects})
+    rollback_run(ScriptConsole(["yes"]), store, record, factory(nr), sleep=lambda _: None)
+    assert sorted(nr.deleted) == [
+        ("channel", "c1"),
+        ("dashboard", "g1"),
+        ("destination", "d1"),
+        ("workflow", "w1"),
+    ]
+    assert ("condition", "9") in nr.objects
+    assert store.load(record.run_id).status == "partly-rolled-back"

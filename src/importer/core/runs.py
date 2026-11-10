@@ -33,6 +33,8 @@ class RunRecord(BaseModel):
     status: Status = "in-progress"
     objects: list[CreatedObject] = []
     rolled_back: list[str] = []  # ids (kind:id) already deleted
+    sandbox: bool = True  # False only for a real migration; older records count as sandbox
+    include_review: bool = False  # notifications: the person chose to include "needs review" plans
 
     def key(self, o: CreatedObject) -> str:
         return f"{o.kind}:{o.id}"
@@ -70,7 +72,16 @@ class RunStore:
             Path(tmp).unlink(missing_ok=True)
             raise
 
-    def start(self, *, source: str, account_id: int, region: str, out_dir: Path) -> RunRecord:
+    def start(
+        self,
+        *,
+        source: str,
+        account_id: int,
+        region: str,
+        out_dir: Path,
+        include_review: bool = False,
+        sandbox: bool = True,
+    ) -> RunRecord:
         now = datetime.now(UTC)
         record = RunRecord(
             run_id=f"{now:%Y%m%dT%H%M%S%fZ}-{secrets.token_hex(3)}",
@@ -78,6 +89,8 @@ class RunStore:
             account_id=account_id,
             region=region,
             out_dir=str(out_dir),
+            include_review=include_review,
+            sandbox=sandbox,
             started=now.isoformat(timespec="seconds"),
         )
         self.save(record)
