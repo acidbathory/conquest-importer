@@ -9,6 +9,7 @@ from pathlib import Path
 
 from importer.core.remediation import remedies_for
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 from importer.core.text import printable
 from importer.sources.dynatrace.dashboards import reasons as r
 from importer.sources.dynatrace.dashboards.classic import classify_tiles
@@ -267,7 +268,12 @@ def _copies(plans: DashboardPlans) -> list[str]:
 
 
 def render_report(plans: DashboardPlans) -> str:
-    lines = ["# Dynatrace dashboard plan", "", *_summary(plans), *_copies(plans)]
+    lines = [
+        *header_lines("Dynatrace dashboard plan", "dynatrace"),
+        "",
+        *_summary(plans),
+        *_copies(plans),
+    ]
     lines += ["", "## By dashboard", ""]
     lines += _per_dashboard(plans)
     lines += _steps(plans)

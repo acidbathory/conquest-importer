@@ -4,6 +4,7 @@ import json
 from collections import Counter
 
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 from importer.core.text import printable
 from importer.sources.grafana.triage.pipeline import ORDER, Result, Row
 
@@ -61,7 +62,7 @@ def _row(r: Row) -> str:
 def build_markdown(result: Result) -> str:
     counts = Counter(r.verdict.bucket for r in result.rows)
     lines = [
-        "# Grafana dashboard triage",
+        *header_lines("Grafana dashboard triage", "grafana"),
         "",
         f"**{result.headline}**",
         "",

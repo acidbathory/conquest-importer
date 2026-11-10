@@ -31,11 +31,11 @@ def pair_name(source: str) -> str:
 
 
 def badge_line(source: str) -> str:
-    """A shields-style text badge for markdown: code spans only, no images."""
+    """A shields-style text badge for markdown: bold text only, no images and no backticks."""
     known = PAIRS.get(source)
     if known is None:
-        return f"`target: {TARGET}`"
-    return f"`source: {known[0]}` → `target: {TARGET}`"
+        return f"**target: {TARGET}**"
+    return f"**source: {known[0]}** → **target: {TARGET}**"
 
 
 def header_lines(title: str, source: str) -> list[str]:

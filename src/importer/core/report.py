@@ -3,6 +3,7 @@
 from collections import Counter
 
 from importer.core.ir import Confidence, IRMonitor
+from importer.core.report_brand import header_lines
 
 COMMON_NOTES = [
     "All conditions are created DISABLED. Enable them after review.",
@@ -34,7 +35,7 @@ def build_report(monitors: list[IRMonitor], emitted_ids: set[int], source: str) 
     total = len(monitors)
     converted = len(emitted_ids)
     lines = [
-        "# Conversion report",
+        *header_lines("Conversion report", source),
         "",
         f"Monitors read: **{total}**. Emitted as conditions: **{converted}**.",
         "",

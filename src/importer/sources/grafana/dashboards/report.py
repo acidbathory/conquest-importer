@@ -5,6 +5,7 @@ from collections.abc import Callable
 
 from importer.core.remediation import remedies_for
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 from importer.core.taxonomy import classify
 from importer.core.text import printable
 from importer.sources.grafana.dashboards.panels import TABLE, panel_type
@@ -34,7 +35,7 @@ def _share(count: int, total: int) -> str:
 def _header(plan: Plan) -> list[str]:
     t = plan.totals
     return [
-        "# Grafana dashboards: coverage plan",
+        *header_lines("Grafana dashboards: coverage plan", "grafana"),
         "",
         CAVEAT,
         "",

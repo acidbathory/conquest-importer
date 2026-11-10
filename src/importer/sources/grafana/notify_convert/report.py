@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from importer.core.emit.notifications import secret_variable
 from importer.core.remediation import remedies_for
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 from importer.sources.grafana.notifications import reasons as R
 from importer.sources.grafana.notify_convert.convert import Conversion
 from importer.sources.grafana.notify_convert.destinations import Point
@@ -162,7 +163,7 @@ def _steps(c: Conversion) -> list[str]:
 
 def render_report(c: Conversion) -> str:
     lines = [
-        "# Grafana notification conversion",
+        *header_lines("Grafana notification conversion", "grafana"),
         "",
         "Nothing was created. Workflows and muting rules are planned disabled. Every secret is a "
         "name, never a value.",

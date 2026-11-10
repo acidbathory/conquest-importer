@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from importer.core.remediation import remedies_for
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 from importer.core.text import printable
 from importer.sources.dynatrace.dashboards.report_util import table
 from importer.sources.dynatrace.inventory import reasons as r
@@ -328,7 +329,7 @@ def _slo_lines(plan: ReinstrumentPlan) -> list[str]:
 
 def render_report(plan: ReinstrumentPlan) -> str:
     lines = [
-        "# Dynatrace re-instrumentation plan",
+        *header_lines("Dynatrace re-instrumentation plan", "dynatrace"),
         "",
         f"Entities read: **{plan.entities_read}** (skipped: {plan.entities_skipped}"
         + (f"; the API reported {plan.reported_total}" if plan.reported_total is not None else "")

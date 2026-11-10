@@ -57,6 +57,7 @@ from importer.core.notification_ir import (
     plan_violations,
 )
 from importer.core.report import build_report, md_cell
+from importer.core.report_brand import header_lines
 from importer.core.report_html import PROFILES, render_report
 from importer.core.rollback import rollback
 from importer.core.secrets import (
@@ -300,7 +301,7 @@ def convert_dashboards(
         (out / "nerdgraph" / f"{ident}.json").write_text(json.dumps(payload, indent=2) + "\n")
     (out / "dashboards.tf").write_text(dashboards_terraform(emitted))
     keys = {d.source_key for _, d in emitted}
-    (out / "report.md").write_text(build_dashboard_report(dashboards, keys))
+    (out / "report.md").write_text(build_dashboard_report(dashboards, keys, source_system))
     typer.echo(
         f"Read {len(dashboards)} dashboards, emitted {len(emitted)}. See {out / 'report.md'}"
     )
@@ -864,7 +865,7 @@ def _convert_cloudwatch_notifications(
     routes = routing(monitors, converted_condition_names(monitors))
     (out / "notification-plans").mkdir(parents=True, exist_ok=True)
     plans: list[NotificationPlan] = []
-    lines = ["# Notification conversion report", ""]
+    lines = [*header_lines("Notification conversion report", "cloudwatch"), ""]
     for n, raw in enumerate(raw_topics, start=1):
         topic = translate_topic(raw, warn_https_payload)
         plan = build_plan(topic, routes.get(topic.source_key, []), prefix)
@@ -1263,7 +1264,7 @@ def _plan_text(
     """The reviewable summary written by `migrate` (plain text, no untrusted names)."""
     ingest = out / "ingest"
     lines = [
-        "# Migration plan",
+        *header_lines("Migration plan", "cloudwatch"),
         "",
         headline,
         "",

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from importer.core.report_brand import header_lines
 from importer.sources.grafana.dashboards.load import FOLDERS_FILE, LIBRARY_FILE, _read_json
 from importer.sources.grafana.dashboards.models import MAX_FILES, Dashboard, Estate
 from importer.sources.grafana.dashboards.plan import DashboardPlan, plan_dashboard
@@ -306,7 +307,7 @@ def _best_cells(best: Match | None) -> tuple[str, str]:
 
 def quickstart_report(plan: QuickstartPlan) -> str:
     lines = [
-        "# Grafana dashboards: native New Relic replacements",
+        *header_lines("Grafana dashboards: native New Relic replacements", "grafana"),
         "",
         f"**{plan.coverage}.**",
         "",

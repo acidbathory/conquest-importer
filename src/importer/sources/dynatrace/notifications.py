@@ -32,6 +32,7 @@ from importer.core.notification_ir import (
     tag_predicate,
 )
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 from importer.core.text import printable
 from importer.sources.dynatrace.models import DtTask, DtWorkflow
 from importer.sources.dynatrace.translate import DQL_ACTION, action_label, davis_config
@@ -329,7 +330,9 @@ def _title(plan: NotificationPlan) -> str:
 def render_report(plans: list[NotificationPlan]) -> str:
     """Markdown for the owner. Counts only for recipients: addresses stay in the plan files."""
     lines = [
-        "# Notification conversion report (Dynatrace Davis problem workflows)",
+        *header_lines(
+            "Notification conversion report (Dynatrace Davis problem workflows)", "dynatrace"
+        ),
         "",
         "Every plan below needs review. Nothing was created. Workflows are planned disabled.",
         "",

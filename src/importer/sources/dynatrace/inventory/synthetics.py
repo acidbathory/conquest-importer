@@ -27,6 +27,7 @@ from pydantic import BaseModel
 
 from importer.core.remediation import remedies_for
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 from importer.core.text import printable
 from importer.sources.dynatrace.dashboards.report_util import table
 from importer.sources.dynatrace.inventory import reasons as r
@@ -280,7 +281,7 @@ def render_report(plan: SyntheticsPlan) -> str:
         by_target[m.target] = by_target.get(m.target, 0) + 1
     creatable = sum(m.creatable_from_json for m in plan.monitors)
     lines = [
-        "# Dynatrace synthetic monitor plan",
+        *header_lines("Dynatrace synthetic monitor plan", "dynatrace"),
         "",
         f"Monitors read: **{len(plan.monitors)}** (entries not read: {plan.skipped}). "
         f"Creatable from the JSON alone: **{creatable}**. No monitor is created by this plan.",

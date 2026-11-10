@@ -77,7 +77,9 @@ def _write(out: Path, dashboards: list[IRDashboard], report: Report, entries: in
         (out / "nerdgraph" / f"{ident}.json").write_text(json.dumps(payload, indent=2) + "\n")
     (out / "dashboards.tf").write_text(dashboards_terraform(emitted))
     keys = {d.source_key for _, d in emitted}
-    text = build_dashboard_report(dashboards, keys) + prerequisite_section(report, entries)
+    text = build_dashboard_report(dashboards, keys, "grafana") + prerequisite_section(
+        report, entries
+    )
     (out / "report.md").write_text(text)
     return len(emitted)
 
