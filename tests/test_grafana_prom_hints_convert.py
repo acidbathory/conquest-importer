@@ -1,5 +1,8 @@
 """The converter reads a metric's exact type from the hints when there is one."""
 
+import json
+from pathlib import Path
+
 import pytest
 
 from importer.sources.grafana.dashboard_convert import reasons as r
@@ -87,3 +90,24 @@ def test_planner_follows_the_hints() -> None:
     assert plan_reason("process_open_fds_total", gauge) == ""
     assert "counter" in plan_reason("requests", NameMap(types={"requests": "counter"}))
     assert plan_reason("requests", NameMap()) == ""
+
+
+def test_the_command_reads_a_hints_file_next_to_a_name_map(tmp_path: Path) -> None:
+    from typer.testing import CliRunner
+
+    from importer.cli import app
+
+    source = Path(__file__).parent / "fixtures" / "grafana-dashboard-convert"
+    hints = tmp_path / "hints.json"
+    hints.write_text(json.dumps({"types": {"node_load1": "counter"}}))
+    args = ["convert-grafana-dashboards", "--in", str(source / "node-exporter-rows.json")]
+    plain = CliRunner().invoke(app, [*args, "--out", str(tmp_path / "a")])
+    hinted = CliRunner().invoke(app, [*args, "--out", str(tmp_path / "b"), "--hints", str(hints)])
+    assert plain.exit_code == 0 and hinted.exit_code == 0, hinted.output
+    assert "Hints loaded: 1 types" in hinted.output
+    assert "average(node_load1)" in "".join(
+        p.read_text() for p in (tmp_path / "a").glob("nerdgraph/*")
+    )
+    assert "average(node_load1)" not in "".join(
+        p.read_text() for p in (tmp_path / "b").glob("nerdgraph/*")
+    )

@@ -26,6 +26,7 @@ from importer.sources.grafana.dashboard_convert.name_map import (
     NameMapError,
     active_name_map,
     load_name_map,
+    merge_hints,
 )
 from importer.sources.grafana.dashboard_convert.translate import Report, convert_all, load_items
 
@@ -97,6 +98,14 @@ def register(app: typer.Typer) -> None:
                 f"attribute; without it {MAP_ENV} is read",
             ),
         ] = None,
+        hints: Annotated[
+            Path | None,
+            typer.Option(
+                "--hints",
+                help="JSON from `grafana-prom-hints`: the exact type of each metric and the "
+                "labels that name one series. Replaces the guess from the name suffix.",
+            ),
+        ] = None,
     ) -> None:
         """Convert Grafana dashboards to IR, NerdGraph payloads, Terraform and a report.
 
@@ -110,6 +119,8 @@ def register(app: typer.Typer) -> None:
             if _inside(out, source):
                 raise ValueError(f"--out {out} is inside --in {source}; choose a separate folder")
             names: NameMap = load_name_map(name_map) if name_map else active_name_map()
+            if hints:
+                names = merge_hints(names, load_name_map(hints))
             items = load_items(source)
             if not items:
                 raise ValueError(f"no Grafana dashboards found in {source}")
@@ -124,4 +135,6 @@ def register(app: typer.Typer) -> None:
             f"Read {len(dashboards)} dashboards, emitted {emitted}: {len(widgets) - placeholders} "
             f"widgets converted, {placeholders} placeholders. See {out / 'report.md'}"
         )
+        if hints:
+            typer.echo(f"Hints loaded: {len(names.types)} types, {len(names.series)} series sets.")
         typer.echo(f"Note: {r.D_DATA}.")
