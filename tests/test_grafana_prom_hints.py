@@ -12,7 +12,7 @@ from importer.cli import app
 from importer.sources.grafana import prom_hints as ph
 
 HOST = "https://stack.grafana.net"
-TOKEN = "glsa_secret_token_123"
+TOKEN = "glsa_secret_token_123"  # noqa: S105 - a made-up value
 UID = "prom-uid-1"
 PROXY = f"/api/datasources/proxy/uid/{UID}/api/v1"
 
@@ -232,7 +232,7 @@ def test_the_command_end_to_end(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
         kwargs["transport"] = httpx.MockTransport(handler(seen))
         return real(*args, **kwargs)
 
-    monkeypatch.setattr(ph.httpx, "Client", client)
+    monkeypatch.setattr(httpx, "Client", client)
     out = tmp_path / "hints.json"
     args = ["grafana-prom-hints", "--datasource", UID, "--metrics-from", str(tmp_path / "extract")]
     result = CliRunner().invoke(app, [*args, "--out", str(out)])
@@ -250,11 +250,8 @@ def test_the_command_end_to_end(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
 
     # the hints file feeds the converter: the gauge named *_total now converts
     conv = tmp_path / "conv"
-    done = CliRunner().invoke(
-        app,
-        ["convert-grafana-dashboards", "--in", str(tmp_path / "extract"), "--out", str(conv)]
-        + ["--hints", str(out)],
-    )
+    convert = ["convert-grafana-dashboards", "--in", str(tmp_path / "extract")]
+    done = CliRunner().invoke(app, [*convert, "--out", str(conv), "--hints", str(out)])
     assert done.exit_code == 0, done.output
     assert "Hints loaded: 3 types, 2 series sets" in done.output
     nerdgraph = "".join(p.read_text() for p in (conv / "nerdgraph").glob("*.json"))
