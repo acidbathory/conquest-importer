@@ -26,6 +26,11 @@
    "rows": 3,
    "where": "alert-facet-identity"
   },
+  "27242a2a2e65cfa2": {
+   "ok": true,
+   "rows": 72,
+   "where": "sliding-window"
+  },
   "28015ce12d004953": {
    "ok": true,
    "rows": 1,
@@ -45,6 +50,11 @@
    "ok": true,
    "rows": 6,
    "where": "query-variable"
+  },
+  "3cd78a2e46891650": {
+   "ok": true,
+   "rows": 5,
+   "where": "one-query-merge"
   },
   "41dacad74b3c3524": {
    "ok": true,
@@ -111,6 +121,11 @@
    "rows": 1,
    "where": "nested-latest"
   },
+  "6529d3872b68ad0c": {
+   "ok": true,
+   "rows": 108,
+   "where": "bucket-percentile"
+  },
   "6aa59ab0575c586a": {
    "ok": true,
    "rows": 1080,
@@ -141,6 +156,16 @@
    "rows": 5,
    "where": "alert-threshold"
   },
+  "78d83433752b2ecc": {
+   "ok": true,
+   "rows": 3,
+   "where": "rows-to-columns"
+  },
+  "8c4e0d9debdb1f99": {
+   "ok": true,
+   "rows": 3,
+   "where": "filter-by-value"
+  },
   "8ff471ead20a2275": {
    "error": "TIMESERIES supports a maximum of 366 buckets. Query has 1440.",
    "ok": false,
@@ -150,6 +175,11 @@
    "ok": true,
    "rows": 216,
    "where": "rate-of-sum"
+  },
+  "aaa090f924570132": {
+   "ok": true,
+   "rows": 2,
+   "where": "alert-window"
   },
   "b848f90a3b8ce7a8": {
    "ok": true,
@@ -206,15 +236,35 @@
    "rows": 0,
    "where": "aggregate-without-at-source"
   },
+  "e7b132b17cd92586": {
+   "ok": true,
+   "rows": 0,
+   "where": "fixed-window-stat"
+  },
   "ec817f793018c37c": {
    "ok": true,
    "rows": 0,
    "where": "join-at-source"
   },
+  "edc7620e675d948a": {
+   "ok": true,
+   "rows": 720,
+   "where": "sliding-window"
+  },
   "f1463c94a827fad6": {
    "ok": true,
    "rows": 1,
    "where": "where-on-value"
+  },
+  "f51d7491a791d239": {
+   "ok": true,
+   "rows": 4,
+   "where": "no-changes"
+  },
+  "f85ca95a24d40544": {
+   "ok": true,
+   "rows": 36,
+   "where": "per-bucket-bars"
   },
   "f971ebbbb80f6d95": {
    "ok": true,
