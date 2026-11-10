@@ -4,7 +4,7 @@ New files and additive rules only. No frozen file, golden file, hash file or bas
 
 ## What was added
 
-- `core/playbook.py` and `core/playbooks/*`: 144 playbooks keyed by remediation rule title (the rule
+- `core/playbook.py` and `core/playbooks/*`: 180 playbook keys (82 distinct playbooks, several shared by related rule titles) keyed by remediation rule title (the rule
   engine still decides what a reason is). Each has what the item does, the closest New Relic
   construct or "no equivalent" and the workaround, steps, a template, what differs, measured numbers
   where we have them, effort and documentation links.
