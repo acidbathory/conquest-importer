@@ -35,6 +35,7 @@ from importer.sources.grafana.dashboard_convert.reuse import (
     selector,
 )
 from importer.sources.grafana.dashboards.models import Dashboard, Variable
+from importer.sources.grafana.dashboards.regex_matchers import PRESENT, RegexUse, mask
 from importer.sources.grafana.dashboards.query_tier import variables_in
 from importer.sources.grafana.dashboards.variables import (
     CONVERTS,
@@ -205,13 +206,24 @@ def _checked_label(label: str) -> str:
         raise Unconvertible(r.C_NAME) from None
 
 
+def _regex_cond(cond: Cond, regexes: dict[str, RegexUse]) -> Cond:
+    """A condition on a masked word becomes RLIKE, or a presence test for `.+` and `!=""`."""
+    use = regexes.get(cond.values[0]) if cond.kind == "eq" else None
+    if use is None:
+        return cond
+    if use.pattern == PRESENT:
+        return Cond(cond.key, "absent", negate=not cond.negate)
+    return Cond(cond.key, "rlike", (use.pattern,), cond.negate)
+
+
 def _selector_where(text: str, names: NameMap, used: list[str]) -> tuple[str, list[str]]:
     """(event, WHERE terms) of the metric selector inside label_values() or query_result()."""
     name, body = _split_selector(text)
     if name and VAR_TOKEN.search(name):
         raise Unconvertible(r.C_VAR_NAME)
     body, name_conds = _name_conditions(body, names)
-    matchers = prom_conditions(body, r.C_SHAPE)
+    masked, regexes = mask("{" + body + "}")  # the matchers a panel query reads, read the same way
+    matchers = [_regex_cond(c, regexes) for c in prom_conditions(masked[1:-1], r.C_SHAPE)]
     if any(c.key == METRIC_NAME for c in matchers):
         raise Unconvertible(r.C_METRICNAME)
     event, where = "Metric", []
