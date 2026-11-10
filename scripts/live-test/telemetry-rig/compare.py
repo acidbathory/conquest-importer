@@ -163,6 +163,26 @@ CASES: list[tuple[str, str, str]] = [
 ]
 
 
+# Cases for the type experiment: run against both prometheus_server names ("ckg-local" untyped,
+# "ckg-local-typed" with newrelic_metric_type forced by write_relabel_configs).
+TYPED_CASES: list[tuple[str, str, str]] = [
+    (
+        "t_nginx_rate_ingress",
+        "typed",
+        "sum by (ingress) (rate(nginx_ingress_controller_requests[2m]))",
+    ),
+    ("t_nginx_irate_total", "typed", "sum(irate(nginx_ingress_controller_requests[2m]))"),
+    ("t_pg_commit_irate", "typed", "sum by (datname) (irate(pg_stat_database_xact_commit[5m]))"),
+    ("t_pg_activity_state", "typed", 'sum by (state) (pg_stat_activity_count{datname="app"})'),
+    (
+        "t_pg_locks_mode",
+        "typed",
+        'sum by (mode) (pg_locks_count{datname="app",mode=~"accesssharelock|rowexclusivelock"})',
+    ),
+    ("t_system_cpu_count", "typed", "sum(system_cpu_count)"),
+]
+
+
 def prom_get(path: str, **params: str) -> Any:
     with urllib.request.urlopen(f"{PROM}{path}?{urllib.parse.urlencode(params)}", timeout=60) as r:
         return json.load(r)["data"]
@@ -172,14 +192,15 @@ def metric_names() -> list[str]:
     return sorted(prom_get("/api/v1/label/__name__/values"), key=len, reverse=True)
 
 
-def tag(expr: str, names: list[str]) -> str:
-    """Add ckg_test="true" to every selector of the metrics in `names`."""
+def tag(expr: str, names: list[str], server: str | None = None) -> str:
+    """Add ckg_test="true" (and prometheus_server) to every selector of the metrics in `names`."""
+    extra = f',prometheus_server="{server}"' if server else ""
     pat = re.compile(r"(?<![\w:])(" + "|".join(re.escape(n) for n in names) + r")(?![\w:])(\{)?")
 
     def sub(m: re.Match[str]) -> str:
         if m[2]:
-            return m[1] + '{ckg_test="true",'
-        return m[1] + '{ckg_test="true"}'
+            return m[1] + '{ckg_test="true"' + extra + ","
+        return m[1] + '{ckg_test="true"' + extra + "}"
 
     return pat.sub(sub, expr)
 
@@ -220,7 +241,14 @@ def local_hints(names: list[str]) -> NameMap:
 
 
 def run_case(
-    cid: str, expr: str, t0: int, t1: int, names: list[str], chart: bool, nmap: NameMap
+    cid: str,
+    expr: str,
+    t0: int,
+    t1: int,
+    names: list[str],
+    chart: bool,
+    nmap: NameMap,
+    server: str | None = None,
 ) -> dict[str, Any]:
     out: dict[str, Any] = {"id": cid, "mode": "chart" if chart else "stat", "promql": expr}
     used = [n for n in names if re.search(r"(?<![\w:])" + re.escape(n) + r"(?![\w:])", expr)]
@@ -228,7 +256,7 @@ def run_case(
         variables={}, name_map=nmap, timeseries=chart, bucket_seconds=STEP if chart else None
     )
     try:
-        conv = convert_query(tag(expr, used), "prometheus", opts)
+        conv = convert_query(tag(expr, used, server), "prometheus", opts)
     except Unconvertible as e:
         out["status"] = "UNCONVERTIBLE"
         out["detail"] = str(e)[:200]
@@ -377,10 +405,16 @@ def main() -> None:
     results = []
     maps = {"plain": NameMap(), "hints": local_hints([n for n in names if not n.startswith("go_")])}
     for variant, nmap in maps.items():
-        for cid, _grp, expr in CASES:
+        todo = [(c, g, e, None) for c, g, e in CASES]
+        todo += [
+            (c + "@" + sv, g, e, sv)
+            for c, g, e in TYPED_CASES
+            for sv in ("ckg-local", "ckg-local-typed")
+        ]
+        for cid, _grp, expr, server in todo:
             for chart in (True, False):
                 try:
-                    r = run_case(cid, expr, t0, t1, names, chart, nmap)
+                    r = run_case(cid, expr, t0, t1, names, chart, nmap, server)
                 except Exception as e:  # keep going; the failure is a result
                     r = {
                         "id": cid,
