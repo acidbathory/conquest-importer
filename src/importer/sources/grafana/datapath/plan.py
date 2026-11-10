@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from importer.core.emit.nrql import identifier, quote_string
+from importer.core.report_brand import header_lines
 from importer.sources.grafana.notifications import reasons as R
 from importer.sources.grafana.notifications.models import DataSource
 
@@ -268,7 +269,12 @@ def _sources_section(sources: list[DataSource]) -> str:
 
 
 def _queries_text(metrics: list[str], attributes: list[str], hours: int) -> str:
-    lines = ["# Queries a data check sends", "", "All are read-only NRQL.", ""]
+    lines = [
+        *header_lines("Queries a data check sends", "grafana"),
+        "",
+        "All are read-only NRQL.",
+        "",
+    ]
     if not metrics and not attributes:
         lines += [NO_TARGETS, "", "For a metric `<metric name>`:", ""]
         lines += [f"    {q}" for q in metric_queries("example_metric", hours)]

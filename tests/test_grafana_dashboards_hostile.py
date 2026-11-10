@@ -31,7 +31,9 @@ def test_a_hostile_file_loads_plans_and_reports_without_error(path: Path) -> Non
         assert bad not in report, (path.name, repr(bad))
     assert data.isascii() and json.loads(data)["totals"]["dashboards"] == len(estate.dashboards)
     headings = [x for x in report.splitlines() if x.startswith("# ")]
-    assert headings == ["# Grafana dashboards: coverage plan"]  # no title became a heading
+    assert headings == [
+        "# Grafana dashboards: coverage plan: Grafana to New Relic"
+    ]  # no title became a heading
     for dashboard in plan.dashboards:
         for panel in dashboard.panels:
             assert len(panel.title) <= m.MAX_TEXT

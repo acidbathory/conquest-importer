@@ -16,6 +16,7 @@ from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.redact import safe_name, safe_path
 from importer.core.remediation import steps_for
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 from importer.core.text import printable
 
 CHECKS_FILE = "uptime-checks.json"
@@ -103,7 +104,7 @@ def write_outputs(checks: list[dict[str, Any]], out: Path) -> list[UptimePlan]:
         json.dumps([p.model_dump() for p in plans], indent=2) + "\n"
     )
     lines = [
-        "# Google uptime check report",
+        *header_lines("Google uptime check report", "gcp"),
         "",
         "The host of each check is not exported, and the path has no query string or fragment. "
         "Names and paths that looked like an address, URL or token are masked. "

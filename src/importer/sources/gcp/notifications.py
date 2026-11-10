@@ -20,6 +20,7 @@ from importer.core.ir import IRMonitor
 from importer.core.notification_ir import IRTopic, NotificationPlan, build_plan
 from importer.core.redact import safe_name
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 
 CHANNELS_FILE = "channels.json"
 MAX_CHANNELS = 10000
@@ -146,7 +147,7 @@ def write_outputs(
     routes, unrouted = channel_sets(monitors, converted_condition_names(monitors))
     (out / "notification-plans").mkdir(parents=True, exist_ok=True)
     lines = [
-        "# Google Cloud notification report",
+        *header_lines("Google Cloud notification report", "gcp"),
         "",
         "Channel labels (addresses, URLs, tokens) are not exported, so nothing here can be "
         "created automatically. Channel names that look like an address, a URL or a token are "

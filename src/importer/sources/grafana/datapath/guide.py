@@ -11,6 +11,7 @@ from collections import Counter
 
 from importer.core.notification_ir import SecretRef
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 from importer.sources.grafana.datapath import needs
 from importer.sources.grafana.datapath.needs import Item, Judged
 from importer.sources.grafana.datapath.plan import (
@@ -218,7 +219,7 @@ def plan_files(
     tiles = [j for j in judged if j.item.kind == "tile"]
     cov = {"rules": needs.coverage(rules), "tiles": needs.coverage(tiles)}
     lines = [
-        "# Data path plan",
+        *header_lines("Data path plan", "grafana"),
         "",
         "Converted rules and tiles query New Relic; nothing here sends data. Each verdict says "
         "after which step the item has data, assuming the sender runs and the names arrive as "

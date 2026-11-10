@@ -17,6 +17,7 @@ from pydantic import ValidationError
 from importer.core.apply import NewRelicAPIError, NewRelicClient
 from importer.core.emit.common import CannotEmit, nrql_for
 from importer.core.ir import IRMonitor
+from importer.core.report_brand import header_lines
 from importer.core.text import printable
 from importer.sources.cloudwatch.extract import AwsError, Reader
 from importer.sources.cloudwatch.models import CloudWatchAlarm, load_alarms
@@ -233,7 +234,7 @@ def render(checks: list[Check], start: datetime, end: datetime) -> str:
 
     bad = {Status.MISMATCH, Status.NO_DATA_IN_NEW_RELIC}
     lines = [
-        "# Side-by-side validation",
+        *header_lines("Side-by-side validation", "cloudwatch"),
         "",
         f"Window: {start:%Y-%m-%d %H:%M} to {end:%Y-%m-%d %H:%M} UTC. Tolerance {TOLERANCE:.0%}.",
         f"Compared {sum(c.status != Status.NOT_COMPARED for c in checks)} of {len(checks)} alarms; "

@@ -5,6 +5,7 @@ from collections import Counter
 from importer.core.dashboard_ir import IRDashboard, WidgetKind
 from importer.core.ir import Confidence
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 from importer.core.text import printable
 
 NOTES = [
@@ -20,12 +21,14 @@ def _cell(text: str, limit: int = 120) -> str:
     return md_cell(printable(text, 10_000), limit)
 
 
-def build_dashboard_report(dashboards: list[IRDashboard], emitted_keys: set[str]) -> str:
+def build_dashboard_report(
+    dashboards: list[IRDashboard], emitted_keys: set[str], source: str = ""
+) -> str:
     widgets = [w for d in dashboards for w in d.widgets]
     converted = [w for w in widgets if w.kind != WidgetKind.UNSUPPORTED]
     counts = Counter(w.confidence for w in widgets)
     lines = [
-        "# Dashboard conversion report",
+        *header_lines("Dashboard conversion report", source),
         "",
         f"Dashboards read: **{len(dashboards)}**. Emitted: **{len(emitted_keys)}**. "
         f"Widgets: **{len(widgets)}**, converted: **{len(converted)}**.",

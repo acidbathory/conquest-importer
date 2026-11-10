@@ -14,6 +14,7 @@ from importer.core.apply import NewRelicClient
 from importer.core.emit.common import CannotEmit, nrql_for
 from importer.core.emit.nrql import identifier
 from importer.core.ir import Confidence, IRMonitor, SignalKind
+from importer.core.report_brand import header_lines
 from importer.core.text import printable
 
 NRQL_QUERY = (
@@ -107,7 +108,7 @@ def render(checks: list[Check], hours: int) -> str:
     from importer.core.report import md_cell
 
     lines = [
-        "# Data check",
+        *header_lines("Data check", "gcp"),
         "",
         f"Data points seen in the last {hours} hours for the metric behind each converted "
         "condition. A threshold condition with no data cannot fire; an absence condition with "

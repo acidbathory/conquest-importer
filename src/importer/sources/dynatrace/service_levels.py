@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from importer.core.emit.terraform import hcl_string
 from importer.core.report import md_cell
+from importer.core.report_brand import header_lines
 from importer.core.text import printable
 from importer.sources.dynatrace.models import DtSlo
 
@@ -170,7 +171,7 @@ def service_levels_terraform(plans: list[ServiceLevelPlan]) -> str:
 
 def render_report(plans: list[ServiceLevelPlan]) -> str:
     lines = [
-        "# Service level plan (Dynatrace SLOs)",
+        *header_lines("Service level plan (Dynatrace SLOs)", "dynatrace"),
         "",
         "Every row needs review. There is no data path from the Dynatrace metrics to New Relic, "
         "so the good and valid events are left as TODO for a person to write.",
