@@ -83,6 +83,79 @@ MAIN = (
     "  7  Try on sample data",
     "  0  Quit",
 )
+# What each kind of run creates, and how it ends up in New Relic.
+WHAT = {
+    "alerts": ("alert conditions", "disabled"),
+    "dashboards": ("dashboards", "private"),
+    "notifications": ("destinations, channels and workflows", "workflows disabled"),
+}
+
+
+def kind_of(source: str) -> str:
+    """alerts, dashboards or notifications, from a run's source label such as grafana-dashboards."""
+    for kind in ("dashboards", "notifications"):
+        if source.endswith("-" + kind):
+            return kind
+    return "alerts"
+
+
+def command_for(source: str) -> str:
+    return {"alerts": "apply", "dashboards": "apply-dashboards"}.get(
+        kind_of(source), "apply-notifications"
+    )
+
+
+def preview_args(command: str, folder: Path, account: int) -> list[str]:
+    return [command, "--in", str(folder), "--account-id", str(account)]
+
+
+@dataclass(frozen=True)
+class Dirs:
+    export: Path  # where this flow's own export goes
+    out: Path  # where its converted files go
+    raw: Path  # the alert export already read
+    alerts: Path  # the alerts already converted
+
+
+Step = tuple[str, list[str]]
+StepBuilder = Callable[[Dirs], list[Step]]
+READ_ONLY, LOCAL = "reading (read-only)", "converting (local files only)"
+
+
+def _grafana_dashboards(d: Dirs) -> list[Step]:
+    return [
+        (READ_ONLY, ["extract-grafana-dashboards", "--out", str(d.export)]),
+        (LOCAL, ["convert-grafana-dashboards", "--in", str(d.export), "--out", str(d.out)]),
+    ]
+
+
+def _grafana_notifications(d: Dirs) -> list[Step]:
+    convert = ["convert-grafana-notifications", "--in", str(d.export)]
+    return [
+        (READ_ONLY, ["extract-grafana-notifications", "--out", str(d.export)]),
+        (LOCAL, [*convert, "--alerts", str(d.alerts), "--out", str(d.out)]),
+    ]
+
+
+def _dynatrace_dashboards(d: Dirs) -> list[Step]:
+    return [
+        (READ_ONLY, ["extract-dynatrace-inventory", "--out", str(d.export)]),
+        (
+            "planning (local files only)",
+            ["plan-dynatrace-dashboards", "--in", str(d.export), "--out", str(d.out)],
+        ),
+    ]
+
+
+def _dynatrace_notifications(d: Dirs) -> list[Step]:
+    convert = ["convert-notifications", "--source", "dynatrace", "--topics", str(d.raw)]
+    return [(LOCAL, [*convert, "--out", str(d.out)])]
+
+
+EXTRA: dict[str, dict[str, StepBuilder]] = {
+    "3": {"dashboards": _grafana_dashboards, "notifications": _grafana_notifications},
+    "4": {"dashboards": _dynatrace_dashboards, "notifications": _dynatrace_notifications},
+}
 BAD_CHOICE = "Please type a number from the list."
 
 
@@ -215,26 +288,30 @@ class Menu:
         ):
             self.c.say("Converting failed; see the message above. Nothing was changed anywhere.")
             return
-        self._after_convert(spec, alerts)
+        self._after_convert(spec, alerts, raw)
 
-    def _preview_args(self, alerts: Path, account: int) -> list[str]:
-        return ["apply", "--in", str(alerts), "--account-id", str(account)]
-
-    def _after_convert(self, spec: Spec, alerts: Path) -> None:
+    def _after_convert(self, spec: Spec, alerts: Path, raw: Path) -> None:
         account = self._nr_account()
         if account is not None:
             self.c.say(f"\nPreview of what would be created in New Relic account {account}:")
-            self.runner(self._preview_args(alerts, account))
+            self.runner(preview_args("apply", alerts, account))
         while True:
             self.c.say("\nStep 4 of 4: what next?")
             self.c.say("  1  Create these in New Relic (asks you to confirm)")
             self.c.say("  2  Open the HTML report in my browser")
+            if spec.key in EXTRA:
+                self.c.say("  3  Also bring over the dashboards")
+                self.c.say("  4  Also bring over the notifications")
             self.c.say("  0  Back to the main menu")
             choice = self.c.ask("Your choice:")
             if choice == "0":
                 return
             if choice == "2":
                 self._open_report(spec, alerts)
+            elif choice in ("3", "4") and spec.key in EXTRA:
+                self._extra_flow(
+                    spec, "dashboards" if choice == "3" else "notifications", raw, alerts
+                )
             elif choice == "1":
                 if account is None:
                     self.c.say("Set NEW_RELIC_ACCOUNT_ID in .env (or enter it) to create.")
@@ -263,12 +340,15 @@ class Menu:
             return False
         return True
 
-    def _create(self, spec: Spec, alerts: Path, account: int) -> bool:
+    def _create(
+        self, spec: Spec, out: Path, account: int, kind: str = "alerts", review: bool = False
+    ) -> bool:
         """Returns True when the flow is finished (created, or something went wrong)."""
         if not self._guards_ok(account):
             return False
+        what, state = WHAT[kind]
         question = (
-            f"This creates objects in New Relic account {account}, disabled, named from your "
+            f"This creates {what} in New Relic account {account} ({state}), named from your "
             "source. You can undo it from 'Roll back a run'."
         )
         if not confirm_yes(self.c, question):
@@ -277,18 +357,49 @@ class Menu:
         if not ensure_secret(self.c, "NEW_RELIC_API_KEY", "create objects"):
             self.c.say("No New Relic key, so nothing was created.")
             return False
+        source = spec.source if kind == "alerts" else f"{spec.source}-{kind}"
         record = self.store.start(
-            source=spec.source, account_id=account, region="us", out_dir=alerts
+            source=source, account_id=account, region="us", out_dir=out, include_review=review
         )
         self._apply(record)
         return True
 
+    # -- dashboards and notifications (Grafana, Dynatrace) -------------------------------------
+    def _extra_flow(self, spec: Spec, kind: str, raw: Path, alerts: Path) -> None:
+        """Read -> convert -> preview -> optional create for dashboards or notifications."""
+        folder = alerts.parent
+        dirs = Dirs(folder / f"{kind}-export", folder / kind, raw, alerts)
+        steps = EXTRA[spec.key][kind](dirs)
+        for i, (title, args) in enumerate(steps, 1):
+            self.c.say(f"\n{kind.capitalize()}, step {i} of {len(steps)}: {title}")
+            if self.runner(args) != 0:
+                self.c.say("That step failed; see the message above. Nothing was created.")
+                return
+        if spec.key == "4" and kind == "dashboards":
+            self.c.say("Dynatrace dashboards are planned only; there is nothing to create.")
+            return
+        account = self._nr_account()
+        if account is None:
+            self.c.say("Set NEW_RELIC_ACCOUNT_ID in .env (or enter it) to preview and create.")
+            return
+        self.c.say(f"\nPreview of what would be created in New Relic account {account}:")
+        self.runner(preview_args(command_for(f"x-{kind}"), dirs.out, account))
+        self.c.say(f"  1  Create these {kind} in New Relic account {account} (asks you to confirm)")
+        self.c.say("  0  Back")
+        if self.c.ask("Your choice:") != "1":
+            return
+        review = spec.key == "4" and confirm_yes(
+            self.c, "Dynatrace plans are marked 'needs review'. Include them anyway?"
+        )
+        self._create(spec, dirs.out, account, kind, review)
+
     def _apply(self, record: RunRecord) -> None:
         alerts = Path(record.out_dir)
         manifest = alerts / "manifest.json"
+        command = command_for(record.source)
         code = self.runner(
             [
-                "apply",
+                command,
                 "--in",
                 str(alerts),
                 "--account-id",
@@ -300,6 +411,7 @@ class Menu:
                 str(record.account_id),
                 "--manifest",
                 str(manifest),
+                *(["--include-needs-review"] if record.include_review else []),
             ]
         )
         if manifest.is_file():
