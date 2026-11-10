@@ -320,7 +320,11 @@ class Plan:
                 break
             gain, hit, title = best
             done.add(title)
-            minutes = next(g.minutes for g in self.groups if g.title == title)
+            # a title that is only ever a later remedy has no group: add up the items that carry it
+            minutes = next(
+                (g.minutes for g in self.groups if g.title == title),
+                sum(i.minutes for i in self.items if title in titles[i]),
+            )
             picked.append(TopFix(title, gain, hit, minutes))
             remaining = [i for i in remaining if not titles[i] <= done]
         return picked

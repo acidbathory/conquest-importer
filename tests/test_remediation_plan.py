@@ -188,3 +188,18 @@ def test_items_without_a_cookbook_entry_print_as_before(plan: Plan) -> None:
 
     text = render_markdown(plan)
     assert "Template (edit the parts in angle brackets)" in text or "Steps:" in text
+
+
+def test_top_fixes_survives_a_reason_that_is_never_an_items_first_remedy() -> None:
+    """A second remedy title has no group of its own; the scoreboard used to crash on it."""
+    from importer.core.remediation import Remedy
+    from importer.core.remediation_plan import Group, Item, Plan
+
+    only_a = Item("grafana", "dashboard panel", "d", "p1", ("a",))
+    only_a.remedies = [Remedy("Problem A", ())]
+    a_and_b = Item("grafana", "dashboard panel", "d", "p2", ("a", "b"))
+    a_and_b.remedies = [Remedy("Problem A", ()), Remedy("Problem B", ())]
+    plan = Plan([only_a, a_and_b], [Group("Problem A", None, [only_a, a_and_b], 0)], [])
+    top = plan.top_fixes(5)
+    assert [t.title for t in top] == ["Problem A", "Problem B"]
+    assert top[1].unlocks == 1
