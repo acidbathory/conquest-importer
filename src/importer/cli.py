@@ -747,7 +747,7 @@ def apply_dashboards_command(
         f"failed {len(result.failed)}. Dashboards are PRIVATE."
     )
     for name, reason in result.failed:
-        typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
+        typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 1500)}", err=True)
     if result.failed:
         _partial_failure()
 
