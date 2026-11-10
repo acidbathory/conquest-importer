@@ -246,6 +246,11 @@
    "rows": 108,
    "where": "remote-write-rules"
   },
+  "b74b9ad655a82e9d": {
+   "ok": true,
+   "rows": 36,
+   "where": "filter-in-aggregate"
+  },
   "b848f90a3b8ce7a8": {
    "ok": true,
    "rows": 576,
@@ -376,5 +381,26 @@
   "https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor": 200,
   "https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/": 200
  },
- "values": {}
+ "values": {
+  "comparison/filter-in-aggregate": {
+   "note": "filter() bad=1 total=2; separate queries 1.0/2.0",
+   "ok": true
+  },
+  "comparison/nested-then-filter": {
+   "note": "nested filter 6.0, hand count 6",
+   "ok": true
+  },
+  "comparison/where-on-value": {
+   "note": "WHERE >= 1 counted 6.0; newest value is 1 for 6 nodes",
+   "ok": true
+  },
+  "sum-gauge/average-times-cardinality": {
+   "note": "average*cardinality 60.0, nested 60.0 (steady gauge)",
+   "ok": true
+  },
+  "sum-gauge/nested-latest": {
+   "note": "nested 60.0, sum of per-series newest values 60.0, plain sum 13500.0",
+   "ok": true
+  }
+ }
 }

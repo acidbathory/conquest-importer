@@ -14,6 +14,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from importer.core.cookbook import Blocker, blocker_for
 from importer.core.dashboard_ir import IRDashboard, WidgetKind
 from importer.core.ir import Confidence, IRMonitor
 from importer.core.playbook import CHECKED_ON, Playbook, fill_template, playbook_for
@@ -90,6 +91,13 @@ class Item:
     def minutes(self) -> int:
         pb = self.playbook
         return (pb.effort_minutes if pb else 30) * self.count
+
+    @property
+    def cookbook(self) -> Blocker | None:
+        """The cookbook blocker for this item: by rule title, then by variant, reasons and query."""
+        if not self.title:
+            return None
+        return blocker_for(self.title, " ".join([self.variant, *self.reasons, self.query]))
 
 
 def promql_names(query: str) -> tuple[str, tuple[str, ...], str]:
@@ -365,7 +373,8 @@ def render_csv(plan: Plan) -> str:
     out = csv.writer(buf, lineterminator="\n")
     out.writerow(
         ["source", "kind", "container", "item", "count", "reason", "also_blocked_by",
-         "effort", "effort_minutes", "steps", "template", "done"]
+         "effort", "effort_minutes", "steps", "template", "done",
+         "cookbook_recommended", "cookbook_alternatives"]
     )  # fmt: skip
     for g in plan.groups:
         for i in g.items:
@@ -376,10 +385,43 @@ def render_csv(plan: Plan) -> str:
                     "; ".join(r.title for r in i.remedies[1:]),
                     pb.effort if pb else "not estimated", str(i.minutes),
                     " | ".join(f"{n}. {s}" for n, s in enumerate(_steps_of(i), 1)),
-                    _filled(i), "",
+                    _filled(i), "", *_cookbook_cells(i),
                 )]
             )  # fmt: skip
     return buf.getvalue()
+
+
+def _cookbook_cells(item: Item) -> tuple[str, str]:
+    b = item.cookbook
+    if b is None:
+        return "", ""
+    first = b.recommended
+    return (
+        f"{first.name} [{first.label}; {first.status}]",
+        "; ".join(f"{m.name} [{m.family}; {m.status}]" for m in b.methods[1:]),
+    )
+
+
+def _cookbook_lines(group: Group) -> list[str]:
+    """Ranked methods and the customer questions for each cookbook blocker in a group."""
+    seen: dict[str, Blocker] = {}
+    for i in group.items:
+        b = i.cookbook
+        if b is not None:
+            seen.setdefault(b.key, b)
+    lines: list[str] = []
+    for b in seen.values():
+        lines += ["", f"- Cookbook methods (ranked) for {md_cell(b.title, 100)} "
+                  "(details: docs/user/remediation-cookbook.md):"]  # fmt: skip
+        for n, m in enumerate(b.methods, 1):
+            tag = " (recommended)" if n == 1 else ""
+            lines.append(f"  {n}. {m.name}{tag} [{m.label}; {m.status}; {m.effort}]")
+            lines.append(f"     - Choose it when: {m.when}")
+            lines.append(f"     - Verify: {m.verify}")
+        lines += ["- What to ask the customer:", *(f"  - {a}" for a in b.ask)]
+        if b.cannot:
+            lines.append(f"- What New Relic cannot do: {b.cannot}")
+    return lines
 
 
 def _link_line(pb: Playbook) -> list[str]:
@@ -455,6 +497,7 @@ def render_markdown(plan: Plan) -> str:
             lines += [
                 f"  - {s}" for s in dict.fromkeys(s for i in g.items[:1] for s in _steps_of(i))
             ]
+        lines += _cookbook_lines(g)
         lines += ["", "Checklist:", ""]
         for i in g.items:
             where = (
@@ -464,6 +507,11 @@ def render_markdown(plan: Plan) -> str:
             also = [r.title for r in i.remedies[1:] if not r.secondary]
             tail = f" - also blocked by: {md_cell('; '.join(also), 150)}" if also else ""
             lines.append(f"- [ ] {i.kind}: {md_cell(i.name, 80)}{where}{extra}{tail}")
+            cb = i.cookbook
+            if cb is not None:
+                alts = ", ".join(m.name for m in cb.methods[1:3])
+                lines.append(f"  - recommended method: {cb.recommended.name} "
+                             f"[{cb.recommended.status}]; alternatives: {alts}")  # fmt: skip
             ready = _filled(i)
             if ready and ready != (g.playbook.template if g.playbook else ""):
                 lines.append(f"  - with this item's names: `{ready}`")
