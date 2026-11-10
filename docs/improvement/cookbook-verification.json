@@ -279,7 +279,7 @@
   "c0f046116633c0c2": {
    "ok": true,
    "rows": 4,
-   "where": "alert-counter"
+   "where": "one-query-ratio"
   },
   "cc1904ee18f2ea14": {
    "ok": true,
@@ -378,13 +378,31 @@
   }
  },
  "urls": {
+  "https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/alert-conditions/": 200,
   "https://docs.newrelic.com/docs/alerts/create-alert/create-alert-condition/create-nrql-alert-conditions/": 200,
+  "https://docs.newrelic.com/docs/alerts/get-notified/incident-workflows/": 200,
+  "https://docs.newrelic.com/docs/alerts/get-notified/message-templates/": 200,
+  "https://docs.newrelic.com/docs/alerts/get-notified/microsoft-teams-integrations/": 200,
+  "https://docs.newrelic.com/docs/alerts/get-notified/muting-rules-suppress-notifications/": 200,
+  "https://docs.newrelic.com/docs/alerts/get-notified/notification-integrations/": 200,
+  "https://docs.newrelic.com/docs/apis/nerdgraph/examples/nerdgraph-api-loss-signal-gap-filling/": 200,
+  "https://docs.newrelic.com/docs/apis/nerdgraph/examples/nerdgraph-api-workflows/": 200,
+  "https://docs.newrelic.com/docs/apis/nerdgraph/examples/nerdgraph-dashboards/": 200,
   "https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/install-configure-remote-write/set-your-prometheus-remote-write-integration/": 200,
   "https://docs.newrelic.com/docs/infrastructure/prometheus-integrations/view-query-data/translate-promql-queries-nrql/": 200,
   "https://docs.newrelic.com/docs/nrql/nrql-syntax-clauses-functions/": 200,
   "https://docs.newrelic.com/docs/nrql/using-nrql/nested-aggregation-make-ordered-computations-single-query/": 200,
+  "https://docs.newrelic.com/docs/opentelemetry/best-practices/opentelemetry-otlp/": 200,
+  "https://docs.newrelic.com/docs/opentelemetry/get-started/collector-processing/opentelemetry-collector-processing-intro/": 200,
+  "https://docs.newrelic.com/docs/query-your-data/explore-query-data/dashboards/dashboard-template-variables/": 200,
+  "https://docs.newrelic.com/docs/query-your-data/explore-query-data/dashboards/nested-variables/": 200,
+  "https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/cumulativetodeltaprocessor": 200,
   "https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor": 200,
-  "https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/": 200
+  "https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.relabel/": 200,
+  "https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/": 200,
+  "https://registry.terraform.io/providers/newrelic/newrelic/latest/docs/resources/alert_muting_rule": 200,
+  "https://registry.terraform.io/providers/newrelic/newrelic/latest/docs/resources/nrql_alert_condition": 200,
+  "https://registry.terraform.io/providers/newrelic/newrelic/latest/docs/resources/one_dashboard": 200
  },
  "values": {
   "comparison/filter-in-aggregate": {
