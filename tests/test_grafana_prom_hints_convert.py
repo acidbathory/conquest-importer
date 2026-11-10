@@ -1,0 +1,79 @@
+"""The converter reads a metric's exact type from the hints when there is one."""
+
+import pytest
+
+from importer.sources.grafana.dashboard_convert import reasons as r
+from importer.sources.grafana.dashboard_convert.name_map import NameMap, NameMapError, load_name_map
+from importer.sources.grafana.dashboard_convert.promql import QueryOptions, convert_query
+from importer.sources.grafana.dashboard_convert.reuse import Unconvertible
+from importer.sources.grafana.dashboards.models import Dashboard, Panel, Target
+from importer.sources.grafana.dashboards.plan import plan_dashboard
+
+
+def opts(names: NameMap, timeseries: bool = True) -> QueryOptions:
+    return QueryOptions(variables={}, name_map=names, timeseries=timeseries)
+
+
+def nrql(expr: str, names: NameMap) -> str:
+    return convert_query(expr, "prometheus", opts(names)).nrql
+
+
+def test_types_are_optional_and_checked(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    assert NameMap().types == {}
+    good = tmp_path / "h.json"
+    good.write_text('{"types": {"up": "gauge", "x_total": "counter", "l_bucket": "histogram_bucket"}}')
+    assert load_name_map(good).types["x_total"] == "counter"
+    bad = tmp_path / "b.json"
+    bad.write_text('{"types": {"up": "dial"}}')
+    with pytest.raises(NameMapError):
+        load_name_map(bad)
+
+
+def test_gauge_with_counter_suffix_converts_when_hinted() -> None:
+    with pytest.raises(Unconvertible):
+        nrql("process_open_fds_total", NameMap())
+    names = NameMap(types={"process_open_fds_total": "gauge"})
+    assert "average(process_open_fds_total)" in nrql("process_open_fds_total", names)
+
+
+def test_counter_without_suffix_is_refused_bare_when_hinted() -> None:
+    assert "average(requests)" in nrql("requests", NameMap())
+    with pytest.raises(Unconvertible):
+        nrql("requests", NameMap(types={"requests": "counter"}))
+    # through rate it still converts
+    assert "rate(sum(requests), 1 second)" in nrql(
+        "sum(rate(requests[5m]))", NameMap(types={"requests": "counter"})
+    )
+
+
+def test_histogram_percentile_needs_a_bucket_type_when_hinted() -> None:
+    expr = "histogram_quantile(0.9, sum by (le) (rate(lat_bucket[5m])))"
+    assert "bucketPercentile(lat_bucket, 90)" in nrql(expr, NameMap())
+    assert "bucketPercentile" in nrql(expr, NameMap(types={"lat_bucket": "histogram_bucket"}))
+    with pytest.raises(Unconvertible):
+        nrql(expr, NameMap(types={"lat_bucket": "gauge"}))
+
+
+def test_series_hint_unlocks_gauge_sum_as_before() -> None:
+    names = NameMap(series={"node_load1": ["instance"]})
+    assert "average(node_load1)" in nrql("sum by (instance) (node_load1)", names)
+    with pytest.raises(Unconvertible) as stop:
+        nrql("sum(node_load1)", names)
+    assert str(stop.value) == r.C_GAUGE_SERIES
+
+
+def plan_reason(expr: str, names: NameMap) -> str:
+    dash = Dashboard(
+        uid="d",
+        title="t",
+        panels=[Panel(id=1, type="timeseries", title="p", targets=[Target(ref_id="A", expr=expr)])],
+    )
+    plan = plan_dashboard(dash, names.types)
+    return plan.panels[0].reasons[0] if plan.panels[0].reasons else ""
+
+
+def test_planner_follows_the_hints() -> None:
+    assert "counter" in plan_reason("process_open_fds_total", NameMap())
+    assert plan_reason("process_open_fds_total", NameMap(types={"process_open_fds_total": "gauge"})) == ""
+    assert "counter" in plan_reason("requests", NameMap(types={"requests": "counter"}))
+    assert plan_reason("requests", NameMap()) == ""
