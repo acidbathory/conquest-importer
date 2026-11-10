@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parent.parent
 GUIDES = [
     ROOT / "README.md",
     ROOT / "docs" / "README.md",
+    ROOT / "docs" / "permissions.md",
+    ROOT / "docs" / "getting-started.md",
     *sorted((ROOT / "docs" / "user").glob("*.md")),
 ]
 LINK = re.compile(r"(?<!\!)\[[^\]]*\]\(([^)\s]+)\)")
@@ -99,3 +101,43 @@ def test_commands_and_flags_are_real(guide: Path) -> None:
             f"{name} has no option {flag}" for flag in FLAG.findall(text) if flag not in known
         )
     assert not bad, f"{guide.name}: {sorted(set(bad))}"
+
+
+IMAGE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
+SOURCES = ["Grafana", "Dynatrace", "AWS CloudWatch", "Google Cloud"]
+
+
+def test_readme_images_exist_and_are_small() -> None:
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    targets = [t for t in IMAGE.findall(text) if not t.startswith("http")]
+    assert targets, "the README has no images"
+    for target in targets:
+        path = ROOT / target
+        assert path.is_file(), f"README image missing: {target}"
+        assert path.stat().st_size < 600_000, f"README image too large: {target}"
+    for image in (ROOT / "docs" / "img").glob("report-*.jpg"):
+        assert image.stat().st_size < 300_000, f"image over 300 KB: {image.name}"
+
+
+def test_readme_covers_every_source_with_prerequisites() -> None:
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    headings = [line for line in text.splitlines() if line.startswith("### Prerequisites:")]
+    for source in SOURCES:
+        assert source in text.split("## Supported sources")[1].split("## What you need")[0]
+        assert any(source in h for h in headings), f"no prerequisites heading for {source}"
+    assert "bash scripts/migrate.sh" in text
+    for variable in ("GRAFANA_SA_TOKEN", "DYNATRACE_API_TOKEN", "NEW_RELIC_ALLOWED_ACCOUNT_IDS"):
+        assert variable in text
+    assert "SSL_CERT_FILE" in text
+
+
+def test_permissions_has_a_section_per_source() -> None:
+    text = (ROOT / "docs" / "permissions.md").read_text(encoding="utf-8")
+    for heading in (
+        "AWS CloudWatch",
+        "Google Cloud Monitoring",
+        "Grafana",
+        "Dynatrace",
+        "New Relic",
+    ):
+        assert re.search(rf"^## {heading}", text, re.MULTILINE), heading
