@@ -311,9 +311,11 @@ class _Parse:
 
     def bucket_percentile(self, inner: str, labels: list[str], percent: str) -> Leaf:
         call = RATE_CALL.fullmatch(inner)  # a bucket counter is only read through a rate call
-        if call is None or not call[2].endswith("_bucket"):
+        if call is None:
             raise Unconvertible(r.C_SHAPE)
         name, body = call[2], (call[3] or "")[1:-1]
+        if not self.is_bucket(name):
+            raise Unconvertible(r.C_SHAPE)
         event, metric = self.metric(name)
         where = self.where(body)
         core = f"bucketPercentile({metric}, {percent})"
@@ -334,7 +336,7 @@ class _Parse:
         if call is not None:
             return self.rate_leaf(agg, labels, call)
         name, body = selector(inner, r.C_SHAPE)
-        if name.endswith(COUNTER_SUFFIXES):
+        if self.is_counter(name):
             raise Unconvertible(r.C_SHAPE)
         event, metric = self.metric(name)
         func = NR_AGGREGATE[agg or "avg"]
@@ -354,6 +356,17 @@ class _Parse:
             event=event,
             kept=agg is None,
         )
+
+    def is_counter(self, name: str) -> bool:
+        """The hinted type when there is one, else the name suffix."""
+        kind = self.opts.name_map.types.get(name)
+        if kind is None:
+            return name.endswith(COUNTER_SUFFIXES)
+        return kind != "gauge"
+
+    def is_bucket(self, name: str) -> bool:
+        kind = self.opts.name_map.types.get(name)
+        return kind == "histogram_bucket" or (kind is None and name.endswith("_bucket"))
 
     def one_series(self, name: str, labels: list[str], body: str) -> bool:
         """True when the name map says these labels name one series and the query fixes them."""

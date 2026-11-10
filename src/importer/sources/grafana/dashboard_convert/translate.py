@@ -128,7 +128,7 @@ class Drafted:
 def draft_panels(dash: Dashboard, raw: RawDashboard | None, names: NameMap) -> Drafted:
     """Plan the dashboard, convert its variables and turn every panel into a draft."""
     known = raw or RawDashboard(displays=[None] * len(dash.panels), matched=False)
-    plan = plan_dashboard(dash)
+    plan = plan_dashboard(dash, names.types)
     raw_variables = known.variables + [RawVar()] * max(
         0, len(dash.variables) - len(known.variables)
     )
