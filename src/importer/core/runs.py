@@ -19,7 +19,7 @@ from importer.core.manifest import CreatedObject, load_manifest
 
 RUNS_ENV = "IMPORTER_RUNS_DIR"
 DEFAULT_RUNS_DIR = Path("out") / "runs"
-_RUN_ID = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{6}$")
+_RUN_ID = re.compile(r"^[0-9]{8}T[0-9]{12}Z-[0-9a-f]{6}$")
 Status = Literal["in-progress", "applied", "rolled-back", "partly-rolled-back"]
 
 
@@ -73,7 +73,7 @@ class RunStore:
     def start(self, *, source: str, account_id: int, region: str, out_dir: Path) -> RunRecord:
         now = datetime.now(UTC)
         record = RunRecord(
-            run_id=f"{now:%Y%m%dT%H%M%SZ}-{secrets.token_hex(3)}",
+            run_id=f"{now:%Y%m%dT%H%M%S%fZ}-{secrets.token_hex(3)}",
             source=source,
             account_id=account_id,
             region=region,
