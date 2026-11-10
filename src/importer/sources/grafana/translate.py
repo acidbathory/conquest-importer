@@ -240,7 +240,10 @@ N_LAST = (
 )
 N_PENDING = (
     "the pending period becomes the threshold duration; New Relic restarts the count when a "
-    "window has no data, so it may differ"
+    "window has no data, so it may differ. The incident opens later than in Grafana: after the "
+    "last window of the pending period ends it waits the aggregation delay (120s here) and "
+    "about one more minute (measured: 5 minutes after the first breaching sample for a 60s "
+    "window and a 2 minute duration)"
 )
 N_ROUNDED_FOR = (
     "the pending period of {seconds}s is not a whole number of {window}s windows, so it is "
