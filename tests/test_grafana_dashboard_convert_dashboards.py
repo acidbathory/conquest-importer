@@ -172,24 +172,29 @@ def test_a_table_and_a_top_five_bar_and_a_markdown_panel() -> None:
 
 def test_the_job_variable_is_an_nrql_multi_select_that_selects_all() -> None:
     d = convert(MINE, "node-exporter-rows.json")
-    assert [v.name for v in d.variables] == ["job"]
-    job = d.variables[0]
+    assert [v.name for v in d.variables] == ["job", "instance"]
+    job, instance = d.variables
     assert job.nrql == "FROM Metric SELECT uniques(job) WHERE metricName = 'node_uname_info'"
     assert job.multi_select and job.default_values == ["*"]
-    assert "1 variables were not converted" in d.reasons  # `instance` depends on `job`
+    # `instance` depends on `job`: a nested variable, listed after its parent
+    assert instance.nrql == (
+        "FROM Metric SELECT uniques(instance) WHERE metricName = 'node_uname_info' "
+        "AND job IN ({{job}})"
+    )
+    assert not any("were not converted" in x for x in d.reasons)
+    assert any(x.startswith("1 variables use another variable") for x in d.reasons)
 
 
 # --- placeholders ---
 
 
 def test_a_manual_panel_is_a_visible_placeholder_with_reason_and_query() -> None:
-    d = convert(MINE, "node-exporter-rows.json")
-    detail = by_title(d)["Per instance detail"]
-    assert detail.kind == WidgetKind.UNSUPPORTED and detail.confidence == Confidence.MANUAL
-    assert detail.reasons[0].startswith("dashboard panel uses a variable that stays manual")
-    assert detail.reasons[1] == 'query: node_load1{instance="$instance"}'
-    terraform = dashboards_terraform([(1, d)])
-    assert "**Not migrated:** Per instance detail (timeseries)" in terraform
+    made, _ = convert_all(load_items(MINE / "hostile-convert.json"))
+    placeholder = next(w for m in made for w in m.widgets if w.kind == WidgetKind.UNSUPPORTED)
+    assert placeholder.confidence == Confidence.MANUAL
+    assert any(x.startswith("query: ") for x in placeholder.reasons)
+    terraform = dashboards_terraform([(1, made[0])])
+    assert "**Not migrated:**" in terraform
 
 
 def test_placeholder_query_text_is_escaped_and_capped() -> None:
@@ -214,7 +219,12 @@ def test_a_dashboard_where_nothing_converts_is_not_emitted_but_is_listed() -> No
 def test_kubernetes_variables_constants_and_intervals() -> None:
     d = convert(MINE, "kubernetes-variables.json")
     kinds = {v.name: v.type.value for v in d.variables}
-    assert kinds == {"namespace": "nrql", "cluster": "enum", "jobfilter": "string"}
+    assert kinds == {"namespace": "nrql", "cluster": "enum", "jobfilter": "string", "pod": "nrql"}
+    assert [v.name for v in d.variables].index("namespace") < [v.name for v in d.variables].index(
+        "pod"
+    )
+    pod = next(v for v in d.variables if v.name == "pod")
+    assert pod.nrql is not None and "namespace IN ({{namespace}})" in pod.nrql
     assert d.variables[1].default_values == ["prod-eu"]
     w = by_title(d)
     assert queries(w["Region note"]) == [
@@ -400,3 +410,15 @@ def test_a_panel_that_shows_another_panels_result_uses_that_panels_query(tmp_pat
     assert queries(widgets[1]) == ["SELECT sum(up) FROM Metric"]
     assert widgets[1].visualization is not None
     assert widgets[1].visualization.value == "viz.billboard"
+
+
+def test_every_variable_of_a_chain_gets_the_real_account_when_applied() -> None:
+    from importer.core.apply_dashboards import with_account
+
+    d = convert(MINE, "node-exporter-rows.json")
+    sent = with_account(nerdgraph_dashboard(d), 4242)
+    variables = sent["variables"]["dashboard"]["variables"]
+    assert [v["name"] for v in variables] == ["job", "instance"]
+    assert [v["nrqlQuery"]["accountIds"] for v in variables] == [[4242], [4242]]
+    assert "ACCOUNT_ID_PLACEHOLDER" not in json.dumps(sent)
+    assert "{{job}}" in variables[1]["nrqlQuery"]["query"]

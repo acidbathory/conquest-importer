@@ -23,6 +23,7 @@ from importer.core.dashboard_ir import (
     Visualization,
     WidgetKind,
     WidgetOptions,
+    order_variables,
 )
 from importer.core.ir import (
     Aggregation,
@@ -197,7 +198,7 @@ def test_a_threshold_needs_a_bound_and_ordered_bounds() -> None:
             "name": "x",
             "title": "t",
             "type": VariableType.NRQL,
-            "nrql": "FROM Log SELECT uniques(a) WHERE b IN ({{y}})",
+            "nrql": "FROM Log SELECT uniques(a) LIMIT {{y}}",
         },
         {
             "name": "x",
@@ -353,3 +354,62 @@ def test_raw_series_has_no_label_field() -> None:
 def test_hidden_characters_are_refused_in_raw_series(bad: str) -> None:
     with pytest.raises(ValidationError):
         RawNrqlSeries(nrql=bad)
+
+
+def nrql_var(name: str, nrql: str, **extra: Any) -> IRVariable:
+    return IRVariable(name=name, title=name, type=VariableType.NRQL, nrql=nrql, **extra)
+
+
+def test_a_variable_query_may_use_another_variable_where_nrql_substitutes_it() -> None:
+    child = nrql_var("machine", "FROM Table SELECT uniques(machine) WHERE env IN ({{env}})")
+    assert child.nrql is not None and "{{env}}" in child.nrql
+
+
+def test_a_parent_must_be_defined_before_its_child() -> None:
+    parent = nrql_var("env", "FROM Transaction SELECT uniques(environment)")
+    child = nrql_var("machine", "FROM Table SELECT uniques(machine) WHERE env IN ({{env}})")
+    assert dashboard([chart()], variables=[parent, child]).variables == [parent, child]
+    with pytest.raises(ValidationError, match="before"):
+        dashboard([chart()], variables=[child, parent])
+
+
+def test_a_variable_query_may_not_use_an_undefined_variable() -> None:
+    child = nrql_var("machine", "FROM Table SELECT uniques(machine) WHERE env IN ({{env}})")
+    with pytest.raises(ValidationError, match="not defined"):
+        dashboard([chart()], variables=[child])
+
+
+def test_a_variable_query_may_not_use_itself() -> None:
+    selfish = nrql_var("a", "FROM Table SELECT uniques(x) WHERE y IN ({{a}})")
+    with pytest.raises(ValidationError, match="itself"):
+        dashboard([chart()], variables=[selfish])
+
+
+def test_a_cycle_of_variables_is_refused_by_name() -> None:
+    a = nrql_var("a", "FROM T SELECT uniques(x) WHERE y IN ({{b}})")
+    b = nrql_var("b", "FROM T SELECT uniques(y) WHERE x IN ({{a}})")
+    for order in ([a, b], [b, a]):
+        with pytest.raises(ValidationError, match="cycle"):
+            dashboard([chart()], variables=order)
+
+
+def test_order_variables_puts_parents_first_and_leaves_ordered_lists_alone() -> None:
+    free = IRVariable(name="free", title="f", type=VariableType.STRING)
+    parent = nrql_var("env", "FROM T SELECT uniques(e)")
+    child = nrql_var("machine", "FROM T SELECT uniques(m) WHERE e IN ({{env}})")
+    grandchild = nrql_var("disk", "FROM T SELECT uniques(d) WHERE m IN ({{machine}})")
+    assert order_variables([grandchild, free, child, parent]) == [parent, child, grandchild, free]
+    assert order_variables([free, parent]) == [free, parent]  # nothing to move
+
+
+def test_order_variables_reports_a_cycle() -> None:
+    a = nrql_var("a", "FROM T SELECT uniques(x) WHERE y IN ({{b}})")
+    b = nrql_var("b", "FROM T SELECT uniques(y) WHERE x IN ({{a}})")
+    with pytest.raises(ValueError, match="cycle: a, b"):
+        order_variables([a, b])
+
+
+def test_a_dashboard_without_dependent_variables_serialises_as_before() -> None:
+    v = nrql_var("env", "FROM T SELECT uniques(e)")
+    dumped = dashboard([chart()], variables=[v]).model_dump(mode="json")
+    assert set(dumped["variables"][0]) == set(v.model_dump(mode="json"))

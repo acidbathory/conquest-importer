@@ -295,22 +295,28 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"^dashboard variable query (?:is not label_values|runs on a data source)"),
+        re.compile(
+            r"^dashboard variable query "
+            r"(?:is not label_values|is query_result|runs on a data source)"
+        ),
         "Dashboard variable query",
         [
-            "Only `label_values(metric, label)` on Prometheus becomes a New Relic `nrql` "
-            "variable (`SELECT uniques(label) FROM Metric ...`). Other queries (`query_result`, "
-            "`label_names`, `metrics`, Loki, CloudWatch, SQL) need the list written by hand, "
-            "as an `enum` variable or an NRQL query with `uniques()` or `keyset()`.",
+            "Only these Prometheus variable queries become a New Relic `nrql` variable "
+            "(`FROM Metric SELECT uniques(label) ...`): `label_values(metric, label)`, "
+            "`label_values(label)`, `metrics(regex)` and `query_result(selector)` with a regex "
+            "that captures one label value. Anything else (`query_result` of an expression, "
+            "`label_names`, Loki, CloudWatch, SQL) needs the list written by hand, as an `enum` "
+            "variable or an NRQL query with `uniques()` or `keyset()`.",
         ],
     ),
     (
-        re.compile(r"^dashboard variable query depends on another variable"),
+        re.compile(r"^dashboard variable query depends on (?:a variable|itself)"),
         "Dashboard nested variable",
         [
-            "A variable that uses another variable in its query needs New Relic nested "
-            "variables, which are limited to some plans, and the parent needs selected values. "
-            "Check the plan of your account; otherwise make the child independent.",
+            "A child variable can only be written when every variable its query uses is written "
+            "too, and the variables do not depend on each other in a circle. Fix the parent "
+            "variable first (see its own reason), or make the child independent. Nested "
+            "variables also need a New Relic plan that offers them.",
         ],
     ),
     (

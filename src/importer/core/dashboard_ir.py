@@ -314,10 +314,42 @@ class IRVariable(BaseModel):
     def _check_query(self) -> None:
         if not self.nrql:
             raise ValueError("an nrql variable needs a query")
-        check_raw_nrql(self.nrql)
-        # Nested variables are Pro-plan only (research note); a translator must resolve them.
-        if check_variable_usage(self.nrql):
-            raise ValueError("a variable query may not use other variables")
+        check_raw_nrql(self.nrql)  # also refuses a {{variable}} in a clause that cannot hold one
+
+    def depends_on(self) -> list[str]:
+        """Names of the variables this variable's query uses (nested variables), in order."""
+        return check_variable_usage(self.nrql) if self.nrql else []
+
+
+def order_variables(variables: list[IRVariable]) -> list[IRVariable]:
+    """The variables with every parent before its children; the others keep their place.
+
+    A depth-first sort in list order: each variable is placed where it first appears, after its
+    parents. A list that is already in order comes back unchanged. Raises
+    ValueError for a variable that uses itself or a cycle ("cycle: a, b"). A name that is not
+    in the list is ignored here; `IRDashboard` reports it.
+    """
+    by_name = {v.name: v for v in variables}
+    parents = {v.name: [p for p in v.depends_on() if p in by_name] for v in variables}
+    done: list[str] = []
+    visiting: list[str] = []
+
+    def visit(name: str) -> None:
+        if name in done:
+            return
+        if name in visiting:
+            raise ValueError(
+                "variable cycle: " + ", ".join(sorted(visiting[visiting.index(name) :]))
+            )
+        visiting.append(name)
+        for parent in parents[name]:
+            visit(parent)
+        visiting.pop()
+        done.append(name)
+
+    for variable in variables:
+        visit(variable.name)
+    return [by_name[n] for n in done]
 
 
 class IRDashboard(OmitDefaults):
@@ -337,5 +369,12 @@ class IRDashboard(OmitDefaults):
         if len(set(names)) != len(names):
             raise ValueError("variable names must be unique")
         queries = [r.nrql for w in self.widgets for r in w.raw_series]
+        queries += [v.nrql for v in self.variables if v.nrql]
         check_variables_defined(queries, names)
+        for v in self.variables:
+            if v.name in v.depends_on():
+                raise ValueError(f"variable '{v.name}' uses itself in its query")
+        ordered = order_variables(self.variables)  # raises on a cycle
+        if [v.name for v in ordered] != names:
+            raise ValueError("a variable must be defined before the variables that use it")
         return self

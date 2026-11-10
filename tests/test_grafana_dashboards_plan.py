@@ -12,7 +12,7 @@ from importer.sources.grafana.dashboards import reasons as r
 from importer.sources.grafana.dashboards.datasources import resolve
 from importer.sources.grafana.dashboards.load import load_data, load_estate
 from importer.sources.grafana.dashboards.panels import TABLE, panel_type
-from importer.sources.grafana.dashboards.plan import DashboardPlan, Plan, build_plan
+from importer.sources.grafana.dashboards.plan import DashboardPlan, Plan, build_plan, plan_dashboard
 from importer.sources.grafana.dashboards.variables import classify_variable
 from importer.sources.grafana.translate import OTHER_DATASOURCES
 
@@ -282,8 +282,32 @@ VARIABLES = [
         "",
         "nrql variable",
     ),
-    (var(kind="query", query='label_values(up{s=~"$service"}, pod)'), "manual", r.V_NESTED, ""),
-    (var(kind="query", query="query_result(up)"), "manual", r.V_QUERY_SHAPE, ""),
+    (
+        var(kind="query", query='label_values(up{s=~"$service"}, pod)'),
+        "converts",
+        "",
+        "nrql variable",
+    ),
+    (var(kind="query", query="query_result(up)"), "manual", r.V_QUERY_RESULT, ""),
+    (
+        var(kind="query", query="query_result(up)", regex='/.*instance="([^"]+).*/'),
+        "converts",
+        "",
+        "nrql variable",
+    ),
+    (
+        var(kind="query", query="query_result(sum(up) by (job))", regex='/job="([^"]+)/'),
+        "manual",
+        r.V_QUERY_RESULT,
+        "",
+    ),
+    (
+        var(kind="query", query="query_result(up)", regex='/(?!x).*instance="([^"]+)/'),
+        "manual",
+        r.V_QUERY_RESULT,
+        "",
+    ),
+    (var(kind="query", query="metrics(node_.*)"), "converts", "", "nrql variable"),
     (var(kind="query", query="label_names()"), "manual", r.V_QUERY_SHAPE, ""),
     (var(kind="query", query="x", ds=m.DsRef(type="loki")), "manual", r.V_QUERY_DS, ""),
     (
@@ -311,15 +335,15 @@ VARIABLES = [
 def test_a_variable_is_classified_by_type_and_query(
     variable: m.Variable, status: str, reason: str, target: str
 ) -> None:
-    found = classify_variable(variable, dash(variables=[variable]), {"service"})
+    found = classify_variable(variable, dash(variables=[variable]))
     assert (found.status, found.reason, found.target) == (status, reason, target)
 
 
 def test_a_variable_name_used_twice_is_manual_the_second_time() -> None:
     first, second = var(name="a", kind="custom"), var(name="a", kind="custom")
     d = dash(variables=[first, second])
-    assert classify_variable(first, d, {"a"}, seen=set()).status == "converts"
-    assert classify_variable(second, d, {"a"}, seen={"a"}).reason == r.V_DUPLICATE
+    assert classify_variable(first, d, seen=set()).status == "converts"
+    assert classify_variable(second, d, seen={"a"}).reason == r.V_DUPLICATE
 
 
 def test_templating_usage_lists_used_unused_and_undefined_variables() -> None:
@@ -543,3 +567,53 @@ def test_a_dashboard_of_ten_thousand_panels_is_planned_quickly_and_in_bounded_me
     tracemalloc.stop()
     assert plan.dashboards[0].t2 == m.MAX_PANELS
     assert elapsed < 20 and peak < 200 * 1024 * 1024
+
+
+def test_a_child_variable_follows_its_parent_status() -> None:
+    parent = var(name="job", kind="query", query="label_values(up, job)")
+    child = var(name="inst", kind="query", query='label_values(up{job=~"$job"}, instance)')
+    grand = var(name="pod", kind="query", query='label_values(up{instance=~"$inst"}, pod)')
+    got = {
+        v.name: (v.status, v.reason)
+        for v in plan_dashboard(dash(variables=[parent, child, grand])).variables
+    }
+    assert got == dict.fromkeys(("job", "inst", "pod"), ("converts", ""))
+
+
+def test_a_child_of_a_manual_parent_is_manual_down_the_chain() -> None:
+    parent = var(name="job", kind="adhoc")
+    child = var(name="inst", kind="query", query='label_values(up{job=~"$job"}, instance)')
+    grand = var(name="pod", kind="query", query='label_values(up{instance=~"$inst"}, pod)')
+    got = {
+        v.name: (v.status, v.reason)
+        for v in plan_dashboard(dash(variables=[parent, child, grand])).variables
+    }
+    assert got == {
+        "job": ("manual", r.V_ADHOC),
+        "inst": ("manual", r.V_NESTED),
+        "pod": ("manual", r.V_NESTED),
+    }
+
+
+def test_a_child_listed_before_its_parent_still_converts() -> None:
+    child = var(name="inst", kind="query", query='label_values(up{job=~"$job"}, instance)')
+    parent = var(name="job", kind="query", query="label_values(up, job)")
+    got = {v.name: v.status for v in plan_dashboard(dash(variables=[child, parent])).variables}
+    assert got == {"inst": "converts", "job": "converts"}
+
+
+def test_variables_that_use_themselves_or_each_other_are_manual_with_the_cycle_reason() -> None:
+    a = var(name="a", kind="query", query='label_values(up{x=~"$b"}, y)')
+    b = var(name="b", kind="query", query='label_values(up{y=~"$a"}, x)')
+    me = var(name="me", kind="query", query='label_values(up{y=~"$me"}, x)')
+    ok = var(name="ok", kind="query", query="label_values(up, z)")
+    got = {
+        v.name: (v.status, v.reason)
+        for v in plan_dashboard(dash(variables=[a, b, me, ok])).variables
+    }
+    assert got == {
+        "a": ("manual", r.V_CYCLE),
+        "b": ("manual", r.V_CYCLE),
+        "me": ("manual", r.V_CYCLE),
+        "ok": ("converts", ""),
+    }

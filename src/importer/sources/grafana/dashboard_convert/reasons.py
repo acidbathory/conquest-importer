@@ -26,6 +26,12 @@ C_NRQL = f"{PREFIX}: the converted query is not accepted by the dashboard query 
 C_VARIABLE_UNDEFINED = (
     f"{PREFIX}: the query uses a variable that did not become a New Relic variable"
 )
+C_METRICNAME = (
+    f"{PREFIX}: a label is called metricName, the attribute that holds the metric name in New Relic"
+)
+C_METRICS_RENAMED = (
+    f"{PREFIX}: the query lists Prometheus metric names, but the name map renames metrics"
+)
 C_LIKE_PERCENT = f"{PREFIX}: a pattern contains % which NRQL LIKE cannot match literally"
 C_AGG_RATE = f"{PREFIX}: an average, minimum or maximum of rates has no correct New Relic form"
 C_REUSE = f"{PREFIX}: the panel reuses a query that did not convert"
@@ -88,5 +94,17 @@ D_PANELS = "{done} of {total} panels converted, {placeholders} are placeholders"
 D_WIDGET_CAP = "{count} widgets over the limit of 150 per page were left out"
 D_VARIABLE_DROPPED = "{count} interval or data source variables were dropped"
 D_VARIABLE_MANUAL = "{count} variables were not converted"
+D_VARIABLE_NESTED = (
+    "{count} variables use another variable in their query; New Relic offers nested variables on "
+    "Pro, Enterprise and Core Compute plans only (not verified for your account)"
+)
+D_VARIABLE_QUERY_RESULT = (
+    "{count} query_result() variables list the unique values of the captured label; Grafana reads "
+    "the latest sample of each series, so the lists can differ"
+)
+D_VARIABLE_PARENT_DEFAULT = (
+    "{count} variables that others depend on have no default value; a nested variable lists "
+    "nothing until its parent has a selected value"
+)
 D_SUBSTITUTED = "{count} constant variables were written into the queries"
 D_BAD_FILE = "the file could not be read: {reason}"

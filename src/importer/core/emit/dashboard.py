@@ -19,6 +19,7 @@ from importer.core.dashboard_ir import (
     VariableType,
     Visualization,
     WidgetKind,
+    order_variables,
     provider_layout,
 )
 from importer.core.dashboard_nrql import check_raw_nrql, check_variables_defined
@@ -104,6 +105,21 @@ def _check_variables(dashboard: IRDashboard, queries: list[str]) -> None:
     uses_variables = bool(dashboard.variables) or any(w.raw_series for w in dashboard.widgets)
     if uses_variables:
         check_variables_defined(queries, [v.name for v in dashboard.variables])
+
+
+def check_variable_order(dashboard: IRDashboard) -> None:
+    """Refuse variables whose queries use an undefined variable, or that come before their parent.
+
+    The IR checks this when it is built; the models are mutable, so it is checked again here.
+    """
+    queries = [v.nrql for v in dashboard.variables if v.nrql]
+    try:
+        check_variables_defined(queries, [v.name for v in dashboard.variables])
+        ordered = order_variables(dashboard.variables)
+    except ValueError as exc:
+        raise CannotEmit(str(exc)) from None
+    if ordered != dashboard.variables:
+        raise CannotEmit("a variable is defined before a variable its query uses")
 
 
 def emittable_widgets(dashboard: IRDashboard) -> list[EmitWidget]:
@@ -207,6 +223,7 @@ def nerdgraph_dashboard(dashboard: IRDashboard) -> dict[str, Any]:
         "pages": [{"name": dashboard.name, "widgets": widgets}],
     }
     if dashboard.variables:
+        check_variable_order(dashboard)
         body["variables"] = [nerdgraph_variable(v) for v in dashboard.variables]
     return {"query": MUTATION, "variables": {"accountId": ACCOUNT_PLACEHOLDER, "dashboard": body}}
 
@@ -328,6 +345,7 @@ def dashboard_resource(dashboard: IRDashboard, source_id: int) -> str:
     if notes := clamp_notes(dashboard):
         lines.append(f"  description = {hcl_string(notes)}")
     lines.append("")
+    check_variable_order(dashboard)
     for variable in dashboard.variables:
         lines += _variable_lines(variable)
     lines += ["  page {", f"    name = {hcl_string(dashboard.name)}"]

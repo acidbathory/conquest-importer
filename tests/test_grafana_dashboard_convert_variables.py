@@ -148,7 +148,7 @@ def test_interval_and_datasource_variables_are_dropped_and_interval_is_remembere
 
 def test_variables_the_planner_keeps_manual_are_not_created() -> None:
     adhoc = Variable(name="filters", kind="adhoc")
-    nested = Variable(name="b", kind="query", query='label_values(up{a=~"$a"}, b)')
+    nested = Variable(name="b", kind="query", query='label_values(up{a=~"$filters"}, b)')
     first = Variable(name="a", kind="custom", query="1,2")
     out = build([first, nested, adhoc])
     assert [v.name for v in out.variables] == ["a"] and out.manual == 2
@@ -198,3 +198,126 @@ def test_a_variable_the_converter_cannot_write_is_counted_and_its_panels_say_so(
     draft = convert_panel(panel, plan.panels[0], None, Context(dash, NameMap(), found))
     assert draft.kind.value == "unsupported"
     assert draft.reasons[0].endswith("did not become a New Relic variable")
+
+
+# --- chained variables, query_result, metrics(), __name__ ---
+
+
+def named(name: str, query: str, **extra: object) -> Variable:
+    return Variable(name=name, kind="query", query=query, **extra)
+
+
+def nrql_of(out: Variables) -> dict[str, str | None]:
+    return {v.name: v.nrql for v in out.variables}
+
+
+def test_a_chain_of_variables_uses_in_filters_and_lists_parents_first() -> None:
+    chain = [
+        named("node", 'label_values(node_uname_info{job="$job", nodename="$nodename"}, instance)'),
+        named("nodename", 'label_values(node_uname_info{job="$job"}, nodename)'),
+        named("job", "label_values(node_uname_info, job)"),
+    ]
+    out = build(chain)
+    assert [v.name for v in out.variables] == ["job", "nodename", "node"]
+    assert nrql_of(out) == {
+        "job": "FROM Metric SELECT uniques(job) WHERE metricName = 'node_uname_info'",
+        "nodename": "FROM Metric SELECT uniques(nodename) WHERE metricName = 'node_uname_info' "
+        "AND job IN ({{job}})",
+        "node": "FROM Metric SELECT uniques(instance) WHERE metricName = 'node_uname_info' "
+        "AND job IN ({{job}}) AND nodename IN ({{nodename}})",
+    }
+    assert out.nested == 2 and out.manual == 0
+
+
+def test_a_multi_value_parent_is_matched_with_in() -> None:
+    parent = named("ns", "label_values(kube_pod_info, namespace)", multi=True, include_all=True)
+    child = named("pod", 'label_values(kube_pod_info{namespace=~"$ns"}, pod)')
+    out = build([parent, child])
+    assert out.variables[0].multi_select and out.variables[0].default_values == ["*"]
+    assert nrql_of(out)["pod"] == (
+        "FROM Metric SELECT uniques(pod) WHERE metricName = 'kube_pod_info' "
+        "AND namespace IN ({{ns}})"
+    )
+
+
+def test_a_constant_parent_is_written_into_the_child_query() -> None:
+    const = Variable(name="env", kind="constant", query="prod")
+    child = named("pod", 'label_values(up{env="$env"}, pod)')
+    assert nrql_of(build([const, child]))["pod"].endswith("AND env = 'prod'")  # type: ignore[union-attr]
+
+
+def test_a_parent_that_stays_manual_leaves_the_child_manual_and_counted() -> None:
+    adhoc = Variable(name="filters", kind="adhoc")
+    child = named("pod", 'label_values(up{a=~"$filters"}, pod)')
+    out = build([adhoc, child])
+    assert out.variables == [] and out.manual == 2
+
+
+def test_a_child_whose_query_cannot_be_written_is_manual_not_a_wrong_filter() -> None:
+    parent = named("a", "label_values(up, a)")
+    child = named("b", 'label_values(up{x=~"$a-suffix"}, b)')  # text mixed with a variable
+    out = build([parent, child])
+    assert [v.name for v in out.variables] == ["a"] and out.manual == 1
+
+
+def test_a_variable_cycle_creates_no_variable() -> None:
+    a = named("a", 'label_values(up{y=~"$b"}, x)')
+    b = named("b", 'label_values(up{x=~"$a"}, y)')
+    out = build([a, b])
+    assert out.variables == [] and out.manual == 2
+
+
+@pytest.mark.parametrize(
+    ("variable", "nrql"),
+    [
+        (
+            named("i", "query_result(pg_up)", regex='/.*instance="([^"]+).*/'),
+            "FROM Metric SELECT uniques(instance) WHERE metricName = 'pg_up'",
+        ),
+        (
+            named("r", 'query_result(pg_up{kubernetes_namespace="x"})', regex='/release="([^"]+)/'),
+            "FROM Metric SELECT uniques(release) WHERE metricName = 'pg_up' "
+            "AND kubernetes_namespace = 'x'",
+        ),
+        (
+            named("m", "metrics(node_.*)"),
+            "FROM Metric SELECT uniques(metricName) WHERE metricName LIKE 'node_%'",
+        ),
+        (named("all", "metrics(.*)"), "FROM Metric SELECT uniques(metricName)"),
+        (
+            named("h", 'label_values({__name__=~"container.*", instance=~"$h2"}, name)'),
+            "FROM Metric SELECT uniques(name) WHERE metricName LIKE 'container%' "
+            "AND instance IN ({{h2}})",
+        ),
+    ],
+)
+def test_other_prometheus_variable_queries_become_uniques(variable: Variable, nrql: str) -> None:
+    parent = named("h2", 'label_values({__name__=~"container.*"}, instance)')
+    out = build([parent, variable] if variable.name == "h" else [variable])
+    assert nrql_of(out)[variable.name] == nrql
+
+
+def test_query_result_variables_are_noted_as_approximate() -> None:
+    v = named("i", "query_result(pg_up)", regex='/.*instance="([^"]+).*/')
+    out = build([v])
+    assert out.query_results == 1
+
+
+def test_a_label_called_metricname_is_manual_because_it_collides_with_the_name_attribute() -> None:
+    assert build([named("x", "label_values(up, metricName)")]).manual == 1
+    assert build([named("x", 'label_values(up{metricName="a"}, pod)')]).manual == 1
+
+
+def test_query_result_of_an_expression_or_without_a_capture_is_manual() -> None:
+    assert build([named("x", "query_result(sum(up))", regex='/job="([^"]+)/')]).manual == 1
+    assert build([named("x", "query_result(up)")]).manual == 1
+
+
+def test_the_name_map_decides_the_event_of_a_parent_filter() -> None:
+    names = NameMap(metrics={"kube_pod_info": NameEntry(event="K8sPodSample", attribute="podName")})
+    parent = named("ns", "label_values(kube_pod_info, namespace)")
+    child = named("pod", 'label_values(kube_pod_info{namespace=~"$ns"}, pod)')
+    out = build([parent, child], names=names)
+    assert nrql_of(out)["pod"] == (
+        "FROM K8sPodSample SELECT uniques(pod) WHERE podName IS NOT NULL AND namespace IN ({{ns}})"
+    )
