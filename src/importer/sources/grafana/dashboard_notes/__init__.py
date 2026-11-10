@@ -8,7 +8,7 @@ are anchored to the converter's wording in `dashboard_convert/reasons.py`; the t
 
 import re
 
-from importer.core.remediation import Rule, register_rules
+from importer.core.remediation import register_rules
 from importer.core.taxonomy import Category, register_taxonomy
 
 ROWS: list[tuple[str, str, list[str]]] = [

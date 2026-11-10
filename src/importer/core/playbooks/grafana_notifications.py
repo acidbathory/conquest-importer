@@ -15,7 +15,7 @@ _CP_MANUAL = "Grafana contact point needs a manual step"
 reg(
     f"{_CP_MANUAL}|slack",
     Playbook(
-        grafana="A Slack contact point posts alerts to a channel through a webhook URL or bot token.",
+        source="A Slack contact point posts alerts to a channel (webhook URL or bot token).",
         newrelic="A Slack destination (the New Relic Slack app, OAuth sign-in once per "
         "workspace) with a channel on it, used by a workflow.",
         steps=(
@@ -34,7 +34,7 @@ reg(
 reg(
     f"{_CP_MANUAL}|teams",
     Playbook(
-        grafana="A Microsoft Teams contact point posts to a channel through a connector URL.",
+        source="A Microsoft Teams contact point posts to a channel through a connector URL.",
         newrelic="The New Relic app for Microsoft Teams, added to the channel; a Teams "
         "destination in New Relic.",
         steps=(
@@ -51,7 +51,7 @@ reg(
 reg(
     f"{_CP_MANUAL}|jira",
     Playbook(
-        grafana="A Jira contact point creates an issue from an alert.",
+        source="A Jira contact point creates an issue from an alert.",
         newrelic="A Jira destination (Jira Cloud only) with a channel that has a project "
         "and an issue type.",
         steps=(
@@ -69,7 +69,7 @@ reg(
 reg(
     f"{_CP_MANUAL}|sns",
     Playbook(
-        grafana="An SNS contact point publishes to an Amazon SNS topic.",
+        source="An SNS contact point publishes to an Amazon SNS topic.",
         newrelic="An AWS EventBridge destination (New Relic is an EventBridge SaaS partner "
         "event source); an EventBridge rule in AWS forwards to SNS.",
         steps=(
@@ -86,7 +86,7 @@ reg(
 reg(
     f"{_CP_MANUAL}|pagerduty",
     Playbook(
-        grafana="A PagerDuty contact point sends events with an integration key.",
+        source="A PagerDuty contact point sends events with an integration key.",
         newrelic="A PagerDuty destination: account-level (REST API key, recommended, several "
         "services) or service-level integration key.",
         steps=(
@@ -103,7 +103,7 @@ reg(
 reg(
     _CP_MANUAL,
     Playbook(
-        grafana="A contact point that needs a person to sign in or to supply a key "
+        source="A contact point that needs a person to sign in or to supply a key "
         "(Pushover, Slack, Teams, Jira, SNS, PagerDuty).",
         newrelic="A destination of the matching New Relic type (Slack, Teams, Jira, "
         "ServiceNow, PagerDuty, EventBridge, email, webhook) used by a workflow channel. "
@@ -121,7 +121,7 @@ _CP_NONE = "Grafana contact point has no New Relic destination"
 reg(
     _CP_NONE,
     Playbook(
-        grafana="A contact point for a service New Relic does not have a destination for "
+        source="A contact point for a service New Relic does not have a destination for "
         "(Threema, LINE, MQTT, WeChat, WeCom app).",
         newrelic="None. Workarounds: a webhook destination to a relay you control that "
         "speaks the service's protocol (MQTT broker bridge, Threema gateway), or another "
@@ -143,7 +143,7 @@ reg(
 reg(
     "Grafana contact point type not known",
     Playbook(
-        grafana="A contact point of a type the importer's table does not list.",
+        source="A contact point of a type the importer's table does not list.",
         newrelic="Depends on the type; recreate it by hand as email, webhook or a native "
         "destination.",
         steps=(
@@ -159,7 +159,7 @@ reg(
 reg(
     "Grafana contact point as a webhook template",
     Playbook(
-        grafana="A chat or incident service reached through its own API (Discord, Google "
+        source="A chat or incident service reached through its own API (Discord, Google "
         "Chat, Telegram, Webex, OnCall, Opsgenie, VictorOps, DingTalk, Sensu, Kafka).",
         newrelic="A WEBHOOK destination with a channel payload (Handlebars) in the shape the "
         "service expects. Opsgenie has a documented webhook template.",
@@ -177,7 +177,7 @@ reg(
 reg(
     "Grafana vendor webhook payload not tested",
     Playbook(
-        grafana="A webhook payload for a vendor service built by the importer.",
+        source="A webhook payload for a vendor service built by the importer.",
         newrelic="The same WEBHOOK destination; the payload needs a real test.",
         steps=(
             "Send a test notification to a sandbox receiver and compare with the service's "
@@ -192,7 +192,7 @@ reg(
 reg(
     "Grafana webhook settings not converted",
     Playbook(
-        grafana="A webhook with an HTTP method, credentials, signing, headers or a custom body.",
+        source="A webhook with an HTTP method, credentials, signing, headers or a custom body.",
         newrelic="A WEBHOOK destination with basic or bearer auth and custom headers; a "
         "channel payload. New Relic always POSTs and does not sign requests.",
         steps=(
@@ -209,7 +209,7 @@ reg(
 reg(
     "Grafana custom notification template",
     Playbook(
-        grafana="A Go template builds the title and message.",
+        source="A Go template builds the title and message.",
         newrelic="A message template on the channel using issue variables "
         "(issueTitle, priorityText, stateText, issuePageUrl, ...).",
         steps=(
@@ -226,7 +226,7 @@ reg(
 reg(
     "Grafana email contact point without an address",
     Playbook(
-        grafana="An email contact point.",
+        source="An email contact point.",
         newrelic="An EMAIL destination.",
         steps=(
             "Put the addresses in the destinations map under the contact point and convert "
@@ -240,7 +240,7 @@ reg(
 reg(
     "Grafana converted destination needs a secret at apply time",
     Playbook(
-        grafana="A credential the export cannot hold.",
+        source="A credential the export cannot hold.",
         newrelic="A sensitive Terraform variable or the destination form in the UI.",
         steps=(
             "Set `TF_VAR_nr_secret_<name>` in the environment or a tfvars file kept out of git.",
@@ -258,7 +258,7 @@ reg(
         "Grafana destinations map entry does not fit",
     ),
     Playbook(
-        grafana="A route sends to a receiver that was not exported or has nothing New Relic "
+        source="A route sends to a receiver that was not exported or has nothing New Relic "
         "can create.",
         newrelic="Fix the export or the map, or pick another channel for the route.",
         steps=(
@@ -281,7 +281,7 @@ reg(
         "Grafana notification policy rule without receiver",
     ),
     Playbook(
-        grafana="The notification policy tree routes alerts by label matchers, in order; the "
+        source="The notification policy tree routes alerts by label matchers, in order; the "
         "first matching route wins; a rule can have no receiver.",
         newrelic="One workflow per route with an issue filter (attribute, operator, value); "
         "workflows run independently and all that match fire.",
@@ -309,7 +309,7 @@ reg(
         "Grafana notification policy tree cut",
     ),
     Playbook(
-        grafana="Group by labels, group wait, group interval and repeat interval shape how "
+        source="Group by labels, group wait, group interval and repeat interval shape how "
         "alerts are batched and repeated.",
         newrelic="Issues group incidents by incident preference of the policy (per policy, "
         "per condition, per condition and target); workflows notify on state changes. There "
@@ -343,7 +343,7 @@ reg(
         "Grafana policy names a mute timing that is not in the export",
     ),
     Playbook(
-        grafana="A mute timing silences notifications on a time pattern (weekdays, time of "
+        source="A mute timing silences notifications on a time pattern (weekdays, time of "
         "day, days of the month, months, a time zone) for the routes that use it.",
         newrelic="A muting rule: a filter on alert event attributes (conditionName, "
         "policyName, tags.<name>) and a schedule with a start, end, time zone and a daily, "

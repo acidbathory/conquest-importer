@@ -34,7 +34,7 @@ class Link:
 class Playbook:
     """How to finish one kind of unconverted item. All text is fixed; none comes from an export."""
 
-    grafana: str  # what the item does in the source tool
+    source: str  # what the item does in the source tool
     newrelic: str  # the closest New Relic construct, or "none" and the best workaround
     steps: tuple[str, ...]
     differs: str  # what will behave differently

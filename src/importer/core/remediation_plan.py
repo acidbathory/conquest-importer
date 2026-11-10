@@ -35,8 +35,33 @@ COUNTED = re.compile(r"^(\d+) ")
 PANEL_TYPE = re.compile(r"^dashboard panel type ([a-z-]+) ")
 DATA_SOURCE = re.compile(r"^dashboard data source ([a-z ]+?) is not supported")
 PROMQL_WORDS = frozenset(
-    "by without on ignoring group_left group_right bool offset and or unless sum avg min max "
-    "count rate irate increase histogram_quantile topk bottomk stddev stdvar quantile".split()
+    {
+        "by",
+        "without",
+        "on",
+        "ignoring",
+        "group_left",
+        "group_right",
+        "bool",
+        "offset",
+        "and",
+        "or",
+        "unless",
+        "sum",
+        "avg",
+        "min",
+        "max",
+        "count",
+        "rate",
+        "irate",
+        "increase",
+        "histogram_quantile",
+        "topk",
+        "bottomk",
+        "stddev",
+        "stdvar",
+        "quantile",
+    }
 )
 
 
@@ -145,7 +170,7 @@ def _dashboard_items(dash: IRDashboard) -> list[Item]:
             )
         )
     for reason in dash.reasons:
-        if SUMMARY.match(reason):
+        if SUMMARY.match(reason) or not remedies_for([reason]):
             continue
         counted = COUNTED.match(reason)
         kind = "dashboard variable" if "variable" in reason else "dashboard feature"
@@ -358,8 +383,8 @@ def render_csv(plan: Plan) -> str:
 
 def _link_line(pb: Playbook) -> list[str]:
     return [
-        f"  - {l.note}: {l.url} ({'checked ' + CHECKED_ON if l.verified else 'UNVERIFIED'})"
-        for l in pb.links
+        f"  - {k.note}: {k.url} ({'checked ' + CHECKED_ON if k.verified else 'UNVERIFIED'})"
+        for k in pb.links
     ]
 
 
@@ -401,7 +426,7 @@ def render_markdown(plan: Plan) -> str:
         pb = g.playbook
         if pb:
             lines += [
-                f"- In the source tool: {pb.grafana}",
+                f"- In the source tool: {pb.source}",
                 f"- Closest New Relic construct: {pb.newrelic}"
                 + (
                     " (no direct equivalent; this is the best workaround)"

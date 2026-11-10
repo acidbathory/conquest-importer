@@ -1,6 +1,6 @@
 """Playbooks for Grafana dashboard panels, variables and dashboard-level features."""
 
-from importer.core.playbook import Link, Playbook, register_playbook
+from importer.core.playbook import Playbook, register_playbook
 from importer.core.playbooks import links as L
 
 UNRUN = (
@@ -17,7 +17,7 @@ def reg(titles: tuple[str, ...] | str, pb: Playbook) -> None:
 reg(
     "Dashboard panel using a variable that stays manual",
     Playbook(
-        grafana='The query filters on a dashboard variable such as cluster=~"$cluster".',
+        source='The query filters on a dashboard variable such as cluster=~"$cluster".',
         newrelic="A New Relic dashboard variable used as {{name}} in the widget query "
         "(`WHERE cluster IN ({{cluster}})`).",
         steps=(
@@ -43,7 +43,7 @@ reg(
         "Dashboard variable regex",
     ),
     Playbook(
-        grafana="A variable fills its drop-down from a data source query (label_values, "
+        source="A variable fills its drop-down from a data source query (label_values, "
         "query_result, a regex that trims the values).",
         newrelic="A `nrql` variable (`uniques()`), or an `enum` variable with the values typed "
         "in. A regex on the values becomes `WHERE attr RLIKE '...'` in the variable query.",
@@ -65,7 +65,7 @@ reg(
 reg(
     "Dashboard nested variable",
     Playbook(
-        grafana="A variable's query uses another variable (instance depends on job).",
+        source="A variable's query uses another variable (instance depends on job).",
         newrelic="Nested variables, `WHERE job IN ({{job}})` in the child's NRQL.",
         steps=(
             "Check that the account is on Pro, Enterprise or Core Compute; the docs say nested "
@@ -89,7 +89,7 @@ reg(
         "Dashboard variable type",
     ),
     Playbook(
-        grafana="A variable that adds any label filter or group-by at view time (ad hoc), "
+        source="A variable that adds any label filter or group-by at view time (ad hoc), "
         "switches the data source or sets the interval.",
         newrelic="No equivalent for ad hoc filters, data source and interval variables. "
         "Workaround: a `string` variable with the identifier replacement after FACET for a "
@@ -114,7 +114,7 @@ reg(
 reg(
     "Dashboard query using a variable that did not convert",
     Playbook(
-        grafana="The query filters on a variable that did not become a New Relic variable.",
+        source="The query filters on a variable that did not become a New Relic variable.",
         newrelic="The same as 'panel using a variable that stays manual': rebuild the variable, "
         "then use {{name}}.",
         steps=(
@@ -133,7 +133,7 @@ reg(
         "Dashboard query using $__interval or $__range outside a range",
     ),
     Playbook(
-        grafana="A variable sits inside a metric or label name, or is mixed with text in a "
+        source="A variable sits inside a metric or label name, or is mixed with text in a "
         'matcher (`job=~"api-$env"`), or $__interval is used in arithmetic.',
         newrelic="A New Relic variable is substituted whole, so it can stand for an attribute "
         "name (identifier), a value or a number, but not part of one.",
@@ -152,7 +152,7 @@ reg(
 reg(
     "Dashboard metric list with a name map",
     Playbook(
-        grafana="A variable lists metric names (`metrics(regex)`).",
+        source="A variable lists metric names (`metrics(regex)`).",
         newrelic="An `enum` variable, or `FROM Metric SELECT uniques(metricName)`.",
         steps=(
             "Type the metric names as they are in New Relic into an `enum` variable, or use "
@@ -169,7 +169,7 @@ reg(
 reg(
     ("Dashboard annotations", "Dashboard annotations dropped"),
     Playbook(
-        grafana="Annotation queries draw events (deploys, incidents) as vertical lines on charts.",
+        source="Annotation queries draw events (deploys, incidents) as vertical lines on charts.",
         newrelic="Change tracking markers on charts of an entity (created through NerdGraph, the "
         "CLI or a CI step). There is no query-based annotation layer on a dashboard.",
         steps=(
@@ -189,7 +189,7 @@ reg(
 reg(
     "Dashboard links dropped",
     Playbook(
-        grafana="Links at the top of the dashboard to other dashboards, runbooks or tools.",
+        source="Links at the top of the dashboard to other dashboards, runbooks or tools.",
         newrelic="A markdown widget holding the links, or the link setting of one widget. "
         "No link bar.",
         steps=(
@@ -206,7 +206,7 @@ reg(
 reg(
     ("Dashboard repeated rows shown once", "Dashboard tabs flattened"),
     Playbook(
-        grafana="A row or panel repeats once for every value of a multi-value variable; tabs "
+        source="A row or panel repeats once for every value of a multi-value variable; tabs "
         "group rows.",
         newrelic="One widget with a FACET on the variable's label draws every value; pages "
         "(tabs) of a dashboard.",
@@ -224,7 +224,7 @@ reg(
 reg(
     "Dashboard over the widget limit",
     Playbook(
-        grafana="A dashboard with more panels than one New Relic page holds.",
+        source="A dashboard with more panels than one New Relic page holds.",
         newrelic="A second page in the same dashboard (150 widgets per page).",
         steps=(
             "Re-run the conversion on a split dashboard, or add a page by hand and move "
@@ -241,7 +241,7 @@ reg(
 reg(
     "Dashboard sum or count across the series of a gauge",
     Playbook(
-        grafana="sum(metric) or count(metric) of a gauge adds the latest value of every series.",
+        source="sum(metric) or count(metric) of a gauge adds the latest value of every series.",
         newrelic="A nested query: latest() per series, then sum() of those. A New Relic sum() "
         "of a gauge adds every sample, not the latest value per series.",
         steps=(
@@ -270,7 +270,7 @@ reg(
 reg(
     "Dashboard average, minimum or maximum of rates",
     Playbook(
-        grafana="avg(rate(counter[5m])) is the mean of the per-series rates.",
+        source="avg(rate(counter[5m])) is the mean of the per-series rates.",
         newrelic="rate(sum(c), 1 second) divided by the number of series, or the rate per "
         "series with FACET. rate(average(c)) divides one sample by the bucket and reads too low.",
         steps=(
@@ -291,7 +291,7 @@ reg(
 reg(
     "Dashboard query comparison or vector matching",
     Playbook(
-        grafana="A comparison or set operator filters series (`metric == 1`, `> 0`, `and`, "
+        source="A comparison or set operator filters series (`metric == 1`, `> 0`, `and`, "
         "`unless`) or joins two metrics (`on(...) group_left(...)`).",
         newrelic="WHERE before the aggregation, a nested query that filters the inner result, "
         "or a widget threshold. A join of two metrics on labels is FACET on both labels with "
@@ -319,7 +319,7 @@ reg(
 reg(
     ("Dashboard query time or range function", "Dashboard query bottomk or topk with a variable"),
     Playbook(
-        grafana="offset, *_over_time, delta, deriv, predict_linear, absent() or without() "
+        source="offset, *_over_time, delta, deriv, predict_linear, absent() or without() "
         "looking back or across time; bottomk/topk with a variable count.",
         newrelic="`SINCE ... COMPARE WITH` for offset, an aggregate with `SLIDE BY` for "
         "*_over_time, derivative() / predictLinear() for delta and prediction, `LIMIT` with a "
@@ -351,7 +351,7 @@ reg(
         "Dashboard histogram_quantile shape",
     ),
     Playbook(
-        grafana="A PromQL function with no direct NRQL form (label_replace, label_join, "
+        source="A PromQL function with no direct NRQL form (label_replace, label_join, "
         "clamp, scalar), an aggregation of an aggregation, or grouping by different labels.",
         newrelic="NRQL nested aggregation `SELECT f(x) FROM (SELECT g(y) AS x FACET a)`; "
         "capture()/aparse() for derived labels; clamp_min()/clamp_max(); "
@@ -380,7 +380,7 @@ reg(
         "Dashboard panel could not be read",
     ),
     Playbook(
-        grafana="A PromQL expression longer or more complex than the converter reads.",
+        source="A PromQL expression longer or more complex than the converter reads.",
         newrelic="NRQL written by hand, starting from New Relic's own PromQL translation.",
         steps=(
             "Try New Relic's PromQL translation of the expression, then check it: it baked in "
@@ -400,7 +400,7 @@ reg(
 reg(
     "Dashboard query on a raw counter",
     Playbook(
-        grafana="A counter shown as its raw, ever-increasing value.",
+        source="A counter shown as its raw, ever-increasing value.",
         newrelic="Prometheus counters arrive as the change per interval (`count` type), so a "
         "raw cumulative line has no equal; the rate or the increase is what the data holds.",
         steps=(
@@ -427,7 +427,7 @@ reg(
         "Dashboard pattern with a percent sign",
     ),
     Playbook(
-        grafana="A label matcher (regex) or a metric or label name that NRQL cannot take as "
+        source="A label matcher (regex) or a metric or label name that NRQL cannot take as "
         "it is: colons from recording rules, a label called metricName, a % in a pattern.",
         newrelic="`WHERE attr RLIKE '...'`; the attribute name as New Relic stored it "
         "(check with keyset()); backticks around odd names.",
@@ -450,7 +450,7 @@ reg(
 reg(
     "Dashboard query over metrics on different New Relic events",
     Playbook(
-        grafana="One expression combines two metrics.",
+        source="One expression combines two metrics.",
         newrelic="One NRQL query reads one event type. Either both metrics in `Metric`, or "
         "`FROM A, B`, or two widgets.",
         steps=(
@@ -466,7 +466,7 @@ reg(
 reg(
     "Dashboard percentile next to terms with other filters",
     Playbook(
-        grafana="A percentile of a histogram next to other filtered terms in one expression.",
+        source="A percentile of a histogram next to other filtered terms in one expression.",
         newrelic="bucketPercentile cannot be wrapped in filter(); one widget per term.",
         steps=(
             "Build the percentile as its own widget with filters in WHERE.",
@@ -481,7 +481,7 @@ reg(
 reg(
     "Dashboard panel with transformations",
     Playbook(
-        grafana="Transformations reshape the query result in the browser (organize, "
+        source="Transformations reshape the query result in the browser (organize, "
         "merge, join, group by, calculate field, filter by value, sort).",
         newrelic="NRQL does the shaping: AS for rename, SELECT list for hide and order, FACET "
         "for group-by, arithmetic in SELECT for calculate field, WHERE or a nested query for "
@@ -508,7 +508,7 @@ reg(
 reg(
     "Dashboard panel options",
     Playbook(
-        grafana="Value mappings, overrides, a unit conversion or a calculation (mean, max) "
+        source="Value mappings, overrides, a unit conversion or a calculation (mean, max) "
         "other than the latest value change what the panel shows.",
         newrelic="Widget settings (units, thresholds, null handling) and NRQL (`if()`, "
         "`FACET CASES`, `filter()`) for mappings.",
@@ -529,7 +529,7 @@ reg(
 reg(
     "Dashboard panel time override",
     Playbook(
-        grafana="The panel uses its own time range (relative time or time shift).",
+        source="The panel uses its own time range (relative time or time shift).",
         newrelic="`SINCE ... UNTIL ...` in the widget's NRQL overrides the dashboard time "
         "picker for that widget.",
         steps=(
@@ -549,7 +549,7 @@ reg(
         "Dashboard panel type the importer cannot create yet|bargauge",
     ),
     Playbook(
-        grafana="A gauge or bar gauge shows one value against a minimum, a maximum and "
+        source="A gauge or bar gauge shows one value against a minimum, a maximum and "
         "threshold colours.",
         newrelic="The gauge chart type, a bullet chart, or a billboard with thresholds.",
         steps=(
@@ -566,7 +566,7 @@ reg(
 reg(
     "Dashboard panel type the importer cannot create yet|logs",
     Playbook(
-        grafana="A list of the newest log lines.",
+        source="A list of the newest log lines.",
         newrelic="A log table widget over `Log`.",
         steps=(
             "Add a widget, choose the Log table, query "
@@ -583,7 +583,7 @@ reg(
 reg(
     "Dashboard panel type the importer cannot create yet",
     Playbook(
-        grafana="A bar chart, heatmap, histogram or similar panel.",
+        source="A bar chart, heatmap, histogram or similar panel.",
         newrelic="Bar (FACET), heatmap or histogram (`histogram()`), or the closest chart "
         "type in the menu.",
         steps=(
@@ -600,7 +600,7 @@ reg(
 reg(
     "Dashboard panel type with no New Relic widget",
     Playbook(
-        grafana="A panel type with no widget in New Relic (state timeline, status history, "
+        source="A panel type with no widget in New Relic (state timeline, status history, "
         "geomap, node graph, canvas, flame graph, plugin panels).",
         newrelic="None. Best workaround: a table or billboard over the same data; for a state "
         "timeline a table with `FACET` and `latest()`; a map becomes a table by country/city.",
@@ -623,7 +623,7 @@ reg(
         "Dashboard panel reusing a query that did not convert",
     ),
     Playbook(
-        grafana="The panel shows another panel's query result ('-- Dashboard --' data source).",
+        source="The panel shows another panel's query result ('-- Dashboard --' data source).",
         newrelic="No sharing of results; each widget runs its own query.",
         steps=(
             "Convert the source panel first, then copy its NRQL into this widget and apply "
@@ -637,7 +637,7 @@ reg(
 reg(
     ("Dashboard data source not supported", "Dashboard data source not known"),
     Playbook(
-        grafana="A panel queries something other than Prometheus or Loki (CloudWatch, SQL, "
+        source="A panel queries something other than Prometheus or Loki (CloudWatch, SQL, "
         "Elasticsearch, InfluxDB, Azure, Google Cloud, Tempo).",
         newrelic="Depends on how the data gets to New Relic: cloud integrations/Metric Streams "
         "for CloudWatch, Azure and Google; agents and OpenTelemetry for the rest. NRQL has no "
@@ -665,7 +665,7 @@ reg(
         "Dashboard LogQL not converted",
     ),
     Playbook(
-        grafana="LogQL pulls fields out of the log line at query time (| json, | logfmt, "
+        source="LogQL pulls fields out of the log line at query time (| json, | logfmt, "
         "| pattern, unwrap) or uses a function other than count_over_time and rate.",
         newrelic="Log parsing rules at ingest (Grok or regex) make the field an attribute; "
         "at query time `aparse()`, `capture()` and `jparse()`.",
@@ -691,7 +691,7 @@ reg(
         "Dashboard server-side expression",
     ),
     Playbook(
-        grafana="A library panel whose definition is not in the export, a panel with no "
+        source="A library panel whose definition is not in the export, a panel with no "
         "query, or a server-side expression over other queries.",
         newrelic="Export the library panel too, then convert; for expressions, write the math "
         "in one NRQL SELECT.",

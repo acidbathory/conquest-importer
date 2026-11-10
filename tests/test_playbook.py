@@ -23,7 +23,7 @@ def empty_book(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_two_playbooks_for_one_title_are_refused(empty_book: None) -> None:
     p = Playbook("a", "b", ("c",), "d", 5)
     register_playbook("test-title-once", p)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="two playbooks"):
         register_playbook("test-title-once", p)
 
 
@@ -53,7 +53,7 @@ def test_playbooks_are_complete_and_safe() -> None:
     for key, pb in all_playbooks().items():
         seen[id(pb)] = (key, pb)
     for key, pb in seen.values():
-        assert pb.grafana and pb.newrelic and pb.steps and pb.differs, key
+        assert pb.source and pb.newrelic and pb.steps and pb.differs, key
         assert 1 <= pb.effort_minutes <= 480, key
         assert all(s.strip() for s in pb.steps), key
         assert pb.links, f"{key}: no documentation link"
@@ -63,6 +63,6 @@ def test_playbooks_are_complete_and_safe() -> None:
         leftover = TOKEN.sub("", pb.template)
         assert "<metric>" not in leftover and "<labels>" not in leftover, key
         # no secret-looking text and no emoji
-        text = " ".join([pb.grafana, pb.newrelic, pb.differs, *pb.steps, pb.template])
+        text = " ".join([pb.source, pb.newrelic, pb.differs, *pb.steps, pb.template])
         assert "api_key" not in text.lower() and "password=" not in text.lower(), key
         assert text.isascii(), key

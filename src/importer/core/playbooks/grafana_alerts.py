@@ -38,7 +38,7 @@ reg(
         "PromQL counter name",
     ),
     Playbook(
-        grafana="rate() or increase() of a counter, tested per series or reduced over a "
+        source="rate() or increase() of a counter, tested per series or reduced over a "
         "range, against a threshold.",
         newrelic="An NRQL condition on `rate(sum(<metric>), 1 minute)` (or `sum()` over the "
         "window for an increase) with a FACET when each series must be tested alone.",
@@ -73,7 +73,7 @@ reg(
         "PromQL operator or comparison",
     ),
     Playbook(
-        grafana="The query filters with a comparison (`up == 0`) and the rule then applies "
+        source="The query filters with a comparison (`up == 0`) and the rule then applies "
         "its own threshold to what is left.",
         newrelic="Put the comparison into the condition threshold: query the plain value "
         "and set the operator and number.",
@@ -96,7 +96,7 @@ reg(
 reg(
     ("PromQL ratio not converted", "Grafana math expression"),
     Playbook(
-        grafana="A ratio or calculation of two metrics (error rate = errors / requests), "
+        source="A ratio or calculation of two metrics (error rate = errors / requests), "
         "written as PromQL division or as a math expression over two queries.",
         newrelic="One NRQL query with both aggregates and the division; use filter() for a "
         "subset of one metric. The result is one value per window.",
@@ -120,7 +120,7 @@ reg(
 reg(
     ("PromQL absent() threshold", "PromQL absent()"),
     Playbook(
-        grafana="absent(metric) returns 1 when the series is missing; the rule fires on that.",
+        source="absent(metric) returns 1 when the series is missing; the rule fires on that.",
         newrelic="Loss of signal on a condition over the metric (expiration time = how long "
         "it may be silent), or a count below 1.",
         steps=(
@@ -149,7 +149,7 @@ reg(
         "Grafana query time range",
     ),
     Playbook(
-        grafana="The rule first combines series (sum/avg across series) and then reduces over "
+        source="The rule first combines series (sum/avg across series) and then reduces over "
         "time (last, mean, max, count).",
         newrelic="One aggregate per window; the aggregation window is the lookback. The "
         "reducer maps to the aggregate: last = latest(), mean = average(), max = max(), "
@@ -180,7 +180,7 @@ reg(
         "Grafana rule file group not readable",
     ),
     Playbook(
-        grafana="A recording rule saves a query result as a new metric; a ruler-managed rule "
+        source="A recording rule saves a query result as a new metric; a ruler-managed rule "
         "runs in Mimir or Loki, outside Grafana.",
         newrelic="Recording rules do not alert; the closest New Relic thing is an NRQL "
         "query inside the condition that needs it, or an events-to-metrics rule for a "
@@ -210,7 +210,7 @@ reg(
         "Grafana rule with several queries",
     ),
     Playbook(
-        grafana="The rule is a chain of query, reduce, math, resample, classic condition or "
+        source="The rule is a chain of query, reduce, math, resample, classic condition or "
         "SQL nodes, or reads several queries or data sources.",
         newrelic="One NRQL condition per test. AND/OR between tests: one condition each, joined "
         "by a compound alert or by one workflow.",
@@ -233,7 +233,7 @@ reg(
 reg(
     ("Grafana range threshold", "Grafana threshold not converted"),
     Playbook(
-        grafana="A threshold of within a range or outside a range, or an operator or value "
+        source="A threshold of within a range or outside a range, or an operator or value "
         "the importer does not read.",
         newrelic="Two conditions on the same query (one per bound), or one condition with a "
         "critical and a warning threshold.",
@@ -253,7 +253,7 @@ reg(
 reg(
     ("Data source not supported", "Grafana data source without a New Relic data path"),
     Playbook(
-        grafana="The rule queries a data source other than Prometheus or Loki (CloudWatch, "
+        source="The rule queries a data source other than Prometheus or Loki (CloudWatch, "
         "Azure Monitor, SQL, Elasticsearch, Grafana's own usage metrics).",
         newrelic="Depends on the data path: cloud integrations and Metric Streams carry "
         "CloudWatch, Azure and Google metrics; there is nothing for SQL or Elasticsearch "
@@ -274,7 +274,7 @@ reg(
 reg(
     ("PromQL histogram_quantile",),
     Playbook(
-        grafana="histogram_quantile(0.95, rate(x_bucket[5m])) against a latency threshold.",
+        source="histogram_quantile(0.95, rate(x_bucket[5m])) against a latency threshold.",
         newrelic="`bucketPercentile(<metric>_bucket, 95)` in a query; whether the condition "
         "editor accepts it in your account was not verified. Fallback: the share of requests "
         "slower than the limit, as a ratio.",
@@ -296,7 +296,7 @@ reg(
 reg(
     ("PromQL feature with no alert-condition equivalent",),
     Playbook(
-        grafana="offset, a subquery, vector matching, topk/bottomk or without() inside an "
+        source="offset, a subquery, vector matching, topk/bottomk or without() inside an "
         "alert expression.",
         newrelic="No equivalent inside a condition (no subqueries, joins, COMPARE WITH or "
         "LIMIT). Workaround: simpler conditions, an anomaly (baseline) condition for "
@@ -319,7 +319,7 @@ reg(
 reg(
     "PromQL label matcher not converted",
     Playbook(
-        grafana="A label matcher with a general regular expression.",
+        source="A label matcher with a general regular expression.",
         newrelic="`WHERE attr RLIKE '<regex>'`, `LIKE`, or `IN (...)` in the condition query.",
         steps=(
             "Write the filter in the NRQL: `WHERE <label> RLIKE '<regex>'`; test the regex on "
@@ -336,7 +336,7 @@ reg(
 reg(
     ("PromQL name not valid in NRQL", "PromQL not converted"),
     Playbook(
-        grafana="A PromQL expression the converter does not read, or a name with characters "
+        source="A PromQL expression the converter does not read, or a name with characters "
         "NRQL does not accept (colons from recording rules).",
         newrelic="An NRQL condition written by hand on the metric as it is stored.",
         steps=(
@@ -364,7 +364,7 @@ reg(
         "LogQL not converted",
     ),
     Playbook(
-        grafana="A LogQL alert: count or rate of log lines, with parser stages (json, logfmt, "
+        source="A LogQL alert: count or rate of log lines, with parser stages (json, logfmt, "
         "pattern), unwrap, regex filters or labels.",
         newrelic="An NRQL condition on the `Log` event; parse fields once with a log parsing "
         "rule so they are attributes the condition can filter and aggregate.",
@@ -388,7 +388,7 @@ reg(
 reg(
     ("Grafana window too long", "Grafana pending period too long"),
     Playbook(
-        grafana="A lookback window over one hour or a pending period over 24 hours.",
+        source="A lookback window over one hour or a pending period over 24 hours.",
         newrelic="The longest window is one hour and the longest threshold duration 24 hours.",
         steps=(
             "Use the 1 hour window with a threshold scaled to your longer window, or a "
@@ -403,7 +403,7 @@ reg(
 reg(
     ("Grafana no-data and error states", "Grafana keep firing or recovery threshold"),
     Playbook(
-        grafana="No-data and error states raise their own alert; keep-firing and a recovery "
+        source="No-data and error states raise their own alert; keep-firing and a recovery "
         "threshold hold an alert open.",
         newrelic="Loss of signal on the condition for no data; gap filling for missing "
         "points; a longer threshold duration or recovery options against flapping. A failing "
