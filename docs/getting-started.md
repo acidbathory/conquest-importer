@@ -1,4 +1,8 @@
-# Getting started
+# Getting started: the AWS CloudWatch walkthrough
+
+This is the step-by-step guide for AWS CloudWatch (the `importer migrate` shortcut). For Grafana,
+Dynatrace or Google Cloud, use the runbook for your source, listed in the
+[README](../README.md#start-here).
 
 This walks you from install to rollback in about ten minutes. Nothing is created in New Relic
 until you answer `y` in step 5.

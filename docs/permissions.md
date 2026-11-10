@@ -1,8 +1,12 @@
 # Permissions
 
-The importer uses two credentials, and each can be limited to the minimum.
+The importer uses two credentials: a read-only one for the system you are leaving, and a New Relic
+User API key to create things. Jump to your source: [AWS CloudWatch](#aws-cloudwatch),
+[Google Cloud](#google-cloud-monitoring), [Grafana](#grafana), [Dynatrace](#dynatrace),
+[New Relic](#new-relic-every-source). A section marked UNVERIFIED has not been seen working on a live
+system; start read-only and add only what an error asks for.
 
-## AWS: read-only
+## AWS CloudWatch
 
 The importer only reads. Create an IAM user or role with this policy, or use AWS's managed
 `ReadOnlyAccess`, which is broader:
@@ -68,7 +72,50 @@ or name a profile from `~/.aws/credentials` with `--profile my-profile`. The reg
 
 Use keys you can revoke afterwards. The tool never writes them to a file or log.
 
-## New Relic: an API key, only to create things
+## Google Cloud Monitoring
+
+Read-only. The importer reads alert policies, notification channels, uptime checks and dashboards.
+
+- Role: Monitoring Viewer (`roles/monitoring.viewer`) on the project. UNVERIFIED: that this is the
+  minimum.
+- Sign-in: `gcloud auth application-default login`, or set `GOOGLE_OAUTH_ACCESS_TOKEN` to a
+  short-lived access token. The importer never stores credentials.
+- To link the project for data (a person runs `terraform apply`), the deployer needs to create a
+  service account and a workload identity pool and grant IAM roles. The generated Terraform grants New
+  Relic's read-only service account `roles/viewer`, `roles/serviceusage.serviceUsageConsumer` and
+  `roles/cloudasset.viewer`; review them. Narrowing the deployer's own permissions is an open to-do.
+
+Details: [runbook-gcp](user/runbook-gcp.md#2-prerequisites).
+
+## Grafana
+
+Read-only. The importer sends only `GET` requests, on a fixed list of paths.
+
+- A Grafana service account token, starting with the Viewer role, in `GRAFANA_SA_TOKEN`, with the
+  stack address in `GRAFANA_URL` (`https://<stack>.grafana.net`; self-hosted needs `--allow-host`).
+- It reads: alert rules, contact points, notification policies, mute timings, templates, data sources
+  (type and uid), dashboards, folders and library panels.
+- UNVERIFIED: which exact Grafana RBAC action each path needs on your version. If a command answers
+  403, add only the missing read permission.
+- Check the token before use (`GET /api/access-control/user/permissions`): a token requested as Viewer
+  in our sandbox held alerting write permissions. Give it a short expiry and delete it afterwards.
+
+Details: [runbook-grafana](user/runbook-grafana.md#2-prerequisites).
+
+## Dynatrace
+
+Read-only token in `DYNATRACE_API_TOKEN`, tenant address in `DYNATRACE_ENV_URL`
+(`https://<env-id>.apps.dynatrace.com`).
+
+| Command | Scopes (read only) |
+|---|---|
+| `extract-dynatrace` (workflows, SLOs) | `automation:workflows:read`, `slo:slos:read` (platform token) |
+| `extract-dynatrace-classic` (metric events, Davis detectors) | `settings:objects:read`, `settings:schemas:read` (platform token), or an API token with `settings.read` |
+| `extract-dynatrace-inventory` (dashboards, synthetics, entities) | UNVERIFIED. The code mentions `document:documents:read`, `entities.read` and `ReadConfig`; start read-only and add what a 403 asks for |
+
+Details: [runbook-dynatrace](user/runbook-dynatrace.md#2-prerequisites).
+
+## New Relic (every source)
 
 Making a plan needs no New Relic key. To create alerts, dashboards and workflows:
 
@@ -88,5 +135,12 @@ NEW_RELIC_ALLOWED_ACCOUNT_IDS=1234567     # the account(s) this tool may write t
 `NEW_RELIC_ALLOWED_ACCOUNT_IDS` is a safety catch: the tool refuses to write to any account that
 isn't listed. If your account is in the EU data centre, add `--nr-region eu`.
 
-The data-ingestion Terraform also needs a New Relic license key. The importer never reads it; you
-give it to Terraform yourself (see [getting started](getting-started.md#step-6-stream-the-metrics)).
+Two kinds of New Relic key exist, and they do different jobs:
+
+- The **User API key** (`NRAK-...`, `NEW_RELIC_API_KEY`) is the only key the importer reads. It creates
+  conditions, workflows and dashboards, deletes them on rollback, and runs the data checks.
+- The **ingest licence key** sends data to New Relic. The importer never reads it. You give it to the
+  Terraform or collector you deploy yourself (for AWS, see
+  [getting started](getting-started.md#step-6-stream-the-metrics)).
+
+Set `SSL_CERT_FILE` to the corporate root certificate (PEM) if your network inspects TLS.

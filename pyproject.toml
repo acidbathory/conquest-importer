@@ -1,7 +1,7 @@
 [project]
 name = "conquest-importer"
 version = "0.1.0"
-description = "Prototype: migrate AWS CloudWatch and Google Cloud alerts, and CloudWatch dashboards, to New Relic"
+description = "Prototype: migrate alerts, notifications and dashboards from Grafana, Dynatrace, AWS CloudWatch and Google Cloud Monitoring to New Relic"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"

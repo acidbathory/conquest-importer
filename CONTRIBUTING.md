@@ -49,13 +49,14 @@ uv run pip-audit
 src/importer/
   cli.py                     commands
   core/                      shared: the IR, emitters, apply, rollback, report
-  sources/cloudwatch/        CloudWatch reader, converters, ingest Terraform
+  sources/<source>/          one folder per source (cloudwatch, gcp, grafana, dynatrace):
+                             reader, converters, data-path files
 tests/                       unit tests, fixtures, golden files
 docs/                        user docs; docs/dev has contributor docs
 ```
 
 To add a source platform, create one folder under `sources/` with `load()` and `translate()`, as
-`sources/cloudwatch` does. See the [roadmap](README.md#roadmap).
+the existing ones do (see [adding a source](docs/dev/adding-a-source.md)). See the [roadmap](README.md#roadmap).
 
 ## License
 
