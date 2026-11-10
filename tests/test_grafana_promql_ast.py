@@ -113,7 +113,9 @@ def test_offset_at_and_subquery() -> None:
     (arg,) = node.args
     assert isinstance(arg, Selector)
     assert (arg.offset, arg.at) == ("1h", "1609746000")
-    assert parse("x @ end()").at == "end()"  # type: ignore[attr-defined]
+    ended = parse("x @ end()")
+    assert isinstance(ended, Selector)
+    assert ended.at == "end()"
     sub = parse("max_over_time(rate(x[1m])[1h:5m])")
     assert isinstance(sub, Call)
     (inner,) = sub.args
@@ -133,7 +135,7 @@ def test_grafana_variables_are_placeholders() -> None:
     assert arg.range == "$__rate_interval"
     assert arg.variables == ("job", "ns", "__rate_interval")
     assert isinstance(parse("$metric"), Placeholder)
-    named = parse("node_$suffix{a=\"b\"}")
+    named = parse('node_$suffix{a="b"}')
     assert isinstance(named, Selector)
     assert named.name == "node_$suffix"
     top = parse("topk($n, up)")
@@ -167,7 +169,9 @@ def test_walk_visits_every_node() -> None:
     assert kinds == ["Binary", "Aggregate", "Call", "Selector", "Selector"]
 
 
-@pytest.mark.parametrize("text", ["", "sum(", "a +", "x{job=}", "x[5m", "a b", "foo(1,)x", "x offset"])
+@pytest.mark.parametrize(
+    "text", ["", "sum(", "a +", "x{job=}", "x[5m", "a b", "foo(1,)x", "x offset"]
+)
 def test_syntax_errors_raise(text: str) -> None:
     with pytest.raises(PromQLSyntaxError):
         parse(text)
@@ -175,4 +179,5 @@ def test_syntax_errors_raise(text: str) -> None:
 
 def test_format_round_trips() -> None:
     text = 'sum by (a) (rate(x{b=~"c"}[5m] offset 1m)) / on (a) group_left () y > bool 3'
-    assert parse(format_expr(parse(text))) == parse(text)
+    once = format_expr(parse(text))
+    assert format_expr(parse(once)) == once
