@@ -13,7 +13,7 @@ Run 2026-11-10 (owner authorised for this task). Account and keys come from `.en
 
 | Widget (dashboard) | Converted NRQL | Source PromQL | New Relic | Grafana | Verdict |
 |---|---|---|---|---|---|
-| Org variable (Billing/Usage) | `SELECT uniques(org_slug) WHERE metricName='grafanacloud_org_info'` | `label_values(grafanacloud_org_info, org_slug)` | `["blackmerlin1056"]` | same one label value | match |
+| Org variable (Billing/Usage) | `SELECT uniques(org_slug) WHERE metricName='grafanacloud_org_info'` | `label_values(grafanacloud_org_info, org_slug)` | `["<stack>"]` | same one label value | match |
 | Service Status (Cloud Logs Export Insights) | `sum(..._export_status)` | `sum(..._export_status)` | 0.0 (no data) | no series | no data at source, not verifiable |
 | Logs data copied / exported 24h, 7d, 30d | `sum(..._exported_bytes)`, `rate(sum(..), N)` | `increase(..._exported_bytes[..])` | 0.0 (no data) | no series | no data at source, not verifiable |
 | Number Of Nodes, Nodes Unavailable, node number, cluster (kube-state-metrics) | `sum(kube_node_*)`, `uniques(cluster)` | `kube_node_*` | 0.0 (no data) | no series | no data at source, not verifiable |
