@@ -50,7 +50,8 @@ def _method(n: int, m: Method) -> list[str]:
 
 
 def _blocker(b: Blocker) -> list[str]:
-    lines = [f"### {b.title}", "", f"**Measured:** {b.scope}", "", b.summary, "", "**Decision tree**", ""]
+    lines = [f"### {b.title}", "", f"**Measured:** {b.scope}", "", b.summary]
+    lines += ["", "**Decision tree**", ""]
     lines += [f"- {d}" for d in b.decision]
     lines += ["", "**What to ask the customer**", ""] + [f"- {a}" for a in b.ask]
     if b.cannot:

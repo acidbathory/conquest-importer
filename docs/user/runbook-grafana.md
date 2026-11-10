@@ -320,7 +320,9 @@ Known limits, in short:
 - Deeper Grafana conversion work exists on separate, unmerged branches. It is not described here.
 
 The remediation plan (`importer plan-remediation --in <folder> --out out/remediation`, or written for
-you by the menu) is offline and read-only. It lists every item that did not convert.
+you by the menu) is offline and read-only. It lists every item that did not convert and, for the
+common blockers, the ranked methods from the [remediation cookbook](remediation-cookbook.md), the
+recommended one first, with what to ask the customer.
 
 - `remediation-plan.md`: first the five fixes that unlock the most items, then a table of groups
   (reason, number of items, how many only that reason blocks, effort per item), then one section per

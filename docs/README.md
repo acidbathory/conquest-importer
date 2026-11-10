@@ -7,6 +7,7 @@
   [Datadog and Azure (not built)](user/runbook-datadog-and-azure.md)
 - [Script and command reference](user/script-reference.md): every script and command, by source
 - [The guided menu and rollback](user/menu-and-rollback.md)
+- [Remediation cookbook](user/remediation-cookbook.md): ranked ways to finish what New Relic cannot do one-to-one
 - [Getting started (AWS walkthrough)](getting-started.md): AWS CloudWatch, install to rollback, step by step
 - [What migrates](what-migrates.md): everything that does and does not move, and why
 - [Permissions](permissions.md): per source (AWS, Google Cloud, Grafana, Dynatrace) and the New Relic keys

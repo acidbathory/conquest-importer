@@ -61,7 +61,7 @@ def account() -> int:
 def nrql(query: str) -> list[dict[str, object]]:
     """Read-only NRQL. Raises RuntimeError with the first GraphQL error text."""
     body = json.dumps({"query": GQL, "variables": {"id": account(), "q": query}}).encode()
-    req = urllib.request.Request(  # noqa: S310  (fixed https host)
+    req = urllib.request.Request(
         GRAPHQL,
         data=body,
         method="POST",
@@ -119,57 +119,133 @@ def _close(a: float, b: float) -> bool:
 
 
 def _nested_sum() -> tuple[bool, str]:
-    got = number(nrql("SELECT sum(v) FROM (SELECT latest(kube_deployment_status_replicas) AS v FROM Metric FACET cluster, namespace, deployment LIMIT MAX)" + SINCE), "sum.v")
-    by_hand = _sum_rows("SELECT latest(kube_deployment_status_replicas) FROM Metric FACET cluster, namespace, deployment, instance LIMIT MAX", "latest.kube_deployment_status_replicas")
-    plain = number(nrql("SELECT sum(kube_deployment_status_replicas) FROM Metric" + SINCE), "sum.kube_deployment_status_replicas")
-    return _close(got, by_hand), f"nested {got}, sum of per-series newest values {by_hand}, plain sum {plain}"
+    got = number(
+        nrql(
+            "SELECT sum(v) FROM (SELECT latest(kube_deployment_status_replicas) AS v FROM Metric FACET cluster, namespace, deployment LIMIT MAX)"
+            + SINCE
+        ),
+        "sum.v",
+    )
+    by_hand = _sum_rows(
+        "SELECT latest(kube_deployment_status_replicas) FROM Metric FACET cluster, namespace, deployment, instance LIMIT MAX",
+        "latest.kube_deployment_status_replicas",
+    )
+    plain = number(
+        nrql("SELECT sum(kube_deployment_status_replicas) FROM Metric" + SINCE),
+        "sum.kube_deployment_status_replicas",
+    )
+    return _close(
+        got, by_hand
+    ), f"nested {got}, sum of per-series newest values {by_hand}, plain sum {plain}"
 
 
 def _avg_card() -> tuple[bool, str]:
-    got = nrql("SELECT average(kube_deployment_status_replicas) * cardinality(kube_deployment_status_replicas) FROM Metric" + SINCE)[0]
+    got = nrql(
+        "SELECT average(kube_deployment_status_replicas) * cardinality(kube_deployment_status_replicas) FROM Metric"
+        + SINCE
+    )[0]
     value = float(next(iter(got.values())))  # type: ignore[arg-type]
-    ref = number(nrql("SELECT sum(v) FROM (SELECT latest(kube_deployment_status_replicas) AS v FROM Metric FACET cluster, namespace, deployment LIMIT MAX)" + SINCE), "sum.v")
+    ref = number(
+        nrql(
+            "SELECT sum(v) FROM (SELECT latest(kube_deployment_status_replicas) AS v FROM Metric FACET cluster, namespace, deployment LIMIT MAX)"
+            + SINCE
+        ),
+        "sum.v",
+    )
     return _close(value, ref), f"average*cardinality {value}, nested {ref} (steady gauge)"
 
 
 def _where_value() -> tuple[bool, str]:
-    ge = number(nrql("SELECT uniqueCount(node) FROM Metric WHERE metricName = 'kube_node_status_condition' AND condition = 'Ready' AND status = 'true' AND kube_node_status_condition >= 1" + SINCE), "uniqueCount.node")
-    rows = nrql("SELECT latest(kube_node_status_condition) FROM Metric WHERE condition = 'Ready' AND status = 'true' FACET node LIMIT MAX" + SINCE)
+    ge = number(
+        nrql(
+            "SELECT uniqueCount(node) FROM Metric WHERE metricName = 'kube_node_status_condition' AND condition = 'Ready' AND status = 'true' AND kube_node_status_condition >= 1"
+            + SINCE
+        ),
+        "uniqueCount.node",
+    )
+    rows = nrql(
+        "SELECT latest(kube_node_status_condition) FROM Metric WHERE condition = 'Ready' AND status = 'true' FACET node LIMIT MAX"
+        + SINCE
+    )
     ready = sum(1 for r in rows if r.get("latest.kube_node_status_condition") == 1)
     return _close(ge, ready), f"WHERE >= 1 counted {ge}; newest value is 1 for {ready} nodes"
 
 
 def _nested_filter() -> tuple[bool, str]:
-    got = number(nrql("SELECT count(*) FROM (SELECT latest(kube_node_status_condition) AS v FROM Metric WHERE condition = 'Ready' AND status = 'true' FACET node LIMIT MAX) WHERE v = 1" + SINCE), "count")
-    rows = nrql("SELECT latest(kube_node_status_condition) FROM Metric WHERE condition = 'Ready' AND status = 'true' FACET node LIMIT MAX" + SINCE)
+    got = number(
+        nrql(
+            "SELECT count(*) FROM (SELECT latest(kube_node_status_condition) AS v FROM Metric WHERE condition = 'Ready' AND status = 'true' FACET node LIMIT MAX) WHERE v = 1"
+            + SINCE
+        ),
+        "count",
+    )
+    rows = nrql(
+        "SELECT latest(kube_node_status_condition) FROM Metric WHERE condition = 'Ready' AND status = 'true' FACET node LIMIT MAX"
+        + SINCE
+    )
     ready = sum(1 for r in rows if r.get("latest.kube_node_status_condition") == 1)
     return _close(got, ready), f"nested filter {got}, hand count {ready}"
 
 
 def _filter_agg() -> tuple[bool, str]:
-    row = nrql("SELECT filter(uniqueCount(deployment), WHERE kube_deployment_status_replicas_unavailable > 0) AS bad, uniqueCount(deployment) AS total FROM Metric WHERE metricName LIKE 'kube_deployment_status_replicas%'" + SINCE)[0]
-    bad = number(nrql("SELECT uniqueCount(deployment) FROM Metric WHERE kube_deployment_status_replicas_unavailable > 0" + SINCE), "uniqueCount.deployment")
-    total = number(nrql("SELECT uniqueCount(deployment) FROM Metric WHERE metricName LIKE 'kube_deployment_status_replicas%'" + SINCE), "uniqueCount.deployment")
-    return _close(float(row["bad"]), bad) and _close(float(row["total"]), total), f"filter() bad={row['bad']} total={row['total']}; separate queries {bad}/{total}"  # type: ignore[arg-type]
+    row = nrql(
+        "SELECT filter(uniqueCount(deployment), WHERE kube_deployment_status_replicas_unavailable > 0) AS bad, uniqueCount(deployment) AS total FROM Metric WHERE metricName LIKE 'kube_deployment_status_replicas%'"
+        + SINCE
+    )[0]
+    bad = number(
+        nrql(
+            "SELECT uniqueCount(deployment) FROM Metric WHERE kube_deployment_status_replicas_unavailable > 0"
+            + SINCE
+        ),
+        "uniqueCount.deployment",
+    )
+    total = number(
+        nrql(
+            "SELECT uniqueCount(deployment) FROM Metric WHERE metricName LIKE 'kube_deployment_status_replicas%'"
+            + SINCE
+        ),
+        "uniqueCount.deployment",
+    )
+    return _close(float(row["bad"]), bad) and _close(
+        float(row["total"]), total
+    ), f"filter() bad={row['bad']} total={row['total']}; separate queries {bad}/{total}"  # type: ignore[arg-type]
 
 
 def _join() -> tuple[bool, str]:
-    joined = nrql("FROM Metric JOIN (FROM Metric SELECT latest(kube_pod_info) AS info WHERE metricName = 'kube_pod_info' FACET pod, node LIMIT MAX) ON pod SELECT uniqueCount(pod) WHERE metricName = 'kube_pod_status_phase' AND phase = 'Running' AND kube_pod_status_phase >= 1 FACET node LIMIT MAX" + SINCE)
-    direct = nrql("SELECT uniqueCount(pod) FROM Metric WHERE metricName = 'kube_pod_info' FACET node LIMIT MAX" + SINCE)
+    joined = nrql(
+        "FROM Metric JOIN (FROM Metric SELECT latest(kube_pod_info) AS info WHERE metricName = 'kube_pod_info' FACET pod, node LIMIT MAX) ON pod SELECT uniqueCount(pod) WHERE metricName = 'kube_pod_status_phase' AND phase = 'Running' AND kube_pod_status_phase >= 1 FACET node LIMIT MAX"
+        + SINCE
+    )
+    direct = nrql(
+        "SELECT uniqueCount(pod) FROM Metric WHERE metricName = 'kube_pod_info' FACET node LIMIT MAX"
+        + SINCE
+    )
     a = {str(r["node"]): r["uniqueCount.pod"] for r in joined}
     b = {str(r["node"]): r["uniqueCount.pod"] for r in direct}
     return a == b and bool(a), f"JOIN per node {a}; direct on the info metric {b}"
 
 
 def _facet_total() -> tuple[bool, str]:
-    rows = _sum_rows("SELECT rate(sum(node_cpu_seconds_total), 1 second) FROM Metric FACET instance, mode LIMIT MAX", "rate.sum.node_cpu_seconds_total")
-    total = number(nrql("SELECT rate(sum(node_cpu_seconds_total), 1 second) FROM Metric" + SINCE), "rate.sum.node_cpu_seconds_total")
+    rows = _sum_rows(
+        "SELECT rate(sum(node_cpu_seconds_total), 1 second) FROM Metric FACET instance, mode LIMIT MAX",
+        "rate.sum.node_cpu_seconds_total",
+    )
+    total = number(
+        nrql("SELECT rate(sum(node_cpu_seconds_total), 1 second) FROM Metric" + SINCE),
+        "rate.sum.node_cpu_seconds_total",
+    )
     return _close(rows, total), f"sum of facet rates {rows}, unfaceted {total}"
 
 
 def _bucket_sums() -> tuple[bool, str]:
-    whole = number(nrql("SELECT sum(nginx_ingress_controller_requests) FROM Metric" + SINCE), "sum.nginx_ingress_controller_requests")
-    parts = _sum_rows("SELECT sum(nginx_ingress_controller_requests) FROM Metric TIMESERIES 1 hour", "sum.nginx_ingress_controller_requests")
+    whole = number(
+        nrql("SELECT sum(nginx_ingress_controller_requests) FROM Metric" + SINCE),
+        "sum.nginx_ingress_controller_requests",
+    )
+    parts = _sum_rows(
+        "SELECT sum(nginx_ingress_controller_requests) FROM Metric TIMESERIES 1 hour",
+        "sum.nginx_ingress_controller_requests",
+    )
     return _close(whole, parts), f"sum over 1 day {whole}, sum of hourly buckets {parts}"
 
 
@@ -184,7 +260,6 @@ VALUE_CHECKS: dict[str, ValueCheck] = {
     "raw-counter/rate-of-sum": _bucket_sums,
     "raw-counter/sum-for-increase": _bucket_sums,
 }
-
 
 
 def fetch_status(url: str) -> int:

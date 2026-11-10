@@ -15,7 +15,7 @@ EFFORT = re.compile(r"^\d+(-\d+)? (minutes?|hours?|days?)$")
 
 def test_every_required_blocker_is_present_with_ranked_methods() -> None:
     found = {b.key: b for b in cookbook.blockers()}
-    assert REQUIRED <= set(found), REQUIRED - set(found)
+    assert set(found) >= REQUIRED, REQUIRED - set(found)
     for key in REQUIRED:
         assert 3 <= len(found[key].methods) <= 6, key
 
@@ -47,7 +47,8 @@ ROOT = Path(__file__).resolve().parent.parent
 TAIL = re.compile(r"\s+(SINCE|UNTIL|COMPARE WITH)\b.*$", re.IGNORECASE | re.DOTALL)
 # Not allowed in an alert condition query (see the NRQL alert conditions page).
 CONDITION_FORBIDDEN = re.compile(
-    r"\b(TIMESERIES|SLIDE BY|LIMIT|JOIN|COMPARE WITH|SINCE|UNTIL|histogram|cardinality)\b|FROM\s*\(",
+    r"\b(TIMESERIES|SLIDE BY|LIMIT|JOIN|COMPARE WITH|SINCE|UNTIL|histogram|cardinality)\b"
+    r"|FROM\s*\(",
     re.IGNORECASE,
 )
 

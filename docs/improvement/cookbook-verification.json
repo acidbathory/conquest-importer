@@ -166,6 +166,11 @@
    "rows": 864,
    "where": "nrql-join"
   },
+  "715fbb1155e03dfb": {
+   "ok": true,
+   "rows": 216,
+   "where": "nrql-join"
+  },
   "71b94908ad829350": {
    "ok": true,
    "rows": 6,
@@ -274,7 +279,7 @@
   "c0f046116633c0c2": {
    "ok": true,
    "rows": 4,
-   "where": "one-query-ratio"
+   "where": "alert-counter"
   },
   "cc1904ee18f2ea14": {
    "ok": true,
@@ -394,12 +399,28 @@
    "note": "WHERE >= 1 counted 6.0; newest value is 1 for 6 nodes",
    "ok": true
   },
+  "joins/nrql-join": {
+   "note": "JOIN per node {'node-a3': 5, 'node-a2': 5, 'node-b3': 5, 'node-b2': 5, 'node-a1': 5, 'node-b1': 5}; direct on the info metric {'node-a3': 5, 'node-a2': 5, 'node-b3': 5, 'node-a1': 5, 'node-b2': 5, 'node-b1': 5}",
+   "ok": true
+  },
+  "raw-counter/rate-of-sum": {
+   "note": "sum over 1 day 41503855.082794495, sum of hourly buckets 41503855.082794435",
+   "ok": true
+  },
+  "raw-counter/sum-for-increase": {
+   "note": "sum over 1 day 41503855.082794495, sum of hourly buckets 41503855.082794435",
+   "ok": true
+  },
   "sum-gauge/average-times-cardinality": {
    "note": "average*cardinality 60.0, nested 60.0 (steady gauge)",
    "ok": true
   },
   "sum-gauge/nested-latest": {
    "note": "nested 60.0, sum of per-series newest values 60.0, plain sum 13500.0",
+   "ok": true
+  },
+  "without/facet-remaining": {
+   "note": "sum of facet rates 0.934049623318323, unfaceted 0.934049623318326",
    "ok": true
   }
  }

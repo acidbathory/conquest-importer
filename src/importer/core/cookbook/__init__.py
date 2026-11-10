@@ -96,9 +96,16 @@ class Blocker:
         return self.methods[0]
 
 
+def _list(value: object) -> list[object]:
+    if not isinstance(value, list):
+        raise TypeError("cookbook data: expected a list")
+    return value
+
+
 def _example(raw: dict[str, object]) -> Example:
     subst = raw.get("subst", {})
-    assert isinstance(subst, dict)
+    if not isinstance(subst, dict):
+        raise TypeError("cookbook data: subst must be a table")
     return Example(
         str(raw["kind"]),
         str(raw["title"]),
@@ -108,9 +115,8 @@ def _example(raw: dict[str, object]) -> Example:
 
 
 def _method(raw: dict[str, object]) -> Method:
-    examples = raw.get("example", [])
-    sources = raw.get("sources", [])
-    assert isinstance(examples, list) and isinstance(sources, list)
+    examples = _list(raw.get("example", []))
+    sources = _list(raw.get("sources", []))
     return Method(
         id=str(raw["id"]),
         family=str(raw["family"]),
@@ -127,15 +133,13 @@ def _method(raw: dict[str, object]) -> Method:
         status=str(raw["status"]),
         evidence=str(raw["evidence"]).strip(),
         sources=tuple(str(s) for s in sources),
-        examples=tuple(_example(e) for e in examples),
+        examples=tuple(_example(e) for e in examples),  # type: ignore[arg-type]
     )
 
 
 def _blocker(raw: dict[str, object]) -> Blocker:
-    methods = raw.get("method", [])
-    decision, ask, titles = raw["decision"], raw["ask"], raw["titles"]
-    assert isinstance(methods, list)
-    assert isinstance(decision, list) and isinstance(ask, list) and isinstance(titles, list)
+    methods = _list(raw.get("method", []))
+    decision, ask, titles = _list(raw["decision"]), _list(raw["ask"]), _list(raw["titles"])
     return Blocker(
         key=str(raw["key"]),
         title=str(raw["title"]),
@@ -146,7 +150,7 @@ def _blocker(raw: dict[str, object]) -> Blocker:
         decision=tuple(str(d) for d in decision),
         ask=tuple(str(a) for a in ask),
         cannot=str(raw.get("cannot", "")).strip(),
-        methods=tuple(_method(m) for m in methods),
+        methods=tuple(_method(m) for m in methods),  # type: ignore[arg-type]
     )
 
 
@@ -174,4 +178,5 @@ def blocker_for(title: str, text: str = "") -> Blocker | None:
         if b.match and re.search(b.match, text, re.IGNORECASE):
             return b
     plain = [b for b in own if not b.match]
-    return (plain or own or [None])[0]
+    chosen = plain or own
+    return chosen[0] if chosen else None

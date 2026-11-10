@@ -1,4 +1,4 @@
-"""A status in the cookbook data needs a recorded run in docs/improvement/cookbook-verification.json.
+"""A status in the cookbook data needs a recorded run (docs/improvement/cookbook-verification.json).
 
 The record is written by scripts/improve/verify_cookbook.py (read-only NerdGraph NRQL and an HTTPS
 fetch of each documentation page). Nothing here touches the network.
