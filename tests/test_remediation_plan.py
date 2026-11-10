@@ -1,6 +1,7 @@
 """plan-remediation: reads converted output and writes the remediation plan."""
 
 import csv
+import io
 import json
 from pathlib import Path
 
@@ -81,7 +82,7 @@ def test_command_writes_markdown_and_csv(converted: Path, tmp_path: Path) -> Non
     _run("plan-remediation", "--in", str(converted), "--out", str(out))
     text = (out / "remediation-plan.md").read_text()
     assert "Top 5 fixes" in text and "- [ ]" in text
-    rows = list(csv.DictReader((out / "remediation-plan.csv").open()))
+    rows = list(csv.DictReader(io.StringIO((out / "remediation-plan.csv").read_text())))
     assert rows and {"reason", "item", "effort", "steps"} <= set(rows[0])
     assert len(rows) == len(read_items(converted))
 
@@ -111,7 +112,7 @@ def test_csv_cells_cannot_start_a_spreadsheet_formula(tmp_path: Path) -> None:
     (folder / "1.json").write_text(json.dumps(dash))
     out = tmp_path / "plan"
     _run("plan-remediation", "--in", str(tmp_path / "d"), "--out", str(out))
-    for row in csv.DictReader((out / "remediation-plan.csv").open()):
+    for row in csv.DictReader(io.StringIO((out / "remediation-plan.csv").read_text())):
         for value in row.values():
             assert not value.startswith(("=", "+", "-", "@")), value
 
