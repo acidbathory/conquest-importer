@@ -147,3 +147,48 @@ def test_cli_apply_needs_all_guards(converted: Path, monkeypatch: pytest.MonkeyP
         ],
     )
     assert res.exit_code == 1 and "ALLOWED" in res.output
+
+
+def _nrql_variable_payload() -> dict[str, Any]:
+    from importer.core.dashboard_ir import IRDashboard, IRVariable, VariableType
+    from importer.core.emit.dashboard import nerdgraph_dashboard
+    from importer.core.ir import Confidence
+
+    var = IRVariable(
+        name="cluster",
+        title="cluster",
+        type=VariableType.NRQL,
+        nrql="FROM Metric SELECT uniques(cluster)",
+    )
+    pinned = IRVariable(
+        name="acct",
+        title="acct",
+        type=VariableType.NRQL,
+        nrql="FROM Metric SELECT uniques(a)",
+        account_ids=[777],
+    )
+    dash = IRDashboard(
+        source_system="grafana",
+        source_key="k",
+        name="d",
+        widgets=[],
+        confidence=Confidence.EXACT,
+        variables=[var, pinned],
+    )
+    return nerdgraph_dashboard(dash)
+
+
+def test_nrql_variable_account_placeholder_is_replaced() -> None:
+    """A placeholder string left in a variable's accountIds makes NerdGraph reject the dashboard."""
+    out = with_account(_nrql_variable_payload(), 1234)
+    variables = out["variables"]["dashboard"]["variables"]
+    assert variables[0]["nrqlQuery"]["accountIds"] == [1234]
+    assert variables[1]["nrqlQuery"]["accountIds"] == [777]
+    assert "ACCOUNT_ID_PLACEHOLDER" not in json.dumps(out)
+
+
+def test_unexpected_variable_account_is_refused() -> None:
+    bad = _nrql_variable_payload()
+    bad["variables"]["dashboard"]["variables"][0]["nrqlQuery"]["accountIds"] = ["other"]
+    with pytest.raises(GuardError, match="variable"):
+        with_account(bad, 1)
