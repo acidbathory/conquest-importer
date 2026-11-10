@@ -100,6 +100,7 @@ SAMPLES = {
     "binop.+": "up + 1",
     "arith.vector_vector": "a + b",
     "window.rate_interval": "sum(rate(x_total[$__rate_interval]))",
+    "name.recording_rule": "node:cpu:rate5m",
 }
 UNSUPPORTED_SAMPLES = {
     "agg.without": "sum without (a) (up)",
@@ -111,7 +112,6 @@ UNSUPPORTED_SAMPLES = {
     "subquery": "max_over_time(up[1h:5m])",
     "fn.label_replace": 'label_replace(up, "a", "b", "c", "d")',
     "fn.delta": "delta(up[5m])",
-    "name.recording_rule": "node:cpu:rate5m",
     "shape.avg_min_max_of_rate": "avg(rate(x_total[5m]))",
     "style.uppercase_aggregate": "SUM(up)",
     "style.single_quoted_string": "sum(up{a='b'})",
