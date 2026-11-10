@@ -1,0 +1,21 @@
+groups:
+  - name: ckg-recording
+    interval: 15s
+    rules:
+      - record: instance:node_cpu_utilisation:rate5m
+        expr: 1 - avg by (instance) (rate(node_cpu_seconds_total{job="node-extras",mode="idle"}[5m]))
+      - record: ingress:nginx_requests:rate2m
+        expr: sum by (controller_namespace, ingress) (rate(nginx_ingress_controller_requests[2m]))
+      - record: application:http_server_requests_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (application, le) (rate(http_server_requests_seconds_bucket[5m])))
+  - name: ckg-alerting
+    interval: 15s
+    rules:
+      - alert: CkgIngress5xxRatioHigh
+        expr: sum by (ingress) (rate(nginx_ingress_controller_requests{status=~"5.."}[2m])) / sum by (ingress) (rate(nginx_ingress_controller_requests[2m])) > 0.05
+        for: 1m
+      - alert: CkgTargetDown
+        expr: up{job=~"flaky|missing"} == 0
+        for: 30s
+      - alert: CkgPodRestartingOften
+        expr: changes(kube_pod_container_status_restarts_total[30m]) > 1
