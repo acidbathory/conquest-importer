@@ -35,6 +35,10 @@ C_UNEXPECTED = f"{PREFIX}: the panel could not be read"
 N_MERGED = f"{NOTE} series are not kept apart; add a FACET for the labels that identify one series"
 N_INSTANT = f"{NOTE} the value is taken over the whole time range, Grafana showed the latest point"
 N_RATE_WINDOW = f"{NOTE} the rate window of the query becomes the automatic New Relic bucket"
+N_IRATE = f"{NOTE} irate shows the average rate of each bucket, not the last two samples"
+N_RATE_BUCKET = (
+    f"{NOTE} the bucket may differ from a multiple of the scrape interval, which makes a rate swing"
+)
 N_INCREASE = f"{NOTE} increase over a variable window is the sum per bucket"
 N_SUM_GAUGE = (
     f"{NOTE} sum() of a gauge adds every sample in the bucket, so a series counts once per scrape"
