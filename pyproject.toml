@@ -61,6 +61,10 @@ max-complexity = 15
 "scripts/live-test/grafana-sandbox/**" = [
   "E501", "S310", "SIM115", "ARG001", "ARG005", "PERF401", "C901", "C416", "RUF007",
 ]
+# Rig scripts: synthetic data generators and a read-only comparison harness (not shipped code).
+"scripts/live-test/telemetry-rig/**" = [
+  "E501", "S310", "S311", "S603", "S607", "ARG001", "B007", "PERF401", "C901", "RUF100",
+]
 # Lambda handler signature is fixed by AWS.
 "scripts/live-test/aws/handler.py" = ["ARG001"]
 # Terraform template text contains long lines that cannot be wrapped.
