@@ -62,6 +62,33 @@ and your account on `NEW_RELIC_ALLOWED_ACCOUNT_IDS`, so a mistyped account id ca
 wrong place. In a script, pass `--aws-account-id` and `--yes`. The
 [walkthrough](docs/getting-started.md) covers the details.
 
+## Which guide do I follow?
+
+Start with the guide for the product you are leaving. Each one is a full runbook: what you get,
+what you need, the easy way, the manual way, how data reaches New Relic, how to check it, how to
+undo it, and what goes wrong.
+
+| Your source | Guide | State |
+|---|---|---|
+| AWS CloudWatch | [runbook-aws-cloudwatch](docs/user/runbook-aws-cloudwatch.md) | Most tested. Alarms, dashboards, notifications, Metric Streams Terraform |
+| Google Cloud | [runbook-gcp](docs/user/runbook-gcp.md) | Alerts and dashboards tested in a sandbox; VM CPU data does not arrive |
+| Grafana | [runbook-grafana](docs/user/runbook-grafana.md) | Alert firing test passed in a sandbox; dashboards convert in part; notifications untested live |
+| Dynatrace | [runbook-dynatrace](docs/user/runbook-dynatrace.md) | Early. Nothing run against a tenant with workflows; no automatic data path |
+| Datadog, Azure | [runbook-datadog-and-azure](docs/user/runbook-datadog-and-azure.md) | Not available: Datadog paused, Azure not started |
+
+The one-command start for AWS, Google Cloud, Grafana and Dynatrace is the guided menu. It needs
+[uv](https://docs.astral.sh/uv/), Python 3.12 or newer, and a `.env` file:
+
+```sh
+uv sync && source .venv/bin/activate
+cp .env.example .env     # fill in the lines for your source; never commit it
+bash scripts/migrate.sh
+```
+
+Nothing is created until you type `yes`. Every script and command is listed in the
+[script reference](docs/user/script-reference.md). Rolling back is covered in
+[the menu guide](docs/user/menu-and-rollback.md).
+
 ## What can and cannot be migrated
 
 | Asset | Migrates | Does not migrate (and what to do) |
@@ -102,7 +129,9 @@ and the notification options (`--include-needs-review`, secrets from the environ
 
 | | |
 |---|---|
-| [Getting started](docs/getting-started.md) | The full walkthrough, from install to rollback |
+| [Runbooks](docs/user/runbook-aws-cloudwatch.md) | One end-to-end guide per source product (see the table above) |
+| [Script reference](docs/user/script-reference.md) | Every script and every command, grouped by source |
+| [Getting started](docs/getting-started.md) | The full AWS walkthrough, from install to rollback |
 | [What migrates](docs/what-migrates.md) | Everything that does and doesn't move, and why |
 | [Permissions](docs/permissions.md) | The AWS policy and New Relic key, ready to copy |
 | [Troubleshooting](docs/troubleshooting.md) | Error messages and what to do about them |
