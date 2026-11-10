@@ -115,6 +115,7 @@ MAIN = (
     "  6  Check my setup",
     "  7  Try on sample data",
     "  8  What did I just do?",
+    "  9  Check my migration (parity)",
     "  0  Quit",
 )
 
@@ -195,6 +196,8 @@ class Menu:
                 self._sample()
             elif choice == "8":
                 self.last_run_summary()
+            elif choice == "9":
+                self._parity()
             else:
                 self.c.say(BAD_CHOICE)
 
@@ -702,6 +705,57 @@ class Menu:
             self.c.say(
                 "To undo it: pick 'Roll back a run' (5) here, or run 'importer rollback-run'. "
                 "You see exactly what will be deleted and must type yes."
+            )
+
+    # -- parity ------------------------------------------------------------------------------
+    def _parity(self) -> None:
+        """Compare the newest Grafana conversion with the numbers in Prometheus and New Relic."""
+        runs = sorted(self.work_dir.glob("grafana-*/converted")) if self.work_dir.is_dir() else []
+        if not runs:
+            self.c.say("There is no converted Grafana run yet. Pick 3 (Grafana) first.")
+            return
+        lay = Layout(runs[-1].parent)
+        self.c.say(
+            "\nThis reads the same time range from your Prometheus and from New Relic and "
+            "compares the numbers. It only creates reports; nothing is changed anywhere. It "
+            "means something only where the same data is in both places."
+        )
+        source = self.c.ask(
+            "Where is your Prometheus? A Grafana data source name or uid, or a URL such as "
+            "http://127.0.0.1:9090 (Enter to go back):"
+        )
+        if not source:
+            return
+        if not source.lower().startswith(("http://", "https://")) and not self._ensure_env(
+            SPECS["3"]
+        ):
+            return
+        account = self._nr_account()
+        if account is None:
+            self.c.say("A New Relic account id is needed to read the converted data.")
+            return
+        if not ensure_secret(
+            self.c, "NEW_RELIC_API_KEY", "run read-only queries in New Relic (kept in memory only)"
+        ):
+            self.c.say("NEW_RELIC_API_KEY is needed; add it to .env and retry.")
+            return
+        out = lay.folder / "parity"
+        code = self.runner(
+            [
+                *("verify-parity", "--in", str(lay.converted), "--export", str(lay.export)),
+                *("--source-prom", source, "--nr-account-id", str(account), "--out", str(out)),
+            ]
+        )
+        if code in (0, 2):
+            self.c.say(f"Parity report: {(out / 'parity.html').resolve().as_uri()}")
+            self.c.say(
+                f"To show 'verified on' in the dashboard report, add: --parity {out / 'verified-labels.json'}"
+            )
+            if code == 2:
+                self.c.say("At least one item is a MISMATCH; the report names the likely cause.")
+        else:
+            self.c.say(
+                "The parity check did not finish; see the message above. Nothing was changed."
             )
 
     # -- sample ------------------------------------------------------------------------------
