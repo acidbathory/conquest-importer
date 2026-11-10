@@ -279,6 +279,15 @@ def run_case(
             "/api/v1/query_range", query=expr, start=str(t0), end=str(t1), step=str(STEP)
         )["result"]
         out.update(compare_chart(pe, nr, conv.facet, t0))
+        # the same expression with every range set to the New Relic bucket: data path without window semantics
+        e1 = re.sub(r"\[\d+[smhd]\]", f"[{STEP}s]", expr)
+        if e1 != expr:
+            p1 = prom_get(
+                "/api/v1/query_range", query=e1, start=str(t0), end=str(t1), step=str(STEP)
+            )["result"]
+            c1 = compare_chart(p1, nr, conv.facet, t0)
+            out["status_1m"] = c1.get("status")
+            out["series_1m"] = c1.get("series")
     else:
         w = t1 - t0
         pexpr = re.sub(r"\[\d+[smhd]\]", f"[{w}s]", expr)
