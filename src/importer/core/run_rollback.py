@@ -21,8 +21,9 @@ from importer.core.runs import RunRecord, RunStore
 from importer.core.secrets import MissingSecretError, require_env
 from importer.core.text import printable
 
-# `ckg-` marks sandbox objects; the second is the policy name `apply` uses by default.
-ALLOWED_PREFIXES = ("ckg-", "Imported by Conquest Importer")
+# `ckg-` marks sandbox objects; the second is the policy name `apply` uses by default; the third is
+# the default prefix of the notification objects the menu creates.
+ALLOWED_PREFIXES = ("ckg-", "Imported by Conquest Importer", "Imported:")
 
 
 ClientFactory = Callable[[str], AbstractContextManager[Any]]
@@ -35,7 +36,10 @@ def real_client(region: str) -> Any:
 
 
 def is_ours_by_name(obj: CreatedObject) -> bool:
-    return obj.name.startswith(ALLOWED_PREFIXES)
+    """A dashboard keeps the title it had in the source, so it is accepted by kind: it is in the
+    record only because this tool created it (existing names are skipped), and `rollback` still
+    re-reads it and deletes it only if the id has the recorded name."""
+    return obj.kind == "dashboard" or obj.name.startswith(ALLOWED_PREFIXES)
 
 
 def _merge_interrupted(console: Console, store: RunStore, record: RunRecord) -> None:
