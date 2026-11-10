@@ -65,7 +65,7 @@ def test_every_item_has_a_remedy_and_most_have_a_playbook(plan: Plan) -> None:
 def test_groups_are_counted_and_sorted_by_items(plan: Plan) -> None:
     counts = [g.count for g in plan.groups]
     assert counts == sorted(counts, reverse=True)
-    assert sum(g.count for g in plan.groups) == len(plan.items)
+    assert sum(g.count for g in plan.groups) == sum(i.count for i in plan.items)
 
 
 def test_top_five_is_a_greedy_cover_that_unlocks_items(plan: Plan) -> None:
@@ -92,13 +92,22 @@ def test_csv_cells_cannot_start_a_spreadsheet_formula(tmp_path: Path) -> None:
     widget = {
         "kind": "unsupported",
         "source_type": "stat",
-        "title": "=HYPERLINK(\"http://x\")",
+        "title": '=HYPERLINK("http://x")',
         "layout": {"column": 1, "row": 1, "width": 3, "height": 3},
         "confidence": "manual",
-        "reasons": ["dashboard panel has transformations, which run in the browser and cannot be "
-                    "reproduced in a query", "query: up"],
+        "reasons": [
+            "dashboard panel has transformations, which run in the browser and cannot be "
+            "reproduced in a query",
+            "query: up",
+        ],
     }
-    dash = {"source_system": "grafana", "source_key": "k", "name": "+evil", "widgets": [widget]}
+    dash = {
+        "source_system": "grafana",
+        "source_key": "k",
+        "name": "+evil",
+        "confidence": "manual",
+        "widgets": [widget],
+    }
     (folder / "1.json").write_text(json.dumps(dash))
     out = tmp_path / "plan"
     _run("plan-remediation", "--in", str(tmp_path / "d"), "--out", str(out))
