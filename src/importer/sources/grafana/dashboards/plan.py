@@ -41,6 +41,7 @@ from importer.sources.grafana.dashboards.variables import (
     MANUAL,
     VariablePlan,
     classify_variable,
+    link_variables,
 )
 
 MAX_LISTED = 100  # names listed per dashboard in the plan
@@ -359,8 +360,9 @@ def plan_dashboard(dash: Dashboard) -> DashboardPlan:
     variables: list[VariablePlan] = []
     seen: set[str] = set()
     for variable in dash.variables:
-        variables.append(classify_variable(variable, dash, set(known), seen))
+        variables.append(classify_variable(variable, dash, seen))
         seen.add(variable.name)
+    variables = link_variables(dash.variables, variables)
     manual = frozenset(v.name for v in variables if v.status == MANUAL)
     plans = _plan_panels(dash, known, manual)
     out = DashboardPlan(

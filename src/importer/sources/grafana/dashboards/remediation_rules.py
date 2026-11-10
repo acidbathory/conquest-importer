@@ -296,7 +296,8 @@ RULES: list[Rule] = [
     ),
     (
         re.compile(
-            r"^dashboard variable query (?:is not label_values|is query_result|runs on a data source)"
+            r"^dashboard variable query "
+            r"(?:is not label_values|is query_result|runs on a data source)"
         ),
         "Dashboard variable query",
         [

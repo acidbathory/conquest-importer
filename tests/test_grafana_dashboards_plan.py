@@ -335,15 +335,15 @@ VARIABLES = [
 def test_a_variable_is_classified_by_type_and_query(
     variable: m.Variable, status: str, reason: str, target: str
 ) -> None:
-    found = classify_variable(variable, dash(variables=[variable]), {"service"})
+    found = classify_variable(variable, dash(variables=[variable]))
     assert (found.status, found.reason, found.target) == (status, reason, target)
 
 
 def test_a_variable_name_used_twice_is_manual_the_second_time() -> None:
     first, second = var(name="a", kind="custom"), var(name="a", kind="custom")
     d = dash(variables=[first, second])
-    assert classify_variable(first, d, {"a"}, seen=set()).status == "converts"
-    assert classify_variable(second, d, {"a"}, seen={"a"}).reason == r.V_DUPLICATE
+    assert classify_variable(first, d, seen=set()).status == "converts"
+    assert classify_variable(second, d, seen={"a"}).reason == r.V_DUPLICATE
 
 
 def test_templating_usage_lists_used_unused_and_undefined_variables() -> None:
@@ -577,7 +577,7 @@ def test_a_child_variable_follows_its_parent_status() -> None:
         v.name: (v.status, v.reason)
         for v in plan_dashboard(dash(variables=[parent, child, grand])).variables
     }
-    assert got == {n: ("converts", "") for n in ("job", "inst", "pod")}
+    assert got == dict.fromkeys(("job", "inst", "pod"), ("converts", ""))
 
 
 def test_a_child_of_a_manual_parent_is_manual_down_the_chain() -> None:
