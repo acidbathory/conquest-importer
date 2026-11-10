@@ -35,8 +35,8 @@ from importer.sources.grafana.dashboard_convert.reuse import (
     selector,
 )
 from importer.sources.grafana.dashboards.models import Dashboard, Variable
-from importer.sources.grafana.dashboards.regex_matchers import PRESENT, RegexUse, mask
 from importer.sources.grafana.dashboards.query_tier import variables_in
+from importer.sources.grafana.dashboards.regex_matchers import PRESENT, RegexUse, mask
 from importer.sources.grafana.dashboards.variables import (
     CONVERTS,
     DROPPED,

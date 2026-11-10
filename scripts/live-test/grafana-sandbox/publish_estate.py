@@ -15,9 +15,39 @@ from estate_common import LOKI, PROM, ROOT, call, load_manifest, save_manifest
 
 GROUPS = {
     "infra": [1860, 11074, 10619, 10826, 6671],
-    "kubernetes": [15661, 315, 13332, 15757, 15758, 15759, 15760, 16364, 16368, 16361, 15762, 15761, 6417, 747],
+    "kubernetes": [
+        15661,
+        315,
+        13332,
+        15757,
+        15758,
+        15759,
+        15760,
+        16364,
+        16368,
+        16361,
+        15762,
+        15761,
+        6417,
+        747,
+    ],
     "data": [7362, 12485, 9628, 11835, 2583, 14191, 6483, 10991, 7651],
-    "edge-apps": [12693, 9614, 14900, 17346, 4701, 11378, 13659, 14981, 7645, 7636, 14584, 19993, 15987, 12904],
+    "edge-apps": [
+        12693,
+        9614,
+        14900,
+        17346,
+        4701,
+        11378,
+        13659,
+        14981,
+        7645,
+        7636,
+        14584,
+        19993,
+        15987,
+        12904,
+    ],
     "observability": [9578, 3662, 19105, 14055, 15141, 15983, 11176],
 }
 
@@ -27,7 +57,12 @@ def rewrite_ds(node):
     if isinstance(node, dict):
         for k, v in list(node.items()):
             if k == "datasource":
-                if isinstance(v, str) and v and not v.startswith(("$", "-- ", "${")) and v != "null":
+                if (
+                    isinstance(v, str)
+                    and v
+                    and not v.startswith(("$", "-- ", "${"))
+                    and v != "null"
+                ):
                     node[k] = {"type": "prometheus", "uid": LOKI if "oki" in v else PROM}
                 elif isinstance(v, dict) and not str(v.get("uid", "")).startswith("$"):
                     t = v.get("type")
@@ -81,7 +116,14 @@ def main(src: Path) -> int:
                 val = i.get("value", "")
                 if i["type"] == "datasource":
                     val = LOKI if i.get("pluginId") == "loki" else PROM
-                inputs.append({"name": i["name"], "type": i["type"], "pluginId": i.get("pluginId"), "value": val})
+                inputs.append(
+                    {
+                        "name": i["name"],
+                        "type": i["type"],
+                        "pluginId": i.get("pluginId"),
+                        "value": val,
+                    }
+                )
             if d.get("__inputs"):
                 body = {"dashboard": d, "overwrite": False, "folderUid": fuid, "inputs": inputs}
                 code, text = call("POST", "/api/dashboards/import", body)

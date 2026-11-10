@@ -23,11 +23,25 @@ def main(go: bool) -> int:
     m = load_manifest()
     plan = []
     for r in m.get("grafana_alert_rules", []):
-        plan.append(("alert rule", r["title"], f"/api/v1/provisioning/alert-rules/{guard(r['title']) and r['uid']}"))
+        plan.append(
+            (
+                "alert rule",
+                r["title"],
+                f"/api/v1/provisioning/alert-rules/{guard(r['title']) and r['uid']}",
+            )
+        )
     for t in m.get("grafana_mute_timings", []):
-        plan.append(("mute timing", t["name"], f"/api/v1/provisioning/mute-timings/{guard(t['name'])}"))
+        plan.append(
+            ("mute timing", t["name"], f"/api/v1/provisioning/mute-timings/{guard(t['name'])}")
+        )
     for c in m.get("grafana_contact_points", []):
-        plan.append(("contact point", c["name"], f"/api/v1/provisioning/contact-points/{guard(c['name']) and c['uid']}"))
+        plan.append(
+            (
+                "contact point",
+                c["name"],
+                f"/api/v1/provisioning/contact-points/{guard(c['name']) and c['uid']}",
+            )
+        )
     for d in m.get("grafana_dashboards", []):
         plan.append(("dashboard", d["uid"], f"/api/dashboards/uid/{guard(d['uid'])}"))
     for f in reversed(m.get("grafana_folders", [])):

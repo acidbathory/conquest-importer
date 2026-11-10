@@ -36,22 +36,42 @@ def main(run: Path) -> dict:
                     blockers[norm(r)] += 1
                     blocker_dash[norm(r)].add(d["source_key"])
         n = sum(c[k] for k in ("exact", "approximate", "manual", "unsupported"))
-        dashes.append({"uid": d["source_key"], "name": d["name"], "data_widgets": n, "exact": c["exact"],
-                       "approx": c["approximate"], "manual": c["manual"] + c["unsupported"], "chrome": c["chrome"],
-                       "score": round((c["exact"] + 0.5 * c["approximate"]) / n * 100) if n else 0,
-                       "converted_pct": round((c["exact"] + c["approximate"]) / n * 100) if n else 0,
-                       "variables": len(d.get("variables", []))})
+        dashes.append(
+            {
+                "uid": d["source_key"],
+                "name": d["name"],
+                "data_widgets": n,
+                "exact": c["exact"],
+                "approx": c["approximate"],
+                "manual": c["manual"] + c["unsupported"],
+                "chrome": c["chrome"],
+                "score": round((c["exact"] + 0.5 * c["approximate"]) / n * 100) if n else 0,
+                "converted_pct": round((c["exact"] + c["approximate"]) / n * 100) if n else 0,
+                "variables": len(d.get("variables", [])),
+            }
+        )
     alerts = []
     ablock = collections.Counter()
     for p in sorted((run / "alerts/ir").glob("*.json")):
         d = json.loads(p.read_text())
-        alerts.append({"name": d["name"], "confidence": d["confidence"],
-                       "reason": norm(d["reasons"][0]) if d["reasons"] and d["confidence"] == "manual" else ""})
+        alerts.append(
+            {
+                "name": d["name"],
+                "confidence": d["confidence"],
+                "reason": norm(d["reasons"][0])
+                if d["reasons"] and d["confidence"] == "manual"
+                else "",
+            }
+        )
         if d["confidence"] == "manual":
             for r in d["reasons"]:
                 ablock[norm(r)] += 1
-    return {"dashboards": dashes, "dash_blockers": [(k, v, len(blocker_dash[k])) for k, v in blockers.most_common()],
-            "alerts": sorted(alerts, key=lambda a: a["name"]), "alert_blockers": ablock.most_common()}
+    return {
+        "dashboards": dashes,
+        "dash_blockers": [(k, v, len(blocker_dash[k])) for k, v in blockers.most_common()],
+        "alerts": sorted(alerts, key=lambda a: a["name"]),
+        "alert_blockers": ablock.most_common(),
+    }
 
 
 if __name__ == "__main__":
