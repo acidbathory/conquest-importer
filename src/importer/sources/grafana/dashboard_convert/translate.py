@@ -104,6 +104,13 @@ def _variable_reasons(found: Variables) -> list[str]:
         notes.append(r.D_VARIABLE_DROPPED.format(count=found.dropped))
     if found.manual:
         notes.append(r.D_VARIABLE_MANUAL.format(count=found.manual))
+        notes += found.why  # the fixed reason of each kind of variable left out
+    if found.nested:
+        notes.append(r.D_VARIABLE_NESTED.format(count=found.nested))
+    if found.query_results:
+        notes.append(r.D_VARIABLE_QUERY_RESULT.format(count=found.query_results))
+    if found.no_default:
+        notes.append(r.D_VARIABLE_PARENT_DEFAULT.format(count=found.no_default))
     return notes
 
 

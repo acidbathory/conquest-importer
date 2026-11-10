@@ -235,7 +235,8 @@ def test_a_multi_value_parent_is_matched_with_in() -> None:
     out = build([parent, child])
     assert out.variables[0].multi_select and out.variables[0].default_values == ["*"]
     assert nrql_of(out)["pod"] == (
-        "FROM Metric SELECT uniques(pod) WHERE metricName = 'kube_pod_info' AND namespace IN ({{ns}})"
+        "FROM Metric SELECT uniques(pod) WHERE metricName = 'kube_pod_info' "
+        "AND namespace IN ({{ns}})"
     )
 
 

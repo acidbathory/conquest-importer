@@ -106,6 +106,26 @@ ROWS: list[tuple[str, str, list[str], Category]] = [
         C.UNSUPPORTED_FEATURE,
     ),
     (
+        r.C_METRICNAME,
+        "Dashboard label named metricName",
+        [
+            "In New Relic `metricName` is the attribute that holds the metric name, so a "
+            "Prometheus label with that name collides with it. Rename the label where the data "
+            "is sent (a relabel rule), then filter on the new name.",
+        ],
+        C.UNSUPPORTED_QUERY,
+    ),
+    (
+        r.C_METRICS_RENAMED,
+        "Dashboard metric list with a name map",
+        [
+            "The variable lists Prometheus metric names, but the name map sends some metrics "
+            "to other events or attributes, so `uniques(metricName)` would list other names. "
+            "Write the list by hand as an `enum` variable.",
+        ],
+        C.UNSUPPORTED_FEATURE,
+    ),
+    (
         r.C_LIKE_PERCENT,
         "Dashboard pattern with a percent sign",
         [
