@@ -390,5 +390,5 @@ def test_rate_chart_note_warns_when_the_bucket_may_not_match_the_scrape_interval
     ],
 )
 def test_recording_rule_names_with_colons_are_quoted(expr: str, expected: str) -> None:
-    # Measured live (telemetry rig): remote write keeps the colon name and NRQL reads it in backticks.
+    # Measured live (telemetry rig): remote write keeps the colon name; NRQL reads it in backticks.
     assert nrql(expr) == expected
