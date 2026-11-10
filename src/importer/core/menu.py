@@ -748,9 +748,8 @@ class Menu:
         )
         if code in (0, 2):
             self.c.say(f"Parity report: {(out / 'parity.html').resolve().as_uri()}")
-            self.c.say(
-                f"To show 'verified on' in the dashboard report, add: --parity {out / 'verified-labels.json'}"
-            )
+            labels = out / "verified-labels.json"
+            self.c.say(f"To show 'verified on' in the dashboard report, add: --parity {labels}")
             if code == 2:
                 self.c.say("At least one item is a MISMATCH; the report names the likely cause.")
         else:
