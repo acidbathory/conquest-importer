@@ -40,7 +40,7 @@ def test_a_variable_matcher_next_to_a_regex_matcher_still_converts() -> None:
 
 @pytest.mark.parametrize(
     "pattern",
-    [".*", "a|", "a?", "(?i)abc", "^abc$", "a\\\\.b", "(?:a|b)", "5..|$ns", "a{2}", "[a-"],
+    [".*", "a|", "a?", "(?i)abc", "^a^bc$", "a\\\\.b", "(?:a|b)", "5..|$ns", "a{2}", "[a-"],
 )
 def test_a_pattern_rlike_cannot_carry_exactly_stays_manual(pattern: str) -> None:
     expr = 'up{code=~"' + pattern + '"}'
@@ -56,3 +56,19 @@ def test_the_regex_reason_names_the_empty_value_rule() -> None:
 def test_mask_leaves_plain_forms_and_strings_alone() -> None:
     text = 'up{job=~"a|b", x="5.."} and "{code=~\\"5..\\"}"'
     assert mask(text) == (text, {})
+
+
+@pytest.mark.parametrize(
+    ("matcher", "where"),
+    [
+        ('code=~"^5..$"', "code RLIKE '5..'"),
+        ('job=~"^k8s_.*"', "job LIKE 'k8s_%'"),
+        ('mode=~"^(ext.*|xfs)$"', "mode RLIKE 'ext.*|xfs'"),
+        ('ns=~"^$ns$"', "ns IN ({{ns}})"),
+        ('ns=~"^($ns)$"', "ns IN ({{ns}})"),
+        ('code!~"^5..$"', "code NOT RLIKE '5..'"),
+    ],
+)
+def test_the_anchors_of_a_whole_value_regex_are_dropped(matcher: str, where: str) -> None:
+    out = nrql("up{" + matcher + "}")
+    assert f"WHERE {where}" in out

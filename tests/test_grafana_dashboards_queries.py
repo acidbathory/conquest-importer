@@ -70,7 +70,7 @@ PROM_MANUAL = [
     ('up{job=~".*"}', r.Q_REGEX),
     ('up{job=~"a|"}', r.Q_REGEX),
     ('up{job=~"(?i)abc"}', r.Q_REGEX),
-    ('node_filesystem_size_bytes{device!~"^(tmpfs|rootfs)$"}', r.Q_REGEX),
+    ('node_filesystem_size_bytes{device!~"^(?:tmpfs|rootfs)$"}', r.Q_REGEX),
     ("sum by ($group) (up)", r.Q_GROUP_VARIABLE),
     ("sum(up) by ($group)", r.Q_GROUP_VARIABLE),
     ("sum by (a) (x) / sum by (b) (y)", r.Q_BINARY_LABELS),
