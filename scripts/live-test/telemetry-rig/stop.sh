@@ -2,7 +2,7 @@
 # Stop every rig process and delete the temp dir (binaries, TSDB, token file). Logs stay in out/live-run/rig.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"; RIG="$ROOT/out/live-run/rig"
-for n in prometheus node_exporter exporter watchdog; do
+for n in caffeinate prometheus node_exporter exporter watchdog; do
   [[ -f "$RIG/$n.pid" ]] && { kill "$(cat "$RIG/$n.pid")" 2>/dev/null; rm -f "$RIG/$n.pid"; }
 done
 sleep 2

@@ -28,4 +28,7 @@ sleep 2
 nohup "$T/bin/prometheus" --config.file="$T/prometheus.yml" --web.listen-address=127.0.0.1:9090 \
   --storage.tsdb.path="$T/data" --storage.tsdb.retention.time=1d >"$RIG/prometheus.log" 2>&1 & echo $! > "$RIG/prometheus.pid"
 nohup python3 -I "$HERE/watchdog.py" "$RIG" >"$RIG/watchdog.log" 2>&1 & echo $! > "$RIG/watchdog.pid"
+# The Mac sleeps one minute after the display turns off, which stops the scrapes and leaves holes in
+# both Prometheus and New Relic. Hold off idle sleep for as long as the watchdog lives (no sudo).
+nohup caffeinate -i -w "$(cat "$RIG/watchdog.pid")" >/dev/null 2>&1 & echo $! > "$RIG/caffeinate.pid"
 echo "started; ends $(date -u -r "$(cat "$RIG/ends_at_epoch")" +%FT%TZ); stop with: bash $HERE/stop.sh"
