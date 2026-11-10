@@ -67,21 +67,29 @@ class Item:
         return (pb.effort_minutes if pb else 30) * self.count
 
 
-def promql_names(query: str) -> tuple[str, tuple[str, ...]]:
-    """The first metric name and the grouping labels of a PromQL text, or empty when unsure."""
+def promql_names(query: str) -> tuple[str, tuple[str, ...], str]:
+    """The first metric name, the grouping labels and the first label a variable filters.
+
+    Each is empty when the text does not give it. Names are checked again by `fill_template`
+    before they reach any output.
+    """
     text = re.sub(r'"(?:[^"\\]|\\.)*"', '""', query)
     labels: list[str] = []
     for group in re.finditer(r"\b(?:by|without)\s*\(([^)]*)\)", text):
         labels += [x.strip() for x in group.group(1).split(",") if x.strip()]
+    variable_label = ""
+    for matcher in re.finditer(r'([A-Za-z_]\w*)\s*(?:=~|!~|!=|=)\s*"[^"]*\$', query):
+        variable_label = variable_label or matcher.group(1)
     text = re.sub(r"\{[^}]*\}", "", text)
     text = re.sub(r"\b(?:by|without|on|ignoring|group_left|group_right)\s*\([^)]*\)", " ", text)
     text = re.sub(r"\$\{?\w+\}?|\[[^\]]*\]", " ", text)
+    unique = tuple(dict.fromkeys(labels))
     for name in re.finditer(r"[A-Za-z_:][A-Za-z0-9_:]*(?!\w)", text):
         word = name.group(0)
         rest = text[name.end() :].lstrip()
-        if word not in PROMQL_WORDS and not rest.startswith("("):
-            return word, tuple(dict.fromkeys(labels))
-    return "", tuple(dict.fromkeys(labels))
+        if word not in PROMQL_WORDS and not rest.startswith("(") and not word.startswith("__"):
+            return word, unique, variable_label
+    return "", unique, variable_label
 
 
 def _variant(reason: str) -> str:
@@ -322,8 +330,8 @@ def _filled(item: Item) -> str:
     pb = item.playbook
     if not pb or not pb.template:
         return ""
-    metric, labels = promql_names(item.query)
-    return fill_template(pb.template, metric, labels)
+    metric, labels, label = promql_names(item.query)
+    return fill_template(pb.template, metric, labels, label)
 
 
 def render_csv(plan: Plan) -> str:
@@ -430,6 +438,9 @@ def render_markdown(plan: Plan) -> str:
             also = [r.title for r in i.remedies[1:] if not r.secondary]
             tail = f" - also blocked by: {md_cell('; '.join(also), 150)}" if also else ""
             lines.append(f"- [ ] {i.kind}: {md_cell(i.name, 80)}{where}{extra}{tail}")
+            ready = _filled(i)
+            if ready and ready != (g.playbook.template if g.playbook else ""):
+                lines.append(f"  - with this item's names: `{ready}`")
     if plan.unmatched:
         lines += ["", "## Items with no remediation rule", ""]
         lines += [

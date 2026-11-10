@@ -81,15 +81,23 @@ def all_playbooks() -> dict[str, Playbook]:
     return dict(_BOOK)
 
 
-def fill_template(template: str, metric: str = "", labels: tuple[str, ...] = ()) -> str:
-    """Put the item's own names into a template; a name that is not safe stays a token."""
+def fill_template(
+    template: str, metric: str = "", labels: tuple[str, ...] = (), label: str = ""
+) -> str:
+    """Put the item's own names into a template; a name that is not safe stays a token.
+
+    `<label>` is the label a variable filters on when the item has one, else the first grouping
+    label; `<labels>` is the list of grouping labels.
+    """
 
     def pick(match: re.Match[str]) -> str:
         if match.group(1) == "metric":
             return metric if SAFE_NAME.match(metric) else match.group(0)
         good = [x for x in labels if SAFE_NAME.match(x)]
         if match.group(1) == "label":
-            return good[0] if good else match.group(0)
+            one = label if SAFE_NAME.match(label) else ""
+            pick_one = one or (good[0] if good else "")
+            return pick_one or match.group(0)
         return ", ".join(good) if good else match.group(0)
 
     return TOKEN.sub(pick, template)

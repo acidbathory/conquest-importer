@@ -127,3 +127,33 @@ def test_refuses_an_output_folder_inside_the_input(converted: Path) -> None:
 def test_empty_input_is_an_error(tmp_path: Path) -> None:
     result = runner.invoke(app, ["plan-remediation", "--in", str(tmp_path)])
     assert result.exit_code == 1
+
+
+@pytest.mark.parametrize(
+    ("query", "expected"),
+    [
+        ('sum(kube_pod_info{cluster=~"$cluster"})', ("kube_pod_info", (), "cluster")),
+        (
+            "sum by (instance, device) (rate(node_disk_io_time_seconds_total[5m]))",
+            ("node_disk_io_time_seconds_total", ("instance", "device"), ""),
+        ),
+        ("label_values(__name__)", ("", (), "")),
+        ('x{a="b"} * on(job) group_left(z) y', ("x", (), "")),
+    ],
+)
+def test_names_are_read_from_promql(query: str, expected: tuple[str, tuple[str, ...], str]) -> None:
+    from importer.core.remediation_plan import promql_names
+
+    assert promql_names(query) == expected
+
+
+def test_a_template_gets_the_items_own_metric(plan: Plan) -> None:
+    from importer.core.remediation_plan import render_csv
+
+    rows = [
+        row
+        for row in csv.DictReader(io.StringIO(render_csv(plan)))
+        if row["reason"] == "Dashboard sum or count across the series of a gauge"
+    ]
+    assert rows
+    assert all("<metric>" not in row["template"] for row in rows)
