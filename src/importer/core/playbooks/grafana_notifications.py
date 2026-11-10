@@ -305,7 +305,7 @@ reg(
 reg(
     (
         "Grafana notification policy grouping or timing",
-        "Grafana notification policy tree too large",
+        "Grafana notification policy too large",
         "Grafana notification policy tree cut",
     ),
     Playbook(
