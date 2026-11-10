@@ -1,21 +1,36 @@
-"""The numbered menu: pick a source, then check -> read -> convert and preview -> optional create.
+"""The numbered menu: pick a source, then one pass: check, read everything, convert everything,
+one preview, one typed `yes`, create in a safe order, one combined run record.
 
 Every step calls an existing command through `runner`, so the menu adds no new way to talk to a
 cloud or to New Relic. All questions go through a `Console`, so tests drive it with scripted
 answers. Nothing is created without the word `yes` typed after a message that names the New Relic
-account. No browser or report opens unless that exact option is chosen.
+account and the counts. The menu never opens a browser: report paths are only printed.
 """
 
 import os
-import webbrowser
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from importer.core.apply import GuardError, check_guards
+from importer.core.apply import GuardError, check_guards, get_account_name
 from importer.core.console import Console, InputEnded, confirm_yes, ensure_secret
+from importer.core.menu_flow import (
+    APPLY,
+    KINDS,
+    LABEL,
+    PLANS,
+    STATE,
+    KindPlan,
+    Layout,
+    Summary,
+    build_kinds,
+    extra_plans,
+    read_int,
+    summarise,
+    triage_buckets,
+)
 from importer.core.run_rollback import (
     ClientFactory,
     is_sandbox_account,
@@ -90,12 +105,6 @@ MAIN = (
     "  8  What did I just do?",
     "  0  Quit",
 )
-# What each kind of run creates, and how it ends up in New Relic.
-WHAT = {
-    "alerts": ("alert conditions", "disabled"),
-    "dashboards": ("dashboards", "private"),
-    "notifications": ("destinations, channels and workflows", "workflows disabled"),
-}
 
 
 def kind_of(source: str) -> str:
@@ -107,62 +116,13 @@ def kind_of(source: str) -> str:
 
 
 def command_for(source: str) -> str:
-    return {"alerts": "apply", "dashboards": "apply-dashboards"}.get(
-        kind_of(source), "apply-notifications"
-    )
+    return APPLY[kind_of(source)]
 
 
 def preview_args(command: str, folder: Path, account: int) -> list[str]:
     return [command, "--in", str(folder), "--account-id", str(account)]
 
 
-@dataclass(frozen=True)
-class Dirs:
-    export: Path  # where this flow's own export goes
-    out: Path  # where its converted files go
-    raw: Path  # the alert export already read
-    alerts: Path  # the alerts already converted
-
-
-Step = tuple[str, list[str]]
-StepBuilder = Callable[[Dirs], list[Step]]
-READ_ONLY, LOCAL = "reading (read-only)", "converting (local files only)"
-
-
-def _grafana_dashboards(d: Dirs) -> list[Step]:
-    return [
-        (READ_ONLY, ["extract-grafana-dashboards", "--out", str(d.export)]),
-        (LOCAL, ["convert-grafana-dashboards", "--in", str(d.export), "--out", str(d.out)]),
-    ]
-
-
-def _grafana_notifications(d: Dirs) -> list[Step]:
-    convert = ["convert-grafana-notifications", "--in", str(d.export)]
-    return [
-        (READ_ONLY, ["extract-grafana-notifications", "--out", str(d.export)]),
-        (LOCAL, [*convert, "--alerts", str(d.alerts), "--out", str(d.out)]),
-    ]
-
-
-def _dynatrace_dashboards(d: Dirs) -> list[Step]:
-    return [
-        (READ_ONLY, ["extract-dynatrace-inventory", "--out", str(d.export)]),
-        (
-            "planning (local files only)",
-            ["plan-dynatrace-dashboards", "--in", str(d.export), "--out", str(d.out)],
-        ),
-    ]
-
-
-def _dynatrace_notifications(d: Dirs) -> list[Step]:
-    convert = ["convert-notifications", "--source", "dynatrace", "--topics", str(d.raw)]
-    return [(LOCAL, [*convert, "--out", str(d.out)])]
-
-
-EXTRA: dict[str, dict[str, StepBuilder]] = {
-    "3": {"dashboards": _grafana_dashboards, "notifications": _grafana_notifications},
-    "4": {"dashboards": _dynatrace_dashboards, "notifications": _dynatrace_notifications},
-}
 BAD_CHOICE = "Please type a number from the list."
 
 
@@ -174,7 +134,6 @@ class Menu:
         store: RunStore,
         *,
         work_dir: Path = Path("out") / "guided",
-        opener: Callable[[str], object] = webbrowser.open,
         sample_dir: Path = SAMPLE_DIR,
         client_factory: ClientFactory | None = None,
         real_migration: bool = False,
@@ -183,7 +142,6 @@ class Menu:
         self.runner = runner
         self.store = store
         self.work_dir = work_dir
-        self.opener = opener
         self.sample_dir = sample_dir
         self.client_factory = client_factory or real_client
         self.real_migration = real_migration
@@ -249,20 +207,19 @@ class Menu:
         return True
 
     # -- a source ------------------------------------------------------------------------------
-    def _ask_inputs(self, spec: Spec) -> tuple[list[str], list[str], str] | None:
-        """Returns (extract args without --out, extra doctor args, label for messages)."""
+    def _ask_inputs(self, spec: Spec) -> tuple[list[str], list[str]] | None:
+        """Returns (extract args without --out, extra doctor args), or None to go back."""
         if spec.key == "1":
             project = self.c.ask("Google Cloud project id (Enter to go back):")
-            return (["extract-gcp", "--project", project], [], project) if project else None
+            return (["extract-gcp", "--project", project], []) if project else None
         if spec.key == "2":
             account = self.c.ask("AWS account id, 12 digits (Enter to go back):")
             if not account:
                 return None
             region = self.c.ask("AWS region [us-east-1]:") or "us-east-1"
             args = ["extract-cloudwatch", "--account-id", account, "--region", region]
-            return args, ["--region", region], account
-        extract = "extract-grafana" if spec.key == "3" else "extract-dynatrace"
-        return [extract], [], spec.label
+            return args, ["--region", region]
+        return [("extract-grafana" if spec.key == "3" else "extract-dynatrace")], []
 
     def _nr_account(self) -> int | None:
         text = os.environ.get("NEW_RELIC_ACCOUNT_ID", "").strip()
@@ -273,71 +230,120 @@ class Menu:
             os.environ["NEW_RELIC_ACCOUNT_ID"] = text
         return int(text)
 
+    def _run_all(self, steps: list[list[str]]) -> bool:
+        return all(self.runner(step) == 0 for step in steps)
+
     def _source(self, spec: Spec) -> None:
         if not self._ensure_env(spec):
             return
         inputs = self._ask_inputs(spec)
         if inputs is None:
             return
-        extract, doctor_extra, _label = inputs
+        extract, doctor_extra = inputs
         self.c.say("\nStep 1 of 4: checking your setup")
         if not self._doctor(spec, tuple(doctor_extra)):
             return
-        folder = self.work_dir / f"{spec.source}-{datetime.now(UTC):%Y%m%d-%H%M%S}"
-        raw, alerts = folder / "export", folder / "alerts"
-        self.c.say("\nStep 2 of 4: reading from the source (read-only)")
-        if self.runner([*extract, "--out", str(raw)]) != 0:
-            self.c.say("Reading failed; see the message above. Nothing was changed anywhere.")
+        lay = Layout(self.work_dir / f"{spec.source}-{datetime.now(UTC):%Y%m%d-%H%M%S}")
+        kinds = build_kinds(spec.key, spec.source, extract, lay)
+        self.c.say(f"\nStep 2 of 4: reading everything {spec.label} offers (read-only)")
+        kinds = self._stage(kinds, "read", "Reading")
+        if not kinds:
             return
-        self.c.say("\nStep 3 of 4: converting and previewing (local files only)")
-        convert_in = raw / "policies" if spec.key == "1" else raw
-        if (
-            self.runner(
-                ["convert", "--source", spec.source, "--in", str(convert_in), "--out", str(alerts)]
-            )
-            != 0
-        ):
-            self.c.say("Converting failed; see the message above. Nothing was changed anywhere.")
+        self.c.say("\nStep 3 of 4: converting everything (local files only)")
+        kinds = self._stage(kinds, "convert", "Converting")
+        if not kinds:
             return
-        self._after_convert(spec, alerts, raw)
-
-    def _after_convert(self, spec: Spec, alerts: Path, raw: Path) -> None:
+        self._side_plans(spec, lay)
+        summary = summarise(lay, kinds)
         account = self._nr_account()
-        if account is not None:
-            self.c.say(f"\nPreview of what would be created in New Relic account {account}:")
-            self.runner(preview_args("apply", alerts, account))
-        while True:
-            self.c.say("\nStep 4 of 4: what next?")
-            self.c.say("  1  Create these in New Relic (asks you to confirm)")
-            self.c.say("  2  Open the HTML report in my browser")
-            if spec.key in EXTRA:
-                self.c.say("  3  Also bring over the dashboards")
-                self.c.say("  4  Also bring over the notifications")
-            self.c.say("  0  Back to the main menu")
-            choice = self.c.ask("Your choice:")
-            if choice == "0":
-                return
-            if choice == "2":
-                self._open_report(spec, alerts)
-            elif choice in ("3", "4") and spec.key in EXTRA:
-                self._extra_flow(
-                    spec, "dashboards" if choice == "3" else "notifications", raw, alerts
-                )
-            elif choice == "1":
-                if account is None:
-                    self.c.say("Set NEW_RELIC_ACCOUNT_ID in .env (or enter it) to create.")
-                elif self._create(spec, alerts, account):
-                    return
-            else:
-                self.c.say(BAD_CHOICE)
-
-    def _open_report(self, spec: Spec, alerts: Path) -> None:
-        if self.runner(["report", str(alerts), "--source", spec.source]) != 0:
-            self.c.say("The report could not be written; see the message above.")
+        self.c.say("\nStep 4 of 4: preview")
+        name = self._account_name(account) if account is not None else None
+        self._preview(spec, lay, summary, account, name)
+        if account is None:
+            self.c.say(
+                "Set NEW_RELIC_ACCOUNT_ID in .env (or enter it) to create. Nothing was created."
+            )
             return
-        path = (alerts / "report.html").resolve()
-        self.opener(path.as_uri())
-        self.c.say(f"Opened {path}")
+        if summary.total == 0:
+            self.c.say("There is nothing to create from this source. Nothing was created.")
+            return
+        self._create_all(spec, lay, summary, account, name)
+
+    def _stage(self, kinds: list[KindPlan], which: str, verb: str) -> list[KindPlan]:
+        """Run one stage for every kind. Alerts failing ends the flow; other kinds are dropped."""
+        kept: list[KindPlan] = []
+        for kp in kinds:
+            if self._run_all(kp.read if which == "read" else kp.convert):
+                kept.append(kp)
+            elif kp.kind == "alerts":
+                self.c.say(f"{verb} the alerts failed; see the message above. Nothing was changed.")
+                return []
+            else:
+                self.c.say(
+                    f"{verb} the {kp.kind} did not work (see above), so they are left out. "
+                    "Nothing was changed."
+                )
+        return kept
+
+    def _side_plans(self, spec: Spec, lay: Layout) -> None:
+        """Plans written next to the conversion. A failure here never stops the flow."""
+        for args in extra_plans(spec.key, lay):
+            self.runner(args)
+        self.runner(["plan-remediation", "--in", str(lay.converted), "--out", str(lay.remediation)])
+        if (lay.out("alerts") / "report.md").is_file():
+            self.runner(["report", str(lay.out("alerts")), "--source", spec.source])
+
+    def _account_name(self, account: int) -> str | None:
+        """The account's name when a key is already set; any failure just leaves the id."""
+        if not os.environ.get("NEW_RELIC_API_KEY", "").strip():
+            return None
+        try:
+            with self.client_factory("us") as client:
+                return get_account_name(client, account)
+        except Exception:  # cosmetic lookup: the id is shown anyway
+            return None
+
+    def _preview(
+        self, spec: Spec, lay: Layout, summary: Summary, account: int | None, name: str | None
+    ) -> None:
+        who = "(no New Relic account chosen yet)"
+        if account is not None:
+            who = f"New Relic account {account}" + (f" ({name})" if name else "")
+        self.c.say(f"\nWhat would be created in {who}:")
+        for kind in KINDS:
+            found = summary.kinds.get(kind)
+            if found is None:
+                continue
+            line = f"  {LABEL[kind].capitalize()}: {found.create} will be created, "
+            line += f"{found.attention} need your attention"
+            if kind == "dashboards" and spec.key == "4":
+                line += " (Dynatrace dashboards are planned only, nothing is created)"
+            if kind == "notifications" and spec.key == "1":
+                line += " (Google channels are manual steps, nothing is created)"
+            self.c.say(line)
+        self.c.say("Everything is created disabled or private; nothing is turned on.")
+        if summary.reasons:
+            self.c.say("\nMost common reasons items need your attention:")
+            for title, count in summary.reasons:
+                self.c.say(f"  {count}  {title}")
+        plan = lay.remediation / "remediation-plan.md"
+        if plan.is_file():
+            self.c.say(f"Remediation plan (what to do for each): {plan}")
+        if spec.key in ("3", "4") and (lay.datapath / "datapath-plan.md").is_file():
+            self.c.say(
+                f"Your metrics must reach New Relic; see {lay.datapath / 'datapath-plan.md'}"
+            )
+        self._dashboard_plans(lay)
+        self.c.say(f"Reports: {lay.converted}")
+
+    def _dashboard_plans(self, lay: Layout) -> None:
+        quick = read_int(lay.quickstarts / "quickstart-plan.json", "replace")
+        if quick:
+            self.c.say(f"{quick} dashboards have a New Relic quickstart replacement.")
+        buckets = triage_buckets(lay.triage / "triage-report.json")
+        if buckets:
+            ranked = ", ".join(f"{n} {b}" for b, n in sorted(buckets.items()))
+            self.c.say(f"Dashboards ranked: {ranked} (see {lay.triage / 'triage-report.md'}).")
 
     # -- create ------------------------------------------------------------------------------
     def _guards_ok(self, account: int) -> bool:
@@ -351,94 +357,116 @@ class Menu:
             return False
         return True
 
-    def _create(
-        self, spec: Spec, out: Path, account: int, kind: str = "alerts", review: bool = False
-    ) -> bool:
-        """Returns True when the flow is finished (created, or something went wrong)."""
+    def _create_all(
+        self, spec: Spec, lay: Layout, summary: Summary, account: int, name: str | None
+    ) -> None:
         if not self._guards_ok(account):
-            return False
-        what, state = WHAT[kind]
+            return
+        parts = [f"{summary.create(k)} {LABEL[k]} ({STATE[k]})" for k in KINDS if summary.create(k)]
+        who = f"{account} ({name})" if name else str(account)
         question = (
-            f"This creates {what} in New Relic account {account} ({state}), named from your "
-            "source. You can undo it from 'Roll back a run'."
+            f"\nThis creates {', '.join(parts)} in New Relic account {who}, named from your "
+            "source. Nothing is turned on. You can undo all of it from 'Roll back a run'."
         )
         if not confirm_yes(self.c, question):
             self.c.say("Nothing was created.")
-            return False
+            return
         if not ensure_secret(self.c, "NEW_RELIC_API_KEY", "create objects"):
             self.c.say("No New Relic key, so nothing was created.")
-            return False
-        source = spec.source if kind == "alerts" else f"{spec.source}-{kind}"
+            return
         record = self.store.start(
-            source=source,
+            source=spec.source,
             account_id=account,
             region="us",
-            out_dir=out,
-            include_review=review,
+            out_dir=lay.converted,
             sandbox=is_sandbox_account(account, os.environ.get("NEW_RELIC_ALLOWED_ACCOUNT_IDS")),
         )
-        self._apply(record)
-        return True
+        if self._apply_until_done(record):
+            self._done(lay, record)
 
-    # -- dashboards and notifications (Grafana, Dynatrace) -------------------------------------
-    def _extra_flow(self, spec: Spec, kind: str, raw: Path, alerts: Path) -> None:
-        """Read -> convert -> preview -> optional create for dashboards or notifications."""
-        folder = alerts.parent
-        dirs = Dirs(folder / f"{kind}-export", folder / kind, raw, alerts)
-        steps = EXTRA[spec.key][kind](dirs)
-        for i, (title, args) in enumerate(steps, 1):
-            self.c.say(f"\n{kind.capitalize()}, step {i} of {len(steps)}: {title}")
-            if self.runner(args) != 0:
-                self.c.say("That step failed; see the message above. Nothing was created.")
-                return
-        if spec.key == "4" and kind == "dashboards":
-            self.c.say("Dynatrace dashboards are planned only; there is nothing to create.")
-            return
-        account = self._nr_account()
-        if account is None:
-            self.c.say("Set NEW_RELIC_ACCOUNT_ID in .env (or enter it) to preview and create.")
-            return
-        self.c.say(f"\nPreview of what would be created in New Relic account {account}:")
-        self.runner(preview_args(command_for(f"x-{kind}"), dirs.out, account))
-        self.c.say(f"  1  Create these {kind} in New Relic account {account} (asks you to confirm)")
-        self.c.say("  0  Back")
-        if self.c.ask("Your choice:") != "1":
-            return
-        review = spec.key == "4" and confirm_yes(
-            self.c, "Dynatrace plans are marked 'needs review'. Include them anyway?"
-        )
-        self._create(spec, dirs.out, account, kind, review)
+    def _targets(self, record: RunRecord) -> list[tuple[str, Path]]:
+        """The converted folders this run creates from, in the safe order."""
+        out = Path(record.out_dir)
+        marker = {"alerts": "ir", "notifications": PLANS, "dashboards": "dashboard-ir"}
+        found = [(k, out / k) for k in KINDS if (out / k / marker[k]).exists()]
+        if found:
+            return found
+        return [(kind_of(record.source), out)]  # a run recorded by an older menu
 
-    def _apply(self, record: RunRecord) -> None:
-        alerts = Path(record.out_dir)
-        manifest = alerts / "manifest.json"
-        command = command_for(record.source)
-        code = self.runner(
-            [
-                command,
-                "--in",
-                str(alerts),
-                "--account-id",
-                str(record.account_id),
-                "--region",
-                record.region,
-                "--apply",
-                "--confirm-account",
-                str(record.account_id),
-                "--manifest",
-                str(manifest),
-                *(["--include-needs-review"] if record.include_review else []),
-            ]
-        )
-        if manifest.is_file():
-            try:
-                record = self.store.absorb_manifest(record, manifest)
-            except (OSError, ValueError) as exc:
-                self.c.say(f"Could not record the result: {exc}")
+    def _apply_until_done(self, record: RunRecord) -> bool:
+        """Create every kind; on the first failure say what exists and offer undo or continue."""
+        while True:
+            failed = self._apply_all(record)
+            if failed is None:
+                return True
+            self.c.say(f"\n{failed.capitalize()} could not all be created; I stopped there.")
+            self.c.say(f"Created so far: {self._made(record)}.")
+            self.c.say("  1  Roll back what was created")
+            self.c.say("  2  Continue (already created items are skipped)")
+            self.c.say("  0  Leave it as it is (undo later from item 5)")
+            choice = self.c.ask("Your choice:")
+            if choice == "1":
+                rollback_run(
+                    self.c,
+                    self.store,
+                    record,
+                    self.client_factory,
+                    real_migration=self.real_migration,
+                )
+                return False
+            if choice != "2":
+                return False
+
+    def _apply_all(self, record: RunRecord) -> str | None:
+        """Returns the kind that failed, or None when everything was created."""
+        for kind, folder in self._targets(record):
+            manifest = folder / "manifest.json"
+            code = self.runner(
+                [
+                    APPLY[kind],
+                    "--in",
+                    str(folder),
+                    "--account-id",
+                    str(record.account_id),
+                    "--region",
+                    record.region,
+                    "--apply",
+                    "--confirm-account",
+                    str(record.account_id),
+                    "--manifest",
+                    str(manifest),
+                    *(["--include-needs-review"] if record.include_review else []),
+                ]
+            )
+            if manifest.is_file():
+                try:
+                    record = self.store.absorb_manifest(record, manifest)
+                except (OSError, ValueError) as exc:
+                    self.c.say(f"Could not record the result: {exc}")
+            if code != 0:
+                record.status = "in-progress"
+                self.store.save(record)
+                return LABEL[kind]
+        record.status = "applied"
+        self.store.save(record)
+        return None
+
+    @staticmethod
+    def _made(record: RunRecord) -> str:
+        made = Counter(o.kind for o in record.objects)
+        return ", ".join(f"{n} {kind}" for kind, n in sorted(made.items())) or "nothing"
+
+    def _done(self, lay: Layout, record: RunRecord) -> None:
+        self.c.say(f"\nDone. Run {record.run_id}: created {self._made(record)} in account "
+                   f"{record.account_id}.")  # fmt: skip
+        self.c.say(f"Reports are in {lay.converted}")
+        plan = lay.remediation / "remediation-plan.md"
+        if plan.is_file():
+            self.c.say(f"Remediation plan: {plan}")
+        self.c.say("To undo all of it: pick 5 Roll back a run.")
         self.c.say(
-            f"\nRun {record.run_id}: {len(record.objects)} object(s) recorded in account "
-            f"{record.account_id}."
-            + ("" if code == 0 else " Something failed; roll back or continue from item 5.")
+            "Next: turn on the alert conditions one by one in New Relic, and make sure your "
+            "metrics reach New Relic."
         )
 
     # -- roll back -----------------------------------------------------------------------------
@@ -488,7 +516,7 @@ class Menu:
             return
         if not ensure_secret(self.c, "NEW_RELIC_API_KEY", "create objects"):
             return
-        self._apply(record)
+        self._apply_until_done(record)
 
     # -- what did I just do --------------------------------------------------------------------
     def last_run_summary(self) -> None:
@@ -531,14 +559,4 @@ class Menu:
         if self.runner(["convert", "--source", "gcp", "--in", str(source), "--out", str(out)]) != 0:
             self.c.say("The sample could not be converted; see the message above.")
             return
-        self.c.say(f"Done. The summary is in {out / 'report.md'}.")
-        while True:
-            self.c.say("  1  Open the HTML report in my browser")
-            self.c.say("  0  Back to the main menu")
-            choice = self.c.ask("Your choice:")
-            if choice == "1":
-                self._open_report(SPECS["1"], out)
-            elif choice == "0":
-                return
-            else:
-                self.c.say(BAD_CHOICE)
+        self.c.say(f"Done. The summary is in {out / 'report.md'}. Nothing was sent anywhere.")
