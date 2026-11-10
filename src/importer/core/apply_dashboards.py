@@ -76,6 +76,16 @@ def with_account(payload: dict[str, Any], account_id: int) -> dict[str, Any]:
                 if q.get("accountIds") != [ACCOUNT_PLACEHOLDER]:
                     raise GuardError("widget has an unexpected account value; refusing to send")
                 q["accountIds"] = [account_id]
+    for variable in variables["dashboard"].get("variables", []):
+        query = variable.get("nrqlQuery")
+        if query is None:
+            continue
+        # A variable pinned to a source account keeps its integer ids; only the placeholder moves.
+        ids = query["accountIds"]
+        if ids == [ACCOUNT_PLACEHOLDER]:
+            query["accountIds"] = [account_id]
+        elif not all(isinstance(i, int) for i in ids):
+            raise GuardError("variable has an unexpected account value; refusing to send")
     return out
 
 
