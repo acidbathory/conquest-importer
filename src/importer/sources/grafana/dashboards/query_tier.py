@@ -21,7 +21,7 @@ refused before the translator's own patterns see it.
 import re
 from collections.abc import Callable, Mapping
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import MappingProxyType
 
 from importer.sources.grafana.dashboards import reasons as r
@@ -491,6 +491,27 @@ def _prepare(expr: str, language: str, known: frozenset[str] | None) -> tuple[st
     return text, used, _regex_reason(text, language)
 
 
+UNARY_MATH = re.compile(r"(round|ceil|floor|abs) ?\((.*)\)")
+
+
+def peel_math(expr: str) -> tuple[str, str]:
+    """(function, inner text) when `expr` is one `round(...)`, `ceil(...)`, `floor(...)` or
+    `abs(...)` call around everything; else ("", expr). NRQL has all four with one argument.
+    `round(x, 0.5)` is not peeled (NRQL rounds to a multiple the other way round)."""
+    found = UNARY_MATH.fullmatch(expr.strip())
+    if found is None:
+        return "", expr
+    depth = 0
+    for ch in re.sub(QUOTED, '""', found[2]):
+        depth += ch == "("
+        depth -= ch == ")"
+        if depth < 0:
+            return "", expr
+    if depth != 0 or "," in _mask(found[2]):
+        return "", expr
+    return found[1], found[2]
+
+
 def classify_query(expr: str, language: str, known: frozenset[str] | None = None) -> Verdict:
     """The tier `expr` reaches, or a reason. `known` lists the dashboard's variable names; with
     None every `$name` counts as a variable. Never raises."""
@@ -498,6 +519,10 @@ def classify_query(expr: str, language: str, known: frozenset[str] | None = None
         return Verdict(None, r.Q_NOT_SIMPLE)
     if len(expr) > MAX_EXPRESSION:
         return Verdict(None, r.Q_TOO_LONG)
+    function, inner = peel_math(expr) if language == "prometheus" else ("", expr)
+    if function:
+        verdict = classify_query(inner, language, known)
+        return replace(verdict, tier=max(2, verdict.tier) if verdict.tier else None)
     text, used, reason = _prepare(expr, language, known)
     variables = frozenset(used)
     if reason:

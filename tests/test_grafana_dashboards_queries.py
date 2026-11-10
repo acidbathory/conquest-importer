@@ -103,7 +103,7 @@ PROM_MANUAL = [
     ("avg(sum by (i, c) (rate(a_total[5m]))) by (i)", r.Q_NESTED),
     ("time() - process_start_time_seconds", r.Q_FUNCTION),
     ("clamp_min(x, 0)", r.Q_FUNCTION),
-    ("round(x)", r.Q_FUNCTION),
+    ("sqrt(x)", r.Q_FUNCTION),
     ("stddev(x)", r.Q_FUNCTION),
     ('node_cpu{__name__=~"x"}', r.Q_MATCHER),
     ('up{job=~"(?!canary).*"}', r.Q_MATCHER),
