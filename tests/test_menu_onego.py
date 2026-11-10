@@ -6,11 +6,10 @@ from typing import Any
 
 import pytest
 
+from importer.core.apply import ACCOUNT_QUERY
 from menu_helpers import HybridRunner
 from test_menu import OPENED, ScriptConsole, make
 from test_run_rollback import FakeNR
-
-from importer.core.apply import ACCOUNT_QUERY
 
 
 class NamedNR(FakeNR):
@@ -53,10 +52,13 @@ def test_grafana_one_pass_preview_names_account_counts_and_reasons(tmp_path: Pat
     text = console.text
     # everything is read and converted before the single question
     names = runner.names()
-    for command in ("extract-grafana", "extract-grafana-dashboards", "extract-grafana-notifications",
-                    "convert", "convert-grafana-dashboards", "convert-grafana-notifications",
-                    "plan-grafana-datapath", "triage-grafana-dashboards",
-                    "plan-grafana-quickstarts", "plan-remediation"):  # fmt: skip
+    expected = [
+        "extract-grafana", "extract-grafana-dashboards", "extract-grafana-notifications",
+        "convert", "convert-grafana-dashboards", "convert-grafana-notifications",
+        "plan-grafana-datapath", "triage-grafana-dashboards", "plan-grafana-quickstarts",
+        "plan-remediation",
+    ]  # fmt: skip
+    for command in expected:
         assert command in names
     assert "will be created" in text and "need your attention" in text
     assert "account 7 (Sandbox Team)" in text

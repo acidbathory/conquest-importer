@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 from importer.core.console import InputEnded
-from importer.core.manifest import CreatedObject, Manifest, save_manifest
+from importer.core.manifest import CreatedObject
 from importer.core.menu import Menu
 from importer.core.runs import RunStore
 
@@ -68,7 +68,7 @@ def _no_network(region: str) -> Any:
 @pytest.fixture(autouse=True)
 def _env(monkeypatch: pytest.MonkeyPatch) -> None:
     OPENED.clear()
-    monkeypatch.setattr(webbrowser, "open", lambda url, *a, **k: OPENED.append(url))
+    monkeypatch.setattr(webbrowser, "open", lambda url, *_a, **_k: OPENED.append(url))
     monkeypatch.setenv("NEW_RELIC_ACCOUNT_ID", "7")
     monkeypatch.setenv("NEW_RELIC_ALLOWED_ACCOUNT_IDS", "7")
     monkeypatch.setenv("NEW_RELIC_API_KEY", "k")
