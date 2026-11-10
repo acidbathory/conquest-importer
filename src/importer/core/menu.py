@@ -8,6 +8,7 @@ account. No browser or report opens unless that exact option is chosen.
 
 import os
 import webbrowser
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -81,6 +82,7 @@ MAIN = (
     "  5  Roll back a run",
     "  6  Check my setup",
     "  7  Try on sample data",
+    "  8  What did I just do?",
     "  0  Quit",
 )
 # What each kind of run creates, and how it ends up in New Relic.
@@ -207,6 +209,8 @@ class Menu:
                 self._check_all()
             elif choice == "7":
                 self._sample()
+            elif choice == "8":
+                self.last_run_summary()
             else:
                 self.c.say(BAD_CHOICE)
 
@@ -471,6 +475,36 @@ class Menu:
         if not ensure_secret(self.c, "NEW_RELIC_API_KEY", "create objects"):
             return
         self._apply(record)
+
+    # -- what did I just do --------------------------------------------------------------------
+    def last_run_summary(self) -> None:
+        runs = self.store.list()
+        if not runs:
+            self.c.say("\nNothing yet: no run has created anything in New Relic.")
+            return
+        r = runs[0]
+        left = r.pending()
+        self.c.say(f"\nLast run: {r.run_id} ({r.source}), New Relic account {r.account_id}.")
+        self.c.say(f"Started {r.started or 'unknown'}; status: {r.status}.")
+        if not r.objects:
+            self.c.say("It recorded no objects, so there is nothing in New Relic to undo.")
+            return
+        made = Counter(o.kind for o in r.objects)
+        self.c.say("Created: " + ", ".join(f"{n} {kind}" for kind, n in sorted(made.items())) + ".")
+        self.c.say(f"{len(left)} still in New Relic; {len(r.objects) - len(left)} removed.")
+        notes = (
+            (("dashboard",), "Dashboards are private: only you can see them."),
+            (("condition", "policy"), "Alert conditions are created disabled."),
+            (("workflow",), "Workflows are created disabled, so nothing is sent yet."),
+        )
+        for kinds, note in notes:
+            if any(o.kind in kinds for o in left):
+                self.c.say(note)
+        if left:
+            self.c.say(
+                "To undo it: pick 'Roll back a run' (5) here, or run 'importer rollback-run'. "
+                "You see exactly what will be deleted and must type yes."
+            )
 
     # -- sample ------------------------------------------------------------------------------
     def _sample(self) -> None:
