@@ -35,7 +35,7 @@ from importer.sources.grafana.prom_hints import read_hints  # noqa: E402
 
 PROM = "http://127.0.0.1:9090"
 STEP = 60
-SKIP = 6  # buckets dropped at the start of the window: Prometheus ranges need that much history
+SKIP = 1  # buckets dropped at the start of the window (edge bucket)
 
 # id, group, PromQL (plain; no ckg_test), chart-only?
 CASES: list[tuple[str, str, str]] = [
@@ -407,9 +407,12 @@ def compare_stat(pe: list[dict], nr: list[dict], facet: list[str]) -> dict[str, 
 
 def main() -> None:
     nrcommon.load_env(sys.argv[1])
-    minutes = int(sys.argv[3]) if len(sys.argv) > 3 else 30
-    t1 = int(time.time() // 60 * 60) - 180  # ingest latency margin
-    t0 = t1 - minutes * 60
+    if len(sys.argv) > 4:  # explicit window: T0 T1 as epoch seconds (multiples of 60)
+        t0, t1 = int(sys.argv[3]), int(sys.argv[4])
+    else:
+        minutes = int(sys.argv[3]) if len(sys.argv) > 3 else 30
+        t1 = int(time.time() // 60 * 60) - 180  # ingest latency margin
+        t0 = t1 - minutes * 60
     names = metric_names()
     results = []
     maps = {"plain": NameMap(), "hints": local_hints([n for n in names if not n.startswith("go_")])}
