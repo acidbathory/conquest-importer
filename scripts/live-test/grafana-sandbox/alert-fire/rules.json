@@ -1,0 +1,170 @@
+[
+ {
+  "annotations": {
+   "summary": "ckg-synth-cpu"
+  },
+  "condition": "C",
+  "data": [
+   {
+    "datasourceUid": "grafanacloud-prom",
+    "model": {
+     "expr": "avg(ckg_synth_cpu{ckg_test=\"true\"})",
+     "instant": true,
+     "intervalMs": 1000,
+     "maxDataPoints": 43200,
+     "refId": "A"
+    },
+    "queryType": "",
+    "refId": "A",
+    "relativeTimeRange": {
+     "from": 600,
+     "to": 0
+    }
+   },
+   {
+    "datasourceUid": "__expr__",
+    "model": {
+     "expression": "A",
+     "intervalMs": 1000,
+     "maxDataPoints": 43200,
+     "reducer": "last",
+     "refId": "B",
+     "settings": {
+      "mode": "dropNN"
+     },
+     "type": "reduce"
+    },
+    "queryType": "",
+    "refId": "B",
+    "relativeTimeRange": {
+     "from": 0,
+     "to": 0
+    }
+   },
+   {
+    "datasourceUid": "__expr__",
+    "model": {
+     "conditions": [
+      {
+       "evaluator": {
+        "params": [
+         80
+        ],
+        "type": "gt"
+       }
+      }
+     ],
+     "expression": "B",
+     "intervalMs": 1000,
+     "maxDataPoints": 43200,
+     "refId": "C",
+     "type": "threshold"
+    },
+    "queryType": "",
+    "refId": "C",
+    "relativeTimeRange": {
+     "from": 0,
+     "to": 0
+    }
+   }
+  ],
+  "execErrState": "Error",
+  "folderUID": "ckg-sandbox",
+  "for": "2m",
+  "isPaused": true,
+  "keep_firing_for": "0s",
+  "labels": {
+   "origin": "ckg-sandbox"
+  },
+  "noDataState": "NoData",
+  "notification_settings": null,
+  "record": null,
+  "ruleGroup": "ckg-sandbox",
+  "title": "ckg-synth-cpu",
+  "uid": "ckg-fire-01"
+ },
+ {
+  "annotations": {
+   "summary": "ckg-synth-rate"
+  },
+  "condition": "C",
+  "data": [
+   {
+    "datasourceUid": "grafanacloud-prom",
+    "model": {
+     "expr": "sum(rate(ckg_synth_requests_total{ckg_test=\"true\"}[5m]))",
+     "instant": true,
+     "intervalMs": 1000,
+     "maxDataPoints": 43200,
+     "refId": "A"
+    },
+    "queryType": "",
+    "refId": "A",
+    "relativeTimeRange": {
+     "from": 600,
+     "to": 0
+    }
+   },
+   {
+    "datasourceUid": "__expr__",
+    "model": {
+     "expression": "A",
+     "intervalMs": 1000,
+     "maxDataPoints": 43200,
+     "reducer": "last",
+     "refId": "B",
+     "settings": {
+      "mode": "dropNN"
+     },
+     "type": "reduce"
+    },
+    "queryType": "",
+    "refId": "B",
+    "relativeTimeRange": {
+     "from": 0,
+     "to": 0
+    }
+   },
+   {
+    "datasourceUid": "__expr__",
+    "model": {
+     "conditions": [
+      {
+       "evaluator": {
+        "params": [
+         1.5
+        ],
+        "type": "gt"
+       }
+      }
+     ],
+     "expression": "B",
+     "intervalMs": 1000,
+     "maxDataPoints": 43200,
+     "refId": "C",
+     "type": "threshold"
+    },
+    "queryType": "",
+    "refId": "C",
+    "relativeTimeRange": {
+     "from": 0,
+     "to": 0
+    }
+   }
+  ],
+  "execErrState": "Error",
+  "folderUID": "ckg-sandbox",
+  "for": "2m",
+  "isPaused": true,
+  "keep_firing_for": "0s",
+  "labels": {
+   "origin": "ckg-sandbox"
+  },
+  "noDataState": "NoData",
+  "notification_settings": null,
+  "record": null,
+  "ruleGroup": "ckg-sandbox",
+  "title": "ckg-synth-rate",
+  "uid": "ckg-fire-02"
+ }
+]
