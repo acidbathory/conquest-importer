@@ -28,13 +28,18 @@ choice. The menu calls the same commands you would type:
    remediation plan; for Grafana and Dynatrace a line that your metrics must reach New Relic
    (when the data-path plan exists); and the quickstart and ranking results when they were
    produced. All numbers are counted from the converter's own output files, never estimated.
+   Right after this preview the HTML report opens in your default browser (see "The HTML report"
+   below), showing the same plan for every kind, the top reasons, links to the remediation plan and
+   the data-path guide, and a "Preview, nothing has changed in New Relic" banner.
 5. One confirmation. It names the account and lists the counts of each kind. Only the word `yes`
    continues; anything else leaves nothing created.
 6. Create in a safe order: alert conditions, then notifications, then dashboards. The whole thing
    is one run record (for example `grafana`), so one rollback undoes all of it.
-7. A short "Done" screen: what was created, where the reports are (a path; no browser is ever
-   opened), the remediation plan, how to undo (pick 5 Roll back a run) and what to do next (turn
-   on the alert conditions one by one, make sure your metrics reach New Relic).
+7. A short "Done" screen: what was created, where the reports are, the remediation plan, how to undo (pick 5 Roll back a run) and what to do next (turn
+   on the alert conditions one by one, make sure your metrics reach New Relic). After a successful
+   create a second report opens: `report-created.html`, which says that objects were created, the
+   counts per kind, how many stay disabled or private, the account id, the run id and how to roll
+   back, and has no preview banner.
 
 | | Alerts | Notifications | Dashboards |
 |---|---|---|---|
@@ -52,8 +57,22 @@ Missing settings are asked for. A token is asked with a hidden prompt, kept in t
 and never written to disk or to a report. Creating needs the New Relic account id (from
 `NEW_RELIC_ACCOUNT_ID`), that account in `NEW_RELIC_ALLOWED_ACCOUNT_IDS`, and you typing `yes`
 after a message that names the account. It only creates, never updates. Conditions and workflows
-are disabled; dashboards are private. The menu never opens a browser: the markdown and HTML
-reports are written and their folder is printed.
+are disabled; dashboards are private.
+
+## The HTML report
+
+The menu writes two pages into the run's own folder (`out/guided/<source>-<time>/`) and opens each
+in your default browser, once per run:
+
+- `report.html` opens after the conversion and before the `yes` question. It is a forecast.
+- `report-created.html` opens only after the create finished without error. If you answered
+  anything but `yes`, or the create failed, nothing is opened after that and the menu says nothing
+  was created.
+
+The `file://` path is always printed as well. Nothing opens when input or output is not a
+terminal, when the environment variable `IMPORTER_NO_BROWSER=1` is set, or when you start the menu
+with `importer menu --no-open`. If the browser cannot be started the menu says so and carries on.
+Only these two local files are ever opened, never an address taken from your monitoring data.
 
 ## What did I just do? (item 8)
 

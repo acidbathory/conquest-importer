@@ -160,7 +160,7 @@ def _notifications(run: Path) -> list[Asset]:
 
     folder = run / "export" / "notifications"
     if not folder.is_dir():
-        return []
+        return _planned_notifications(run)
     out = []
     for raw in load_topics(folder):
         topic = translate_topic(raw)
@@ -180,6 +180,30 @@ def _notifications(run: Path) -> list[Asset]:
             for reason in topic.unsupported
         )
     return out
+
+
+def _planned_notifications(run: Path) -> list[Asset]:
+    """One asset per converted notification plan (the guided menu's folder layout)."""
+    from importer.core.notification_ir import NotificationPlan
+
+    out = []
+    for path in _json_files(run / "notifications" / "notification-plans"):
+        try:
+            plan = NotificationPlan.model_validate_json(path.read_text())
+        except (OSError, ValueError):
+            continue
+        name = f"{plan.topic}: workflow"
+        if plan.workflow is not None and not plan.needs_review:
+            out.append(Asset("notification", name, "workflow", Confidence.EXACT))
+            continue
+        reason = "needs review before it can be created" if plan.workflow else NO_WORKFLOW
+        out.append(
+            Asset("notification", name, "workflow", Confidence.MANUAL, [reason, *plan.notes])
+        )
+    return out
+
+
+NO_WORKFLOW = "no workflow could be planned: no converted condition uses this notification"
 
 
 def _created(run: Path) -> dict[str, int] | None:

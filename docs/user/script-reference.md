@@ -64,7 +64,7 @@ unless you give `--apply` and `--confirm-account <account-id>` and the account i
 
 | Command | What it does | Reads | Writes | NR write |
 |---|---|---|---|---|
-| `importer menu` | Numbered guided menu: GCP, AWS, Grafana, Dynatrace, roll back, check setup, sample, last run. | the sources, `.env` | `out/guided/`, run records in `out/runs/` | Yes, after `yes` |
+| `importer menu [--no-open]` | Numbered guided menu: GCP, AWS, Grafana, Dynatrace, roll back, check setup, sample, last run. Opens the HTML report before and after the create unless `--no-open`, `IMPORTER_NO_BROWSER=1` or no terminal. | the sources, `.env` | `out/guided/`, run records in `out/runs/` | Yes, after `yes` |
 | `importer doctor [--source ...]` | Checks tools and sign-in. | environment (offline except AWS) | nothing | No |
 | `importer version` | Prints the tool version. | none | none | No |
 | `importer convert --source <s>` | Converts extracted alerts to IR, NerdGraph JSON, Terraform and a report. `--source`: `cloudwatch` (default), `dynatrace`, `dynatrace-classic`, `gcp`, `grafana`. | extract folder | `--out` | No |

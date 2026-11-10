@@ -119,7 +119,7 @@ Screens, in order:
    five reasons items need attention. A line telling you the metrics must reach New Relic.
 7. One question naming the account and the counts. Only `yes` continues. Anything else creates nothing.
 8. Creation, in order: alert conditions, notifications, dashboards. Then a Done screen with the report
-   folder, the remediation plan and how to undo.
+   folder, the remediation plan and how to undo. The HTML report opens in your browser after the preview and again after a successful create (not when stdin or stdout is not a terminal, with `IMPORTER_NO_BROWSER=1`, or with `importer menu --no-open`); the `file://` path is always printed. See [menu and rollback](menu-and-rollback.md).
 
 Everything the menu writes goes under `out/guided/grafana-<timestamp>/`:
 `export/`, `converted/` (alerts, notifications, dashboards), `remediation/`, `datapath/`, `triage/`

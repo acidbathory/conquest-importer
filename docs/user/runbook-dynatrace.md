@@ -101,7 +101,7 @@ Screens, in order:
 6. Step 4 of 4: preview. Alerts: N will be created, M need attention. Notifications: Dynatrace plans
    are marked needs review, so the menu counts them as needing attention and does not create them.
    Dashboards: "planned only, nothing is created".
-7. One question, only `yes` continues. Then conditions are created disabled.
+7. One question, only `yes` continues. The HTML report opens in your browser after the preview and again after a successful create (not when stdin or stdout is not a terminal, with `IMPORTER_NO_BROWSER=1`, or with `importer menu --no-open`); the `file://` path is always printed. See [menu and rollback](menu-and-rollback.md).  Then conditions are created disabled.
 8. Done screen. Reports under `out/guided/dynatrace-<timestamp>/`.
 
 The menu does not run the classic path (`extract-dynatrace-classic`), `plan-service-levels`,

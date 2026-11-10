@@ -36,12 +36,23 @@ def make_runner(app: typer.Typer) -> Runner:
 
 def register(app: typer.Typer) -> None:
     @app.command("menu")
-    def menu_command() -> None:
+    def menu_command(
+        no_open: Annotated[
+            bool,
+            typer.Option(
+                "--no-open", help="Do not open the HTML reports in a browser (paths are printed)."
+            ),
+        ] = False,
+    ) -> None:
         """Numbered menu: GCP, AWS, Grafana, Dynatrace, roll back a run, check setup, sample."""
         if not has_terminal():
             typer.echo(NEEDS_TERMINAL, err=True)
             raise typer.Exit(code=1)
-        raise typer.Exit(code=Menu(TerminalConsole(), make_runner(app), RunStore()).run())
+        raise typer.Exit(
+            code=Menu(
+                TerminalConsole(), make_runner(app), RunStore(), open_reports=not no_open
+            ).run()
+        )
 
     @app.command("runs")
     def runs_command() -> None:

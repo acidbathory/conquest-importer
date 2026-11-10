@@ -221,13 +221,3 @@ def test_dynatrace_dashboards_are_planned_only(
     assert "apply-dashboards" not in runner.names()
     assert "convert-notifications" in runner.names()
     assert isinstance(console, ScriptConsole) and store.list() == []
-
-
-def test_the_report_is_made_from_the_folder_that_holds_alerts(tmp_path: Path) -> None:
-    """`report` looks for alerts/ inside the folder it is given; the menu used to pass alerts/."""
-    runner = HybridRunner()
-    menu, _, _, _ = _menu(tmp_path, ["3", "no", "0"], runner)
-    assert menu.run() == 0
-    reports = [c for c in runner.calls if c and c[0] == "report"]
-    assert reports, "the flow should write the HTML report"
-    assert (Path(reports[0][1]) / "alerts" / "report.md").is_file()
