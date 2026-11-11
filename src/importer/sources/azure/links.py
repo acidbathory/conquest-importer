@@ -74,10 +74,9 @@ def _scope_tags(alert: AzureAlert) -> list[str]:
     ):
         group = RESOURCE_GROUP.match(scope if scope.startswith("/") else "/" + scope)
         kind = type_of_resource_id(scope)
-        if SAFE_VALUE.fullmatch(scope):
-            if kind:
-                tags.append(f"azure.resourceId:{scope}")
-                tags.append(f"azure.resourceType:{kind.lower()}")
+        if kind and SAFE_VALUE.fullmatch(scope):
+            tags.append(f"azure.resourceId:{scope}")
+            tags.append(f"azure.resourceType:{kind.lower()}")
         if group and SAFE_VALUE.fullmatch(group["rg"]):
             tags.append(f"azure.resourceGroup:{group['rg']}")
     return tags
