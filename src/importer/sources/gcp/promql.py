@@ -85,6 +85,7 @@ N_GOOGLE_FIELDS = (
     "a violation when the value stops breaching"
 )
 DROP_NOTES = frozenset({N_RULE_FILE, N_ROUTING, N_INFERRED})
+SAFE_NAME = re.compile(r"[A-Za-z0-9_]{1,64}")
 SAFE_TAG = re.compile(r"[A-Za-z0-9_.-]{1,64}")
 PROM_NAME = re.compile(r"[A-Za-z_:][A-Za-z0-9_:]*")
 NAME_ONLY = re.compile(r'\s*"((?:[^"\\]|\\.)*)"\s*')
@@ -303,8 +304,8 @@ def _clean_query(raw: str, notes: list[str]) -> str:
     query, filled, missing = fill_placeholders(_strip_comments(raw))
     if missing or "${" in query:
         raise Fail(
-            R_PLACEHOLDER_NAMES.format(names=", ".join("${" + n + "}" for n in missing))
-            if missing
+            R_PLACEHOLDER_NAMES.format(names=", ".join("${" + n + "}" for n in safe))
+            if (safe := [n for n in missing if SAFE_NAME.fullmatch(n)])
             else R_PLACEHOLDER
         )
     notes += filled

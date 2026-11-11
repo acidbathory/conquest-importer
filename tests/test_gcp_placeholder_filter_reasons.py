@@ -5,6 +5,8 @@ system label whose New Relic attribute is unconfirmed) is never guessed. What th
 that the reason says what is missing and that the playbook groups it under the right title.
 """
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -129,3 +131,56 @@ def test_system_label_reason_says_the_attribute_is_unconfirmed() -> None:
     m = threshold(f'{METRIC} AND metadata.system_labels.name = starts_with("prod-")')
     assert "metadata.system_labels.name" in m.reasons[0]
     assert "no confirmed New Relic attribute" in m.reasons[0]
+
+
+def test_an_or_of_metric_types_is_not_filed_under_filter_with_an_or() -> None:
+    m = threshold(
+        'metric.type = "compute.googleapis.com/instance/cpu/utilization" OR '
+        'metric.type = "compute.googleapis.com/instance/disk/read_bytes_count"'
+    )
+    assert "an OR of several metric types" in m.reasons[0]
+    assert title_of(m) != "Filter with an OR"
+
+
+def test_a_prefixed_filter_reason_keeps_its_title() -> None:
+    """A ratio denominator reason is the filter reason with a prefix; it must still match."""
+    m = convert(
+        "conditionThreshold",
+        {
+            "filter": f'{METRIC} AND resource.type="gce_instance"',
+            "denominatorFilter": f'{METRIC} AND metric.labels.code > "3"',
+            "aggregations": [{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_RATE"}],
+            "denominatorAggregations": [
+                {"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_RATE"}
+            ],
+            "comparison": "COMPARISON_GT",
+            "thresholdValue": 0.8,
+            "duration": "600s",
+        },
+    )
+    assert m.reasons[0].startswith("ratio denominator: filter term")
+    assert title_of(m) == "Filter not supported"
+
+
+ESTATE = Path(__file__).parent / "fixtures" / "gcp-estate" / "policies"
+
+
+def test_no_filter_reason_of_the_estate_lacks_a_playbook_title() -> None:
+    """Every manual estate condition refused for its filter (also with a prefix, such as a
+    ratio denominator) gets a playbook title; none falls to the default."""
+    seen = 0
+    for path in sorted(ESTATE.glob("*/*.json")):
+        policy = GcpAlertPolicy.model_validate(json.loads(path.read_text()))
+        for monitor in translate_policy(policy):
+            if monitor.confidence is Confidence.MANUAL and "filter" in monitor.reasons[0]:
+                seen += 1
+                assert remedies_for(monitor.reasons), monitor.reasons
+    assert seen >= 15
+
+
+def test_a_hostile_placeholder_name_never_reaches_the_reason() -> None:
+    m = promql('sum(up{job="${é1}", c="${evil name}", d="${OK_1}"}) > 1')
+    assert m.confidence is Confidence.MANUAL
+    assert "${OK_1}" in m.reasons[0]
+    assert all(ord(c) < 128 for c in m.reasons[0])
+    assert "evil" not in m.reasons[0]

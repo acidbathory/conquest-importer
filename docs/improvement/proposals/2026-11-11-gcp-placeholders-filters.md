@@ -17,14 +17,19 @@ No manual case in the two groups can be converted exactly.
 
 ## Change
 
-Reasons and playbook only. Converted output (NerdGraph, Terraform) is byte-identical to before.
+Reasons, remediation titles and playbook only. The NerdGraph and Terraform output is byte-identical to
+before; the remediation titles of several filter reasons changed by design (for example an OR
+between labels or over a value list now reads "Filter with an OR", a system label "System label
+filter"). A metric-type OR (`an OR of several metric types`) keeps the generic title.
 
 - `promql.py`: the reason lists the placeholder names with no value; the playbook explains the name
   map `variables`.
+- `promql.py` also keeps only plain names (letters, digits, underscore) in the reason.
 - `scope.py`: a system label says why it is manual.
 - `remediation_rules.py`: new titles System label filter, SLO selector, Filter value is a template
-  placeholder, Regular expression filter, Filter with an OR; the generic rule is anchored so
-  log-based metrics reach their own rule. Groups 18 -> 23, full playbooks 63 -> 67.
+  placeholder, Regular expression filter, Filter with an OR; the log-based metric rule now comes
+  before the generic filter rule so those reasons reach their own group (the generic rule stays
+  unanchored, so prefixed reasons such as "ratio denominator: ..." still match). Groups 18 -> 23, full playbooks 63 -> 67.
 
 ## Pinned output
 

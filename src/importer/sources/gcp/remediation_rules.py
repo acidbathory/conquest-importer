@@ -107,6 +107,19 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"not one of the google cloud service metrics"),
+        "Metric New Relic does not collect from Google Cloud",
+        [
+            "Collect the data in New Relic directly. For a metric from the Ops Agent, install the "
+            "New Relic infrastructure agent or the OpenTelemetry Collector on the VM. For a "
+            "custom or Prometheus metric, send it to New Relic with OpenTelemetry (OTLP) or "
+            "Prometheus remote write from where it is produced.",
+            "For an alert on a log-based metric, forward the logs and alert on a `Log` query "
+            "instead (the same way log-match conditions convert).",
+            "Then write the NRQL condition over the new metric by hand.",
+        ],
+    ),
+    (
         re.compile(r"system label has no confirmed"),
         "System label filter",
         [
@@ -151,7 +164,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"\ban or\b"),
+        re.compile(r"\ban or (between|over|that is not)\b"),
         "Filter with an OR",
         [
             "A New Relic scope or count filter is a list joined by AND, so an OR of different "
@@ -161,7 +174,7 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"^(filter (term|not supported)|log filter)"),
+        re.compile(r"filter (term|not supported)|log filter"),
         "Filter not supported",
         [
             "The filter uses a feature the importer does not read (OR, regular expressions, "
@@ -196,19 +209,6 @@ RULES: list[Rule] = [
             "Find the attribute New Relic stores for this label (run `SELECT keyset() FROM "
             "Metric WHERE metricName = '<name>'`) and write the `WHERE` or `FACET` clause by "
             "hand with that name in backticks.",
-        ],
-    ),
-    (
-        re.compile(r"not one of the google cloud service metrics"),
-        "Metric New Relic does not collect from Google Cloud",
-        [
-            "Collect the data in New Relic directly. For a metric from the Ops Agent, install the "
-            "New Relic infrastructure agent or the OpenTelemetry Collector on the VM. For a "
-            "custom or Prometheus metric, send it to New Relic with OpenTelemetry (OTLP) or "
-            "Prometheus remote write from where it is produced.",
-            "For an alert on a log-based metric, forward the logs and alert on a `Log` query "
-            "instead (the same way log-match conditions convert).",
-            "Then write the NRQL condition over the new metric by hand.",
         ],
     ),
     (
