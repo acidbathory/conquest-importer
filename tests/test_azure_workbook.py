@@ -464,3 +464,70 @@ def test_every_placeholder_reason_has_a_remedy_and_a_category() -> None:
         assert classify(w.reasons[0]) is not Category.OTHER, w.reasons
     broken = translate_workbook(AzureDashboard(kind="workbook", key="k", name="b", error="x"))
     assert steps_for(broken.widgets[0].reasons)
+
+
+def test_an_options_group_parameter_makes_tabs_for_single_items_too() -> None:
+    options = json.dumps([{"value": "o", "label": "Overview"}, {"value": "d", "label": "Details"}])
+    d = wb(
+        params({"name": "selectedTab", "type": 10, "jsonData": options}),
+        {
+            **metrics(),
+            "conditionalVisibility": {
+                "parameterName": "selectedTab",
+                "comparison": "isEqualTo",
+                "value": "o",
+            },
+        },
+        {
+            **text("d1"),
+            "conditionalVisibility": {
+                "parameterName": "selectedTab",
+                "comparison": "isEqualTo",
+                "value": "d",
+            },
+        },
+        {
+            **text("d2"),
+            "conditionalVisibilities": [
+                {"parameterName": "selectedTab", "comparison": "isEqualTo", "value": "d"},
+                {"parameterName": "Resource", "comparison": "isNotEqualTo"},
+            ],
+        },
+    )
+    assert [(w.page, w.kind) for w in d.widgets] == [
+        ("Overview", WidgetKind.CHART),
+        ("Details", WidgetKind.MARKDOWN),
+        ("Details", WidgetKind.MARKDOWN),
+    ]
+    last = d.widgets[2]
+    assert last.confidence is Confidence.APPROXIMATE
+    assert any("parameter Resource has a value" in r for r in last.reasons)
+
+
+def test_a_condition_that_is_not_a_tab_stays_a_placeholder() -> None:
+    d = wb(
+        params(
+            {
+                "name": "selectedTab",
+                "type": 10,
+                "jsonData": json.dumps([{"value": "o", "label": "O"}]),
+            }
+        ),
+        {
+            **text(),
+            "conditionalVisibility": {
+                "parameterName": "selectedTab",
+                "comparison": "isNotEqualTo",
+                "value": "o",
+            },
+        },
+        {
+            **text(),
+            "conditionalVisibility": {
+                "parameterName": "other",
+                "comparison": "isEqualTo",
+                "value": "o",
+            },
+        },
+    )
+    assert [w.kind for w in d.widgets] == [WidgetKind.UNSUPPORTED] * 2

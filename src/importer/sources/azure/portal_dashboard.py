@@ -270,7 +270,7 @@ def translate_portal(dash: AzureDashboard) -> IRDashboard:
         page = None if index == 0 else f"Lens {index + 1}"
         parts = [p for p in lens.get("parts", []) if isinstance(p, dict)][:MAX_PARTS]
         widgets += [_safe_part(p, lay, page, dash) for p, lay in _layouts(parts)]
-    reasons = [DR.N_LAYOUT]
+    reasons = [DR.N_LAYOUT, *dash.notes]
     if _dict(_dict(dash.metadata.get("model")).get("timeRange")):
         reasons.append(DR.N_PORTAL_TIME)
     converted = [w for w in widgets if w.kind is not WidgetKind.UNSUPPORTED]

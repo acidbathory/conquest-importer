@@ -30,6 +30,10 @@ WORKBOOK_TYPE = "microsoft.insights/workbooks"
 DASHBOARD_TYPE = "microsoft.portal/dashboards"
 SUFFIXES = (".json", ".workbook")
 NOT_JSON = "serializedData is not valid JSON, so the workbook cannot be read"
+REPAIRED = (
+    "serializedData was not valid JSON (unescaped quotes around item content, as in the official "
+    "REST examples) and was repaired to be read"
+)
 NO_CONTENT = (
     "the workbook was listed without its content; read it again with canFetchContent=true "
     "(extract-azure --dashboards does)"
@@ -45,6 +49,7 @@ class AzureDashboard(BaseModel):
     name: str
     content: dict[str, Any] | None = None
     error: str = ""
+    notes: list[str] = []  # things done while reading that the report should say
     metadata: dict[str, Any] = {}  # portal dashboards: properties.metadata
     names: NameMap = Field(default_factory=NameMap, exclude=True)
 
@@ -112,6 +117,45 @@ def _lenses(raw: object) -> list[dict[str, Any]]:
     return out
 
 
+def _object_end(text: str, start: int) -> int:
+    """Index just after the `}` that closes the `{` at `start` (quotes are not interpreted)."""
+    depth = 0
+    for index in range(start, len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    return -1
+
+
+def _repair(text: str) -> dict[str, Any] | None:
+    """Parse serializedData whose item `content` is a quoted object with unescaped quotes.
+
+    The official REST examples are written like that (`"content":"{"json":"..."}"`), which is not
+    JSON. The two stray quotes around each such object are removed, and the result is accepted
+    only if it parses; anything else stays unreadable.
+    """
+    marker = '"content":"{'
+    drop: set[int] = set()
+    at = text.find(marker)
+    while at >= 0:
+        opening = at + len('"content":')
+        end = _object_end(text, opening + 1)
+        if end < 0 or text[end : end + 1] != '"':
+            return None
+        drop.update((opening, end))
+        at = text.find(marker, opening + 2)
+    if not drop:
+        return None
+    try:
+        parsed = json.loads("".join(c for i, c in enumerate(text) if i not in drop))
+    except (ValueError, RecursionError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def _workbook(resource: dict[str, Any], fallback: str, names: NameMap) -> AzureDashboard:
     if _is_raw_workbook(resource):
         return AzureDashboard(
@@ -137,7 +181,10 @@ def _workbook(resource: dict[str, Any], fallback: str, names: NameMap) -> AzureD
     try:
         parsed = json.loads(data)
     except (ValueError, RecursionError):
-        return AzureDashboard(**base, error=NOT_JSON)
+        fixed = _repair(data)
+        if fixed is None:
+            return AzureDashboard(**base, error=NOT_JSON)
+        return AzureDashboard(**base, content=fixed, notes=[REPAIRED])
     if not isinstance(parsed, dict):
         return AzureDashboard(**base, error=NOT_JSON)
     return AzureDashboard(**base, content=parsed)

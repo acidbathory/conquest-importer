@@ -44,7 +44,7 @@ def test_a_list_page_of_workbooks_is_read(tmp_path: Path) -> None:
 
 def test_serialized_data_that_is_not_json_is_kept_with_an_error(tmp_path: Path) -> None:
     bad = workbook("a")
-    bad["properties"]["serializedData"] = '{"items":[{"content":"{"json":1}"}]}'
+    bad["properties"]["serializedData"] = '{"items": [}'
     write(tmp_path / "workbooks.json", {"value": [bad]})
     (found,) = load_dashboards(tmp_path)
     assert found.content is None
@@ -120,3 +120,23 @@ def test_a_file_that_is_too_deep_or_broken_is_refused(tmp_path: Path) -> None:
     (tmp_path / "bad.json").write_text("[" * 500)
     with pytest.raises(ValueError, match="deeply"):
         load_dashboards(tmp_path)
+
+
+def test_item_content_with_unescaped_quotes_is_repaired_and_says_so(tmp_path: Path) -> None:
+    bad = workbook("a")
+    bad["properties"]["serializedData"] = (
+        '{"version":"Notebook/1.0","items":[{"type":1,"content":"{"json":"## Hi\\r\\nthere"}",'
+        '"halfWidth":null},{"type":3,"content":"{"version":"KqlItem/1.0","query":"x | take 1"}"}]}'
+    )
+    write(tmp_path / "workbooks.json", {"value": [bad]})
+    (found,) = load_dashboards(tmp_path)
+    assert found.error == "" and found.content is not None
+    assert found.content["items"][0]["content"] == {"json": "## Hi\r\nthere"}
+    assert found.content["items"][1]["content"]["query"] == "x | take 1"
+    assert "repaired" in found.notes[0]
+
+
+def test_the_official_workbook_examples_are_repaired() -> None:
+    found = load_dashboards(FIXTURES / "workbooks")
+    errors = {d.error for d in found if d.error}
+    assert all("canFetchContent" in e for e in errors)  # only listings that carry no content

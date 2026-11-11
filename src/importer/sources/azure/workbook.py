@@ -68,6 +68,7 @@ MAX_ITEMS = 2000
 PARAM_REF = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)(?::[A-Za-z0-9_.]+)?\}")
 TEXT_REF = re.compile(r"(?<![\w$])\{[A-Za-z_][A-Za-z0-9_]*(?::[A-Za-z0-9_.]+)?\}")
 TIME_PARAM = 4
+OPTIONS_GROUP = 10
 RESOURCE_PICKER = 5
 DROPDOWN = 2
 ARG_QUERY, JSON_QUERY = 1, 8
@@ -211,12 +212,14 @@ def _collect(items: list[dict[str, Any]], state: State, depth: int = 0) -> None:
                 param = _read_param(raw)
                 if param is not None:
                     state.params.setdefault(param.name, param)
+                    if param.kind == OPTIONS_GROUP and param.options:
+                        state.tabs.setdefault(param.name, dict(param.options))
         elif kind == 11 and _str(content.get("style")) == "tabs":
             for raw in _list(content.get("links")):
                 link = _dict(raw)
-                target = _str(link.get("parameterName"))
+                target = _str(link.get("parameterName")) or _str(link.get("cellValue"))
                 if link.get("linkTarget") == "parameter" and target:
-                    value = _str(link.get("parameterValue"))
+                    value = _str(link.get("parameterValue")) or _str(link.get("subTarget"))
                     state.tabs.setdefault(target, {})[value] = _str(link.get("linkLabel")) or value
         elif kind == 12 and depth < MAX_DEPTH:
             _collect(_items(content), state, depth + 1)
@@ -340,19 +343,32 @@ def _hidden(item: dict[str, Any], state: State, page: str | None, reason: str) -
         _fail_widget(state, item, page, [reason])
 
 
-def _tab_page(item: dict[str, Any], state: State) -> str | None:
-    visible = item.get("conditionalVisibility")
-    many = _list(item.get("conditionalVisibilities"))
-    if visible is None and len(many) == 1:
-        visible = many[0]
-    elif many:
-        return None
-    rule = _dict(visible)
-    tabs = state.tabs.get(_str(rule.get("parameterName")))
-    value = _str(rule.get("value"))
-    if tabs is None or rule.get("comparison") != "isEqualTo" or value not in tabs:
-        return None
-    return tabs[value]
+def _rules(item: dict[str, Any]) -> list[dict[str, Any]]:
+    one = item.get("conditionalVisibility")
+    return [
+        _dict(r) for r in [*([one] if one else []), *_list(item.get("conditionalVisibilities"))]
+    ]
+
+
+def _tab_page(item: dict[str, Any], state: State) -> tuple[str | None, list[str]] | None:
+    """(tab label or None, notes) when the item's visibility can be honoured.
+
+    "This tab is selected" gives the tab's label. A rule that only asks that another parameter has
+    a value gives no label (the item stays on its page). A second rule is accepted when it only asks that another parameter has a value; it is kept as
+    a note because a New Relic widget is shown whether or not that parameter is set.
+    """
+    tab: str | None = None
+    notes: list[str] = []
+    for rule in _rules(item):
+        tabs = state.tabs.get(_str(rule.get("parameterName")), {})
+        value = _str(rule.get("value"))
+        if rule.get("comparison") == "isEqualTo" and value in tabs and tab is None:
+            tab = tabs[value] or value
+        elif rule.get("comparison") == "isNotEqualTo" and not value:
+            notes.append(DR.N_COND_SET.format(name=DR.shown(rule.get("parameterName"), 40)))
+        else:
+            return None
+    return (tab, notes) if tab or notes else None
 
 
 def _unique_page(label: str, state: State) -> str | None:
@@ -375,16 +391,32 @@ def _walk(items: list[dict[str, Any]], state: State, page: str | None, depth: in
 
 
 def _item(item: dict[str, Any], state: State, page: str | None, depth: int) -> None:
+    if not (item.get("conditionalVisibility") or item.get("conditionalVisibilities")):
+        _convert(item, state, page, depth)
+        return
+    tab = _tab_page(item, state)
+    named = (
+        page
+        if tab and tab[0] is None
+        else (_unique_page(tab[0], state) if tab and tab[0] else None)
+    )
+    if tab is None or (named is None and tab[0] is not None):
+        _hidden(item, state, page, DR.COND_VIS)
+        return
+    before = len(state.widgets)
+    _convert(item, state, named, depth)
+    for index in range(before, len(state.widgets)):
+        w = state.widgets[index]
+        if tab[1] and w.kind is not WidgetKind.UNSUPPORTED:
+            state.widgets[index] = w.model_copy(
+                update={"reasons": [*w.reasons, *tab[1]], "confidence": Confidence.APPROXIMATE}
+            )
+
+
+def _convert(item: dict[str, Any], state: State, page: str | None, depth: int) -> None:
     kind = item.get("type")
     content = _content(item)
-    if item.get("conditionalVisibility") or item.get("conditionalVisibilities"):
-        tab = _tab_page(item, state) if kind == 12 else None
-        named = _unique_page(tab, state) if tab else None
-        if named is None:
-            _hidden(item, state, page, DR.COND_VIS)
-        else:
-            _walk(_items(content), state, named, depth + 1)
-    elif kind == 1:
+    if kind == 1:
         _text(item, content, state, page)
     elif kind == 10:
         _metrics(item, content, state, page)
@@ -516,6 +548,8 @@ def _metrics(item: dict[str, Any], content: dict[str, Any], state: State, page: 
     title = _title(item, content, f"Metrics: {specs[0].name}")
     layout = _place(state, page, item, "table" if viz is Visualization.TABLE else "chart")
     notes = [*([note] if note else []), DR.N_TIME]
+    if content.get("filters"):
+        notes.append(DR.N_FILTERS)
     state.widgets.append(chart_widget(title, layout, "workbook metrics", viz, chart, page, notes))
 
 
@@ -623,7 +657,7 @@ def translate_workbook(dash: AzureDashboard) -> IRDashboard:
     _walk(items, state, None, 0)
     widgets, dropped = _cap(state.widgets)
     variables = [state.variables[n] for n in sorted(state.used) if n in state.variables]
-    reasons = [DR.N_LAYOUT, *sorted(state.notes)]
+    reasons = [DR.N_LAYOUT, *dash.notes, *sorted(state.notes)]
     converted = [w for w in widgets if w.kind is not WidgetKind.UNSUPPORTED]
     if not widgets:
         confidence, reasons = Confidence.UNSUPPORTED, [DR.NO_ITEMS]

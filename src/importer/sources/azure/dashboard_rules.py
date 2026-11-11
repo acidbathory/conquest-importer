@@ -144,6 +144,7 @@ PATTERNS: list[tuple[Category, str]] = [
         Category.APPROXIMATION,
         r"^(the time range comes from|resource selection|bars over time|a scatter chart"
         r"|chart type|workbook parameters written|link actions|a workbook group|workbook tabs"
+        r"|the item was also shown|the dimension filters"
         r"|visualization .* has no|tiles are shown|grid column|the metric is split|no aggregation"
         r"|several metrics|the portal time range|the metric is charted per|layout is approximated"
         r"|dashboard part .* is not converted)",

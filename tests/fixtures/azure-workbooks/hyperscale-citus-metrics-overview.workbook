@@ -1,0 +1,458 @@
+{
+ "version": "Notebook/1.0",
+ "items": [
+  {
+   "type": 9,
+   "content": {
+    "version": "KqlParameterItem/1.0",
+    "parameters": [
+     {
+      "version": "KqlParameterItem/1.0",
+      "name": "TimeRange",
+      "label": "Time Range ",
+      "type": 4,
+      "isRequired": true,
+      "value": {
+       "durationMs": 604800000
+      },
+      "typeSettings": {
+       "selectableValues": [
+        {
+         "durationMs": 300000
+        },
+        {
+         "durationMs": 900000
+        },
+        {
+         "durationMs": 1800000
+        },
+        {
+         "durationMs": 3600000
+        },
+        {
+         "durationMs": 14400000
+        },
+        {
+         "durationMs": 43200000
+        },
+        {
+         "durationMs": 86400000
+        },
+        {
+         "durationMs": 172800000
+        },
+        {
+         "durationMs": 259200000
+        },
+        {
+         "durationMs": 604800000
+        },
+        {
+         "durationMs": 1209600000
+        },
+        {
+         "durationMs": 2419200000
+        },
+        {
+         "durationMs": 2592000000
+        },
+        {
+         "durationMs": 5184000000
+        },
+        {
+         "durationMs": 7776000000
+        }
+       ],
+       "allowCustom": true
+      },
+      "timeContext": {
+       "durationMs": 86400000
+      }
+     },
+     {
+      "version": "KqlParameterItem/1.0",
+      "name": "Resource",
+      "type": 5,
+      "isHiddenWhenLocked": true,
+      "typeSettings": {
+       "resourceTypeFilter": {
+        "microsoft.dbforpostgresql/servergroupsv2": true
+       },
+       "additionalResourceOptions": [],
+       "showDefault": false,
+       "componentIdOnly": true
+      }
+     }
+    ],
+    "style": "pills",
+    "queryType": 0,
+    "resourceType": "microsoft.dbforpostgresql/servergroupsv2"
+   },
+   "customWidth": "100",
+   "name": "parameters - 14",
+   "styleSettings": {
+    "margin": "1px",
+    "padding": "1px",
+    "maxWidth": "30"
+   }
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 1,
+      "content": {
+       "json": "## Storage Metrics\r\n[**Click here**](https://go.microsoft.com/fwlink/?linkid=2187070) to learn more about these metrics\r\n",
+       "style": "info"
+      },
+      "name": "text - 1"
+     }
+    ]
+   },
+   "name": "group - 12"
+  },
+  {
+   "type": 10,
+   "content": {
+    "version": "MetricsItem/2.0",
+    "size": 1,
+    "chartType": 2,
+    "resourceType": "microsoft.dbforpostgresql/servergroupsv2",
+    "metricScope": 0,
+    "resourceIds": [
+     "{Resource}"
+    ],
+    "timeContextFromParameter": "TimeRange",
+    "timeContext": {
+     "durationMs": 604800000
+    },
+    "metrics": [
+     {
+      "namespace": "microsoft.dbforpostgresql/servergroupsv2",
+      "metric": "microsoft.dbforpostgresql/servergroupsv2-Saturation-storage_percent",
+      "aggregation": 3,
+      "splitBy": "ServerName",
+      "columnName": ""
+     }
+    ],
+    "title": "Storage Percent - Max",
+    "showOpenInMe": true,
+    "showCreateAlertRule": true,
+    "gridSettings": {
+     "rowLimit": 10000
+    }
+   },
+   "name": "metric - 16",
+   "styleSettings": {
+    "showBorder": true
+   }
+  },
+  {
+   "type": 1,
+   "content": {
+    "json": "We recommend either [**scaling up**](https://go.microsoft.com/fwlink/?linkid=2187075) storage  or [**scaling out**](https://go.microsoft.com/fwlink/?linkid=2187158) the nodes if the Storage Percent exceeds 85 percent.\r\n\r\n",
+    "style": "upsell"
+   },
+   "name": "text - 12"
+  },
+  {
+   "type": 10,
+   "content": {
+    "version": "MetricsItem/2.0",
+    "size": 1,
+    "chartType": 2,
+    "resourceType": "microsoft.dbforpostgresql/servergroupsv2",
+    "metricScope": 0,
+    "resourceIds": [
+     "{Resource}"
+    ],
+    "timeContextFromParameter": "TimeRange",
+    "timeContext": {
+     "durationMs": 604800000
+    },
+    "metrics": [
+     {
+      "namespace": "microsoft.dbforpostgresql/servergroupsv2",
+      "metric": "microsoft.dbforpostgresql/servergroupsv2-Saturation-storage_used",
+      "aggregation": 4,
+      "splitBy": "ServerName"
+     }
+    ],
+    "title": "Storage Used - Avg",
+    "showOpenInMe": true,
+    "showCreateAlertRule": true,
+    "gridSettings": {
+     "rowLimit": 10000
+    }
+   },
+   "name": "metric - 14",
+   "styleSettings": {
+    "showBorder": true
+   }
+  },
+  {
+   "type": 1,
+   "content": {
+    "json": "## Performance Metrics\r\n[**Click here**](https://go.microsoft.com/fwlink/?linkid=2186984) to learn more about useful diagnostic queries which might help troubleshoot performance issues.",
+    "style": "info"
+   },
+   "name": "text - 3"
+  },
+  {
+   "type": 10,
+   "content": {
+    "version": "MetricsItem/2.0",
+    "size": 1,
+    "chartType": 2,
+    "resourceType": "microsoft.dbforpostgresql/servergroupsv2",
+    "metricScope": 0,
+    "resourceIds": [
+     "{Resource}"
+    ],
+    "timeContextFromParameter": "TimeRange",
+    "timeContext": {
+     "durationMs": 604800000
+    },
+    "metrics": [
+     {
+      "namespace": "microsoft.dbforpostgresql/servergroupsv2",
+      "metric": "microsoft.dbforpostgresql/servergroupsv2-Saturation-cpu_percent",
+      "aggregation": 3,
+      "splitBy": "ServerName",
+      "columnName": "CPU Percent ( Max)"
+     }
+    ],
+    "title": "CPU Percent - Max",
+    "showOpenInMe": true,
+    "showCreateAlertRule": true,
+    "gridSettings": {
+     "rowLimit": 10000
+    }
+   },
+   "name": "metric - 15",
+   "styleSettings": {
+    "showBorder": true
+   }
+  },
+  {
+   "type": 1,
+   "content": {
+    "json": "We recommend [**scaling**](https://go.microsoft.com/fwlink/?linkid=2186890) the compute if the CPU Percent consistently exceeds 95 percent.\r\n",
+    "style": "upsell"
+   },
+   "name": "text - 2"
+  },
+  {
+   "type": 10,
+   "content": {
+    "version": "MetricsItem/2.0",
+    "size": 1,
+    "chartType": 2,
+    "resourceType": "microsoft.dbforpostgresql/servergroupsv2",
+    "metricScope": 0,
+    "resourceIds": [
+     "{Resource}"
+    ],
+    "timeContextFromParameter": "TimeRange",
+    "timeContext": {
+     "durationMs": 604800000
+    },
+    "metrics": [
+     {
+      "namespace": "microsoft.dbforpostgresql/servergroupsv2",
+      "metric": "microsoft.dbforpostgresql/servergroupsv2-Traffic-iops",
+      "aggregation": 4,
+      "splitBy": "ServerName"
+     }
+    ],
+    "title": "IOPS - Avg",
+    "showOpenInMe": true,
+    "showCreateAlertRule": true,
+    "gridSettings": {
+     "rowLimit": 10000
+    }
+   },
+   "name": "metric - 5",
+   "styleSettings": {
+    "showBorder": true
+   }
+  },
+  {
+   "type": 1,
+   "content": {
+    "json": "[**Click here**](https://go.microsoft.com/fwlink/?linkid=2186985) to learn more about IOPS for your cluster configuration.\r\n",
+    "style": "upsell"
+   },
+   "name": "text - 15"
+  },
+  {
+   "type": 10,
+   "content": {
+    "version": "MetricsItem/2.0",
+    "size": 1,
+    "chartType": 2,
+    "resourceType": "microsoft.dbforpostgresql/servergroupsv2",
+    "metricScope": 0,
+    "resourceIds": [
+     "{Resource}"
+    ],
+    "timeContextFromParameter": "TimeRange",
+    "timeContext": {
+     "durationMs": 604800000
+    },
+    "metrics": [
+     {
+      "namespace": "microsoft.dbforpostgresql/servergroupsv2",
+      "metric": "microsoft.dbforpostgresql/servergroupsv2-Saturation-apps_reserved_memory_percent",
+      "aggregation": 3,
+      "splitBy": "ServerName"
+     }
+    ],
+    "title": "Reserved Memory Percent - Max",
+    "showOpenInMe": true,
+    "showCreateAlertRule": true,
+    "gridSettings": {
+     "rowLimit": 10000
+    }
+   },
+   "name": "metric - 13",
+   "styleSettings": {
+    "showBorder": true
+   }
+  },
+  {
+   "type": 1,
+   "content": {
+    "json": "We recommend [**scaling up**](https://go.microsoft.com/fwlink/?linkid=2186890) the compute if the Reserved Memory Percent  exceeds 90 percent.",
+    "style": "upsell"
+   },
+   "name": "text - 16"
+  },
+  {
+   "type": 1,
+   "content": {
+    "json": "## Connection and Network Metrics",
+    "style": "info"
+   },
+   "name": "text - 18"
+  },
+  {
+   "type": 10,
+   "content": {
+    "version": "MetricsItem/2.0",
+    "size": 1,
+    "chartType": 2,
+    "resourceType": "microsoft.dbforpostgresql/servergroupsv2",
+    "metricScope": 0,
+    "resourceIds": [
+     "{Resource}"
+    ],
+    "timeContextFromParameter": "TimeRange",
+    "timeContext": {
+     "durationMs": 604800000
+    },
+    "metrics": [
+     {
+      "namespace": "microsoft.dbforpostgresql/servergroupsv2",
+      "metric": "microsoft.dbforpostgresql/servergroupsv2-Traffic-active_connections",
+      "aggregation": 3,
+      "splitBy": "ServerName"
+     }
+    ],
+    "title": "Active Connections - Max",
+    "showOpenInMe": true,
+    "showCreateAlertRule": true,
+    "gridSettings": {
+     "rowLimit": 10000
+    }
+   },
+   "name": "metric - 7",
+   "styleSettings": {
+    "showBorder": true
+   }
+  },
+  {
+   "type": 1,
+   "content": {
+    "json": "[**Click here**](https://go.microsoft.com/fwlink/?linkid=2186986) to learn more about connection limits and connection pooling.",
+    "style": "upsell"
+   },
+   "name": "text - 14"
+  },
+  {
+   "type": 10,
+   "content": {
+    "version": "MetricsItem/2.0",
+    "size": 1,
+    "chartType": 2,
+    "resourceType": "microsoft.dbforpostgresql/servergroupsv2",
+    "metricScope": 0,
+    "resourceIds": [
+     "{Resource}"
+    ],
+    "timeContextFromParameter": "TimeRange",
+    "timeContext": {
+     "durationMs": 604800000
+    },
+    "metrics": [
+     {
+      "namespace": "microsoft.dbforpostgresql/servergroupsv2",
+      "metric": "microsoft.dbforpostgresql/servergroupsv2-Traffic-network_bytes_ingress",
+      "aggregation": 1,
+      "splitBy": "ServerName"
+     }
+    ],
+    "title": "Network In ",
+    "showOpenInMe": true,
+    "showCreateAlertRule": true,
+    "gridSettings": {
+     "rowLimit": 10000
+    }
+   },
+   "name": "metric - 9",
+   "styleSettings": {
+    "showBorder": true
+   }
+  },
+  {
+   "type": 10,
+   "content": {
+    "version": "MetricsItem/2.0",
+    "size": 1,
+    "chartType": 2,
+    "resourceType": "microsoft.dbforpostgresql/servergroupsv2",
+    "metricScope": 0,
+    "resourceIds": [
+     "{Resource}"
+    ],
+    "timeContextFromParameter": "TimeRange",
+    "timeContext": {
+     "durationMs": 604800000
+    },
+    "metrics": [
+     {
+      "namespace": "microsoft.dbforpostgresql/servergroupsv2",
+      "metric": "microsoft.dbforpostgresql/servergroupsv2-Traffic-network_bytes_egress",
+      "aggregation": 1,
+      "splitBy": "ServerName"
+     }
+    ],
+    "title": "Network Out",
+    "showOpenInMe": true,
+    "showCreateAlertRule": true,
+    "gridSettings": {
+     "rowLimit": 10000
+    }
+   },
+   "name": "metric - 11",
+   "styleSettings": {
+    "showBorder": true
+   }
+  }
+ ],
+ "fallbackResourceIds": [],
+ "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

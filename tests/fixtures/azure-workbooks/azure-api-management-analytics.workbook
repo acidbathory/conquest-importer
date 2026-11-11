@@ -1,0 +1,2020 @@
+{
+ "version": "Notebook/1.0",
+ "items": [
+  {
+   "type": 9,
+   "content": {
+    "version": "KqlParameterItem/1.0",
+    "parameters": [
+     {
+      "version": "KqlParameterItem/1.0",
+      "name": "TimeRange",
+      "type": 4,
+      "isRequired": true,
+      "typeSettings": {
+       "selectableValues": [
+        {
+         "durationMs": 300000
+        },
+        {
+         "durationMs": 900000
+        },
+        {
+         "durationMs": 1800000
+        },
+        {
+         "durationMs": 3600000
+        },
+        {
+         "durationMs": 14400000
+        },
+        {
+         "durationMs": 43200000
+        },
+        {
+         "durationMs": 86400000
+        },
+        {
+         "durationMs": 172800000
+        },
+        {
+         "durationMs": 259200000
+        },
+        {
+         "durationMs": 604800000
+        },
+        {
+         "durationMs": 1209600000
+        },
+        {
+         "durationMs": 2419200000
+        },
+        {
+         "durationMs": 2592000000
+        },
+        {
+         "durationMs": 5184000000
+        },
+        {
+         "durationMs": 7776000000
+        }
+       ],
+       "allowCustom": true
+      },
+      "value": {
+       "durationMs": 2592000000
+      },
+      "label": "Time range"
+     }
+    ],
+    "style": "pills",
+    "queryType": 0,
+    "resourceType": "microsoft.apimanagement/service"
+   },
+   "name": "parameters"
+  },
+  {
+   "type": 11,
+   "content": {
+    "version": "LinkItem/1.0",
+    "style": "tabs",
+    "links": [
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Timeline",
+      "subTarget": "timeline",
+      "preText": "",
+      "style": "link"
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Geography",
+      "subTarget": "geography",
+      "style": "link"
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "APIs",
+      "subTarget": "apis",
+      "style": "link"
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Operations",
+      "subTarget": "operations",
+      "style": "link"
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Products",
+      "subTarget": "products",
+      "style": "link"
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Subscriptions",
+      "subTarget": "subscriptions",
+      "style": "link"
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Users",
+      "subTarget": "users",
+      "style": "link"
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Requests",
+      "subTarget": "requests",
+      "style": "link"
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Language models",
+      "subTarget": "languageModels",
+      "style": "link"
+     }
+    ]
+   },
+   "name": "links"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| summarize count() by tostring(ResponseCode), bin(TimeGenerated, {TimeRange:grain})\r\n| render timechart",
+       "size": 0,
+       "title": "Requests",
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service"
+      },
+      "name": "requests"
+     },
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| summarize ['Data Transfer'] = sum(iif(isempty(RequestSize), 0, RequestSize) + iif(isempty(ResponseSize), 0, ResponseSize)) by bin(TimeGenerated, {TimeRange:grain})\r\n| render barchart",
+       "size": 0,
+       "title": "Data transfer",
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service"
+      },
+      "name": "data transfer"
+     },
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| summarize ['Response Time'] = avg(TotalTime), ['Service Time'] = avg(BackendTime) by bin(TimeGenerated, {TimeRange:grain})\r\n| render timechart",
+       "size": 0,
+       "aggregation": 3,
+       "title": "Response time",
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service"
+      },
+      "name": "response time"
+     },
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| summarize ['Cache Hits'] = countif(Cache =~ 'hit'), ['Cache Misses'] = countif(Cache =~ 'miss') by Cache, bin(TimeGenerated, {TimeRange:grain})\r\n| render timechart",
+       "size": 0,
+       "title": "Cache",
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service"
+      },
+      "name": "cache"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "timeline"
+   },
+   "name": "Timeline"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| summarize \r\n    SuccessfullRequests = countif(ResponseCode < 400), \r\n    FailedRequests = countif(ResponseCode == 400 or (ResponseCode >= 500 and ResponseCode < 600)),\r\n    UnauthorizedRequests = countif(ResponseCode == 401 or ResponseCode == 403 or ResponseCode == 429),\r\n    OtherRequests = countif((ResponseCode > 401 and ResponseCode < 500 and ResponseCode != 401 and ResponseCode != 403 and ResponseCode != 429) or ResponseCode > 599 or isempty(ResponseCode)),\r\n    TotalRequests = count(),\r\n    AverageResponseTime = avg(TotalTime),\r\n    AverageServiceResponseTime = avg(BackendTime),\r\n    DataTransfer = sum(RequestSize) + sum(ResponseSize)\r\n  by\r\n    Api = coalesce(ApiId, 'None'),\r\n    ApiId = iif(isempty(ApiId), 'None', strcat('/apis/', ApiId))\r\n| extend\r\n    AverageResponseTime = iff(isnan(AverageResponseTime), 0.0, AverageResponseTime),\r\n    AverageServiceResponseTime = iff(isnan(AverageServiceResponseTime), 0.0, AverageResponseTime)",
+       "size": 2,
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "visualization": "table",
+       "gridSettings": {
+        "formatters": [
+         {
+          "columnMatch": "SuccessfullRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "FailedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "UnauthorizedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "OtherRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "TotalRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageServiceResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "DataTransfer",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Sum"
+          },
+          "numberFormat": {
+           "unit": 2,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "TimeGenerated",
+          "formatter": 5
+         }
+        ],
+        "sortBy": [
+         {
+          "itemKey": "Api",
+          "sortOrder": 1
+         }
+        ],
+        "labelSettings": [
+         {
+          "columnId": "Api",
+          "label": "API"
+         },
+         {
+          "columnId": "ApiId",
+          "label": "API ID"
+         },
+         {
+          "columnId": "SuccessfullRequests",
+          "label": "Successful Requests"
+         },
+         {
+          "columnId": "FailedRequests",
+          "label": "Failed Requests"
+         },
+         {
+          "columnId": "UnauthorizedRequests",
+          "label": "Unauthorized Requests"
+         },
+         {
+          "columnId": "OtherRequests",
+          "label": "Other Requests"
+         },
+         {
+          "columnId": "TotalRequests",
+          "label": "Total Requests"
+         },
+         {
+          "columnId": "AverageResponseTime",
+          "label": "Response Time (Avg)"
+         },
+         {
+          "columnId": "AverageServiceResponseTime",
+          "label": "Service Response Time (Avg)"
+         },
+         {
+          "columnId": "DataTransfer",
+          "label": "Data Transfer"
+         }
+        ]
+       },
+       "sortBy": [
+        {
+         "itemKey": "Api",
+         "sortOrder": 1
+        }
+       ],
+       "tileSettings": {
+        "showBorder": false
+       },
+       "mapSettings": {
+        "locInfo": "LatLong"
+       }
+      },
+      "name": "Apis"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "apis"
+   },
+   "name": "APIs"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| summarize\r\n    SuccessfullRequests = countif(ResponseCode < 400), \r\n    FailedRequests = countif(ResponseCode == 400 or (ResponseCode >= 500 and ResponseCode < 600)),\r\n    UnauthorizedRequests = countif(ResponseCode == 401 or ResponseCode == 403 or ResponseCode == 429),\r\n    OtherRequests = countif((ResponseCode > 401 and ResponseCode < 500 and ResponseCode != 401 and ResponseCode != 403 and ResponseCode != 429) or ResponseCode > 599 or isempty(ResponseCode)),\r\n    TotalRequests = count(),\r\n    AverageResponseTime = avg(TotalTime),\r\n    AverageServiceResponseTime = avg(BackendTime),\r\n    DataTransfer=sum(RequestSize) + sum(ResponseSize)\r\n  by\r\n    Api = coalesce(ApiId, 'None'),\r\n    Operation = coalesce(OperationId, 'None'),\r\n    OperationId = iif(isempty(ApiId) or isempty(OperationId), 'None', strcat('/apis/', ApiId, '/operations/', OperationId))\r\n| extend\r\n    AverageResponseTime = iff(isnan(AverageResponseTime), 0.0, AverageResponseTime),\r\n    AverageServiceResponseTime = iff(isnan(AverageServiceResponseTime), 0.0, AverageResponseTime)",
+       "size": 2,
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "visualization": "table",
+       "gridSettings": {
+        "formatters": [
+         {
+          "columnMatch": "SuccessfullRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "FailedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "UnauthorizedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "OtherRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "TotalRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageServiceResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "DataTransfer",
+          "formatter": 0,
+          "numberFormat": {
+           "unit": 2,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         }
+        ],
+        "sortBy": [
+         {
+          "itemKey": "Api",
+          "sortOrder": 1
+         },
+         {
+          "itemKey": "Operation",
+          "sortOrder": 2
+         }
+        ],
+        "labelSettings": [
+         {
+          "columnId": "Api",
+          "label": "API"
+         },
+         {
+          "columnId": "Operation",
+          "label": "Operation"
+         },
+         {
+          "columnId": "OperationId",
+          "label": "Operation ID"
+         },
+         {
+          "columnId": "SuccessfullRequests",
+          "label": "Successful Requests"
+         },
+         {
+          "columnId": "FailedRequests",
+          "label": "Failed Requests"
+         },
+         {
+          "columnId": "UnauthorizedRequests",
+          "label": "Unauthorized Requests"
+         },
+         {
+          "columnId": "OtherRequests",
+          "label": "Other Requests"
+         },
+         {
+          "columnId": "TotalRequests",
+          "label": "Total Requests"
+         },
+         {
+          "columnId": "AverageResponseTime",
+          "label": "Response Time (Avg)"
+         },
+         {
+          "columnId": "AverageServiceResponseTime",
+          "label": "Service Response Time (Avg)"
+         },
+         {
+          "columnId": "DataTransfer",
+          "label": "Data Transfer"
+         }
+        ]
+       },
+       "sortBy": [
+        {
+         "itemKey": "Api",
+         "sortOrder": 1
+        },
+        {
+         "itemKey": "Operation",
+         "sortOrder": 2
+        }
+       ]
+      },
+      "name": "OperationsQuery"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "operations"
+   },
+   "name": "Operations"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| summarize\r\n    SuccessfullRequests = countif(ResponseCode < 400), \r\n    FailedRequests = countif(ResponseCode == 400 or (ResponseCode >= 500 and ResponseCode < 600)),\r\n    UnauthorizedRequests = countif(ResponseCode == 401 or ResponseCode == 403 or ResponseCode == 429),\r\n    OtherRequests = countif((ResponseCode > 401 and ResponseCode < 500 and ResponseCode != 401 and ResponseCode != 403 and ResponseCode != 429) or ResponseCode > 599 or isempty(ResponseCode)),\r\n    TotalRequests=count(),\r\n    AverageResponseTime = avg(TotalTime),\r\n    AverageServiceResponseTime = avg(BackendTime),\r\n    DataTransfer = sum(RequestSize) + sum(ResponseSize)\r\n  by\r\n    Product = coalesce(ProductId, 'None'),\r\n    ProductId = iif(isempty(ProductId), 'None', strcat('/products/', ProductId))\r\n| extend\r\n    AverageResponseTime = iff(isnan(AverageResponseTime), 0.0, AverageResponseTime),\r\n    AverageServiceResponseTime = iff(isnan(AverageServiceResponseTime), 0.0, AverageResponseTime)",
+       "size": 2,
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "visualization": "table",
+       "gridSettings": {
+        "formatters": [
+         {
+          "columnMatch": "SuccessfullRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "FailedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "UnauthorizedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "OtherRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "TotalRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageServiceResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumSignificantDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "DataTransfer",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Sum"
+          },
+          "numberFormat": {
+           "unit": 2,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         }
+        ],
+        "sortBy": [
+         {
+          "itemKey": "Product",
+          "sortOrder": 1
+         }
+        ],
+        "labelSettings": [
+         {
+          "columnId": "Product",
+          "label": "Product"
+         },
+         {
+          "columnId": "ProductId",
+          "label": "Product ID"
+         },
+         {
+          "columnId": "SuccessfullRequests",
+          "label": "Successfull Requests"
+         },
+         {
+          "columnId": "FailedRequests",
+          "label": "Failed Requests"
+         },
+         {
+          "columnId": "UnauthorizedRequests",
+          "label": "Unauthorized Requests"
+         },
+         {
+          "columnId": "OtherRequests",
+          "label": "Other Requests"
+         },
+         {
+          "columnId": "TotalRequests",
+          "label": "Total Requests"
+         },
+         {
+          "columnId": "AverageResponseTime",
+          "label": "Response Time (Avg)"
+         },
+         {
+          "columnId": "AverageServiceResponseTime",
+          "label": "Service Response Time (Avg)"
+         },
+         {
+          "columnId": "DataTransfer",
+          "label": "Data Transfer"
+         }
+        ]
+       }
+      },
+      "name": "ProductsQuery"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "products"
+   },
+   "name": "ProductsQuery"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| summarize\r\n    SuccessfullRequests = countif(ResponseCode < 400), \r\n    FailedRequests = countif(ResponseCode == 400 or (ResponseCode >= 500 and ResponseCode < 600)),\r\n    UnauthorizedRequests = countif(ResponseCode == 401 or ResponseCode == 403 or ResponseCode == 429),\r\n    OtherRequests = countif((ResponseCode > 401 and ResponseCode < 500 and ResponseCode != 401 and ResponseCode != 403 and ResponseCode != 429) or ResponseCode > 599 or isempty(ResponseCode)),\r\n    TotalRequests = count(),\r\n    AverageResponseTime = avg(TotalTime),\r\n    AverageServiceResponseTime = avg(BackendTime),\r\n    DataTransfer = sum(RequestSize) + sum(ResponseSize)\r\n  by\r\n    Subscription = coalesce(ApimSubscriptionId, 'None'),\r\n    SubscriptionId = iif(isempty(ApimSubscriptionId), 'None', strcat('/subscriptions/', ApimSubscriptionId))\r\n| extend\r\n    AverageResponseTime = iff(isnan(AverageResponseTime), 0.0, AverageResponseTime),\r\n    AverageServiceResponseTime = iff(isnan(AverageServiceResponseTime), 0.0, AverageResponseTime)",
+       "size": 2,
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "visualization": "table",
+       "gridSettings": {
+        "formatters": [
+         {
+          "columnMatch": "SubscriptionId",
+          "formatter": 1
+         },
+         {
+          "columnMatch": "SuccessfullRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "FailedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "UnauthorizedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "OtherRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "TotalRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageServiceResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "DataTransfer",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Sum"
+          },
+          "numberFormat": {
+           "unit": 2,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         }
+        ],
+        "sortBy": [
+         {
+          "itemKey": "Subscription",
+          "sortOrder": 1
+         }
+        ],
+        "labelSettings": [
+         {
+          "columnId": "Subscription",
+          "label": "Subscription"
+         },
+         {
+          "columnId": "SubscriptionId",
+          "label": "Subscription ID"
+         },
+         {
+          "columnId": "SuccessfullRequests",
+          "label": "Successful Requests"
+         },
+         {
+          "columnId": "FailedRequests",
+          "label": "Failed Requests"
+         },
+         {
+          "columnId": "UnauthorizedRequests",
+          "label": "Unauthrorized Requests"
+         },
+         {
+          "columnId": "OtherRequests",
+          "label": "Other Requests"
+         },
+         {
+          "columnId": "TotalRequests",
+          "label": "Total Requests"
+         },
+         {
+          "columnId": "AverageResponseTime",
+          "label": "Response Time (Avg)"
+         },
+         {
+          "columnId": "AverageServiceResponseTime",
+          "label": "Service Response Time (Avg)"
+         },
+         {
+          "columnId": "DataTransfer",
+          "label": "Data Transfer"
+         }
+        ]
+       }
+      },
+      "name": "SubscriptionsQuery"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "subscriptions"
+   },
+   "name": "Subscriptions"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| summarize\r\n    SuccessfullRequests = countif(ResponseCode < 400), \r\n    FailedRequests = countif(ResponseCode == 400 or (ResponseCode >= 500 and ResponseCode < 600)),\r\n    UnauthorizedRequests = countif(ResponseCode == 401 or ResponseCode == 403 or ResponseCode == 429),\r\n    OtherRequests = countif((ResponseCode > 401 and ResponseCode < 500 and ResponseCode != 401 and ResponseCode != 403 and ResponseCode != 429) or ResponseCode > 599 or isempty(ResponseCode)),\r\n    TotalRequests = count(),\r\n    AverageResponseTime = avg(TotalTime),\r\n    AverageServiceResponseTime = avg(BackendTime),\r\n    DataTransfer = sum(RequestSize) + sum(ResponseSize)\r\nby\r\n    User = coalesce(UserId, 'None'),\r\n    UserId = iif(isempty(UserId), 'None', strcat('/users/', UserId))\r\n| extend\r\n    AverageResponseTime = iff(isnan(AverageResponseTime), 0.0, AverageResponseTime),\r\n    AverageServiceResponseTime = iff(isnan(AverageServiceResponseTime), 0.0, AverageResponseTime)",
+       "size": 2,
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "visualization": "table",
+       "gridSettings": {
+        "formatters": [
+         {
+          "columnMatch": "SuccessfullRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "FailedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "UnauthorizedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "OtherRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "TotalRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageServiceResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "DataTransfer",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Sum"
+          },
+          "numberFormat": {
+           "unit": 2,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         }
+        ],
+        "sortBy": [
+         {
+          "itemKey": "User",
+          "sortOrder": 1
+         }
+        ],
+        "labelSettings": [
+         {
+          "columnId": "User",
+          "label": "User"
+         },
+         {
+          "columnId": "UserId",
+          "label": "User ID"
+         },
+         {
+          "columnId": "SuccessfullRequests",
+          "label": "SucessFull Requests "
+         },
+         {
+          "columnId": "FailedRequests",
+          "label": "Failed Requests"
+         },
+         {
+          "columnId": "UnauthorizedRequests",
+          "label": "Unauthorized Requests"
+         },
+         {
+          "columnId": "OtherRequests",
+          "label": "Other Requests"
+         },
+         {
+          "columnId": "TotalRequests",
+          "label": "Total Requests"
+         },
+         {
+          "columnId": "AverageResponseTime",
+          "label": "Response Time (Avg)"
+         },
+         {
+          "columnId": "AverageServiceResponseTime",
+          "label": "Service Response Time (Avg)"
+         },
+         {
+          "columnId": "DataTransfer",
+          "label": "Data Transfer"
+         }
+        ]
+       }
+      },
+      "name": "UsersQuery"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "users"
+   },
+   "name": "Users"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| project TimeGenerated, Method, Url, ResponseCode, BackendResponseCode, RequestSize, ResponseSize, BackendTime, TotalTime, Cache, CallerIpAddress, Region",
+       "size": 2,
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "visualization": "table",
+       "gridSettings": {
+        "formatters": [
+         {
+          "columnMatch": "RequestSize",
+          "formatter": 0,
+          "numberFormat": {
+           "unit": 2,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "ResponseSize",
+          "formatter": 0,
+          "numberFormat": {
+           "unit": 2,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "BackendTime",
+          "formatter": 0,
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "TotalTime",
+          "formatter": 0,
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "Region",
+          "formatter": 17
+         }
+        ],
+        "sortBy": [
+         {
+          "itemKey": "TimeGenerated",
+          "sortOrder": 1
+         }
+        ],
+        "labelSettings": [
+         {
+          "columnId": "TimeGenerated",
+          "label": "Time Generated"
+         },
+         {
+          "columnId": "Method",
+          "label": "Method"
+         },
+         {
+          "columnId": "Url",
+          "label": "Url"
+         },
+         {
+          "columnId": "ResponseCode",
+          "label": "Response Code"
+         },
+         {
+          "columnId": "BackendResponseCode",
+          "label": "Backend Response Code"
+         },
+         {
+          "columnId": "RequestSize",
+          "label": "Request Size"
+         },
+         {
+          "columnId": "ResponseSize",
+          "label": "Response Size"
+         },
+         {
+          "columnId": "BackendTime",
+          "label": "Backend Time"
+         },
+         {
+          "columnId": "TotalTime",
+          "label": "Total Time"
+         },
+         {
+          "columnId": "Cache",
+          "label": "Cache"
+         },
+         {
+          "columnId": "CallerIpAddress",
+          "label": "Caller IP Address"
+         },
+         {
+          "columnId": "Region",
+          "label": "Region"
+         }
+        ]
+       },
+       "sortBy": [
+        {
+         "itemKey": "TimeGenerated",
+         "sortOrder": 1
+        }
+       ]
+      },
+      "name": "RequestsQuery"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "requests"
+   },
+   "name": "Requests"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| extend geo = geo_info_from_ip_address(CallerIpAddress)\r\n| extend\r\n    Country = tostring(geo.country),\r\n    State = tostring(geo.state),\r\n    City = tostring(geo.city),\r\n    Latitude = todouble(geo.latitude),\r\n    Longitude = todouble(geo.longitude)\r\n| summarize\r\n    Requests = count(),\r\n    ['Response Time'] = avg(TotalTime),\r\n    ['Data Transfer'] = sum(iif(isempty(RequestSize), 0, RequestSize) + iif(isempty(ResponseSize), 0, ResponseSize)),\r\n    Latitude = avg(Latitude),\r\n    Longitude = avg(Longitude)\r\n    by Country",
+       "size": 0,
+       "title": "Requests",
+       "timeContext": {
+        "durationMs": 86400000
+       },
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "visualization": "map",
+       "mapSettings": {
+        "locInfo": "LatLong",
+        "locInfoColumn": "_ResourceId",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "sizeSettings": "Requests",
+        "sizeAggregation": "Sum",
+        "labelSettings": "Country",
+        "legendMetric": "Requests",
+        "legendAggregation": "Sum",
+        "itemColorSettings": {
+         "nodeColorField": "Requests",
+         "colorAggregation": "Sum",
+         "type": "heatmap",
+         "heatmapPalette": "coldHot"
+        }
+       }
+      },
+      "customWidth": "0",
+      "name": "query - 0",
+      "styleSettings": {
+       "maxWidth": "30%"
+      }
+     },
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "ApiManagementGatewayLogs\r\n| extend geo = geo_info_from_ip_address(CallerIpAddress)\r\n| extend Country = tostring(geo.country)\r\n| summarize\r\n    SuccessfullRequests = countif(ResponseCode < 400),\r\n    FailedRequests = countif(ResponseCode == 400 or (ResponseCode >= 500 and ResponseCode < 600)),\r\n    UnauthorizedRequests = countif(ResponseCode == 401 or ResponseCode == 403 or ResponseCode == 429),\r\n    OtherRequests = countif((ResponseCode > 401 and ResponseCode < 500 and ResponseCode != 401 and ResponseCode != 403 and ResponseCode != 429) or ResponseCode > 599 or isempty(ResponseCode)),\r\n    TotalRequests = count(),\r\n    AverageResponseTime = avg(TotalTime),\r\n    AverageServiceResponseTime = avg(BackendTime),\r\n    DataTransfer = sum(iif(isempty(RequestSize), 0, RequestSize) + iif(isempty(ResponseSize), 0, ResponseSize))\r\nby Country\r\n| extend\r\n    AverageResponseTime = iff(isnan(AverageResponseTime), 0.0, AverageResponseTime),\r\n    AverageServiceResponseTime = iff(isnan(AverageServiceResponseTime), 0.0, AverageResponseTime)",
+       "size": 0,
+       "timeContext": {
+        "durationMs": 86400000
+       },
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "gridSettings": {
+        "formatters": [
+         {
+          "columnMatch": "SuccessfullRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "FailedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "UnauthorizedRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "OtherRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "TotalRequests",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Count"
+          },
+          "numberFormat": {
+           "unit": 17,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "AverageServiceResponseTime",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Average"
+          },
+          "numberFormat": {
+           "unit": 23,
+           "options": {
+            "style": "decimal",
+            "maximumFractionDigits": 2
+           }
+          }
+         },
+         {
+          "columnMatch": "DataTransfer",
+          "formatter": 0,
+          "formatOptions": {
+           "aggregation": "Sum"
+          },
+          "numberFormat": {
+           "unit": 2,
+           "options": {
+            "style": "decimal"
+           }
+          }
+         }
+        ],
+        "labelSettings": [
+         {
+          "columnId": "Country",
+          "label": "Country"
+         },
+         {
+          "columnId": "SuccessfullRequests",
+          "label": "Successful Requests"
+         },
+         {
+          "columnId": "FailedRequests",
+          "label": "Failed Requests"
+         },
+         {
+          "columnId": "UnauthorizedRequests",
+          "label": "Unauthorized Requests"
+         },
+         {
+          "columnId": "OtherRequests",
+          "label": "Other Requests"
+         },
+         {
+          "columnId": "TotalRequests",
+          "label": "Total Requests"
+         },
+         {
+          "columnId": "AverageResponseTime",
+          "label": "Response Time (Avg)"
+         },
+         {
+          "columnId": "AverageServiceResponseTime",
+          "label": "Service Response Time (Avg)"
+         },
+         {
+          "columnId": "DataTransfer",
+          "label": "Data Transfer"
+         }
+        ]
+       },
+       "sortBy": [
+        {
+         "itemKey": "TotalRequests",
+         "sortOrder": 2
+        }
+       ]
+      },
+      "customWidth": "70",
+      "name": "query - 1",
+      "styleSettings": {
+       "maxWidth": "100%"
+      }
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "geography"
+   },
+   "name": "Geography"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "let TimeRangeEnd = {TimeRange:end};\nlet TimeRangeStart = {TimeRange:start} + 1m;\nlet TimeRange = TimeRangeEnd - TimeRangeStart;\nlet llmHeaderLogs = ApiManagementGatewayLlmLog\n| where SequenceNumber == 0\n| where TimeGenerated between ((TimeRangeStart - TimeRange) .. TimeRangeEnd);\nlet timeRangeTokenMetrics = llmHeaderLogs \n| summarize TimeRangeTotalTokens = sum(TotalTokens),\nTimeRangePromptTokens = sum(PromptTokens),\nTimeRangeCompletionTokens = sum(CompletionTokens),\nTimeRangeTotalRequests = count()\nby bin_at(TimeGenerated, TimeRange, now());\nlet SingleRowTable = datatable(column:int)[1];\nlet currentTimeRangeMetrics = timeRangeTokenMetrics | where TimeGenerated between (TimeRangeStart .. TimeRangeEnd) | take 1;\nlet previousTimeRangeMetrics = timeRangeTokenMetrics | where TimeGenerated between ((TimeRangeStart - TimeRange) .. (TimeRangeEnd - TimeRange - 1m)) | take 1;\nlet dailyTokenMetrics = llmHeaderLogs \n| where TimeGenerated between ((TimeRangeEnd - 2d) .. TimeRangeEnd)\n| summarize Tpm = sum(TotalTokens), Rpm = count() by bin_at(TimeGenerated, 1m, TimeRangeEnd)\n| summarize MaxTpm = max(Tpm), MaxRpm = max(Rpm) by bin_at(TimeGenerated, 1d - 1m, TimeRangeEnd);\nlet currentDayMetrics = dailyTokenMetrics | where TimeGenerated between ((TimeRangeEnd - 1d + 1m) .. TimeRangeEnd) | take 1;\nlet previousDayMetrics = dailyTokenMetrics | where TimeGenerated between ((TimeRangeEnd - 2d + 1m) .. (TimeRangeEnd - 1d)) | take 1;\nlet GetMetricIncreasePercentage = (currentMetricValue:int, previousMetricValue:int) { iff(currentMetricValue > 0 and previousMetricValue > 0, (currentMetricValue - previousMetricValue) * 100.0 / previousMetricValue, iff(tostring(previousMetricValue) == \"\" or previousMetricValue <= 0, iff(currentMetricValue > 0, +10000.0, 0.0) , -10000.0)) };\n// \nlet previousPromptTokenMetric = iff(tostring(toscalar(previousTimeRangeMetrics | project TimeRangePromptTokens)) == \"\", 0, toscalar(previousTimeRangeMetrics | project TimeRangePromptTokens));\nlet currentPromptTokenMetric = iff(tostring(toscalar(currentTimeRangeMetrics | project TimeRangePromptTokens)) == \"\", 0, toscalar(currentTimeRangeMetrics | project TimeRangePromptTokens));\nlet timePeriodPromptTokenMetrics = SingleRowTable | project Order = 1, MetricName = \"Prompt tokens\", CurrentMetric = currentPromptTokenMetric, PreviousMetric = previousPromptTokenMetric, MetricIncreasePercentage = GetMetricIncreasePercentage(currentPromptTokenMetric, previousPromptTokenMetric);\n//\nlet previousCompletionTokenMetric = iff(tostring(toscalar(previousTimeRangeMetrics | project TimeRangeCompletionTokens)) == \"\", 0, toscalar(previousTimeRangeMetrics | project TimeRangeCompletionTokens));\nlet currentCompletionTokenMetric = iff(tostring(toscalar(currentTimeRangeMetrics | project TimeRangeCompletionTokens)) == \"\", 0, toscalar(currentTimeRangeMetrics | project TimeRangeCompletionTokens));\nlet timePeriodCompletionTokenMetrics = SingleRowTable | project Order = 2, MetricName = \"Completion tokens\", PreviousMetric = previousCompletionTokenMetric, CurrentMetric = currentCompletionTokenMetric, MetricIncreasePercentage = GetMetricIncreasePercentage(currentCompletionTokenMetric, previousCompletionTokenMetric);\n//\nlet previousTotalTokenMetric = iff(tostring(toscalar(previousTimeRangeMetrics | project TimeRangeTotalTokens)) == \"\", 0, toscalar(previousTimeRangeMetrics | project TimeRangeTotalTokens));\nlet currentTotalTokenMetric = iff(tostring(toscalar(currentTimeRangeMetrics | project TimeRangeTotalTokens)) == \"\", 0, toscalar(currentTimeRangeMetrics | project TimeRangeTotalTokens));\nlet timePeriodTotalTokenMetrics = SingleRowTable | project Order = 3, MetricName = \"Total tokens\", CurrentMetric = currentTotalTokenMetric, PreviousMetric = previousTotalTokenMetric, MetricIncreasePercentage = GetMetricIncreasePercentage(currentTotalTokenMetric, previousTotalTokenMetric);\n//\nlet previousTotalRequestMetric = iff(tostring(toscalar(previousTimeRangeMetrics | project TimeRangeTotalRequests)) == \"\", 0, toscalar(previousTimeRangeMetrics | project TimeRangeTotalRequests));\nlet currentTotalRequestMetric = iff(tostring(toscalar(currentTimeRangeMetrics | project TimeRangeTotalRequests)) == \"\", 0, toscalar(currentTimeRangeMetrics | project TimeRangeTotalRequests));\nlet timePeriodTotalRequestsMetrics = SingleRowTable | project Order = 4, MetricName = \"Total requests\", CurrentMetric = currentTotalRequestMetric, PreviousMetric = previousTotalRequestMetric, MetricIncreasePercentage = GetMetricIncreasePercentage(currentTotalRequestMetric, previousTotalRequestMetric);\n//\nlet previousMaxTpmMetric = iff(tostring(toscalar(previousDayMetrics | project MaxTpm)) == \"\", 0, toscalar(previousDayMetrics | project MaxTpm));\nlet currentMaxTpmMetric = iff(tostring(toscalar(currentDayMetrics | project MaxTpm)) == \"\", 0, toscalar(currentDayMetrics | project MaxTpm));\nlet dailyTpmMetrics = SingleRowTable | project Order = 5, MetricName = \"Max TPM\", CurrentMetric = currentMaxTpmMetric, PreviousMetric = previousMaxTpmMetric, MetricIncreasePercentage = GetMetricIncreasePercentage(currentMaxTpmMetric, previousMaxTpmMetric), timePeriodLabel = \"Last 24 hours\";\n//\nlet previousMaxRpmMetric = iff(tostring(toscalar(previousDayMetrics | project MaxRpm)) == \"\", 0, toscalar(previousDayMetrics | project MaxRpm));\nlet currentMaxRpmMetric = iff(tostring(toscalar(currentDayMetrics | project MaxRpm)) == \"\", 0, toscalar(currentDayMetrics | project MaxRpm));\nlet dailyRpmMetrics = SingleRowTable | project Order = 6, MetricName = \"Max RPM\", CurrentMetric = currentMaxRpmMetric, PreviousMetric = previousMaxRpmMetric, MetricIncreasePercentage = GetMetricIncreasePercentage(currentMaxRpmMetric, previousMaxRpmMetric), timePeriodLabel = \"Last 24 hours\";\n//\ndailyTpmMetrics\n| union dailyRpmMetrics\n| union timePeriodTotalTokenMetrics\n| union timePeriodPromptTokenMetrics\n| union timePeriodCompletionTokenMetrics\n| union timePeriodTotalRequestsMetrics\n| extend timePeriodLabel = iff(tostring(timePeriodLabel) == \"\" , \"{TimeRange:label}\", timePeriodLabel)\n| extend timePeriodLabel = strcat(\"(\", timePeriodLabel, \")\")\n| sort by Order asc ",
+       "size": 4,
+       "title": "Metrics",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "visualization": "tiles",
+       "tileSettings": {
+        "titleContent": {
+         "columnMatch": "MetricName"
+        },
+        "subtitleContent": {
+         "columnMatch": "timePeriodLabel"
+        },
+        "leftContent": {
+         "columnMatch": "CurrentMetric",
+         "formatter": 12,
+         "formatOptions": {
+          "palette": "none"
+         }
+        },
+        "secondaryContent": {
+         "columnMatch": "MetricIncreasePercentage",
+         "formatter": 8,
+         "formatOptions": {
+          "min": -1,
+          "max": 1,
+          "palette": "redGreen"
+         },
+         "numberFormat": {
+          "unit": 1,
+          "options": {
+           "style": "decimal",
+           "maximumFractionDigits": 0
+          }
+         }
+        },
+        "showBorder": false,
+        "sortCriteriaField": "Order",
+        "sortOrderField": 1
+       }
+      },
+      "name": "query - 2"
+     },
+     {
+      "type": 12,
+      "content": {
+       "version": "NotebookGroup/1.0",
+       "groupType": "editable",
+       "title": "Usage breakdowns",
+       "items": [
+        {
+         "type": 3,
+         "content": {
+          "version": "KqlItem/1.0",
+          "query": "let llmHeaderLogs = ApiManagementGatewayLlmLog\r\n| where SequenceNumber == 0;\r\nlet Total = toscalar(llmHeaderLogs | count);\r\nllmHeaderLogs\r\n| summarize Percentage = count() * 100.0 / Total by ModelName\r\n| render piechart\r\n",
+          "size": 2,
+          "title": "Model usage",
+          "timeContextFromParameter": "TimeRange",
+          "queryType": 0,
+          "resourceType": "microsoft.apimanagement/service",
+          "visualization": "piechart",
+          "chartSettings": {
+           "yAxis": [
+            "Percentage"
+           ],
+           "ySettings": {
+            "numberFormatSettings": {
+             "unit": 1,
+             "options": {
+              "style": "decimal",
+              "useGrouping": true
+             }
+            }
+           }
+          }
+         },
+         "customWidth": "30",
+         "name": "query - 3"
+        },
+        {
+         "type": 3,
+         "content": {
+          "version": "KqlItem/1.0",
+          "query": "let UnformatApiVersion = (formattedApiVersion:string) { iff(formattedApiVersion contains \"T00:00:00.0000\", substring(formattedApiVersion, 0, 10), formattedApiVersion)};\r\nlet llmHeaderLogs = ApiManagementGatewayLlmLog\r\n| where SequenceNumber == 0;\r\nlet Total = toscalar(llmHeaderLogs | count);\r\nllmHeaderLogs\r\n| summarize Percentage = count() * 100.0 / Total by UnformatApiVersion(ApiVersion)\r\n| render piechart\r\n",
+          "size": 2,
+          "title": "API version usage",
+          "timeContextFromParameter": "TimeRange",
+          "queryType": 0,
+          "resourceType": "microsoft.apimanagement/service",
+          "chartSettings": {
+           "ySettings": {
+            "numberFormatSettings": {
+             "unit": 1,
+             "options": {
+              "style": "decimal",
+              "useGrouping": true
+             }
+            }
+           }
+          }
+         },
+         "customWidth": "30",
+         "name": "query - 1"
+        },
+        {
+         "type": 3,
+         "content": {
+          "version": "KqlItem/1.0",
+          "query": "let llmHeaderLogs = ApiManagementGatewayLlmLog\r\n| where SequenceNumber == 0;\r\nlet llmLogsWithSubscriptionId = llmHeaderLogs\r\n| join kind=leftouter ApiManagementGatewayLogs on CorrelationId\r\n| project SubscriptionId = ApimSubscriptionId, DeploymentName, ModelName, ApiVersion, PromptTokens, CompletionTokens, TotalTokens;\r\nlet Total = toscalar(llmLogsWithSubscriptionId  | count);\r\nllmLogsWithSubscriptionId\r\n| summarize Percentage = count() * 100.0 / Total by SubscriptionId\r\n| render piechart",
+          "size": 2,
+          "title": "Subscription usage",
+          "timeContextFromParameter": "TimeRange",
+          "queryType": 0,
+          "resourceType": "microsoft.apimanagement/service",
+          "chartSettings": {
+           "ySettings": {
+            "numberFormatSettings": {
+             "unit": 1,
+             "options": {
+              "style": "decimal",
+              "useGrouping": true
+             }
+            }
+           }
+          }
+         },
+         "customWidth": "30",
+         "name": "query - 2"
+        }
+       ]
+      },
+      "name": "group - 3"
+     },
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "let llmLogsWithSubscriptionId = ApiManagementGatewayLlmLog\r\n| where SequenceNumber == 0\r\n| where TotalTokens != 0\r\n| join kind=leftouter ApiManagementGatewayLogs on CorrelationId\r\n| project SubscriptionId = ApimSubscriptionId, DeploymentName, ModelName, ApiVersion, PromptTokens, CompletionTokens, TotalTokens;\r\nllmLogsWithSubscriptionId\r\n| summarize TotalTokens = sum(TotalTokens), TotalRequests=count() by SubscriptionId, DeploymentName, ModelName",
+       "size": 3,
+       "title": "Token consumption",
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "visualization": "table",
+       "gridSettings": {
+        "filter": true,
+        "sortBy": [
+         {
+          "itemKey": "ModelName",
+          "sortOrder": 1
+         }
+        ],
+        "labelSettings": [
+         {
+          "columnId": "SubscriptionId",
+          "label": "Subscription ID"
+         },
+         {
+          "columnId": "DeploymentName",
+          "label": "Deployment"
+         },
+         {
+          "columnId": "ModelName",
+          "label": "Model"
+         },
+         {
+          "columnId": "TotalTokens",
+          "label": "Total Tokens"
+         },
+         {
+          "columnId": "TotalRequests",
+          "label": "Total Requests"
+         }
+        ]
+       },
+       "sortBy": [
+        {
+         "itemKey": "ModelName",
+         "sortOrder": 1
+        }
+       ]
+      },
+      "name": "query - 4"
+     },
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "let llmHeaderLogs = ApiManagementGatewayLlmLog\r\n| where SequenceNumber == 0\r\n| where TotalTokens != 0;\r\nlet llmLogsWithTotalTime = llmHeaderLogs\r\n| join kind=leftouter ApiManagementGatewayLogs on CorrelationId\r\n| project DeploymentName, ModelName, ApiVersion, PromptTokens, CompletionTokens, TotalTokens, TotalTime;\r\nllmLogsWithTotalTime\r\n| summarize AverageTotalTime = avg(TotalTime) by ModelName",
+       "size": 0,
+       "title": "Average duration",
+       "timeContextFromParameter": "TimeRange",
+       "exportToExcelOptions": "all",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "visualization": "barchart",
+       "chartSettings": {
+        "xAxis": "ModelName",
+        "showMetrics": false,
+        "xSettings": {
+         "label": "Model"
+        },
+        "ySettings": {
+         "numberFormatSettings": {
+          "unit": 23,
+          "options": {
+           "style": "decimal",
+           "useGrouping": true
+          }
+         }
+        }
+       }
+      },
+      "name": "query - 3"
+     },
+     {
+      "type": 3,
+      "content": {
+       "version": "KqlItem/1.0",
+       "query": "let UnformatApiVersion = (formattedApiVersion:string) { iff(formattedApiVersion contains \"T00:00:00.0000\", substring(formattedApiVersion, 0, 10), formattedApiVersion)};\r\nlet llmLogsWithSubscriptionId = ApiManagementGatewayLlmLog\r\n| where SequenceNumber == 0\r\n| where TotalTokens != 0\r\n| join kind=leftouter ApiManagementGatewayLogs on CorrelationId\r\n| project SubscriptionId = ApimSubscriptionId, DeploymentName, ModelName, ApiVersion = UnformatApiVersion(ApiVersion), PromptTokens, CompletionTokens, TotalTokens;\r\nllmLogsWithSubscriptionId\r\n| summarize TotalTokens = sum(TotalTokens), TotalRequests=count() by ApiVersion, DeploymentName, ModelName",
+       "size": 3,
+       "title": "API version",
+       "timeContextFromParameter": "TimeRange",
+       "queryType": 0,
+       "resourceType": "microsoft.apimanagement/service",
+       "visualization": "table",
+       "gridSettings": {
+        "filter": true,
+        "sortBy": [
+         {
+          "itemKey": "ModelName",
+          "sortOrder": 1
+         }
+        ],
+        "labelSettings": [
+         {
+          "columnId": "ApiVersion",
+          "label": "API version"
+         },
+         {
+          "columnId": "DeploymentName",
+          "label": "Deployment"
+         },
+         {
+          "columnId": "ModelName",
+          "label": "Model"
+         },
+         {
+          "columnId": "TotalTokens",
+          "label": "Total tokens"
+         },
+         {
+          "columnId": "TotalRequests",
+          "label": "Total requests"
+         }
+        ]
+       },
+       "sortBy": [
+        {
+         "itemKey": "ModelName",
+         "sortOrder": 1
+        }
+       ]
+      },
+      "name": "query - 4 - Copy"
+     },
+     {
+      "type": 12,
+      "content": {
+       "version": "NotebookGroup/1.0",
+       "groupType": "editable",
+       "items": [
+        {
+         "type": 9,
+         "content": {
+          "version": "KqlParameterItem/1.0",
+          "parameters": [
+           {
+            "version": "KqlParameterItem/1.0",
+            "name": "ActivityWindow",
+            "label": "Activity window",
+            "type": 4,
+            "isRequired": true,
+            "typeSettings": {
+             "selectableValues": [
+              {
+               "durationMs": 86400000
+              },
+              {
+               "durationMs": 172800000
+              },
+              {
+               "durationMs": 259200000
+              },
+              {
+               "durationMs": 604800000
+              },
+              {
+               "durationMs": 1209600000
+              },
+              {
+               "durationMs": 2419200000
+              },
+              {
+               "durationMs": 2592000000
+              },
+              {
+               "durationMs": 5184000000
+              },
+              {
+               "durationMs": 7776000000
+              }
+             ]
+            },
+            "value": {
+             "durationMs": 7776000000
+            }
+           },
+           {
+            "version": "KqlParameterItem/1.0",
+            "name": "InactiveThreshold",
+            "label": "Inactive threshold",
+            "type": 4,
+            "isRequired": true,
+            "typeSettings": {
+             "selectableValues": [
+              {
+               "durationMs": 300000
+              },
+              {
+               "durationMs": 900000
+              },
+              {
+               "durationMs": 1800000
+              },
+              {
+               "durationMs": 3600000
+              },
+              {
+               "durationMs": 14400000
+              },
+              {
+               "durationMs": 43200000
+              },
+              {
+               "durationMs": 86400000
+              },
+              {
+               "durationMs": 172800000
+              },
+              {
+               "durationMs": 259200000
+              },
+              {
+               "durationMs": 604800000
+              },
+              {
+               "durationMs": 1209600000
+              },
+              {
+               "durationMs": 2419200000
+              },
+              {
+               "durationMs": 2592000000
+              },
+              {
+               "durationMs": 5184000000
+              },
+              {
+               "durationMs": 7776000000
+              }
+             ]
+            },
+            "value": {
+             "durationMs": 86400000
+            }
+           }
+          ],
+          "style": "pills",
+          "queryType": 0,
+          "resourceType": "microsoft.apimanagement/service"
+         },
+         "name": "parameters - 8"
+        },
+        {
+         "type": 3,
+         "content": {
+          "version": "KqlItem/1.0",
+          "query": "let llmLogsWithSubscriptionId = ApiManagementGatewayLlmLog\r\n| where SequenceNumber == 0\r\n| join kind=inner ApiManagementGatewayLogs on CorrelationId\r\n| project SubscriptionId = ApimSubscriptionId, DeploymentName, ModelName, ApiVersion, PromptTokens, CompletionTokens, TotalTokens, TimeGenerated;\r\nllmLogsWithSubscriptionId\r\n| summarize LastActive = max(TimeGenerated) by SubscriptionId\r\n| where LastActive < {InactiveThreshold:start}\r\n| sort by LastActive desc",
+          "size": 0,
+          "title": "Inactive subscriptions",
+          "noDataMessage": "None",
+          "timeContextFromParameter": "ActivityWindow",
+          "queryType": 0,
+          "resourceType": "microsoft.apimanagement/service",
+          "visualization": "table",
+          "gridSettings": {
+           "labelSettings": [
+            {
+             "columnId": "SubscriptionId",
+             "label": "Subscription ID"
+            },
+            {
+             "columnId": "LastActive",
+             "label": "Last active"
+            }
+           ]
+          }
+         },
+         "customWidth": "50",
+         "name": "query - 0"
+        },
+        {
+         "type": 3,
+         "content": {
+          "version": "KqlItem/1.0",
+          "query": "let llmLogsWithSubscriptionId = ApiManagementGatewayLlmLog\r\n| where SequenceNumber == 0\r\n| join kind=inner ApiManagementGatewayLogs on CorrelationId\r\n| project SubscriptionId = ApimSubscriptionId, DeploymentName, ModelName, ApiVersion, PromptTokens, CompletionTokens, TotalTokens, TimeGenerated;\r\nllmLogsWithSubscriptionId\r\n| summarize LastActive = max(TimeGenerated) by DeploymentName\r\n| where LastActive < {InactiveThreshold:start}\r\n| sort by LastActive desc",
+          "size": 0,
+          "title": "Inactive deployments",
+          "noDataMessage": "None",
+          "timeContextFromParameter": "ActivityWindow",
+          "queryType": 0,
+          "resourceType": "microsoft.apimanagement/service",
+          "visualization": "table",
+          "gridSettings": {
+           "labelSettings": [
+            {
+             "columnId": "DeploymentName",
+             "label": "Deployment"
+            },
+            {
+             "columnId": "LastActive",
+             "label": "Last active"
+            }
+           ]
+          }
+         },
+         "customWidth": "50",
+         "name": "query - 0 - Copy"
+        }
+       ]
+      },
+      "name": "group - 5"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "languageModels"
+   },
+   "name": "LanguageModels"
+  }
+ ]
+}

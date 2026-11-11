@@ -51,6 +51,13 @@ N_CHART_TYPE = "chart type {kind} has no New Relic counterpart and is shown as a
 N_TEXT_PARAMS = "workbook parameters written in braces in the text are shown as written"
 N_LINKS = "link actions (open blade, Azure action, other workbook) are shown as text, not links"
 N_GROUP = "a workbook group is shown as a heading; New Relic groups cannot be collapsed"
+N_COND_SET = (
+    "the item was also shown only when parameter {name} has a value; the widget is shown either way"
+)
+N_FILTERS = (
+    "the dimension filters of the metric item are not applied: add a WHERE on the dimension "
+    "attribute"
+)
 N_TABS = "workbook tabs became pages of the dashboard"
 N_VIZ = "visualization {kind} has no New Relic chart and is shown as a table"
 N_TILES = "tiles are shown as one billboard for the first row"

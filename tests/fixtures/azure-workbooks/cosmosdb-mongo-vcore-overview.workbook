@@ -1,0 +1,743 @@
+{
+ "version": "Notebook/1.0",
+ "items": [
+  {
+   "type": 9,
+   "content": {
+    "version": "KqlParameterItem/1.0",
+    "parameters": [
+     {
+      "version": "KqlParameterItem/1.0",
+      "name": "Resources",
+      "label": "Azure Cosmos DB",
+      "type": 5,
+      "isRequired": true,
+      "isHiddenWhenLocked": true,
+      "typeSettings": {
+       "additionalResourceOptions": [
+        "value::1"
+       ],
+       "showDefault": false
+      },
+      "value": "value::1"
+     },
+     {
+      "version": "KqlParameterItem/1.0",
+      "name": "TimeRange",
+      "label": "Time Range",
+      "type": 4,
+      "isRequired": true,
+      "isGlobal": true,
+      "value": {
+       "durationMs": 14400000
+      },
+      "typeSettings": {
+       "selectableValues": [
+        {
+         "durationMs": 300000
+        },
+        {
+         "durationMs": 900000
+        },
+        {
+         "durationMs": 1800000
+        },
+        {
+         "durationMs": 3600000
+        },
+        {
+         "durationMs": 14400000
+        },
+        {
+         "durationMs": 43200000
+        },
+        {
+         "durationMs": 86400000
+        },
+        {
+         "durationMs": 172800000
+        },
+        {
+         "durationMs": 259200000
+        },
+        {
+         "durationMs": 604800000
+        }
+       ],
+       "allowCustom": true
+      },
+      "timeContext": {
+       "durationMs": 86400000
+      }
+     }
+    ],
+    "style": "above",
+    "queryType": 0,
+    "resourceType": "microsoft.operationalinsights/workspaces"
+   },
+   "name": "Container",
+   "styleSettings": {
+    "margin": "0px"
+   }
+  },
+  {
+   "type": 11,
+   "content": {
+    "version": "LinkItem/1.0",
+    "style": "tabs",
+    "links": [
+     {
+      "cellValue": "selectedTab",
+      "linkTarget": "parameter",
+      "linkLabel": "Overview",
+      "subTarget": "Overview",
+      "style": "link"
+     },
+     {
+      "cellValue": "selectedTab",
+      "linkTarget": "parameter",
+      "linkLabel": "Query Performance",
+      "subTarget": "Query Performance",
+      "style": "link"
+     },
+     {
+      "cellValue": "selectedTab",
+      "linkTarget": "parameter",
+      "linkLabel": "Resource Utilization and Memory",
+      "subTarget": "Resource Utilization and Memory",
+      "style": "link"
+     },
+     {
+      "cellValue": "selectedTab",
+      "linkTarget": "parameter",
+      "linkLabel": "Storage",
+      "subTarget": "Storage",
+      "style": "link"
+     }
+    ]
+   },
+   "name": "Tabs",
+   "styleSettings": {
+    "margin": "0 0 10px 0"
+   }
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "loadType": "always",
+    "items": [
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Saturation-CpuPercent",
+         "aggregation": 3,
+         "columnName": "Maximum CPU Usage"
+        }
+       ],
+       "title": "Maximum CPU Usage",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "name": "metric - 12"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Saturation-MemoryPercent",
+         "aggregation": 3
+        }
+       ],
+       "title": "Maximum Memory Usage",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "Max memory"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Saturation-StoragePercent",
+         "aggregation": 3
+        }
+       ],
+       "title": "Maximum Storage Usage",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "Maximum storage"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Latency-MongoRequestDurationMs",
+         "aggregation": 4,
+         "splitBy": [
+          "ServerName"
+         ],
+         "columnName": "Average Mongo Request Duration"
+        }
+       ],
+       "title": "Query Latency (only available for clusters M40 and up)",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 8"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Latency-MongoRequestDurationMs",
+         "aggregation": 3,
+         "splitBy": [
+          "ServerName"
+         ],
+         "columnName": "Maximum Mongo Request Duration"
+        }
+       ],
+       "title": "Slowest Queries by Server (only available forclusters M40 and up)",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "Slowest Queries by Server"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "selectedTab",
+    "comparison": "isEqualTo",
+    "value": "Overview"
+   },
+   "name": "Overview"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "title": "Query Performance",
+    "items": [
+     {
+      "type": 1,
+      "content": {
+       "json": "**Note:** This feature is only available for clusters tier M40 and up.",
+       "style": "info"
+      },
+      "name": "text - 0"
+     },
+     {
+      "type": 11,
+      "content": {
+       "version": "LinkItem/1.0",
+       "style": "paragraph",
+       "links": [
+        {
+         "cellValue": "{Resources}",
+         "linkTarget": "Resource",
+         "linkLabel": "Upgrade now.",
+         "subTarget": "scale",
+         "style": "link"
+        }
+       ]
+      },
+      "name": "links - 4"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 1,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Latency-MongoRequestDurationMs",
+         "aggregation": 4,
+         "splitBy": [
+          "Operation"
+         ],
+         "columnName": "Mongo request duration"
+        }
+       ],
+       "title": "Query Latency by Operation",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "name": "Query Latency by Operation"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 1,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Latency-MongoRequestDurationMs",
+         "aggregation": 3,
+         "splitBy": [
+          "ServerName"
+         ]
+        }
+       ],
+       "title": "Slowest Queries by Server",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "name": "Slowest Queries by Server"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 1,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Latency-MongoRequestDurationMs",
+         "aggregation": 7,
+         "splitBy": [
+          "Operation"
+         ]
+        }
+       ],
+       "title": "Workload Distribution by Operation",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "name": "Workload Distribution by Operation"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "selectedTab",
+    "comparison": "isEqualTo",
+    "value": "Query Performance"
+   },
+   "name": "Query Performance"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "title": "Resource Utilization and Memory",
+    "items": [
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Saturation-CpuPercent",
+         "aggregation": 4,
+         "splitBy": [
+          "ServerName"
+         ]
+        }
+       ],
+       "title": "CPU Usage by Server",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "Average CPU Usage by Server"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Saturation-MemoryPercent",
+         "aggregation": 4
+        }
+       ],
+       "title": "Memory Usage by Server",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "Average memory usage by server"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Saturation-MemoryPercent",
+         "aggregation": 3
+        }
+       ],
+       "title": "Servers Nearing Maximum Capacity",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "Maximum memory usage by server"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 14400000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Saturation-CpuPercent",
+         "aggregation": 3
+        },
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Saturation-CommittedMemoryPercent",
+         "aggregation": 4
+        }
+       ],
+       "title": "Memory and CPU Load for Resource-Heavy Tasks",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "Average committed memory percent and max CPU usage"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "selectedTab",
+    "comparison": "isEqualTo",
+    "value": "Resource Utilization and Memory"
+   },
+   "name": "Resource Utilization and Memory"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "title": "Storage",
+    "items": [
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 0
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Saturation-StoragePercent",
+         "aggregation": 3,
+         "splitBy": null
+        },
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Saturation-CpuPercent",
+         "aggregation": 3
+        }
+       ],
+       "title": "Maximum Memory and CPU Loads",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "Max storage percent and max CPU usage"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 0
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Traffic-IOPS",
+         "aggregation": 4,
+         "splitBy": null
+        }
+       ],
+       "title": "IOPS by Server",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "Average IOPS by server"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 0
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Traffic-IOPS",
+         "aggregation": 3,
+         "splitBy": null
+        }
+       ],
+       "title": "Peak Storage Traffic by Server",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "Max IOPS by server"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.documentdb/mongoclusters",
+       "metricScope": 0,
+       "resourceParameter": "Resources",
+       "resourceIds": [
+        "{Resources}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 0
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.documentdb/mongoclusters",
+         "metric": "microsoft.documentdb/mongoclusters-Saturation-StorageUsed",
+         "aggregation": 3,
+         "splitBy": null
+        }
+       ],
+       "title": "Storage Capacity Usage by Server",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "Max storage usage by server"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "selectedTab",
+    "comparison": "isEqualTo",
+    "value": "Storage"
+   },
+   "name": "Storage"
+  }
+ ],
+ "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
