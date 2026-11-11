@@ -30,6 +30,8 @@ NRQL_FUNCTIONS = {
     Aggregation.MIN: "min",
     Aggregation.MAX: "max",
     Aggregation.SUM: "sum",
+    Aggregation.COUNT: "count",
+    Aggregation.STDDEV: "stddev",
 }
 COUNT_EVENTS = {SignalKind.LOG: "Log", SignalKind.APM: "Transaction"}
 PRECEDENCE = {"+": 1, "-": 1, "*": 2, "/": 2}

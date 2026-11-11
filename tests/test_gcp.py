@@ -563,3 +563,10 @@ def test_an_absence_condition_emits_to_nerdgraph_and_terraform() -> None:
     (scoped,) = translate_policy(absence())
     query = nerdgraph_payload(scoped)["variables"]["condition"]["nrql"]["query"]
     assert "gcp.subscription_id = 's'" in query
+
+
+def test_a_single_policy_file_loads(tmp_path: Path) -> None:
+    (tmp_path / "one.json").write_text(
+        '{"displayName": "solo", "combiner": "OR", "conditions": []}'
+    )
+    assert [p.displayName for p in load_policies(tmp_path)] == ["solo"]

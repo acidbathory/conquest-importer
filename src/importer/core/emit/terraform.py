@@ -13,6 +13,7 @@ from importer.core.emit.common import (
     condition_name,
     emit_defaults,
     emittable_window,
+    expiration_actions,
     fill_settings,
     nrql_for,
     source_description,
@@ -113,18 +114,26 @@ def resource_block(monitor: IRMonitor) -> str:
             f"    threshold             = {t.value!r}",
             f"    threshold_duration    = {window}",
             f'    threshold_occurrences = "{monitor.signal.occurrences.value}"',
+            *_prediction_lines(monitor),
             "  }",
         ]
     if monitor.no_data.notify and monitor.no_data.timeout_minutes:
         lines += [
             "",
             f"  expiration_duration            = {monitor.no_data.timeout_minutes * 60}",
-            "  open_violation_on_expiration   = true",
-            "  close_violations_on_expiration = false",
+            f"  open_violation_on_expiration   = {str(expiration_actions(monitor)[0]).lower()}",
+            f"  close_violations_on_expiration = {str(expiration_actions(monitor)[1]).lower()}",
         ]
     lines += _optional_lines(monitor)
     lines.append("}")
     return "\n".join(lines) + "\n"
+
+
+def _prediction_lines(monitor: IRMonitor) -> list[str]:
+    options = monitor.emit
+    if options is None or options.predict_by_seconds is None:
+        return []
+    return ["    prediction {", f"      predict_by = {options.predict_by_seconds}", "    }"]
 
 
 def _optional_lines(monitor: IRMonitor) -> list[str]:

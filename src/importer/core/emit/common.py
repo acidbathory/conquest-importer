@@ -75,10 +75,19 @@ def condition_name(name: str) -> str:
     return "".join(c for c in name if c.isprintable()).strip()[:MAX_NAME_LENGTH]
 
 
+MAX_DESCRIPTION = 1000  # characters; kept under the length New Relic is known to accept
+
+
 def source_description(monitor: IRMonitor) -> str:
     label = SOURCE_LABELS.get(monitor.source_system, monitor.source_system)
     ident = monitor.source_key or str(monitor.source_id)
-    return f"Imported from {label} {condition_name(ident)}"
+    text = f"Imported from {label} {condition_name(ident)}"
+    options = monitor.emit
+    if options is None or not options.description_note:
+        return text
+    note = "".join(c if c.isprintable() or c == "\n" else "?" for c in options.description_note)
+    text = f"{text}\n{note}"
+    return text if len(text) <= MAX_DESCRIPTION else text[: MAX_DESCRIPTION - 3] + "..."
 
 
 def aggregation_window(monitor: IRMonitor) -> int:
@@ -159,6 +168,14 @@ def _check_expiration(monitor: IRMonitor) -> None:
         check_expiration_seconds(minutes * 60)
 
 
+def expiration_actions(monitor: IRMonitor) -> tuple[bool, bool]:
+    """(open a violation, close violations) when the signal is lost; default (True, False)."""
+    options = monitor.emit
+    opens = options.open_violation_on_expiration if options is not None else None
+    closes = options.close_violations_on_expiration if options is not None else None
+    return (True if opens is None else opens), (False if closes is None else closes)
+
+
 def _check_method(monitor: IRMonitor) -> None:
     method = streaming_method(monitor)
     options = monitor.emit
@@ -232,6 +249,8 @@ def check_limits(monitor: IRMonitor) -> None:
         return
     _check_slide_by(monitor, options)
     _check_text(options)
+    if options.predict_by_seconds is not None and options.predict_by_seconds <= 0:
+        raise CannotEmit("the prediction horizon must be positive")
     if options.ignore_on_expected_termination and not (
         monitor.no_data.notify and monitor.no_data.timeout_minutes
     ):
