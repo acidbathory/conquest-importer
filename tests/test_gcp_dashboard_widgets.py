@@ -103,6 +103,17 @@ def test_an_incident_list_becomes_an_issue_table() -> None:
     nerdgraph_dashboard(dash(tile(0, {"title": "Incidents", "incidentList": {}})))
 
 
+def test_title_only_text_widget_becomes_a_heading() -> None:
+    w = one({"title": "Topic", "text": {"content": ""}})
+    assert w.kind == WidgetKind.MARKDOWN and w.text == "## Topic"
+    assert w.confidence == Confidence.APPROXIMATE and "heading" in " ".join(w.reasons)
+
+
+def test_text_widget_with_neither_title_nor_content_stays_a_placeholder() -> None:
+    w = one({"text": {"content": "  "}})
+    assert w.kind == WidgetKind.UNSUPPORTED and "no content" in w.reasons[0]
+
+
 def test_blank_tiles_are_dropped() -> None:
     assert dash(tile(0, {"blank": {}}), tile(4, chart())).widgets[0].title == "cpu"
 

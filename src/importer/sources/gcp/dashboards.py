@@ -429,10 +429,21 @@ def _chart(body: dict[str, Any], title: str, layout: Layout, kind: str, ctx: Con
     )
 
 
-def _text(body: dict[str, Any], title: str, layout: Layout) -> IRWidget:
+def _text(body: dict[str, Any], title: str, layout: Layout, *, titled: bool) -> IRWidget:
     content = body.get("content")
     if not isinstance(content, str) or not content.strip():
-        return _failed(title, layout, "text", [NO_CONTENT])
+        if not titled:
+            return _failed(title, layout, "text", [NO_CONTENT])
+        return _result(
+            title,
+            layout,
+            "text",
+            Confidence.APPROXIMATE,
+            ["an empty text box with a title is shown as a heading"],
+            widget_kind=WidgetKind.MARKDOWN,
+            visualization=Visualization.MARKDOWN,
+            text=f"## {title}",
+        )
     raw = str(body.get("format", "MARKDOWN")) == "RAW"
     return _result(
         title,
@@ -459,7 +470,9 @@ def translate_widget(
     if kind in CHART_KINDS:
         return _chart(body, title, layout, kind, ctx or Context())
     if kind == "text":
-        return _text(body, title, layout)
+        return _text(
+            body, title, layout, titled=isinstance(raw_title, str) and bool(raw_title.strip())
+        )
     if kind == "sectionHeader":
         return section_header(body, title, layout)
     if kind == "logsPanel":
