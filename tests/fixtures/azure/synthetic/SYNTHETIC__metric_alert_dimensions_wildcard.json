@@ -1,0 +1,49 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/metricAlerts/dims",
+  "name": "dims",
+  "type": "Microsoft.Insights/metricAlerts",
+  "location": "global",
+  "properties": {
+    "severity": 1,
+    "enabled": true,
+    "scopes": [
+      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Storage/storageAccounts/st1"
+    ],
+    "evaluationFrequency": "PT5M",
+    "windowSize": "PT15M",
+    "criteria": {
+      "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria",
+      "allOf": [
+        {
+          "criterionType": "DynamicThresholdCriterion",
+          "name": "d",
+          "metricName": "Transactions",
+          "timeAggregation": "Total",
+          "operator": "GreaterOrLessThan",
+          "alertSensitivity": "Low",
+          "failingPeriods": {
+            "numberOfEvaluationPeriods": 4,
+            "minFailingPeriodsToAlert": 4
+          },
+          "ignoreDataBefore": "2024-01-01T00:00:00Z",
+          "dimensions": [
+            {
+              "name": "ApiName",
+              "operator": "Include",
+              "values": [
+                "*"
+              ]
+            },
+            {
+              "name": "Empty",
+              "operator": "Exclude",
+              "values": []
+            }
+          ]
+        }
+      ]
+    },
+    "actions": []
+  }
+}

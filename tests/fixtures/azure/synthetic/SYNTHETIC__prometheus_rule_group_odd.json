@@ -1,0 +1,43 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.AlertsManagement/prometheusRuleGroups/odd",
+  "name": "odd",
+  "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+  "location": "westeurope",
+  "properties": {
+    "enabled": true,
+    "interval": "PT1M",
+    "scopes": [
+      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Monitor/accounts/amw"
+    ],
+    "clusterName": null,
+    "rules": [
+      {
+        "record": "job:up:avg",
+        "expression": "avg by (job) (up)",
+        "labels": {
+          "team": "ü"
+        }
+      },
+      {
+        "alert": "Down \"quoted\" ${x}",
+        "expression": "up{job=~\"api.*\"} == 0 and on(instance) (time() - process_start_time_seconds > 300)",
+        "for": "PT0S",
+        "severity": null,
+        "labels": null,
+        "annotations": {
+          "summary": "{{ $labels.instance }} down\nline2"
+        },
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/actionGroups/ag-synthetic"
+          }
+        ],
+        "resolveConfiguration": {
+          "autoResolved": true,
+          "timeToResolve": "PT10M"
+        }
+      }
+    ]
+  }
+}

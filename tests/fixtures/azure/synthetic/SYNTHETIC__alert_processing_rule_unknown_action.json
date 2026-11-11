@@ -1,0 +1,50 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.AlertsManagement/actionRules/future",
+  "name": "future",
+  "type": "Microsoft.AlertsManagement/actionRules",
+  "location": "Global",
+  "properties": {
+    "scopes": [
+      "/subscriptions/00000000-0000-0000-0000-000000000000"
+    ],
+    "conditions": [
+      {
+        "field": "FutureField",
+        "operator": "StartsWith",
+        "values": [
+          "a"
+        ]
+      },
+      {
+        "field": "Severity",
+        "operator": "Equals",
+        "values": []
+      }
+    ],
+    "schedule": {
+      "effectiveFrom": "2024-02-30T25:61:00",
+      "timeZone": "Mars/Olympus",
+      "recurrences": [
+        {
+          "recurrenceType": "Yearly",
+          "startTime": "00:00:00"
+        },
+        {
+          "recurrenceType": "Weekly",
+          "daysOfWeek": [
+            "Funday"
+          ],
+          "startTime": "22:00:00",
+          "endTime": "06:00:00"
+        }
+      ]
+    },
+    "actions": [
+      {
+        "actionType": "Quarantine"
+      }
+    ],
+    "enabled": true
+  }
+}

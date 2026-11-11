@@ -1,0 +1,52 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/scheduledQueryRules/kql",
+  "name": "kql",
+  "type": "Microsoft.Insights/scheduledQueryRules",
+  "location": "westeurope",
+  "kind": "LogAlert",
+  "properties": {
+    "displayName": "Rule \"with\" ${quotes} and 'apostrophes'  ",
+    "severity": 3,
+    "enabled": true,
+    "scopes": [
+      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.OperationalInsights/workspaces/law"
+    ],
+    "evaluationFrequency": "PT5M",
+    "windowSize": "PT1H",
+    "overrideQueryTimeRange": "P2D",
+    "criteria": {
+      "allOf": [
+        {
+          "query": "let threshold = 5;\nlet f = (t:string) { t | where TimeGenerated > ago(1h) };\nAppRequests\n| where Name has \"${jndi:ldap://x}\" or Name == '%{if}' // comment `tick`\n| join kind=inner (f('AppExceptions')) on OperationId\n| summarize cnt = count() by bin(TimeGenerated, 5m), Cloud_RoleName\n| where cnt > threshold\n| extend Δ = cnt - 1",
+          "timeAggregation": "Count",
+          "operator": "GreaterThan",
+          "threshold": 0,
+          "failingPeriods": {
+            "numberOfEvaluationPeriods": 1,
+            "minFailingPeriodsToAlert": 1
+          },
+          "dimensions": [
+            {
+              "name": "Cloud_RoleName",
+              "operator": "Include",
+              "values": [
+                "*"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "muteActionsDuration": "PT30M",
+    "actions": {
+      "actionGroups": [
+        "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/actionGroups/ag-synthetic"
+      ],
+      "customProperties": {
+        "k": "v"
+      }
+    },
+    "autoMitigate": false
+  }
+}

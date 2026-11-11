@@ -1,0 +1,41 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/metricAlerts/алерт-高い-CPU",
+  "name": "алерт-高い-CPU",
+  "type": "Microsoft.Insights/metricAlerts",
+  "location": "global",
+  "tags": {
+    "チーム": "運用",
+    "owner": "ünïcödé ‮evil"
+  },
+  "properties": {
+    "description": "Line1\nLine2\t\"quoted\" ${var.x} %{if true} `backtick` \\ back; ​zero-width; emoji 🔥",
+    "severity": 2,
+    "enabled": true,
+    "scopes": [
+      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Compute/virtualMachines/vm-ü"
+    ],
+    "evaluationFrequency": "PT1M",
+    "windowSize": "PT5M",
+    "criteria": {
+      "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+      "allOf": [
+        {
+          "criterionType": "StaticThresholdCriterion",
+          "name": "Métrique 1",
+          "metricName": "Percentage CPU",
+          "metricNamespace": "Microsoft.Compute/virtualMachines",
+          "operator": "GreaterThan",
+          "threshold": 90,
+          "timeAggregation": "Average"
+        }
+      ]
+    },
+    "autoMitigate": true,
+    "actions": [
+      {
+        "actionGroupId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/actionGroups/ag-synthetic"
+      }
+    ]
+  }
+}

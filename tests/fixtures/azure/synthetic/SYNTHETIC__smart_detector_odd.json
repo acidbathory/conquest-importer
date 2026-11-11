@@ -1,0 +1,27 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/microsoft.alertsManagement/smartDetectorAlertRules/odd",
+  "name": "odd",
+  "type": "microsoft.alertsManagement/smartDetectorAlertRules",
+  "location": "global",
+  "properties": {
+    "state": "Enabled",
+    "severity": "Sev9",
+    "frequency": "PT1M",
+    "detector": {
+      "id": "FailureAnomaliesDetector"
+    },
+    "scope": [
+      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/microsoft.insights/components/ai"
+    ],
+    "actionGroups": {
+      "groupIds": [
+        "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/actionGroups/ag-synthetic"
+      ],
+      "customWebhookPayload": "{\"a\":\"${b}\"}"
+    },
+    "throttling": {
+      "duration": "PT1H"
+    }
+  }
+}

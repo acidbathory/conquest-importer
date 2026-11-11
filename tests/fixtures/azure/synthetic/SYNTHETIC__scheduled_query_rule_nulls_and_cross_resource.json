@@ -1,0 +1,27 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/scheduledQueryRules/nulls",
+  "name": "nulls",
+  "type": "Microsoft.Insights/scheduledQueryRules",
+  "location": "westeurope",
+  "kind": null,
+  "properties": {
+    "scopes": [
+      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.OperationalInsights/workspaces/a",
+      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.OperationalInsights/workspaces/b"
+    ],
+    "criteria": {
+      "allOf": [
+        {
+          "query": "union workspace('b').Heartbeat, Heartbeat | summarize arg_max(TimeGenerated, *) by Computer | where TimeGenerated < ago(5m)",
+          "timeAggregation": null,
+          "operator": null,
+          "threshold": null
+        }
+      ]
+    },
+    "actions": null,
+    "evaluationFrequency": "PT1M",
+    "windowSize": null
+  }
+}

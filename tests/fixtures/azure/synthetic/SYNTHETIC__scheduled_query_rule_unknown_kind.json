@@ -1,0 +1,26 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/scheduledQueryRules/future",
+  "name": "future",
+  "type": "Microsoft.Insights/scheduledQueryRules",
+  "location": "westeurope",
+  "kind": "FutureKind",
+  "properties": {
+    "criteria": {
+      "allOf": [
+        {
+          "criterionType": "DynamicThresholdCriterion",
+          "query": "X | count",
+          "operator": "GreaterOrLessThan",
+          "alertSensitivity": "High",
+          "failingPeriods": {
+            "numberOfEvaluationPeriods": 6,
+            "minFailingPeriodsToAlert": 3
+          },
+          "metricMeasureColumn": "AggregatedValue",
+          "resourceIdColumn": "_ResourceId"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/activityLogAlerts/odd",
+  "name": "odd",
+  "type": "Microsoft.Insights/activityLogAlerts",
+  "location": "Global",
+  "properties": {
+    "scopes": [
+      "/subscriptions/00000000-0000-0000-0000-000000000000"
+    ],
+    "enabled": true,
+    "condition": {
+      "allOf": [
+        {
+          "field": "category",
+          "equals": "Administrative"
+        },
+        {
+          "anyOf": [
+            {
+              "field": "operationName",
+              "equals": "Microsoft.Compute/virtualMachines/delete"
+            },
+            {
+              "field": "properties.statusMessage",
+              "containsAny": [
+                "ünï",
+                "${x}",
+                ""
+              ]
+            }
+          ]
+        },
+        {
+          "field": "futureField",
+          "equals": null
+        }
+      ]
+    },
+    "actions": {
+      "actionGroups": [
+        {
+          "actionGroupId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/actionGroups/ag-synthetic",
+          "webhookProperties": {
+            "k": null
+          }
+        }
+      ]
+    }
+  }
+}

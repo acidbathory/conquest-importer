@@ -1,0 +1,25 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "value": [
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/metricAlerts/p1",
+      "name": "p1",
+      "type": "Microsoft.Insights/metricAlerts",
+      "location": "global",
+      "properties": {
+        "severity": 3,
+        "enabled": true,
+        "scopes": [
+          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Compute/virtualMachines/vm1"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": []
+        }
+      }
+    }
+  ],
+  "nextLink": "https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.Insights/metricAlerts?api-version=2026-01-01&$skiptoken=SYNTHETIC-PAGE-2"
+}
