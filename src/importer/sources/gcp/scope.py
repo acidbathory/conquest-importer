@@ -19,6 +19,7 @@ from importer.sources.gcp.filter import (
     Term,
     conjuncts,
     parse_expression,
+    placeholders,
     unquote_field,
 )
 
@@ -34,6 +35,10 @@ ORDERINGS = {">", ">=", "<", "<="}
 LIKE_OPS = {"starts_with", "ends_with", "has_substring", ":"}
 REGEX_META = set(".^$*+?()[]{}|\\")
 MAX_LIST = 200
+PLACEHOLDER_NOTE = (
+    "the filter holds template placeholders ({names}), which are not real values: replace them "
+    "with the values you use before relying on the query, or it matches nothing"
+)
 MULTI_METRIC = (
     "filter not supported: {what} selects several metrics; New Relic names each metric as its "
     "own attribute, so make one condition or chart series per metric"
@@ -185,8 +190,12 @@ def match_of(term: Term) -> Match:
         if match is None:
             raise ScopeFail(
                 f"filter term on {field!r} uses a regular expression ({term.value!r}) that "
-                "is not a plain prefix, suffix, substring or list of values; NRQL has "
-                "RLIKE for this, which the converter does not emit yet"
+                + (
+                    "holds a template placeholder, so it is not a real pattern yet"
+                    if "${" in term.value
+                    else "is not a plain prefix, suffix, substring or list of values; NRQL has "
+                    "RLIKE for this, which the converter does not emit yet"
+                )
             )
         kind, values = match
         if kind == "in":
@@ -246,12 +255,15 @@ def _or_group(group: Group, notes: list[str]) -> list[TagFilter]:
 def metric_filter(text: str) -> Scope:
     """Metric type, label restrictions and notes from a time series filter."""
     try:
-        parts = conjuncts(parse_expression(text))
+        tree = parse_expression(text)
     except FilterError as err:
         raise ScopeFail(f"filter not supported: {err}") from err
+    parts = conjuncts(tree)
     metric_type = ""
     filters: list[TagFilter] = []
     notes: list[str] = []
+    if names := placeholders(tree):
+        notes.append(PLACEHOLDER_NOTE.format(names=", ".join("${" + n + "}" for n in names)))
     for part in parts:
         if isinstance(part, Group):
             filters += _or_group(part, notes)

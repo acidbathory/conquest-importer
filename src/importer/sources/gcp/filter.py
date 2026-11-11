@@ -316,3 +316,12 @@ def parse_filter(text: str) -> list[Term]:
     if any(isinstance(t, Group) for t in terms):
         raise FilterError("the filter uses OR")
     return [t for t in terms if isinstance(t, Term)]
+
+
+def placeholders(node: Node) -> list[str]:
+    """Names of `${NAME}` template placeholders inside the values of a filter, in order."""
+    if isinstance(node, Group):
+        found = [n for item in node.items for n in placeholders(item)]
+    else:
+        found = [m.group(1) for v in (node.value, *node.values) for m in _VARIABLE.finditer(v)]
+    return list(dict.fromkeys(found))

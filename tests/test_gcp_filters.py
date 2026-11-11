@@ -634,3 +634,21 @@ def test_system_labels_stay_manual_because_the_new_relic_attribute_is_unconfirme
 def test_a_user_label_key_nrql_cannot_name_stays_manual() -> None:
     m = condition(f'{METRIC} AND metadata.user_labels."cloud.google.com/gke-spot" = "true"')
     assert m.confidence is Confidence.MANUAL and "valid New Relic attribute name" in m.reasons[0]
+
+
+# ----- template placeholders in values -----------------------------------------------------------
+
+
+def test_a_placeholder_value_is_noted_so_nobody_trusts_the_query() -> None:
+    m = condition(f'{METRIC} AND resource.labels.project_id = "${{PROJECT_ID}}"')
+    assert m.confidence is Confidence.APPROXIMATE
+    assert any("template placeholders (${PROJECT_ID})" in r for r in m.reasons)
+    m = logs('textPayload:"${NAME}" AND severity=ERROR')
+    assert any("template placeholders (${NAME})" in r for r in m.reasons)
+
+
+def test_a_regex_that_is_a_placeholder_says_so() -> None:
+    m = condition(
+        f'{METRIC} AND metric.labels.pod = monitoring.regex.full_match("${{POD}}-[a-z]+")'
+    )
+    assert m.confidence is Confidence.MANUAL and "template placeholder" in m.reasons[0]

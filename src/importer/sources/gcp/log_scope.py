@@ -15,8 +15,9 @@ from importer.sources.gcp.filter import (
     Term,
     conjuncts,
     parse_expression,
+    placeholders,
 )
-from importer.sources.gcp.scope import ScopeFail, match_of
+from importer.sources.gcp.scope import PLACEHOLDER_NOTE, ScopeFail, match_of
 
 # Cloud Logging severity levels, lowest to highest
 SEVERITIES = [
@@ -116,11 +117,14 @@ def _or_group(group: Group) -> CountFilter:
 def log_filters(text: str) -> tuple[list[CountFilter], list[str]]:
     """The filters of a log-match condition and notes; raises ScopeFail when unreadable."""
     try:
-        parts = conjuncts(parse_expression(text))
+        tree = parse_expression(text)
     except FilterError as err:
         raise ScopeFail(f"log filter not supported: {err}") from err
+    parts = conjuncts(tree)
     filters: list[CountFilter] = []
     notes: list[str] = []
+    if names := placeholders(tree):
+        notes.append(PLACEHOLDER_NOTE.format(names=", ".join("${" + n + "}" for n in names)))
     for part in parts:
         if isinstance(part, Group):
             filters.append(_or_group(part))
