@@ -804,6 +804,7 @@ never counted as converted.
 | Links item | Markdown list; link actions are text | Approximate |
 | KQL query item | NRQL through the KQL translator, chart from `visualization` (timechart/linechart to line, areachart to area, barchart to bar, piechart to pie, table or none to table, tiles or stat to billboard, graph and map to table); needs log forwarding | Placeholder until the KQL translator is connected |
 | KQL query with a time-range parameter | `where TimeGenerated {TimeRange}` (or `:value`) is dropped, the dashboard time picker sets the range; `bin(TimeGenerated, {TimeRange:grain})` becomes `TIMESERIES AUTO`. `:start`, `:end`, other parameters (dropdown, text, subscription, resource) keep the placeholder, named in the reason | Approximate, or Placeholder |
+| KQL query with `let`, `extend` or `tostring` | A `let` holding a table is inlined when used once; `extend a = x * 2 + y` becomes arithmetic inside `sum`/`avg`/`min`/`max` (`/` only with a decimal operand and a literal divisor); `tostring(column)` in `by` or an `extend` is the column. `=~`, a `let` used twice or holding a function, `join`, `union`, `toscalar` and rows without an aggregate keep the placeholder | Approximate, or Placeholder |
 | Resource Graph, ARM endpoint, merge, JSON, Data Explorer query | None | Placeholder |
 | Conditional visibility other than a tab | None: a widget is always shown | Placeholder |
 | Dependent parameter, unknown item type, linked template | None | Placeholder |

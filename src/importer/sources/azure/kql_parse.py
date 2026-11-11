@@ -98,6 +98,9 @@ def is_negated(leaf: Pred) -> bool:
     return isinstance(leaf, InList | Regex) and leaf.negate
 
 
+Expr = tuple[tuple[str, str], ...]  # ("col", name) | ("num", text) | ("op", "+-*/()")
+
+
 @dataclass(frozen=True)
 class Agg:
     alias: str
@@ -105,6 +108,7 @@ class Agg:
     column: str = ""
     arg: float | None = None  # the percentile
     cond: Pred | None = None  # the condition of a ...if aggregate
+    expr: Expr = ()  # an `extend` arithmetic the aggregate is taken over (column is its alias)
 
 
 @dataclass(frozen=True)
@@ -178,6 +182,8 @@ CASE_VARIANTS = ("_cs", "~")
 COMPARE_OPS = {"==", "!=", "<>", "<", "<=", ">", ">="}
 NEGATED = {"!contains", "!has", "!startswith", "!endswith"}
 LAST_SEEN_FUNCTIONS = ("min", "max")
+LET_SCALARS = ("ago", "dynamic", "true", "false", "toscalar", "materialize")
+EXPR_AGGREGATES = ("sum", "avg", "min", "max")  # NRQL takes arithmetic inside these
 
 
 class _Stream:
@@ -188,6 +194,9 @@ class _Stream:
     @property
     def peek(self) -> Token:
         return self.tokens[self.pos]
+
+    def rest(self) -> list[Token]:
+        return self.tokens[self.pos :]
 
     def ahead(self, n: int = 1) -> Token:
         return self.tokens[min(self.pos + n, len(self.tokens) - 1)]
@@ -253,16 +262,86 @@ class _Parser:
     def __init__(self) -> None:
         self.lets: dict[str, Scalar | tuple[Scalar, ...] | tuple[str, int]] = {}
         self.renames: dict[str, str] = {}
+        self.exprs: dict[str, tuple[Expr, bool]] = {}  # extend arithmetic, by the name it was given
         self.query = Query(table="")
 
     # -- names and values ---------------------------------------------------------------------
-    def column(self, s: _Stream) -> str:
+    def column(self, s: _Stream, text_ok: bool = False) -> str:
+        """A plain column. `text_ok` also reads tostring(column) (a group or an extend only)."""
         name = s.ident()
+        if text_ok and name.lower() == "tostring" and s.is_op("("):
+            s.next()
+            inner = self.column(s)
+            s.expect_op(")")
+            return inner
         if s.is_op("("):
             raise KqlUnsupported(f"function {name}()", "only a plain column is read here")
         if name in self.lets:
             raise KqlUnsupported("let value used as a column")
+        if name in self.exprs:
+            raise KqlUnsupported("extend value used outside an aggregate", name)
         return self.renames.get(name, name)
+
+    # -- arithmetic of an extend ---------------------------------------------------------------
+    def arithmetic(self, tokens: list[Token]) -> tuple[Expr, bool]:
+        """`a * 2 + b` as parts; division only where KQL cannot divide integers (a real operand)."""
+        s = _Stream(tokens)
+        parts, real = self._sum(s)
+        if not any(kind == "col" for kind, _ in parts):
+            raise KqlUnsupported("extend that computes a value", "it has no column")
+        if not s.at_end:
+            raise KqlUnsupported("extend that computes a value", "only + - * / on columns")
+        return parts, real
+
+    def _sum(self, s: _Stream) -> tuple[Expr, bool]:
+        parts, real = self._product(s)
+        while s.peek.kind == "op" and s.peek.text in ("+", "-"):
+            op = s.next().text
+            right, right_real = self._product(s)
+            parts, real = (*parts, ("op", op), *right), real or right_real
+        return parts, real
+
+    def _product(self, s: _Stream) -> tuple[Expr, bool]:
+        parts, real = self._factor(s)
+        while s.peek.kind == "op" and s.peek.text in ("*", "/", "%"):
+            op = s.next().text
+            right, right_real = self._factor(s)
+            if op == "%":
+                raise KqlUnsupported("modulo (%)", "NRQL arithmetic has no remainder")
+            if op == "/":
+                if not (real or right_real):
+                    raise KqlUnsupported(
+                        "integer division",
+                        "KQL divides two integers as integers; write 1.0 in the division",
+                    )
+                if not (len(right) == 1 and right[0][0] == "num"):
+                    raise KqlUnsupported(
+                        "division by a column", "a zero denominator reads differently in NRQL"
+                    )
+                if float(right[0][1]) == 0:
+                    raise KqlUnsupported("division by zero")
+            parts, real = (*parts, ("op", op), *right), real or right_real
+        return parts, real
+
+    def _factor(self, s: _Stream) -> tuple[Expr, bool]:
+        token = s.next()
+        if token.kind == "num":
+            return (("num", token.text),), "." in token.text
+        if token.kind == "op" and token.text == "-":
+            inner, real = self._factor(s)
+            return (("op", "-"), *inner), real
+        if token.kind == "op" and token.text == "(":
+            inner, real = self._sum(s)
+            s.expect_op(")")
+            return (("op", "("), *inner, ("op", ")")), real
+        if token.kind == "id" and not s.is_op("("):
+            if token.text in self.exprs:
+                held, real = self.exprs[token.text]
+                return (("op", "("), *held, ("op", ")")), real
+            if token.text in self.lets:
+                raise KqlUnsupported("let value used as a column")
+            return (("col", self.renames.get(token.text, token.text)),), False
+        raise KqlUnsupported("extend that computes a value", "only + - * / on columns")
 
     def scalar(self, s: _Stream) -> Scalar:
         token = s.next()
@@ -483,10 +562,21 @@ class _Parser:
                     name = s.peek.text
                     if name.startswith("series_"):
                         raise KqlUnsupported("series_* function", name)
+                    if name.lower() == "tostring":
+                        self.renames[alias] = self.column(s, text_ok=True)
+                        self.exprs.pop(alias, None)
+                        if not s.at_end:
+                            raise KqlUnsupported(f"{stage} that computes a value")
+                        continue
                     raise KqlUnsupported(f"function {name}()", f"in {stage}")
                 if s.peek.kind != "id" or s.ahead().kind != "eof":
+                    if stage == "extend" and s.peek.kind in ("id", "num", "op"):
+                        self.exprs[alias] = self.arithmetic(s.rest())
+                        self.renames.pop(alias, None)
+                        continue
                     raise KqlUnsupported(f"{stage} that computes a value")
                 self.renames[alias] = self.renames.get(s.peek.text, s.peek.text)
+                self.exprs.pop(alias, None)
             elif stage == "extend":
                 raise KqlUnsupported("extend that computes a value")
 
@@ -528,7 +618,11 @@ class _Parser:
             raise KqlUnsupported(f"aggregate {name}()" if s.is_op("(") else "summarize item")
         s.expect_op("(")
         column, arg, cond = "", None, None
-        if lowered == "count":
+        expr: Expr = ()
+        if lowered in EXPR_AGGREGATES and s.peek.kind == "id" and s.peek.text in self.exprs:
+            column = s.ident()
+            expr = self.exprs[column][0]
+        elif lowered == "count":
             pass
         elif lowered == "countif":
             cond = self.predicate(s)
@@ -549,7 +643,7 @@ class _Parser:
         if not s.at_end:
             raise KqlUnsupported("expression around an aggregate")
         fn = "any" if lowered == "take_any" else lowered
-        return Agg(alias or _default_alias(fn, column, arg), fn, column, arg, cond)
+        return Agg(alias or _default_alias(fn, column, arg), fn, column, arg, cond, expr)
 
     def _group(self, s: _Stream) -> GroupBy:
         alias = ""
@@ -566,7 +660,7 @@ class _Parser:
             if column != "TimeGenerated":
                 raise KqlUnsupported("bin()", "only bin(TimeGenerated, span) is read")
             return GroupBy(column, seconds)
-        column = self.column(s)
+        column = self.column(s, text_ok=True)
         if not s.at_end:
             raise KqlUnsupported("expression in summarize by", "group by a plain column")
         if alias:
@@ -659,6 +753,43 @@ def _default_alias(fn: str, column: str, arg: float | None) -> str:
     return f"{fn}_{column}"
 
 
+def _table_let(statement: list[Token]) -> tuple[str, list[Token]] | None:
+    """`let name = Table | stages` as (name, its tokens without the end), else None."""
+    if len(statement) < 4 or statement[2].text != "=":
+        return None
+    body = statement[3:-1]
+    if body[0].kind != "id" or body[0].text in LET_SCALARS:
+        return None
+    if len(body) > 1 and body[1].text != "|":
+        return None  # a function call such as toscalar(...) or a `Table(...)` is not a table
+    return statement[1].text, body
+
+
+def _use_count(name: str, statements: list[list[Token]]) -> int:
+    return sum(1 for st in statements for t in st if t.kind == "id" and t.text == name)
+
+
+def _inline_tables(statements: list[list[Token]]) -> list[list[Token]]:
+    """Replace each table `let` by its text where the next statement starts with its name.
+
+    Only when the name is used exactly once afterwards, as the first word of a statement: the
+    same rows are then read once, so the query means the same. A `let` used twice (or not at all)
+    is left alone and refused by `Parser.let` with its own reason.
+    """
+    out = list(statements)
+    i = 0
+    while i < len(out) - 1:
+        found = _table_let(out[i]) if out[i][0].text.lower() == "let" else None
+        later = out[i + 1 :]
+        if found and _use_count(found[0], later) == 1 and later[0][0].text == found[0]:
+            joined = [*found[1], *later[0][1:]]
+            out[i : i + 2] = [joined]
+            i = max(i - 1, 0)  # the new statement may itself start with an earlier let's name
+            continue
+        i += 1
+    return out
+
+
 def parse(text: str) -> Query:
     """The query in the subset, or KqlSyntax / KqlUnsupported saying what was not understood."""
     statements = _split(tokenize(text), ";")
@@ -666,6 +797,7 @@ def parse(text: str) -> Query:
         statements.pop()
     if not statements:
         raise KqlSyntax("the query is empty")
+    statements = _inline_tables(statements)
     parser = _Parser()
     for statement in statements[:-1]:
         if not statement[0].text.lower() == "let":

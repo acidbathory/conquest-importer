@@ -208,6 +208,8 @@ def lower(
 ) -> Lowered:
     info = classify(query.table)
     agg, folded = _choose(query, cond)
+    if agg.expr:
+        raise Fail(f"{R.M_KQL}: an alert over extend arithmetic is not converted")
     raw = cond.get("metricMeasureColumn")
     loose = {raw} if isinstance(raw, str) and not query.summarized else set()
     names = _Names(alert, query.table, loose)
