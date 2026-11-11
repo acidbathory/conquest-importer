@@ -183,6 +183,25 @@
    "promql": "count_over_time(ev[10m]) > 3",
    "args": {},
    "note": "added for the differential harness; no hand-computed NRQL (the harness runs the converter)"
+  },
+  {
+   "id": "DIFF-GAUGE-D03",
+   "rule": "DIFF-GAUGE",
+   "surface": "dashboard",
+   "promql": "avg(pg_stat_activity_count)",
+   "args": {
+    "timeseries": true,
+    "bucket_seconds": 60,
+    "hints": {
+     "types": {
+      "pg_stat_activity_count": "gauge"
+     }
+    }
+   },
+   "types": {
+    "pg_stat_activity_count": "gauge"
+   },
+   "note": "a real gauge whose name ends in _count (rig finding 2): the hint tells the converter it is a gauge, `types` tells the generator, and the NRQL model stores it by the name-suffix rule as New Relic does without a relabel"
   }
  ]
 }

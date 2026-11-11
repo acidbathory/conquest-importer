@@ -62,7 +62,7 @@ def _times(gap: bool, rng: random.Random, first: bool) -> list[int]:
 
 def _counter(rng: random.Random, times: list[int], scenario: str) -> list[tuple[int, float]]:
     base = rng.uniform(1.0, 20.0)
-    noise = 0.5 if scenario == "volatile" else 0.05
+    noise = 0.5 if scenario == "volatile" else 0.01
     out: list[tuple[int, float]] = []
     value = rng.uniform(100.0, 1000.0)
     last = 0

@@ -22,7 +22,6 @@ no converter state: it only prints a suggested level.
 import argparse
 import importlib.util
 import json
-import math
 import re
 import sys
 from functools import cache
@@ -45,11 +44,11 @@ HERE = Path(__file__).resolve().parent
 EXTRA_CASES = HERE / "promql_diff_cases.json"
 DOC = HERE.parent.parent / "docs" / "research" / "promql-differential-results.md"
 TOLERANCE = 0.05
-FLOOR = 0.1
+EPSILON = 1e-9
 SAME = 1e-9
 SEEDS = (1, 2, 3)
 TIMES = (6300, 6600, 6900)
-MISALIGN = 37
+MISALIGN = (37, 13, 53)
 SUGGEST = {
     "IDENTICAL": "HIGH",
     "EQUAL_WITHIN_TOLERANCE": "HIGH",
@@ -65,7 +64,16 @@ KNOWN_WRONG: dict[str, str] = {
         "`rate(sum(x), 1 second)`, but New Relic stores it as a gauge holding the running total, "
         "so the query returns the total divided by the bucket, not the rate. Same finding as "
         "finding 1 of telemetry-rig-results.md; the alert reader already refuses this shape "
-        "(DIFF-RATE-A05). The rule was not changed."
+        "(DIFF-RATE-A05). The real fix is on the data path, not the rule: relabel the metric to "
+        "a counter type (`newrelic_metric_type=counter` write relabel) so it arrives as a delta. "
+        "The rule was not changed."
+    ),
+    "DIFF-GAUGE-D03": (
+        "a Prometheus gauge whose name ends in _count (`pg_stat_activity_count`) is stored as a "
+        "delta count by the name-suffix rule, so `average()` of it is the average of differences. "
+        "Same as finding 2 of telemetry-rig-results.md. The real fix is on the data path, not the "
+        "rule: relabel the metric to a gauge type (`newrelic_metric_type=gauge` write relabel), "
+        "which the rig showed restores the gauge. The rule was not changed."
     ),
 }
 
@@ -86,32 +94,41 @@ def all_cases() -> list[dict[str, Any]]:
     return base + json.loads(EXTRA_CASES.read_text())["cases"]
 
 
-def classify(clean: float, edges: list[float]) -> str:
-    if clean > TOLERANCE:
+def classify(
+    clean: float, edges: list[float], clean_missing: bool = False, edge_missing: bool = False
+) -> str:
+    """The rung of the ladder for the worst divergence per scenario.
+
+    This is a statement about our two readings, not about Prometheus or New Relic: the series
+    generator, the PromQL reference and the NRQL model share one author and one set of assumptions,
+    and the model stores `_total/_count/_sum/_bucket` as deltas by the rig's name-suffix rule.
+    WRONG therefore cannot exceed what the rig already found, and IDENTICAL or
+    EQUAL_WITHIN_TOLERANCE only shows that summed deltas equal an extrapolated rate under that
+    rule. A missing group (one side has a group the other lacks) is not a wrong value: on clean
+    data it is WRONG, under an edge scenario it is DIFFERS_AT_EDGES. Rules that differ only at
+    edges are suggested MEDIUM at most.
+    """
+    if clean > TOLERANCE or clean_missing:
         return "WRONG"
     worst = max([clean, *edges])
-    if worst <= SAME:
-        return "IDENTICAL"
-    if worst <= TOLERANCE:
-        return "EQUAL_WITHIN_TOLERANCE"
-    return "DIFFERS_AT_EDGES"
+    if edge_missing or worst > TOLERANCE:
+        return "DIFFERS_AT_EDGES"
+    return "IDENTICAL" if worst <= SAME else "EQUAL_WITHIN_TOLERANCE"
 
 
-def divergence(prom: Vector, nrql: Vector) -> float:
-    """Worst relative difference over the groups; infinity when one side lacks a group.
+def divergence(prom: Vector, nrql: Vector) -> tuple[float, bool]:
+    """(worst relative difference over the groups both sides have, a group is missing on a side).
 
-    The scale of a group is its larger value, but never less than FLOOR of the largest value in
-    either vector, so a difference of two nearly equal rates is not judged on its tiny result.
+    Each group is judged on its own size; only a difference below EPSILON counts as none, so a
+    small group cannot hide behind a large one.
     """
-    top = max([abs(v) for v in (*prom.values(), *nrql.values())] or [0.0])
     worst = 0.0
-    for key in prom.keys() | nrql.keys():
-        if key not in prom or key not in nrql:
-            return math.inf
+    for key in prom.keys() & nrql.keys():
         a, b = prom[key], nrql[key]
-        scale = max(abs(a), abs(b), FLOOR * top)
-        worst = max(worst, abs(a - b) / scale if scale else 0.0)
-    return worst
+        gap = abs(a - b)
+        if gap > EPSILON:
+            worst = max(worst, gap / max(abs(a), abs(b)))
+    return worst, prom.keys() != nrql.keys()
 
 
 def project(vector: Vector, labels: list[str]) -> Vector | None:
@@ -131,7 +148,8 @@ def _literals(pattern: str) -> list[str]:
     return parts if all(p.replace("-", "").replace("_", "").isalnum() for p in parts) else []
 
 
-def _spec(prom: Node, query: Query) -> DataSpec:
+def _spec(prom: Node, query: Query, types: dict[str, str]) -> DataSpec:
+    """`types` is the real Prometheus type of a metric when its name says otherwise."""
     kinds: dict[str, str] = {}
     quantile = any(n.kind == "call" and n.name == "histogram_quantile" for n in walk(prom))
     for n in walk(prom):
@@ -144,6 +162,7 @@ def _spec(prom: Node, query: Query) -> DataSpec:
             kinds.setdefault(
                 name, "counter" if name.endswith(("_total", "_count", "_sum")) else "gauge"
             )
+    kinds.update({k: v for k, v in types.items() if k in kinds})
     values: dict[str, list[str]] = {}
     for n in walk(prom):
         for label, op, want in n.matchers:
@@ -176,22 +195,27 @@ def _window(converted: dict[str, Any], query: Query, prom: Node) -> int:
     return int(converted.get("window_seconds") or query.bucket or first_range(prom) or 300)
 
 
-def _scenario(prom: Node, query: Query, data_spec: DataSpec, window: int, name: str) -> float:
-    worst = 0.0
+def _scenario(
+    prom: Node, query: Query, data_spec: DataSpec, window: int, name: str
+) -> tuple[float, bool]:
+    """Worst value divergence and whether any group was missing, over seeds, times and shifts."""
+    worst, missing = 0.0, False
+    shifts = MISALIGN if name == "misaligned" else (0,)
     for seed in SEEDS:
         data = generate(data_spec, name, seed)
         for base in TIMES:
-            shift = MISALIGN if name == "misaligned" else 0
-            left = evaluate(prom, data, base + shift)
-            right = run_nrql(query, data, base, window)
-            merged = project(left, facet_names(query))
-            if merged is None:
-                return math.inf
-            left = merged
-            if not left and not right:
-                continue
-            worst = max(worst, divergence(left, right))
-    return worst
+            for shift in shifts:
+                left = evaluate(prom, data, base + shift)
+                right = run_nrql(query, data, base, window)
+                merged = project(left, facet_names(query))
+                if merged is None:
+                    missing = True
+                    continue
+                if not merged and not right:
+                    continue
+                value, gone = divergence(merged, right)
+                worst, missing = max(worst, value), missing or gone
+    return worst, missing
 
 
 def run_case(case: dict[str, Any], runner: Any) -> dict[str, Any]:
@@ -204,7 +228,7 @@ def run_case(case: dict[str, Any], runner: Any) -> dict[str, Any]:
         prom = parse_promql(_fill(case["promql"], case.get("args", {})))
         query = parse_nrql(nrql_text)
         side, mode = _alert_side(prom, query, case["surface"])
-        spec = _spec(side, query)
+        spec = _spec(side, query, case.get("types", {}))
         window = _window(converted, query, side)
         scenarios = {s: _scenario(side, query, spec, window, s) for s in SCENARIOS}
     except Unmodelled as stop:
@@ -215,16 +239,18 @@ def run_case(case: dict[str, Any], runner: Any) -> dict[str, Any]:
         for t in TIMES
     ):
         return {**base, "verdict": "NOT_MODELLED", "why": "both sides returned no data"}
-    clean = scenarios["clean"]
-    edges = [v for k, v in scenarios.items() if k != "clean"]
-    verdict = classify(clean, edges)
+    clean, clean_missing = scenarios["clean"]
+    others = [v for k, v in scenarios.items() if k != "clean"]
+    verdict = classify(clean, [v for v, _ in others], clean_missing, any(m for _, m in others))
     return {
         **base,
         "verdict": verdict,
         "why": "",
         "mode": mode,
         "window": window,
-        "scenarios": {k: _round(v) for k, v in scenarios.items()},
+        "scenarios": {
+            k: {"value": _round(v), "missing_group": m} for k, (v, m) in scenarios.items()
+        },
         "suggested": SUGGEST[verdict],
     }
 
@@ -236,7 +262,7 @@ def _fill(text: str, args: dict[str, Any]) -> str:
 
 
 def _round(value: float) -> float:
-    return value if math.isinf(value) else round(value, 6)
+    return round(value, 6)
 
 
 @cache
@@ -262,7 +288,12 @@ def render_markdown(results: dict[str, dict[str, Any]]) -> str:
         "",
         "Generated by `scripts/analysis/promql_diff_harness.py`; do not edit by hand (a test checks it).",
         "",
-        "This is evidence, not proof. Both sides are our own readings: a PromQL reference evaluator",
+        "This is evidence, not proof, and it is circular by construction. The series generator, the",
+        "PromQL reference and the NRQL model share one author and one set of assumptions. The NRQL",
+        "model's storage rule is the rig's name-suffix rule (`_total`, `_count`, `_sum`, `_bucket` are",
+        "stored as deltas), so a WRONG verdict cannot exceed what the rig already found, and",
+        "IDENTICAL or EQUAL_WITHIN_TOLERANCE only shows that summed deltas equal an extrapolated rate",
+        "under that rule. Both sides are our own readings: a PromQL reference evaluator",
         "(`src/importer/parity/diff_promql.py`) and a model of the NRQL semantics",
         "(`diff_nrql.py`, stored types from `telemetry-rig-results.md`), run on seeded synthetic series",
         "(`diff_series.py`). A verdict says the two readings agree or not; it does not replace the live",
@@ -270,7 +301,16 @@ def render_markdown(results: dict[str, dict[str, Any]]) -> str:
         "is advice to the person who decides.",
         "",
         f"Tolerance {TOLERANCE:.0%} relative. Scenarios: {', '.join(SCENARIOS)}. Seeds {list(SEEDS)},",
-        f"evaluation times {list(TIMES)} s. WRONG means the two disagree on clean data.",
+        f"evaluation times {list(TIMES)} s, misalignment shifts {list(MISALIGN)} s. WRONG means the",
+        "two disagree on clean data (a wrong value, or a group that only one side has). Each group is",
+        "judged on its own size (no floor; only differences below 1e-9 count as none), so a small group",
+        "cannot hide behind a large one. A difference of two nearly equal rates can therefore show a",
+        "larger divergence than its operands do. Clean counters carry 1 percent noise (volatile: 50).",
+        "",
+        "Cells give the worst relative value divergence over the groups both sides have; `+M` means a",
+        "group was missing on one side in some run (a missing group is not a wrong value).",
+        "MEDIUM is the cap for a rule that differs only under gaps, resets, volatile data or window",
+        "shifts; HIGH is suggested only when every scenario is within tolerance.",
         "",
         "## Counts",
         "",
@@ -304,12 +344,14 @@ def render_markdown(results: dict[str, dict[str, Any]]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _cell(value: float) -> str:
-    return "inf" if math.isinf(value) else f"{value:.4f}"
+def _cell(entry: dict[str, Any]) -> str:
+    """The value divergence, then `+M` when a group was missing on one side."""
+    return f"{entry['value']:.4f}" + (" +M" if entry["missing_group"] else "")
 
 
 EDGE_NOTES: dict[str, str] = {
     "DIFF-RATE-D03": "counter without _total is stored as a gauge (rig finding 1)",
+    "DIFF-GAUGE-D03": "gauge named *_count is stored as a delta (rig finding 2)",
     "CMP-FILTER-01": "flapping state: PromQL tests the latest sample, NRQL filters every sample",
     "CMP-FILTER-02": "flapping value: PromQL tests the latest sample, NRQL averages the samples above 0",
 }
@@ -323,7 +365,7 @@ FINDINGS: list[str] = [
     "   first window after it, where Prometheus counts only the increase between samples inside",
     "   the window (the rig saw the same catch-up step). A gauge that is silent for longer than the",
     "   alert window but less than five minutes stays visible to Prometheus (staleness lookback)",
-    "   and is absent in New Relic, so a group is missing (`inf`). For an alert the cost is a",
+    "   and is absent in New Relic, so a group is missing (`+M`). For an alert the cost is a",
     "   group that cannot fire during the silence.",
     "4. Volatile gauges: PromQL tests the latest sample, NRQL tests the window mean (or maximum).",
     "   On smooth data they agree; on spiky data they differ by design of the rule. Rules that use",

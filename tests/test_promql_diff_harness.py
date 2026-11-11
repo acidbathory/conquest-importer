@@ -3,9 +3,10 @@
 The harness supplies evidence only. Nothing here may change a converter confidence.
 """
 
+import ast
 import importlib.util
-import math
 import sys
+from functools import cache
 from itertools import pairwise
 from pathlib import Path
 from types import ModuleType
@@ -21,7 +22,12 @@ SCRIPT = ROOT / "scripts" / "analysis" / "promql_diff_harness.py"
 DOC = ROOT / "docs" / "research" / "promql-differential-results.md"
 
 
+@cache
 def load_harness() -> ModuleType:
+    return fresh_harness()
+
+
+def fresh_harness() -> ModuleType:
     spec = importlib.util.spec_from_file_location("promql_diff_harness", SCRIPT)
     assert spec is not None
     assert spec.loader is not None
@@ -218,25 +224,50 @@ def test_nrql_forms_the_model_does_not_read_are_reported(text: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("clean", "edges", "want"),
+    ("clean", "edges", "clean_missing", "edge_missing", "want"),
     [
-        (0.0, [0.0, 0.0], "IDENTICAL"),
-        (1e-12, [0.0], "IDENTICAL"),
-        (0.02, [0.0], "EQUAL_WITHIN_TOLERANCE"),
-        (0.0, [0.02, 0.04], "EQUAL_WITHIN_TOLERANCE"),
-        (0.0, [0.3], "DIFFERS_AT_EDGES"),
-        (0.0, [math.inf], "DIFFERS_AT_EDGES"),
-        (0.2, [0.0], "WRONG"),
-        (math.inf, [0.0], "WRONG"),
+        (0.0, [0.0, 0.0], False, False, "IDENTICAL"),
+        (1e-12, [0.0], False, False, "IDENTICAL"),
+        (0.02, [0.0], False, False, "EQUAL_WITHIN_TOLERANCE"),
+        (0.0, [0.02, 0.04], False, False, "EQUAL_WITHIN_TOLERANCE"),
+        (0.0, [0.3], False, False, "DIFFERS_AT_EDGES"),
+        (0.0, [0.0], False, True, "DIFFERS_AT_EDGES"),
+        (0.2, [0.0], False, False, "WRONG"),
+        (0.0, [0.0], True, False, "WRONG"),
     ],
 )
-def test_the_verdict_ladder(clean: float, edges: list[float], want: str) -> None:
-    assert load_harness().classify(clean, edges) == want
+def test_the_verdict_ladder(
+    clean: float, edges: list[float], clean_missing: bool, edge_missing: bool, want: str
+) -> None:
+    got = load_harness().classify(clean, edges, clean_missing, edge_missing)
+    assert got == want
+
+
+def test_a_small_group_that_is_far_off_is_not_hidden_by_a_large_one() -> None:
+    div = load_harness().divergence
+    big, small = (("g", "big"),), (("g", "small"),)
+    value, missing = div({big: 1000.0, small: 1.0}, {big: 1000.0, small: 2.0})
+    assert value >= 0.49
+    assert not missing
+
+
+def test_a_missing_group_is_reported_apart_from_a_wrong_value() -> None:
+    div = load_harness().divergence
+    key = (("g", "a"),)
+    assert div({key: 1.0}, {}) == (0.0, True)
+    assert div({key: 1.0}, {key: 1.5})[1] is False
+
+
+def test_a_difference_of_nearly_equal_rates_is_judged_against_a_tiny_epsilon_only() -> None:
+    div = load_harness().divergence
+    value, _ = div({(): 1e-12}, {(): 3e-12})
+    assert value == 0.0
 
 
 # ---------------------------------------------------------------- the cases
 
 
+@cache
 def results() -> dict[str, dict[str, object]]:
     got: dict[str, dict[str, object]] = load_harness().run_all()
     return got
@@ -259,7 +290,8 @@ def test_every_case_has_a_verdict_or_a_stated_reason_for_none() -> None:
 
 
 def test_the_run_is_reproducible() -> None:
-    assert results() == results()
+    again: dict[str, dict[str, object]] = fresh_harness().run_all.__wrapped__()
+    assert again == results()
 
 
 def test_the_harness_covers_the_listed_rule_families() -> None:
@@ -270,13 +302,53 @@ def test_the_harness_covers_the_listed_rule_families() -> None:
     assert {"ARITH", "OVER-TIME", "GAUGE-SUM", "WITHOUT", "CMP-FILTER"} <= modelled
 
 
-def test_the_output_never_claims_exactness_and_never_touches_confidence() -> None:
-    text = load_harness().render_markdown(results())
+def test_the_harness_modules_import_nothing_from_the_converter_confidence_model() -> None:
+    parity = ROOT / "src" / "importer" / "parity"
+    for path in (
+        SCRIPT,
+        parity / "diff_series.py",
+        parity / "diff_promql.py",
+        parity / "diff_nrql.py",
+    ):
+        for node in ast.walk(ast.parse(path.read_text())):
+            names: list[str] = []
+            if isinstance(node, ast.ImportFrom):
+                names = [node.module or "", *(a.name for a in node.names)]
+            elif isinstance(node, ast.Import):
+                names = [a.name for a in node.names]
+            assert not any(n.startswith("importer.core.ir") or n == "Confidence" for n in names), (
+                path
+            )
+
+
+def test_exact_is_never_a_verdict_and_the_document_states_its_limits() -> None:
+    got = results()
+    assert all(r["verdict"] != "EXACT" and "EXACT" not in str(r["verdict"]) for r in got.values())
+    text = load_harness().render_markdown(got)
     assert "exact" not in text.lower().replace("exactly", "")
-    assert "evidence" in text.lower()
-    assert "Confidence" not in SCRIPT.read_text().split("def render_markdown")[0].replace(
-        "converter confidence", ""
-    ).replace("monitor.confidence", "")
+    assert "one author" in text
+    assert "MEDIUM is the cap" in text
+    assert "storage rule" in text and "cannot exceed" in text
+
+
+def test_a_rule_judged_only_under_edge_scenarios_is_never_suggested_above_medium() -> None:
+    for res in results().values():
+        if res["verdict"] == "DIFFERS_AT_EDGES":
+            assert res["suggested"] == "MEDIUM"
+
+
+def test_a_gauge_named_like_a_count_is_reported_as_wrong() -> None:
+    res = results()["DIFF-GAUGE-D03"]
+    assert res["verdict"] == "WRONG"
+    assert "DIFF-GAUGE-D03" in load_harness().KNOWN_WRONG
+
+
+def test_the_xfail_reason_points_to_the_data_path() -> None:
+    assert "relabel" in load_harness().KNOWN_WRONG["DIFF-RATE-D03"]
+
+
+def test_misalignment_is_tried_with_more_than_one_shift() -> None:
+    assert len(load_harness().MISALIGN) >= 3
 
 
 def test_the_results_document_is_the_harness_output() -> None:
