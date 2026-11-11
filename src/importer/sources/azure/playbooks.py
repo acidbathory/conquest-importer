@@ -117,6 +117,61 @@ _reg(
     links=(L.CONDITION,),
 )
 _reg(
+    "Azure KQL join or union",
+    source="A KQL query that joins, looks up or unions two tables.",
+    newrelic="One condition per data set, or an IN list for a short fixed lookup.",
+    steps=(
+        "Work out what the join was for.",
+        "Write a short fixed lookup as `IN ('a', 'b')` in the WHERE.",
+        "Otherwise create one condition per table and compare them on a dashboard.",
+        CREATE,
+    ),
+    differs="The correlation between the two tables is not evaluated by New Relic.",
+    effort_minutes=45,
+    no_equivalent=True,
+    links=(L.NRQL, L.CONDITION),
+)
+_reg(
+    "Azure KQL parsing or expansion",
+    source="A KQL query that parses, extracts or expands a column inside the query.",
+    newrelic="A log parsing rule at ingest, then a condition on the parsed attribute.",
+    steps=(
+        "Add a New Relic log parsing rule so the captured value is an attribute.",
+        "Write the condition on that attribute, or use RLIKE for a plain pattern match.",
+        CREATE,
+    ),
+    differs="Records ingested before the parsing rule existed do not have the attribute.",
+    effort_minutes=45,
+    links=(L.NRQL, L.CONDITION),
+)
+_reg(
+    "Azure KQL time series or absence check",
+    source="A KQL query with series functions, or a last-seen check against ago().",
+    newrelic="A baseline condition, or loss of signal with the same duration.",
+    steps=(
+        "Series functions: create a baseline condition on the aggregate and tune it.",
+        "Absence check: create a condition with loss of signal set to the age in the query.",
+        CREATE,
+    ),
+    differs="Azure computes the anomaly or the last-seen time inside the query.",
+    effort_minutes=30,
+    links=(L.ANOMALY, L.CONDITION),
+)
+_reg(
+    "Azure KQL cross-resource query or function",
+    source="A KQL query over another workspace, or with a let function or materialize.",
+    newrelic="One condition per workspace, with the let body written in place.",
+    steps=(
+        "Send each workspace's logs to New Relic.",
+        "Write one condition per workspace with the let body in place.",
+        CREATE,
+    ),
+    differs="One Azure query becomes several New Relic conditions.",
+    effort_minutes=60,
+    no_equivalent=True,
+    links=(L.NRQL, L.CONDITION),
+)
+_reg(
     "Azure KQL query",
     source="A KQL query that the importer does not translate.",
     newrelic="An NRQL query over forwarded logs, written by hand.",
