@@ -130,9 +130,9 @@
     {
       "id": "gcp-threshold-scale-bugs",
       "source": "gcp",
-      "status": "verified",
+      "status": "not_proven",
       "date": "2026-11-11",
-      "claim": "4 GCP conditions compared a percent threshold with a metric that arrives as a 0..1 ratio (agent memory and disk percent_used), so they could never fire; the threshold is now divided by 100 and the sourced metric name is used",
+      "claim": "4 GCP conditions compared a percent threshold with a metric that arrives as a 0..1 ratio (agent memory and disk percent_used), so they could never fire; the threshold is now divided by 100 and the sourced metric name is used (found by comparing the sourced metric units; no alert was fired)",
       "method": "found by comparing the converted thresholds with the unit of the metric as the Ops Agent and OpenTelemetry send it (sourced table); fixed in code with tests; the corrected thresholds were not fired against live data",
       "evidence": "docs/research/gcp-metric-name-mapping.md"
     }
