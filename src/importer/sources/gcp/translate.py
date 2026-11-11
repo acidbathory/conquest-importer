@@ -213,6 +213,32 @@ def _whole_windows(duration: int, period: int) -> tuple[int, str]:
     )
 
 
+def period_of(agg: dict[str, object]) -> int:
+    """The alignment period in seconds; 0 when none is set, manual when it is not readable."""
+    raw = agg.get("alignmentPeriod")
+    period = seconds(raw)
+    if raw and not period:
+        raise Fail(Confidence.MANUAL, f"alignment period {str(raw)[:20]!r} is not supported")
+    return period
+
+
+def whole_minutes(period: int) -> tuple[int, str]:
+    """The alignment period as a whole number of minutes (at least one), and a note if it moved.
+
+    New Relic aggregates over whole-minute windows, and Google Cloud data arrives every five
+    minutes, so a finer period (30s, 45s) gives the same values in a 60s window.
+    """
+    if period >= 60 and not period % 60:
+        return period, ""
+    rounded = max(60, -(-period // 60) * 60)
+    if period <= 0:
+        return rounded, "no alignment period is set; New Relic aggregates over 60s windows"
+    return rounded, (
+        f"the alignment period of {period}s is rounded up to {rounded}s: New Relic aggregates "
+        "over whole minutes and Google Cloud data arrives every 5 minutes"
+    )
+
+
 def _check_limits(period: int, window: int) -> None:
     """Manual when New Relic would refuse the window at emit time."""
     if period > MAX_AGGREGATION_WINDOW_SECONDS:
@@ -301,8 +327,9 @@ def metric_series(
     """
     aggregation, counter = ALIGNERS[aligner]
     group_by, notes = _reducer(agg, aggregation, aligner)
-    if period < 60 or period % 60:
-        raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
+    period, period_note = whole_minutes(period)
+    if period_note:
+        notes.append(period_note)
     name = nr_metric_name(metric_type)
     if aligner.startswith("ALIGN_PERCENTILE_"):
         name += "." + "p" + aligner.rsplit("_", 1)[1]
@@ -339,7 +366,7 @@ def ratio_series(
         denominator = metric_scope({**body, "filter": body.get("denominatorFilter")})
         key = "denominatorAggregations" if body.get("denominatorAggregations") else "aggregations"
         agg, den_aligner = _first_aggregation(body, key)
-        den_period = seconds(agg.get("alignmentPeriod"))
+        den_period = period_of(agg)
         den, *_ = metric_series(denominator[0], denominator[1], agg, den_aligner, den_period)
     except Fail as fail:
         raise Fail(Confidence.MANUAL, f"ratio denominator: {fail.reason}") from fail
@@ -398,7 +425,7 @@ def _metric_condition(
         raise Fail(Confidence.MANUAL, "a trigger on several time series is not supported")
     metric_type, scope, scope_notes = metric_scope(body)
     agg, aligner = _first_aggregation(body)
-    period = seconds(agg.get("alignmentPeriod"))
+    period = period_of(agg)
     duration = seconds(body.get("duration"))
     signal, period, scale, notes = metric_series(metric_type, scope, agg, aligner, period)
     if body.get("denominatorFilter"):
@@ -432,15 +459,22 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
     reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
     if reducer not in (*REDUCERS, "REDUCE_NONE"):
         raise Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
-    period = seconds(agg.get("alignmentPeriod"))
-    if period < 60 or period % 60:
-        raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
+    period = period_of(agg)
+    if period:
+        period, period_note = whole_minutes(period)
+    else:
+        period, period_note = (
+            POLL_SECONDS,
+            "no alignment period is set; the polling interval is used",
+        )
     duration = seconds(body.get("duration"))
     if duration < 60:
         raise Fail(Confidence.MANUAL, f"duration {duration}s is not supported")
     name = nr_metric_name(metric_type)
     group_by, notes = _group_labels(agg)
     notes.append(ABSENCE_NOTE)
+    if period_note:
+        notes.append(period_note)
     if period < POLL_SECONDS:
         notes.append(
             f"the alignment period of {period}s is raised to {POLL_SECONDS}s, the polling interval"

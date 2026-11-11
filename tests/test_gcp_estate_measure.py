@@ -237,7 +237,7 @@ def test_subset_numbers_are_reproduced_by_the_commands_and_the_library(subset: P
     assert conditions["total"] == 9  # the AND policy has two conditions
     shapes = conditions["by_shape"]
     assert shapes["conditionThreshold: metric"]["converted"] >= 2
-    assert shapes["conditionThreshold: ratio"] == {"manual": 1}
+    assert shapes["conditionThreshold: ratio"] == {"converted": 1}
     assert shapes["conditionMonitoringQueryLanguage"] == {"manual": 1}
     assert shapes["conditionPrometheusQueryLanguage"] == {"manual": 1}
     assert shapes["conditionAbsent"] == {"converted": 1}

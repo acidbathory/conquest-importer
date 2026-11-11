@@ -494,3 +494,121 @@ def test_a_ratio_of_a_counter_and_a_gauge_stays_manual() -> None:
         denominatorAggregations=[{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_MEAN"}],
     )
     assert m.confidence is Confidence.MANUAL
+
+
+def ratio_widget(
+    numerator: dict[str, Any], denominator: dict[str, Any], scorecard: bool = False
+) -> IRWidget:
+    query = {"timeSeriesFilterRatio": {"numerator": numerator, "denominator": denominator}}
+    body: dict[str, Any] = (
+        {"scorecard": {"timeSeriesQuery": query}}
+        if scorecard
+        else {"xyChart": {"dataSets": [{"timeSeriesQuery": query}]}}
+    )
+    raw = {"displayName": "d", "gridLayout": {"widgets": [{"title": "w", **body}]}}
+    return translate_dashboard(GcpDashboard.model_validate(raw)).widgets[0]
+
+
+def test_a_ratio_widget_becomes_a_chart_of_two_filtered_sums() -> None:
+    agg = {"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_RATE"}
+    widget = ratio_widget(
+        {
+            "filter": f'metric.type="{LB}" metric.label.response_code_class="500"',
+            "aggregation": agg,
+        },
+        {"filter": f'metric.type="{LB}"', "aggregation": agg},
+    )
+    assert widget.confidence is Confidence.APPROXIMATE
+    series = widget.series[0]
+    assert series.signal.expression is not None
+    assert [t.scope for t in series.signal.terms.values()] == [
+        [TagFilter(key="metric.response_code_class", value="500")],
+        [],
+    ]
+
+
+def test_a_ratio_scorecard_without_aggregations_converts() -> None:
+    widget = ratio_widget(
+        {"filter": f'metric.type="{LB}"'}, {"filter": f'metric.type="{LB}"'}, True
+    )
+    assert widget.confidence is Confidence.APPROXIMATE
+
+
+def test_a_ratio_widget_with_an_unreadable_filter_stays_a_placeholder() -> None:
+    widget = ratio_widget({"filter": "x"}, {"filter": f'metric.type="{LB}"'})
+    assert widget.confidence is Confidence.MANUAL
+
+
+# ----- alignment periods -----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("given", "used"), [("30s", 60), ("45s", 60), ("90s", 120), ("61s", 120)])
+def test_a_period_that_is_not_whole_minutes_is_rounded_up_with_a_note(
+    given: str, used: int
+) -> None:
+    m = condition_with_aggregation({"alignmentPeriod": given, "perSeriesAligner": "ALIGN_MEAN"})
+    assert m.confidence is Confidence.APPROXIMATE
+    assert m.signal.aggregation_window_seconds == used
+    assert any(f"{given} is rounded up to {used}s" in r for r in m.reasons)
+
+
+def condition_with_aggregation(aggregation: dict[str, Any]) -> IRMonitor:
+    return condition_threshold(f'{METRIC} AND resource.type="gce_instance"', [aggregation])
+
+
+def condition_threshold(filter_text: str, aggregations: list[dict[str, Any]]) -> IRMonitor:
+    policy = GcpAlertPolicy.model_validate(
+        {
+            "displayName": "p",
+            "combiner": "OR",
+            "conditions": [
+                {
+                    "displayName": "c",
+                    "conditionThreshold": {
+                        "filter": filter_text,
+                        "aggregations": aggregations,
+                        "comparison": "COMPARISON_GT",
+                        "thresholdValue": 1,
+                        "duration": "300s",
+                    },
+                }
+            ],
+        }
+    )
+    (monitor,) = translate_policy(policy)
+    return monitor
+
+
+def test_a_period_over_the_new_relic_limit_is_still_manual() -> None:
+    m = condition_with_aggregation({"alignmentPeriod": "90000s", "perSeriesAligner": "ALIGN_MEAN"})
+    assert m.confidence is Confidence.MANUAL
+
+
+def test_an_absence_condition_with_no_aggregation_or_a_short_period_converts() -> None:
+    for aggregations in ([], [{"alignmentPeriod": "30s"}]):
+        policy = GcpAlertPolicy.model_validate(
+            {
+                "displayName": "p",
+                "combiner": "OR",
+                "conditions": [
+                    {
+                        "displayName": "c",
+                        "conditionAbsent": {
+                            "filter": f'{METRIC} AND resource.type="gce_instance"',
+                            "aggregations": aggregations,
+                            "duration": "600s",
+                        },
+                    }
+                ],
+            }
+        )
+        (m,) = translate_policy(policy)
+        assert m.confidence is Confidence.APPROXIMATE
+        assert m.signal.aggregation_window_seconds == 300
+        assert any("polling interval" in r for r in m.reasons)
+
+
+def test_a_widget_with_a_short_period_converts_with_the_polling_note() -> None:
+    widget = chart(METRIC, {"alignmentPeriod": "45s", "perSeriesAligner": "ALIGN_MEAN"})
+    assert widget.confidence is Confidence.APPROXIMATE
+    assert widget.series[0].period_seconds == 300

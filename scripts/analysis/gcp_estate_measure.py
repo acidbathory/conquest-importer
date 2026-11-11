@@ -96,7 +96,7 @@ REASON_CODES: list[tuple[str, str]] = [
     (r"^MQL (conditions|queries)", "mql"),
     (r"^PromQL (conditions|queries)", "promql"),
     (r"^SQL (conditions|queries)", "sql"),
-    (r"^ratio (conditions|queries)", "ratio"),
+    (r"^ratio (conditions|queries|denominator)", "ratio"),
     (r"^forecast conditions", "forecast"),
     (r"not one of the Google Cloud service metrics", "uncollected metric family"),
     (r"uptime check alert", "uptime-check alert"),

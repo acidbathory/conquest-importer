@@ -27,6 +27,7 @@ from importer.sources.gcp.translate import (
     check_aligner,
     metric_scope,
     metric_series,
+    ratio_series,
     seconds,
 )
 
@@ -47,9 +48,9 @@ READ_FAILED = "widget could not be read"
 QUERY_REASONS = {
     "timeSeriesQueryLanguage": "MQL queries in widgets are not converted",
     "prometheusQuery": "PromQL queries in widgets are not converted",
-    "timeSeriesFilterRatio": "ratio queries in widgets are not converted",
     "opsAnalyticsQuery": "SQL queries in widgets are not converted",
 }
+SECOND_STAGE = "second-stage aggregation is not supported"
 NO_QUERY = "widget has no query"
 UNKNOWN_QUERY = "widget query is not recognised"
 NO_CONTENT = "text widget has no content"
@@ -179,9 +180,45 @@ LAYOUTS = {
 }
 
 
+def _ratio_series(ratio: object, notes: set[str]) -> Series | str:
+    """A numerator/denominator query as one series: sum(numerator) / sum(denominator)."""
+    parts = ratio if isinstance(ratio, dict) else {}
+    num, den = parts.get("numerator"), parts.get("denominator")
+    if not isinstance(num, dict) or not isinstance(den, dict) or "secondaryAggregation" in parts:
+        return UNKNOWN_QUERY if "secondaryAggregation" not in parts else SECOND_STAGE
+    num_agg: dict[str, object] = {"alignmentPeriod": f"{POLL_SECONDS}s"}
+    if isinstance(num.get("aggregation"), dict):
+        num_agg = num["aggregation"]
+    den_agg = den["aggregation"] if isinstance(den.get("aggregation"), dict) else num_agg
+    body = {
+        "filter": num.get("filter"),
+        "aggregations": [num_agg],
+        "denominatorFilter": den.get("filter"),
+        "denominatorAggregations": [den_agg],
+    }
+    try:
+        metric_type, scope, scope_notes = metric_scope(body)
+        agg, aligner = check_aligner(num_agg)
+        period = seconds(agg.get("alignmentPeriod")) or POLL_SECONDS
+        if period > MAX_SECONDS:
+            raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
+        signal, period, _scale, signal_notes = metric_series(
+            metric_type, scope, agg, aligner, period, chart=True
+        )
+        signal, _scale, signal_notes = ratio_series(body, signal, aligner, period, signal_notes)
+    except Fail as fail:
+        return fail.reason
+    if period < POLL_SECONDS:
+        notes.add(POLL_NOTE)
+    notes.update(scope_notes, signal_notes)
+    return Series(signal=signal, period_seconds=max(period, POLL_SECONDS))
+
+
 def _series(query: object, notes: set[str]) -> Series | str:
     """One data set's time series filter as a Series, or the reason it cannot convert."""
     tsq = query if isinstance(query, dict) else {}
+    if "timeSeriesFilterRatio" in tsq:
+        return _ratio_series(tsq["timeSeriesFilterRatio"], notes)
     for key, reason in QUERY_REASONS.items():
         if key in tsq:
             return reason
@@ -191,7 +228,7 @@ def _series(query: object, notes: set[str]) -> Series | str:
     try:
         metric_type, scope, scope_notes = metric_scope(body)
         if body.get("secondaryAggregation"):
-            raise Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
+            raise Fail(Confidence.MANUAL, SECOND_STAGE)
         raw = body.get("aggregation")
         agg, aligner = check_aligner(raw if isinstance(raw, dict) else {})
         period = seconds(agg.get("alignmentPeriod")) or POLL_SECONDS

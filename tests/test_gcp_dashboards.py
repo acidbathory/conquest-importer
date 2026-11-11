@@ -112,7 +112,6 @@ def test_a_failed_widget_keeps_its_source_type_for_the_report() -> None:
     [
         ("Errors", "dashboard widget type is not supported"),
         ("MQL chart", "MQL"),
-        ("Error ratio", "ratio"),
         ("Open alerts", "dashboard widget type is not supported"),
         ("Uptime", "uptime check"),
         ("Custom metric", "not one of the google cloud service metrics"),
@@ -126,6 +125,11 @@ def test_everything_else_is_a_failed_widget_with_a_reason_and_steps(
     assert reason.lower() in " ".join(w.reasons).lower()
     assert steps_for(w.reasons), w.reasons
     assert all(classify(r) is not Category.OTHER for r in w.reasons), w.reasons
+
+
+def test_a_ratio_query_becomes_a_chart_of_two_sums() -> None:
+    w = widget("Ops overview", "Error ratio")
+    assert w.kind is WidgetKind.CHART and w.confidence is Confidence.APPROXIMATE
 
 
 def test_every_failed_widget_has_remediation_in_every_fixture() -> None:
@@ -179,7 +183,6 @@ def test_a_label_value_with_quotes_is_escaped_in_the_nrql() -> None:
 @pytest.mark.parametrize(
     ("aggregation", "reason"),
     [
-        ({"alignmentPeriod": "45s", "perSeriesAligner": "ALIGN_MEAN"}, "alignment period"),
         ({"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_NEXT_OLDER"}, "aligner"),
         (
             {
