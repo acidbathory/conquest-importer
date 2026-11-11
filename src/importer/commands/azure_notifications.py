@@ -8,7 +8,6 @@ report. Offline: no network, no key, no secret. The plan folder can be read by
 """
 
 import json
-from datetime import date
 from pathlib import Path
 from typing import Annotated
 
@@ -57,11 +56,7 @@ def _summary(c: Conversion) -> str:
 def _convert(source: Path, alerts: Path, out: Path, prefix: str, route_by: str) -> None:
     export = load_export(source)
     monitors = read_monitors(alerts)
-    result = convert(
-        Inputs(
-            export=export, monitors=monitors, prefix=prefix, route_by=route_by, today=date.today()
-        )
-    )
+    result = convert(Inputs(export=export, monitors=monitors, prefix=prefix, route_by=route_by))
     write_files(output_files(result), out)
     typer.echo(f"{_summary(result)} See {printable(str(out / 'report.md'), 200)}")
     for problem in result.problems:
