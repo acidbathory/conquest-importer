@@ -59,6 +59,7 @@ M_LOG_LEGACY = "legacy log alert rule shape"
 M_LOG_RANGE = "log alert evaluates a longer range than its window"
 M_LOG_NO_CRITERIA = "log alert has no readable condition"
 M_LOG_MEASURE = "log alert measures a column that cannot be converted"
+M_KQL_RESULT = "the where on the result column needs a rule that fires when any row passes"
 
 # -- manual: other families ----------------------------------------------------------------------
 M_ACTIVITY = (
@@ -167,6 +168,47 @@ N_LOG_FORWARD = (
 N_LOG_NULL = (
     "a count over an empty window is NULL in New Relic; the count is wrapped so an empty window "
     "gives 0"
+)
+N_LOG_AGENT = (
+    "the table {table} is filled by the Azure Monitor agent or the Application Insights SDK; "
+    "New Relic receives equivalent data only from its own agent or an OpenTelemetry collector, "
+    "so the event type (Log is a guess) and the attribute names are UNVERIFIED"
+)
+N_LOG_WORKSPACE = (
+    "the table {table} is generated inside the Log Analytics workspace; no route to New Relic "
+    "is documented, so the data path is unknown and the event and attribute names are UNVERIFIED"
+)
+N_KQL_BIN = (
+    "kql bin(TimeGenerated, {bin}s) aligns to the epoch in Azure; New Relic aggregation windows "
+    "align to the clock and slide with the event timer, so window edges differ"
+)
+N_KQL_NEGATED = (
+    "kql negated terms (!=, !in, !contains, not) also match records where the column is missing; "
+    "the New Relic != and NOT IN skip those records"
+)
+N_KQL_HAS = (
+    "kql has matches whole terms; the New Relic LIKE '%x%' matches any substring, so it can "
+    "match more records"
+)
+N_KQL_ESTIMATE = (
+    "kql dcount and percentile are estimates in Azure; uniqueCount and percentile in New Relic "
+    "are estimates too and the values can differ"
+)
+N_KQL_ANY = "kql any() returns an arbitrary value; latest() is used, which is one possible value"
+N_KQL_RESULT = (
+    "kql comparison on the result column became the threshold: Azure fires when any row passes "
+    "it, New Relic opens one violation for each facet value that breaches"
+)
+N_KQL_IGNORED = (
+    "kql {names} after the aggregation was ignored: it orders or limits the rows Azure compares "
+    "and the New Relic condition checks every value"
+)
+N_KQL_RANGE = (
+    "kql time filter ago({span}s) differs from the {window}s window; the rule window is used"
+)
+N_KQL_REGEX = (
+    "kql matches regex finds the pattern anywhere; it is written as .*(pattern).* because New "
+    "Relic RLIKE must match the whole value"
 )
 N_FAILING = (
     "{m} failing periods out of {n}: New Relic needs {m} consecutive windows, which is stricter "
