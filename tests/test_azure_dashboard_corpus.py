@@ -30,7 +30,7 @@ EXPECTED = {
     "workbook examples": (16, 26, 13, 13),
     "dashboard examples": (4, 9, 1, 8),
     "quickstart templates": (2, 10, 7, 3),
-    "public templates": (30, 458, 273, 185),
+    "public templates": (30, 458, 274, 184),
 }
 
 
