@@ -612,3 +612,25 @@ def test_a_widget_with_a_short_period_converts_with_the_polling_note() -> None:
     widget = chart(METRIC, {"alignmentPeriod": "45s", "perSeriesAligner": "ALIGN_MEAN"})
     assert widget.confidence is Confidence.APPROXIMATE
     assert widget.series[0].period_seconds == 300
+
+
+# ----- resource user labels ---------------------------------------------------------------------
+
+
+def test_user_labels_map_to_the_confirmed_gcp_labels_attribute() -> None:
+    assert label_name('metadata.user_labels."app"') == "gcp.labels.app"
+    (found,) = scope('metadata.user_labels.env = one_of("prod", "stage")')
+    assert found == TagFilter(key="gcp.labels.env", values=["prod", "stage"])
+    m = condition(f'{METRIC} AND metadata.user_labels.env = "prod"')
+    assert "WHERE gcp.labels.env = 'prod'" in nrql_for(m)
+
+
+def test_system_labels_stay_manual_because_the_new_relic_attribute_is_unconfirmed() -> None:
+    m = condition(f'{METRIC} AND metadata.system_labels.name = "vm-1"')
+    assert m.confidence is Confidence.MANUAL
+    assert "filter term on 'metadata.system_labels.name'" in m.reasons[0]
+
+
+def test_a_user_label_key_nrql_cannot_name_stays_manual() -> None:
+    m = condition(f'{METRIC} AND metadata.user_labels."cloud.google.com/gke-spot" = "true"')
+    assert m.confidence is Confidence.MANUAL and "valid New Relic attribute name" in m.reasons[0]

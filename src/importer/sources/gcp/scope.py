@@ -28,6 +28,7 @@ LABEL_PREFIXES = (
     ("resource.label.", "resource"),
     ("metric.labels.", "metric"),
     ("metric.label.", "metric"),
+    ("metadata.user_labels.", "user"),
 )
 ORDERINGS = {">", ">=", "<", "<="}
 LIKE_OPS = {"starts_with", "ends_with", "has_substring", ":"}
@@ -54,7 +55,10 @@ def label_name(field: str) -> str | None:
     """New Relic's attribute for a Cloud Monitoring label (confirmed on live data).
 
     Resource labels become `gcp.<label>` (`gcp.zone`, `gcp.instance_id`, `gcp.topic_id`); the
-    project is `gcp.projectId`; metric labels become `metric.<label>`. Quoted label names
+    project is `gcp.projectId`; metric labels become `metric.<label>`; user labels of the
+    resource (`metadata.user_labels.env`) become `gcp.labels.<key>` (confirmed in
+    docs/research/gcp-metric-names-verified.md). System labels (`metadata.system_labels.*`) have
+    no confirmed attribute and stay manual. Quoted label names
     (`resource.label."project_id"`) are the same label as the unquoted form. None when the field
     is not a resource or metric label.
     """
@@ -69,6 +73,8 @@ def label_attribute(field: str) -> str | None:
     for prefix, kind in LABEL_PREFIXES:
         if field.startswith(prefix):
             label = field[len(prefix) :]
+            if kind == "user":
+                return _valid_attribute(f"gcp.labels.{label}", field)
             if kind == "resource":
                 return _valid_attribute(PROJECT_LABELS.get(label, f"gcp.{label}"), field)
             return _valid_attribute(f"metric.{label}", field)
