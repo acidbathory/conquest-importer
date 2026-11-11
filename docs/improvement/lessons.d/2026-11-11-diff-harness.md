@@ -1,0 +1,10 @@
+# Lessons: offline PromQL/NRQL differential harness (2026-11-11)
+
+- A verdict ladder needs a definition of "clean" before it means anything. WRONG is "disagrees on smooth, complete data"; everything that needs resets, gaps, spiky gauges or a shifted window is DIFFERS_AT_EDGES. Without that split every gauge rule would have been WRONG, because PromQL tests the newest sample and NRQL a window mean.
+- Relative error misleads on a difference of two nearly equal rates (`a - b` with similar slopes). The first run flagged ARITH-BARE-02 WRONG at 8 percent from cancellation alone. The divergence now has a floor of 10 percent of the largest group, stated in the results document.
+- Compare the shape of the answer before the numbers. A bare selector keeps the matcher labels in PromQL while the NRQL facets on none; the keys are projected to the NRQL facets first, and a merge of two series counts as a missing group.
+- The one WRONG verdict (a dashboard counter without a `_total` style suffix) is the rig's finding 1 again, found here without a rig. The alert reader already refuses that shape; the dashboard reader does not. It is recorded with an xfail test and the rule was not touched.
+- Gaps expose a real difference: New Relic's delta for the first sample after a silence spans the silence, Prometheus counts only the increase between samples inside the window. A gauge silent for longer than the alert window but under five minutes is still visible to Prometheus and absent in New Relic.
+- Both sides are our own readings, so the document says "evidence" and carries its assumptions (delta storage, window bounds, linear `bucketPercentile`). It never edits a converter confidence; the suggested level is for a person.
+- Slip on test-first: the tests failed on import errors, not assertions, and one expected value in the reset test was my own arithmetic error (the first sample has no delta), caught only when the model was run.
+- A document that a test regenerates and compares byte for byte keeps the findings honest: edit the renderer, regenerate with `--markdown`, never the file.
