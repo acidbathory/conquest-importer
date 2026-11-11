@@ -174,9 +174,9 @@ def _rewrite_selectors(text: str, notes: list[str]) -> str:
     while i < len(text):
         ch = text[i]
         if ch in "\"'`":  # a string outside a selector is copied as it is
-            end = _string_end(text, i)
-            result += text[i : end + 1]
-            i = end + 1
+            stop = _string_end(text, i)
+            result += text[i : stop + 1]
+            i = stop + 1
         elif ch == "{":
             end = _closing_brace(text, i)
             if end is None:
