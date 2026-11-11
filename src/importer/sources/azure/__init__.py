@@ -1,6 +1,7 @@
 """Azure Monitor source: alert rules to New Relic."""
 
 from importer.sources.azure.models import AzureAlert, load_alerts
+from importer.sources.azure.translate import translate
 from importer.sources.base import Source, import_subpackages, register
 
 SOURCE: Source[AzureAlert] = Source(
@@ -9,7 +10,7 @@ SOURCE: Source[AzureAlert] = Source(
         "file or folder with the JSON `extract-azure` writes (one list page per resource type)"
     ),
     load=load_alerts,
-    translate=lambda alerts: [],
+    translate=translate,
 )
 register(SOURCE)
 

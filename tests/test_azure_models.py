@@ -95,7 +95,7 @@ def test_name_map_next_to_the_export_is_attached(tmp_path: Path) -> None:
 def test_a_bad_name_map_is_a_clear_error(tmp_path: Path) -> None:
     _write(tmp_path, "a.json", _rule("a"))
     _write(tmp_path, "name-map.json", {"metrics": {"A": "bad name; drop"}})
-    with pytest.raises(ValueError, match="name-map.json"):
+    with pytest.raises(ValueError, match=r"name-map\.json"):
         load_alerts(tmp_path)
 
 
