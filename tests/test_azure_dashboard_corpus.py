@@ -1,8 +1,9 @@
 """The official fixtures and 30 real public workbook templates: exact counts and no gaps.
 
 The numbers are what the converter does today, with the KQL subset translator connected through
-`dashboard_kql.py` (a KQL item converts when the query is an aggregate in the subset). They change only when the converter or the fixtures change; update them
-with the reason in the commit. Placeholders are never counted as converted.
+`dashboard_kql.py` (a KQL item converts when the query is an aggregate in the subset). They change
+only when the converter or the fixtures change; update them with the reason in the commit.
+Placeholders are never counted as converted.
 """
 
 from pathlib import Path
