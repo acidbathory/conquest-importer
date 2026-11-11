@@ -289,9 +289,27 @@ def _reducer(
 
 def _check_one_point_per_series(reducer: str, aligner: str, period: int) -> None:
     """A percentile or deviation across series equals one across polled points only when every
-    series has a single point in the window and the aligner leaves that point as it is."""
+    series has a single point in the window and the aligner leaves that point as it is.
+
+    ALIGN_RATE leaves it (a rate is the change in the poll over a constant); ALIGN_DELTA does too
+    on a counter, but also reads distribution metrics, whose per-series distributions Google
+    merges before taking the percentile, which New Relic (one percentile per series) cannot.
+    """
+    if aligner == "ALIGN_DELTA":
+        raise Fail(
+            Confidence.MANUAL,
+            f"{reducer} after ALIGN_DELTA: on a distribution metric (a latency or size) Google "
+            "merges the per-series distributions and then takes the percentile, and New Relic "
+            "keeps only a percentile per series, so the two differ; on a plain counter the "
+            "same function over the polled changes would do, so check the metric "
+            "kind in Cloud Monitoring and write that query by hand",
+        )
     counter = ALIGNERS.get(aligner, (Aggregation.AVG, False))[1]
-    if period > POLL_SECONDS or counter or aligner.startswith("ALIGN_PERCENTILE_"):
+    if (
+        period > POLL_SECONDS
+        or (counter and aligner != "ALIGN_RATE")
+        or aligner.startswith("ALIGN_PERCENTILE_")
+    ):
         raise Fail(
             Confidence.MANUAL,
             f"{reducer} after {aligner or 'no aligner'} over {period}s: each series has several "

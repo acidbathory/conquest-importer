@@ -253,3 +253,23 @@ def test_a_reducer_after_a_resampler_over_several_polls_stays_manual() -> None:
 
 def test_a_resampler_with_a_reducer_over_one_poll_uses_the_reducer() -> None:
     assert query(CPU, "ALIGN_NEXT_OLDER", "REDUCE_MAX", 300)[0].startswith("SELECT max(")
+
+
+# --- percentile across series ---------------------------------------------------------------
+
+
+def test_a_percentile_across_series_of_rates_over_one_poll() -> None:
+    # three disks changed by 300, 900 and 3000 bytes in the poll; rate x 300s is the change, so
+    # the median across series is the middle one, 900, and percentile(x, 50) over the three rows
+    # gives it; the threshold or chart reading is rescaled by the window like any rate
+    text, scale, _ = query(DISK, "ALIGN_RATE", "REDUCE_PERCENTILE_50", 300)
+    assert text == ("SELECT percentile(gcp.compute.instance.disk.read_bytes_count, 50) FROM Metric")
+    assert scale == 300.0
+
+
+def test_a_percentile_of_a_delta_stays_manual_because_it_may_be_a_distribution() -> None:
+    # ALIGN_DELTA also reads distribution (latency) metrics, where Google merges the per-series
+    # distributions before taking the percentile; New Relic keeps one percentile per series
+    with pytest.raises(Fail) as err:
+        query(DISK, "ALIGN_DELTA", "REDUCE_PERCENTILE_99", 300)
+    assert "distribution" in err.value.reason
