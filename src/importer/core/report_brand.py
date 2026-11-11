@@ -19,6 +19,7 @@ PAIRS: dict[str, tuple[str, str | None, str]] = {
     "grafana": ("Grafana", "grafana", "#f46800"),
     "azure": ("Azure Monitor", None, "#0078d4"),
     "datadog": ("Datadog", "datadog", "#632ca6"),
+    "azure": ("Azure Monitor", None, "#0078d4"),
 }
 TARGET = "New Relic"
 TARGET_COLOUR = "#1ce783"

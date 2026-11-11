@@ -231,6 +231,8 @@ class Created:
 
 @pytest.fixture
 def prompt_world(monkeypatch: pytest.MonkeyPatch) -> Created:
+    import webbrowser
+
     from importer import cli
 
     created = Created()
