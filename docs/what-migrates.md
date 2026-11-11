@@ -846,6 +846,29 @@ blocked on the project's network). Details and the measured share: [runbook-data
 | Change alert, cumulative window, time shift | None | Manual |
 | Service check, event, SLO, synthetics, RUM, trace analytics, CI, audit, database, network, cost, process | Depends on the New Relic product that replaces it | Manual |
 | Unknown monitor type, unreadable monitor | None | Unsupported |
-| Dashboards, downtimes, SLO objects, notification handles | Not read by this source yet | Planned (D4, D6, D7) |
+| Downtimes, SLO objects, notification handles | Not read by this source yet | Planned (D4, D6, D7) |
+| Dashboards | See the next section | Metric charts and notes convert |
+
+## Datadog dashboards
+
+`importer convert-dashboards --source datadog --in <folder of dashboard JSON> --out <folder>`. Offline;
+reads the body `GET /api/v1/dashboard/{id}` returns (or a list of them) and the same `name-map.json` as
+the monitors. Measured on the 30 public integration dashboards in the repository: 454 data widgets
+(notes excluded), 123 converted, 331 placeholders; 62 notes. Every converted chart is approximate and the
+data path is `datadog-same-names` (or `name-map`): data arrives only if the metric reaches New Relic under
+that name. The plan is in the feasibility note `docs/research/datadog-dashboard-feasibility.md` (branch `research/dd-dash-measure`).
+
+| Datadog | New Relic | Status |
+|---|---|---|
+| `timeseries` over one metric query | Line chart, `TIMESERIES AUTO`, `FACET` for `by {tag}`; `bars` and `area` become an area chart | Approximate; a `sum` adds every data point in a bucket (noted on the widget) |
+| `query_value` (aggregator `avg`, `sum`, `min`, `max`) | Billboard | Approximate; `last` and a grouped query are placeholders |
+| `toplist`, `query_table` over one grouped query | Bar chart, table over `FACET` | Approximate |
+| `note`, `free_text` | Markdown widget | Exact for plain text; approximate when it holds `$`, `{{` or `<` |
+| `group` | A page per top-level group (two or more groups), else a heading; nested groups are headings | Layout taken from Datadog's 12-column grid; overlaps are moved down |
+| Template variable with a tag prefix, as `{$host}` or `{host:$host}` | NRQL dashboard variable (`uniques`, multi-select, default all) and `host IN ({{host}})` | Approximate; only in a filter, not in `by {}`, OR, NOT, IN or a wildcard |
+| Template variable with no prefix (`$scope`) | Its default value is applied and the widget says so | Approximate; it cannot be switched in New Relic |
+| `top`, `rollup`, `as_rate`, `timeshift`, `fill`, any function, formulas, several queries | None yet | Placeholder with a reason and manual steps (step 3 of the plan) |
+| Logs, RUM, cost, network, process data; check status, list, flame graph, heatmap and other widget types | None yet | Placeholder |
+| Widget time range, conditional formats, markers, number formats | None | Noted on the widget as not carried over |
 
 Other platforms are planned; see the [roadmap](../README.md#roadmap).
