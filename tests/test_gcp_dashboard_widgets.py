@@ -224,3 +224,8 @@ def test_a_logs_panel_regex_with_a_placeholder_is_not_a_real_pattern() -> None:
     w = one({"title": "l", "logsPanel": {"filter": 'textPayload=~"${NAME}-[0-9]+"'}})
     assert "RLIKE" not in w.raw_series[0].nrql
     assert any("every log line" in r for r in w.reasons)
+
+
+def test_a_logs_panel_label_that_starts_with_a_dot_is_backtick_quoted() -> None:
+    w = one({"title": "l", "logsPanel": {"filter": 'labels.".serviceId"="appfabric"'}})
+    assert "WHERE `labels..serviceId` = 'appfabric'" in w.raw_series[0].nrql

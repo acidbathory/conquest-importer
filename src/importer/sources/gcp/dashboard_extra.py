@@ -16,7 +16,7 @@ from importer.core.dashboard_ir import (
     Visualization,
     WidgetKind,
 )
-from importer.core.emit.nrql import identifier, quote_string
+from importer.core.emit.nrql import field_identifier, identifier, quote_string
 from importer.core.ir import Confidence
 from importer.core.text import printable
 from importer.sources.gcp.filter import FilterError, parse_filter
@@ -125,7 +125,10 @@ def _log_where(filter_text: str) -> list[str] | None:
         terms = parse_filter(filter_text)
         where: list[str] = []
         for term in terms:
+            # a label key such as `.serviceId` leaves an empty segment, valid only in backticks
             name = identifier(term.field)
+            if ".." in name:
+                name = field_identifier(f"`{term.field}`")
             not_ = "NOT " if term.negate else ""
             if term.field == "severity" and term.op in (">=", ">", "<=", "<"):
                 if term.value.upper() not in SEVERITIES:
