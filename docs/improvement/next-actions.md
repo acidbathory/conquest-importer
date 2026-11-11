@@ -44,8 +44,29 @@ In progress elsewhere (do not dispatch a second copy): the parity verifier, bran
 | 11 | Report headline by widgets, not dashboards created | The report counts a dashboard as migrated when it can be created; by widgets the scoreboard shows 178 charts and 306 placeholders on the 19 dashboards | S | Changes pinned report output; hash files need the owner's approval | Owner decision | 2026-11-10 |
 | 12 | CloudWatch leftovers: composite alarms (2), metric math (1) | Baseline 27 of 32 converted (3 more are manual by design) | S | Low | none | 2026-11-09 (baseline.json) |
 
-Not now: Azure (paused by the owner), Datadog (network blocked), recording-rule runner (no customer
-needs it), 48-hour history seeding (after the parity verifier).
+Not now: recording-rule runner (no customer needs it).
+
+## Cycle 2026-11-11 (re-measured from fixtures, outputs in /tmp/overseer/out)
+
+Backlog rows 1 to 3 above were measured on 2026-11-10 before the PromQL engine merge (0782631);
+re-measure them with the census before dispatching. Azure and Datadog are no longer paused or
+blocked: both sources are on main. Fresh numbers, 2026-11-11: GCP 170 of 350 conditions emitted
+(127 manual), 828 data widgets converted and 320 placeholders on 109 dashboards; Azure metric
+alerts 11 of 22 (offline fixtures); Datadog 50 of 70 real monitors; Grafana fixtures 7 of 21
+alert rules. Exact is 0 everywhere. Remediation top 1 by source: GCP template placeholders (18),
+Azure unreadable rule fields (4), Datadog query functions (7).
+
+Next three dispatches, in order:
+
+| # | Item | Value | Effort | Risk | Depends on | Measured on |
+|---|---|---|---|---|---|---|
+| A | Hints step in the guided Grafana flow (run `grafana-prom-hints`, feed series keys to the converter) | Unlocks gauge `sum`/`count` panels (about 354 estate panels per earlier note, re-measure) | M | Low, read-only against the customer Prometheus | none | 2026-11-11 (to re-measure with census) |
+| B | Offline differential harness for PromQL rewrites (seeded data, verdict ladder) | Turns approximate into evidence; feeds `promql_rule_cases.json` | M | Low | none | 2026-11-11 |
+| C | GCP template placeholders (18 conditions) and unsupported filters (17) | Largest GCP blocker pair, 35 of 127 manual | M | Low | none | 2026-11-11 |
+
+Left out: conditional exactness (needs B first), Datadog D4 to D7 (large, wait for owner's view of
+the Datadog baseline), Azure workbook `{Param}` (71 placeholders, after C), Azure subscription link
+(owner decision).
 
 ## Waiting for the owner
 
