@@ -308,8 +308,62 @@ def test_a_label_called_metricname_is_manual_because_it_collides_with_the_name_a
     assert build([named("x", 'label_values(up{metricName="a"}, pod)')]).manual == 1
 
 
+ISTIO_REGEX = '/.*destination_workload="([^"]*)".*/'
+
+
+@pytest.mark.parametrize(
+    ("query", "nrql"),
+    [
+        (
+            "query_result(sum(istio_requests_total{reporter="
+            '"destination"}) by (destination_workload))',
+            "FROM Metric SELECT uniques(destination_workload) WHERE "
+            "metricName = 'istio_requests_total' AND reporter = 'destination'",
+        ),
+        (
+            "query_result(sum by (destination_workload) (istio_requests_total))",
+            "FROM Metric SELECT uniques(destination_workload) "
+            "WHERE metricName = 'istio_requests_total'",
+        ),
+        (
+            'query_result(max(up{job="a\'b"}) by ( destination_workload ))',
+            "FROM Metric SELECT uniques(destination_workload) "
+            "WHERE metricName = 'up' AND job = 'a\\'b'",
+        ),
+    ],
+)
+def test_query_result_of_a_grouped_selector_becomes_uniques(query: str, nrql: str) -> None:
+    out = build([named("w", query, regex=ISTIO_REGEX)])
+    assert out.manual == 0
+    assert nrql_of(out)["w"] == nrql
+
+
+def test_a_grouped_query_result_can_depend_on_a_parent_variable() -> None:
+    parent = named("ns", "label_values(istio_requests_total, namespace)")
+    child = named(
+        "w",
+        'query_result(sum(istio_requests_total{namespace="$ns"}) by (destination_workload))',
+        regex=ISTIO_REGEX,
+    )
+    out = build([child, parent])
+    assert (nrql_of(out)["w"] or "").endswith("AND namespace IN ({{ns}})")
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "query_result(sum(up))",
+        "query_result(sum(up) by (pod))",  # captures destination_workload, groups pod
+        "query_result(sum(rate(up[5m])) by (destination_workload))",
+        "query_result(sum(a) by (destination_workload) or sum(b) by (destination_workload))",
+        "query_result(topk(5, sum(a) by (destination_workload)))",
+    ],
+)
+def test_query_result_shapes_that_are_not_one_grouped_selector_stay_manual(query: str) -> None:
+    assert build([named("w", query, regex=ISTIO_REGEX)]).manual == 1
+
+
 def test_query_result_of_an_expression_or_without_a_capture_is_manual() -> None:
-    assert build([named("x", "query_result(sum(up))", regex='/job="([^"]+)/')]).manual == 1
     assert build([named("x", "query_result(up)")]).manual == 1
 
 

@@ -298,13 +298,17 @@ RULES: list[Rule] = [
         re.compile(
             r"^dashboard variable query "
             r"(?:is not label_values|is query_result|runs on a data source)"
+            r"|^dashboard variable query_result\(\) groups by one label"
         ),
         "Dashboard variable query",
         [
             "Only these Prometheus variable queries become a New Relic `nrql` variable "
             "(`FROM Metric SELECT uniques(label) ...`): `label_values(metric, label)`, "
             "`label_values(label)`, `metrics(regex)` and `query_result(selector)` with a regex "
-            "that captures one label value. Anything else (`query_result` of an expression, "
+            "that captures one label value, also when the selector is grouped by exactly that "
+            "label (`sum(m) by (l)`). Anything else (`query_result` of a function, an `or` or a "
+            "`topk`, "
+            "or a regex that captures a different label than the one grouped, "
             "`label_names`, Loki, CloudWatch, SQL) needs the list written by hand, as an `enum` "
             "variable or an NRQL query with `uniques()` or `keyset()`.",
         ],

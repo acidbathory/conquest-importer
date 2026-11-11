@@ -93,8 +93,12 @@ V_QUERY_SHAPE = (
     "so it has no uniques() form"
 )
 V_QUERY_RESULT = (
-    "dashboard variable query is query_result() of an expression, or has no regex that picks "
-    "one label value out of each series"
+    "dashboard variable query is query_result() of something other than a selector or one "
+    "grouped selector (a function, an or, a topk), or has no regex that picks one label value"
+)
+V_QUERY_RESULT_LABEL = (
+    "dashboard variable query_result() groups by one label but its regex captures a different "
+    "label, so the values are not the grouped ones"
 )
 V_QUERY_DS = "dashboard variable query runs on a data source other than prometheus"
 V_NESTED = "dashboard variable query depends on a variable that stays manual"
