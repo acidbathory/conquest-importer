@@ -7,9 +7,10 @@ answers. Nothing is created without the word `yes` typed after a message that na
 account and the counts.
 
 The HTML report opens in the default browser twice per source: before the question (the plan) and
-after a successful create (what was made). The path is always printed too. Opening is skipped
-without a terminal, with IMPORTER_NO_BROWSER=1 or `--no-open`; a failure to open never stops the
-flow, and only the report file inside the run's own folder is ever opened.
+after a successful create (what was made); right after that second report the remediation cookbook
+page (`cookbook.html`, only the blockers this run hit) opens too. The path is always printed.
+Opening is skipped without a terminal, with IMPORTER_NO_BROWSER=1 or `--no-open`; a failure to
+open never stops the flow, and only the report file inside the run's own folder is ever opened.
 """
 
 import os
@@ -22,6 +23,7 @@ from pathlib import Path
 
 from importer.core.apply import GuardError, check_guards, get_account_name
 from importer.core.console import Console, InputEnded, confirm_yes, ensure_secret, has_terminal
+from importer.core.cookbook_html import render_cookbook_html
 from importer.core.manifest import load_manifest
 from importer.core.menu_flow import (
     APPLY,
@@ -40,6 +42,7 @@ from importer.core.menu_flow import (
     triage_buckets,
 )
 from importer.core.migration_summary import load_summary
+from importer.core.remediation_plan import build_plan, read_items
 from importer.core.report_html import PROFILES, RunInfo, render_report
 from importer.core.run_rollback import (
     ClientFactory,
@@ -408,7 +411,26 @@ class Menu:
         ]
         return [(t, p.relative_to(lay.folder).as_posix()) for t, p in wanted if p.is_file()]
 
-    def _show_report(self, lay: Layout, phase: str, path: Path | None) -> None:
+    def _write_cookbook(self, spec: Spec, lay: Layout, record: RunRecord) -> Path | None:
+        """Write cookbook.html (only the blockers this run hit) into the run folder."""
+        if spec.source not in PROFILES:
+            return None
+        try:
+            plan = build_plan(read_items(lay.converted))
+            plan_file = lay.remediation / "remediation-plan.md"
+            href = plan_file.relative_to(lay.folder).as_posix() if plan_file.is_file() else ""
+            path = lay.folder / "cookbook.html"
+            path.write_text(
+                render_cookbook_html(plan, source=spec.source, plan_path=href, run_id=record.run_id)
+            )
+        except (OSError, ValueError) as exc:
+            self.c.say(f"The remediation cookbook could not be written: {exc}")
+            return None
+        return path
+
+    def _show_report(
+        self, lay: Layout, phase: str, path: Path | None, label: str = "HTML report"
+    ) -> None:
         """Print the report's file:// path; open it once per phase when a person is here."""
         if path is None:
             return
@@ -419,7 +441,7 @@ class Menu:
             uri = target.as_uri()
         except (OSError, ValueError):
             return
-        self.c.say(f"HTML report: {uri}")
+        self.c.say(f"{label}: {uri}")
         key = (lay.folder, phase)
         quiet = os.environ.get("IMPORTER_NO_BROWSER") == "1"
         if key in self._opened or quiet or not self.open_reports or not self.terminal():
@@ -523,8 +545,10 @@ class Menu:
         if not record.objects:
             self._nothing_new(lay, summary, record)
             return
-        self._done(lay, record)
+        cookbook_page = self._write_cookbook(spec, lay, record)
+        self._done(lay, record, cookbook_page)
         self._show_report(lay, "after", self._write_report(spec, lay, account, record, summary))
+        self._show_report(lay, "cookbook", cookbook_page, "Remediation cookbook")
 
     def _nothing_new(self, lay: Layout, summary: Summary, record: RunRecord) -> None:
         """The apply finished but every planned object was already there: not a success."""
@@ -615,13 +639,15 @@ class Menu:
         made = Counter(o.kind for o in record.objects)
         return ", ".join(f"{n} {kind}" for kind, n in sorted(made.items())) or "nothing"
 
-    def _done(self, lay: Layout, record: RunRecord) -> None:
+    def _done(self, lay: Layout, record: RunRecord, cookbook_page: Path | None = None) -> None:
         self.c.say(f"\nDone. Run {record.run_id}: created {self._made(record)} in account "
                    f"{record.account_id}.")  # fmt: skip
         self.c.say(f"Reports are in {lay.converted}")
         plan = lay.remediation / "remediation-plan.md"
         if plan.is_file():
             self.c.say(f"Remediation plan: {plan}")
+        if cookbook_page is not None:
+            self.c.say(f"Remediation cookbook (only what this run hit): {cookbook_page}")
         self.c.say("To undo all of it: pick 5 Roll back a run.")
         self.c.say(
             "Next: turn on the alert conditions one by one in New Relic, and make sure your "
