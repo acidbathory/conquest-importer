@@ -6,6 +6,7 @@ import pytest
 
 from importer.core.dashboard_ir import IRWidget
 from importer.core.emit.common import nrql_for
+from importer.core.emit.nrql import widget_nrql
 from importer.core.ir import Confidence, IRMonitor, TagFilter
 from importer.sources.gcp.dashboard_models import GcpDashboard
 from importer.sources.gcp.dashboards import translate_dashboard
@@ -534,11 +535,45 @@ def test_a_ratio_widget_becomes_a_chart_of_two_filtered_sums() -> None:
     ]
 
 
-def test_a_ratio_scorecard_without_aggregations_converts() -> None:
+def test_a_ratio_widget_of_one_metric_without_aggregations_is_manual_not_a_ratio_of_means() -> None:
+    # average(5xx rows) / average(all rows) is not the share of 5xx: each average divides by a
+    # different number of rows, so the result is inflated. Only a sum is a share.
     widget = ratio_widget(
-        {"filter": f'metric.type="{LB}"'}, {"filter": f'metric.type="{LB}"'}, True
+        {"filter": f'metric.type="{LB}" metric.label.response_code_class="5xx"'},
+        {"filter": f'metric.type="{LB}"'},
+        True,
+    )
+    assert widget.confidence is Confidence.MANUAL
+    assert "share" in " ".join(widget.reasons) and "sum" in " ".join(widget.reasons)
+
+
+def test_a_ratio_widget_with_a_rate_aligner_is_a_ratio_of_sums() -> None:
+    agg = {"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_RATE"}
+    widget = ratio_widget(
+        {
+            "filter": f'metric.type="{LB}" metric.label.response_code_class="5xx"',
+            "aggregation": agg,
+        },
+        {"filter": f'metric.type="{LB}"', "aggregation": agg},
     )
     assert widget.confidence is Confidence.APPROXIMATE
+    nrql = widget_nrql(widget.series[0], True)
+    # 2 of 10 requests fail: sum 2 / sum 10 = 0.2; a ratio of means over 1 and 10 rows differs
+    assert nrql.startswith(
+        "SELECT filter(sum(gcp.loadbalancing.https.request_count), "
+        "WHERE metric.response_code_class = '5xx') / sum(gcp.loadbalancing.https.request_count)"
+    )
+
+
+def test_a_ratio_condition_of_one_metric_with_a_mean_aligner_is_manual() -> None:
+    mean = [{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_MEAN"}]
+    m = ratio(
+        f'metric.type="{LB}" AND metric.label.response_code_class=500',
+        f'metric.type="{LB}"',
+        aggregations=mean,
+        denominatorAggregations=mean,
+    )
+    assert m.confidence is Confidence.MANUAL and "share" in m.reasons[0]
 
 
 def test_a_ratio_widget_with_an_unreadable_filter_stays_a_placeholder() -> None:

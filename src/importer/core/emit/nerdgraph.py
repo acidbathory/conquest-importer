@@ -14,6 +14,7 @@ from importer.core.emit.common import (
     emittable_window,
     expiration_actions,
     fill_settings,
+    has_expiration,
     nrql_for,
     source_description,
     streaming_method,
@@ -107,7 +108,7 @@ def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
         for term in condition["terms"]:
             term["operator"] = "ABOVE"
     condition.update(_text_settings(monitor))
-    if monitor.no_data.notify and monitor.no_data.timeout_minutes:
+    if has_expiration(monitor) and monitor.no_data.timeout_minutes:
         condition["expiration"] = {
             "expirationDuration": monitor.no_data.timeout_minutes * 60,
             "openViolationOnExpiration": expiration_actions(monitor)[0],

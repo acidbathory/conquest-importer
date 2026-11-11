@@ -15,6 +15,7 @@ from importer.core.emit.common import (
     emittable_window,
     expiration_actions,
     fill_settings,
+    has_expiration,
     nrql_for,
     source_description,
     streaming_method,
@@ -117,7 +118,7 @@ def resource_block(monitor: IRMonitor) -> str:
             *_prediction_lines(monitor),
             "  }",
         ]
-    if monitor.no_data.notify and monitor.no_data.timeout_minutes:
+    if has_expiration(monitor) and monitor.no_data.timeout_minutes:
         lines += [
             "",
             f"  expiration_duration            = {monitor.no_data.timeout_minutes * 60}",

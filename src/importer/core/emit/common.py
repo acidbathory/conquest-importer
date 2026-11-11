@@ -162,9 +162,16 @@ def check_expiration_seconds(seconds: int) -> None:
         raise CannotEmit(f"loss-of-signal timeout {seconds}s is outside 30s-48h")
 
 
+def has_expiration(monitor: IRMonitor) -> bool:
+    """True when the condition carries a loss-of-signal timeout: one that opens a violation
+    (`no_data.notify`) or one that only closes open violations (`emit.close_violations_...`)."""
+    closes = monitor.emit is not None and bool(monitor.emit.close_violations_on_expiration)
+    return bool(monitor.no_data.timeout_minutes) and (monitor.no_data.notify or closes)
+
+
 def _check_expiration(monitor: IRMonitor) -> None:
     minutes = monitor.no_data.timeout_minutes
-    if monitor.no_data.notify and minutes:
+    if has_expiration(monitor) and minutes:
         check_expiration_seconds(minutes * 60)
 
 
@@ -251,9 +258,7 @@ def check_limits(monitor: IRMonitor) -> None:
     _check_text(options)
     if options.predict_by_seconds is not None and options.predict_by_seconds <= 0:
         raise CannotEmit("the prediction horizon must be positive")
-    if options.ignore_on_expected_termination and not (
-        monitor.no_data.notify and monitor.no_data.timeout_minutes
-    ):
+    if options.ignore_on_expected_termination and not has_expiration(monitor):
         raise CannotEmit("ignore on expected termination needs a loss-of-signal timeout")
 
 

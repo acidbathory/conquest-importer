@@ -243,7 +243,7 @@ def missing_data(value: str, duration: int) -> tuple[NoData, dict[str, Any], str
         )
     if value.endswith("_INACTIVE"):
         return (
-            NoData(notify=True, timeout_minutes=minutes),
+            NoData(notify=False, timeout_minutes=minutes),  # opens nothing; it only closes
             {"open_violation_on_expiration": False, "close_violations_on_expiration": True},
             "EVALUATION_MISSING_DATA_INACTIVE becomes loss of signal that closes open "
             "violations after the duration; it opens none. Google treats missing data as not "

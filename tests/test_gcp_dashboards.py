@@ -117,6 +117,7 @@ def test_a_custom_metric_widget_converts_and_names_its_data_path() -> None:
     ("title", "reason"),
     [
         ("MQL chart", "MQL"),
+        ("Error ratio", "share of the total"),  # no aggregation given: a ratio of means is wrong
         ("Open alerts", "alert chart"),
         ("Uptime", "uptime check"),
     ],
@@ -129,11 +130,6 @@ def test_everything_else_is_a_failed_widget_with_a_reason_and_steps(
     assert reason.lower() in " ".join(w.reasons).lower()
     assert steps_for(w.reasons), w.reasons
     assert all(classify(r) is not Category.OTHER for r in w.reasons), w.reasons
-
-
-def test_a_ratio_query_becomes_a_chart_of_two_sums() -> None:
-    w = widget("Ops overview", "Error ratio")
-    assert w.kind is WidgetKind.CHART and w.confidence is Confidence.APPROXIMATE
 
 
 def test_every_failed_widget_has_remediation_in_every_fixture() -> None:

@@ -186,6 +186,9 @@ def test_missing_data_active_opens_on_loss_of_signal() -> None:
 
 def test_missing_data_inactive_closes_on_loss_of_signal() -> None:
     m = one(threshold(evaluationMissingData="EVALUATION_MISSING_DATA_INACTIVE"))
+    # the saved IR must not say "notify": nothing is opened on missing data, open violations close
+    assert not m.no_data.notify and m.no_data.timeout_minutes == 10
+    assert m.emit is not None and m.emit.open_violation_on_expiration is False
     cond = nerdgraph_payload(m)["variables"]["condition"]
     assert cond["expiration"] == {
         "expirationDuration": 600,

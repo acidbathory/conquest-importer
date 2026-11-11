@@ -531,6 +531,14 @@ def ratio_series(
             "ratio conditions are not supported when the numerator and denominator differ in "
             "aligner, alignment period or group-by (one New Relic query aggregates both alike)",
         )
+    if numerator.aggregation != Aggregation.SUM and num_term.metric == den_term.metric:
+        raise Fail(
+            Confidence.MANUAL,
+            f"a ratio of one metric to itself is a share of the total, which only a sum gives: "
+            f"{numerator.aggregation.value}(part) / {numerator.aggregation.value}(total) divides "
+            "by a different number of series on each side and overstates the share; use an "
+            "aligner that sums (ALIGN_RATE or ALIGN_DELTA for a counter)",
+        )
     shared = [f for f in numerator.scope if f in den.scope]
     num_term = num_term.model_copy(
         update={"scope": [f for f in numerator.scope if f not in shared]}
@@ -551,8 +559,9 @@ def ratio_series(
             "the threshold is not rescaled"
         )
     kept.append(
-        "the ratio is one query, sum(numerator) / sum(denominator); a window in which the "
-        "denominator is zero gives no value instead of failing"
+        f"the ratio is one query, {numerator.aggregation.value}(numerator) / "
+        f"{numerator.aggregation.value}(denominator); a window in which the denominator is zero "
+        "gives no value instead of failing"
     )
     return signal, 1.0, kept
 
