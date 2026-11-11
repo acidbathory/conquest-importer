@@ -531,3 +531,25 @@ def test_a_condition_that_is_not_a_tab_stays_a_placeholder() -> None:
         },
     )
     assert [w.kind for w in d.widgets] == [WidgetKind.UNSUPPORTED] * 2
+
+
+def time_param(name: str = "TimeRange") -> dict[str, Any]:
+    return {"name": name, "type": 4, "value": {"durationMs": 3600000}}
+
+
+def test_a_workbook_time_range_parameter_in_a_query_follows_the_time_picker() -> None:
+    q = (
+        "AzureDiagnostics | where ResourceType == 'VAULTS' | where TimeGenerated {TimeRange} "
+        "| summarize count() by Op, bin(TimeGenerated, {TimeRange:grain})"
+    )
+    w = only(wb(params(time_param()), query(q)))
+    assert w.kind is not WidgetKind.UNSUPPORTED
+    assert "TIMESERIES AUTO" in nrql(w) and "{" not in nrql(w)
+
+
+def test_a_dropdown_parameter_in_a_query_is_not_guessed() -> None:
+    q = "AzureDiagnostics | where ResourceType == '{Pick}' | summarize count()"
+    pick = {"name": "Pick", "type": 2, "jsonData": '[{"value":"a","label":"A"}]'}
+    w = only(wb(params(time_param(), pick), query(q)))
+    assert w.kind is WidgetKind.UNSUPPORTED and "{Pick}" in w.reasons[0]
+    assert steps_for(w.reasons)

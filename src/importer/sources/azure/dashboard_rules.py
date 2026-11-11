@@ -76,6 +76,26 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(
+            r"^workbook query is KQL that cannot be converted: the query uses workbook param"
+        ),
+        "Azure parameterised workbook query",
+        [
+            "The query has a workbook parameter written in braces. A time-range filter "
+            "(`where TimeGenerated {TimeRange}`) and a grain (`bin(TimeGenerated, "
+            "{TimeRange:grain})`) are converted; the dashboard time picker sets the range. "
+            "Any other use is not guessed.",
+            "Subscription, resource group and resource parameters: New Relic has no such scope. "
+            "Filter on the attribute that carries the resource (for example `azure.resourceId` "
+            "or `azure.subscriptionId`) with a dashboard variable over `uniques()` of it, and use "
+            "`IN ({{name}})`.",
+            "Dropdown and text parameters: create a New Relic dashboard variable with the same "
+            "values and write `{{name}}` in the NRQL by hand after the KQL is rewritten (the "
+            "query also needs the other changes named in the report). `{P:start}` and "
+            "`{P:end}` become `SINCE` and `UNTIL`.",
+        ],
+    ),
+    (
         re.compile(r"^workbook query is KQL"),
         "Azure workbook KQL query",
         [

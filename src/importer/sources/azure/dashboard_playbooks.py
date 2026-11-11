@@ -57,6 +57,14 @@ BOOKS: dict[str, tuple[str, str, str, int]] = {
         "KQL and NRQL differ in joins, let statements and functions; logs must be forwarded.",
         45,
     ),
+    "Azure parameterised workbook query": (
+        "A Kusto query that uses a workbook parameter written in braces.",
+        "An NRQL chart; the time range follows the dashboard time picker and other parameters "
+        "become dashboard variables.",
+        "Parameter values are not guessed; scope parameters (subscription, resource) have no "
+        "New Relic counterpart.",
+        45,
+    ),
     "Azure workbook item type not supported": (
         "A workbook item type with no widget in New Relic.",
         "An NRQL chart that shows the same idea.",

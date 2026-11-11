@@ -73,3 +73,49 @@ def test_untrusted_text_is_escaped_in_the_nrql() -> None:
 
 def test_the_module_is_the_one_swap_point() -> None:
     assert dashboard_kql.translate_kql is translate_kql
+
+
+TIME = ("TimeRange",)
+LOGS = "AzureDiagnostics | where ResourceType == 'VAULTS' "
+
+
+@pytest.mark.parametrize("stage", ["{TimeRange}", "{TimeRange:value}"])
+@pytest.mark.parametrize("column", ["TimeGenerated", "timestamp"])
+def test_a_time_range_filter_is_dropped_for_the_dashboard_time_picker(
+    stage: str, column: str
+) -> None:
+    found = translate_kql(f"{LOGS}| where {column} {stage} | summarize n=count() by Op", (), TIME)
+    assert isinstance(found, KqlNrql), found
+    assert "SINCE" not in found.nrql and "{" not in found.nrql
+    assert found.nrql.endswith("FACET Op")
+
+
+def test_a_time_range_grain_is_timeseries_auto() -> None:
+    q = (
+        f"{LOGS}| where TimeGenerated {{TimeRange}} "
+        "| summarize count() by bin(TimeGenerated, {TimeRange:grain})"
+    )
+    found = translate_kql(q, (), TIME)
+    assert isinstance(found, KqlNrql), found
+    assert found.nrql.endswith("TIMESERIES AUTO") and found.timeseries
+
+
+@pytest.mark.parametrize(
+    ("query", "named"),
+    [
+        (
+            f"{LOGS}| where TimeGenerated > {{TimeRange:start}} | summarize count()",
+            "TimeRange:start",
+        ),
+        (f"{LOGS}| where Op == '{{Pick}}' | summarize count()", "Pick"),
+        (f"let t = {{TimeRange:end}}; {LOGS}| summarize count()", "TimeRange:end"),
+    ],
+)
+def test_any_other_use_of_a_parameter_stays_a_placeholder_naming_it(query: str, named: str) -> None:
+    found = translate_kql(query, (), TIME)
+    assert isinstance(found, str) and "{" + named + "}" in found
+
+
+def test_a_name_that_is_not_a_time_range_parameter_is_not_dropped() -> None:
+    found = translate_kql(f"{LOGS}| where TimeGenerated {{Other}} | summarize count()", (), TIME)
+    assert isinstance(found, str) and "{Other}" in found
