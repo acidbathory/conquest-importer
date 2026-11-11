@@ -120,6 +120,17 @@ def test_an_opener_that_fails_does_not_stop_the_flow(tmp_path: Path) -> None:
     assert len(store.list()) == 1
 
 
+def test_an_opener_that_returns_false_is_reported_not_silent(tmp_path: Path) -> None:
+    """webbrowser.open often fails by returning False (seen on macOS); that must be reported."""
+    runner = HybridRunner()
+    menu, console, _, _ = _menu(tmp_path, ["3", "yes", "0"], runner)
+    menu.terminal = lambda: True
+    menu.opener = lambda _url: False
+    assert menu.run() == 0
+    assert console.text.count("could not be opened") >= 2  # the plan page and the created page
+    assert "Done." in console.text
+
+
 def test_each_phase_opens_once_even_if_shown_again(tmp_path: Path) -> None:
     events, _, menu = _run(tmp_path, ["3", "yes", "0"])
     lay_folder = next(Path(tmp_path).rglob("report.html")).parent

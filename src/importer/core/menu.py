@@ -14,12 +14,15 @@ open never stops the flow, and only the report file inside the run's own folder 
 """
 
 import os
+import subprocess
+import sys
 import webbrowser
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 from importer.core.apply import GuardError, check_guards, get_account_name
 from importer.core.console import Console, InputEnded, confirm_yes, ensure_secret, has_terminal
@@ -142,6 +145,24 @@ def preview_args(command: str, folder: Path, account: int) -> list[str]:
 BAD_CHOICE = "Please type a number from the list."
 
 
+def open_in_browser(uri: str) -> bool:
+    """Open a local report file; True only if the system accepted it.
+
+    On macOS the system `open` command is used: Python's webbrowser goes through AppleScript there
+    and often fails by returning False. Only a `file://` path in the run's own folder reaches here.
+    """
+    if sys.platform == "darwin" and uri.startswith("file://"):
+        path = unquote(urlparse(uri).path)
+        try:
+            done = subprocess.run(  # noqa: S603 - fixed program, a path the tool itself wrote
+                ["/usr/bin/open", path], check=False, capture_output=True, timeout=20
+            )
+        except (OSError, subprocess.SubprocessError):
+            return False
+        return done.returncode == 0
+    return bool(webbrowser.open(uri))
+
+
 class Menu:
     def __init__(
         self,
@@ -164,7 +185,7 @@ class Menu:
         self.sample_dir = sample_dir
         self.client_factory = client_factory or real_client
         self.real_migration = real_migration
-        self.opener = opener or webbrowser.open
+        self.opener = opener or open_in_browser
         self.open_reports = open_reports
         self.terminal = terminal
         self._opened: set[tuple[Path, str]] = set()
@@ -448,8 +469,10 @@ class Menu:
             return
         self._opened.add(key)
         try:
-            self.opener(uri)
+            opened = self.opener(uri)
         except Exception:  # a missing browser must never stop the migration
+            opened = False
+        if opened is False:  # webbrowser.open reports failure by returning False
             self.c.say("The browser could not be opened; open the file above yourself.")
 
     def _account_name(self, account: int) -> str | None:
