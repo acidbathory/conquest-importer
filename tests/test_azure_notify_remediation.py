@@ -84,3 +84,10 @@ def test_manual_reasons_are_manual_followup_or_unsupported() -> None:
     manual = (Category.MANUAL_FOLLOWUP, Category.UNSUPPORTED_FEATURE)
     for reason in (R.R_SMS, R.R_VOICE, R.R_EVENT_HUB, R.R_ARM_ROLE, R.R_APP_PUSH, R.R_RULE_ADD):
         assert classify(reason) in manual
+
+
+def test_every_rule_title_has_a_playbook() -> None:
+    from importer.core.playbook import all_playbooks
+
+    books = all_playbooks()
+    assert [t for t in TITLES if t not in books] == []
