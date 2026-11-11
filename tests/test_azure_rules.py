@@ -3,7 +3,6 @@
 from pathlib import Path
 
 from azure_helpers import log_rule, make, metric_alert
-
 from importer.core import remediation
 from importer.core.ir import Confidence, IRMonitor
 from importer.core.playbook import all_playbooks
@@ -20,16 +19,28 @@ def everything() -> list[IRMonitor]:
     extra = [
         metric_alert(windowSize="PT2H"),
         metric_alert(windowSize="PT30S"),
-        metric_alert(scopes=["/subscriptions/s/resourceGroups/a", "/subscriptions/s/resourceGroups/b"]),
-        metric_alert(autoMitigate=False, enabled=False, severity=9, evaluationFrequency="PT1M", windowSize="PT15M"),
+        metric_alert(
+            scopes=["/subscriptions/s/resourceGroups/a", "/subscriptions/s/resourceGroups/b"]
+        ),
+        metric_alert(
+            autoMitigate=False,
+            enabled=False,
+            severity=9,
+            evaluationFrequency="PT1M",
+            windowSize="PT15M",
+        ),
         log_rule("T | join U on a"),
         log_rule('T | where A contains "x"', operator="LessThan"),
-        log_rule("T", failingPeriods={"numberOfEvaluationPeriods": 4, "minFailingPeriodsToAlert": 2}),
+        log_rule(
+            "T", failingPeriods={"numberOfEvaluationPeriods": 4, "minFailingPeriodsToAlert": 2}
+        ),
         make("scheduledQueryRules", {}, kind="LogToMetric"),
         make("scheduledQueryRules", {}),
         make("smartDetectorAlertRules", {"detector": {"id": "x"}}),
         make("activityLogAlerts", {}),
-        make("prometheusRuleGroups", {"rules": [{"alert": "A"}, {"record": "r", "expression": "x"}]}),
+        make(
+            "prometheusRuleGroups", {"rules": [{"alert": "A"}, {"record": "r", "expression": "x"}]}
+        ),
     ]
     return monitors + translate(extra)
 
@@ -56,6 +67,8 @@ def test_azure_rules_are_anchored_and_have_playbooks() -> None:
 
 
 def test_the_dynamic_threshold_reason_is_a_feature_gap_and_the_name_note_is_unverified() -> None:
-    assert classify("dynamic threshold: Azure learns the normal range") is Category.UNSUPPORTED_FEATURE
+    assert (
+        classify("dynamic threshold: Azure learns the normal range") is Category.UNSUPPORTED_FEATURE
+    )
     note = "metric name azure.x.Y is derived from the documented naming rule and is UNVERIFIED"
     assert classify(note) is Category.UNVERIFIED_NAMES
