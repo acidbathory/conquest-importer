@@ -1,0 +1,13 @@
+# Dependencies whose licence is outside the allowlist in scripts/improve/license_check.py.
+# Every entry needs a reason (who reviewed it, why it is acceptable). Keep this file empty
+# unless a person has decided; the gate fails on anything not listed here.
+
+[[exception]]
+package = "python-dateutil"
+license = "Dual License (Apache-2.0 and BSD-3-Clause, both permissive)"
+reason = "its metadata only says 'Dual License'; the package ships Apache-2.0 and BSD-3-Clause texts. A runtime dependency of boto3."
+
+[[exception]]
+package = "yamllint"
+license = "GPL-3.0-or-later"
+reason = "development-time linter only: run in CI and pre-commit, never imported, bundled or distributed with the tool. Owner to confirm."

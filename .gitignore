@@ -48,3 +48,4 @@ destroyplan
 
 # Local collateral (not for the repo)
 collateral/
+.prepush-identities

@@ -1,0 +1,53 @@
+# Secret-scanning configuration (gitleaks). Our own file; it extends the default rule set.
+#
+# Rule for editing: an allowlist entry may only name a value that is obviously fake and is
+# already used in tests or docs. Never allowlist a whole directory to quiet a finding; never
+# paste a real token here. Every entry needs a description saying what the value is and why it
+# is safe. Run `gitleaks git --redact --no-banner .` locally to check.
+
+title = "conquest-importer gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "AWS documentation example key ids and the alphabet-run placeholder used in tests (no real account)"
+regexes = ['''^AKIAIOSFODNN7EXAMPLE$''', '''^AKIAABCDEFGHIJKLMNOP$''']
+
+[[allowlists]]
+description = "Dynatrace platform-token look-alikes: dt0s16.<ABCDEFGH or AAAA>.<the word secret repeated>, test doubles only"
+regexes = ['''^dt0s16\.(ABCDEFGH|AAAA)\.(?i:secret)+$''']
+
+[[allowlists]]
+description = "Grafana service-account token look-alikes (glsa_AbCdEf123456_..., glsa_abcdefghijklmnop_12345678) used in extract/report tests"
+regexes = ['''^glsa_(AbCdEf123456_(?i:token|secret)+|abcdefghijklmnop_12345678)$''']
+
+[[allowlists]]
+description = "Counting pattern 0123456789abcdef repeated (optionally ending NRAL): placeholder New Relic license/user key shape in tests"
+regexes = ['''^(0123456789abcdef){2}(01234567NRAL)?$''']
+
+[[allowlists]]
+description = "Short fake keys in client tests: NRAK-SECRET-KEY-123, api-key-SECRET-111, the literal text sigv4.secret_key (a field name)"
+regexes = ['''^(NRAK-SECRET-KEY-123|api-key-SECRET-111|sigv4\.secret_key)$''']
+
+[[allowlists]]
+description = "Fake Google OAuth access token ya29.a0AfH6SMB followed by the word SECRET repeated, in the GCP HTTP test"
+regexes = ['''^ya29\.a0AfH6SMB(SECRET)+$''']
+
+[[allowlists]]
+description = "Fake JWT-shaped test token whose last segment is the literal word signature (tests/test_azure_extract.py only)"
+condition = "AND"
+paths = ['''^tests/test_azure_extract\.py$''']
+regexes = ['''^[A-Za-z0-9]+\.signature$''']
+
+[[allowlists]]
+description = "A 36-character dummy token constant in the Grafana rules fields test (tests/test_grafana_rules2_fields2.py only)"
+condition = "AND"
+paths = ['''^tests/test_grafana_rules2_fields2\.py$''']
+regexes = ['''^[A-Za-z0-9]{36}$''']
+
+[[allowlists]]
+description = "40-hex git commit ids quoted in the Azure research note (pinned spec commits, public), mistaken for an access token"
+condition = "AND"
+paths = ['''^docs/research/azure-monitor-alerting\.md$''']
+regexes = ['''^[0-9a-f]{40}$''']

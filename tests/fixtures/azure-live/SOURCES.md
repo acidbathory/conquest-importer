@@ -30,3 +30,8 @@ older versions (`2018-03-01`, `2023-12-01`, `2021-08-01`, `2020-10-01`, `2019-05
 - Zero GUID `00000000-...` is kept (it was sent as a placeholder).
 
 Resource names (`ckg-*`, `ckgstore<random>`) and timestamps are real.
+
+## Licence
+
+These files are our own data, read from our own trial subscription (object names `ckg-`, no
+third-party material); they are released with the repository under its Apache-2.0 licence.
