@@ -20,6 +20,7 @@ from importer.core.dashboard_ir import (
     Visualization,
     WidgetKind,
 )
+from importer.core.dashboard_pack import pack
 from importer.core.ir import Confidence
 from importer.core.text import printable
 from importer.sources.azure import dashboard_kql
@@ -39,7 +40,6 @@ from importer.sources.azure.dashboard_common import (
 from importer.sources.azure.dashboard_kql import LOG_FORWARDING
 from importer.sources.azure.dashboard_models import AzureDashboard
 from importer.sources.azure.names import type_of_resource_id
-from importer.sources.gcp.dashboards import pack
 
 TEMPLATE_TYPE = re.compile(r"'(Microsoft\.[A-Za-z0-9.]+(?:/[A-Za-z0-9]+)+)'")
 LOG_CHARTS = {

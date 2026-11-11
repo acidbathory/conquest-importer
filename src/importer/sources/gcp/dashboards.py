@@ -27,6 +27,7 @@ from importer.core.dashboard_ir import (
     WidgetKind,
 )
 from importer.core.dashboard_nrql import VARIABLE_NAME
+from importer.core.dashboard_pack import pack
 from importer.core.emit.nrql import identifier, widget_nrql
 from importer.core.ir import Confidence
 from importer.core.text import printable
@@ -135,39 +136,6 @@ def _mosaic(layout: dict[str, Any]) -> list[Placed]:
         top, bottom = y // 2, -(-(y + h) // 2)
         placed.append((widget, _layout(left + 1, top + 1, right - left, bottom - top)))
     return placed
-
-
-def _overlaps(a: Layout, b: Layout) -> bool:
-    return (
-        a.column < b.column + b.width
-        and b.column < a.column + a.width
-        and a.row < b.row + b.height
-        and b.row < a.row + a.height
-    )
-
-
-def pack(placed: list[Placed]) -> tuple[list[Placed], int]:
-    """Reading order, with any widget that overlaps an earlier one moved down below it.
-
-    Returns the widgets and how many were moved. Each pass moves a widget past at least one more
-    box, so the loop ends after at most one pass per box already placed.
-    """
-    taken: list[Layout] = []
-    out: list[Placed] = []
-    moved = 0
-    for widget, layout in sorted(placed, key=lambda p: (p[1].row, p[1].column)):
-        row = layout.row
-        for _ in range(len(taken) + 1):
-            hit = [t for t in taken if _overlaps(t, layout.model_copy(update={"row": row}))]
-            if not hit:
-                break
-            row = max(t.row + t.height for t in hit)
-        if row != layout.row:
-            moved += 1
-            layout = layout.model_copy(update={"row": row})
-        taken.append(layout)
-        out.append((widget, layout))
-    return out, moved
 
 
 def _grid(layout: dict[str, Any]) -> list[Placed]:
