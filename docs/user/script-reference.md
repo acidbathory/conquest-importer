@@ -154,7 +154,14 @@ unless you give `--apply` and `--confirm-account <account-id>` and the account i
 
 ### Datadog
 
-No commands. See [runbook-datadog-and-azure.md](runbook-datadog-and-azure.md).
+File-first: no extractor and no Datadog login. See [runbook-datadog.md](runbook-datadog.md).
+
+| Command | What it does | Reads | Writes | NR write |
+|---|---|---|---|---|
+| `importer doctor --source datadog` | Nothing to sign in to; reports Python and the optional New Relic key. | environment | prints | No |
+| `importer convert --source datadog` | Plain threshold metric monitors and log counts to conditions; every other type manual with reasons. | exported monitor JSON, optional `name-map.json` | `--out` | No |
+| `importer scaffold-datadog-names` | Lists the metrics and tags in an export that the name map does not cover; writes a skeleton. | exported monitor JSON | `--out` (new file) | No |
+| `importer check-datadog-data` | Does the metric (or log) behind each converted condition arrive? Lists near names when not. Exit 2 if not. | New Relic (NRQL) | optional markdown | No |
 
 ### Internal
 

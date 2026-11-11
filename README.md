@@ -21,7 +21,7 @@ rest.
 | [Dynatrace](docs/user/runbook-dynatrace.md) | Least proven. Scheduled DQL log-count workflows convert; Davis problem workflows, SLOs and dashboards are plans with manual steps | A read-only check of one Platform tenant; test objects created and removed in a sandbox | Any converted item firing in New Relic; no automatic data path |
 | [AWS CloudWatch](docs/user/runbook-aws-cloudwatch.md) | Most tested. Alarms, dashboards, SNS notifications, Metric Streams Terraform | A real AWS account, end to end with data | Metric names outside the verified list |
 | [Google Cloud Monitoring](docs/user/runbook-gcp.md) | Alert policies and dashboards convert | A sandbox project, including the data link | VM CPU data does not arrive; no firing test |
-| Datadog | Paused (built, then removed) | | [Details](docs/user/runbook-datadog-and-azure.md) |
+| [Datadog](docs/user/runbook-datadog.md) | First release, built offline from exported JSON (no Datadog login). Plain threshold metric monitors and log count monitors convert; the other types are manual with reasons | Nothing yet; offline on 70 real integration monitors (50 convert) and 17 hostile cases. New Relic accepted the NRQL as queries | Metric and tag names (assumed unchanged, UNVERIFIED), data arrival, notifications, dashboards |
 | [Azure Monitor](docs/user/runbook-azure.md) | Built offline, never run live. Metric alerts with one static criterion and simple KQL log counts convert; activity log alerts, dynamic thresholds, smart detectors and most KQL are manual or unsupported | Nothing yet; offline on the official Azure examples | Metric and attribute names (derived, UNVERIFIED), data arrival, notifications |
 
 Sample exports in `tests/fixtures` cover the working sources, so the tests and the images below run
@@ -45,6 +45,18 @@ read-only and add only what an error asks for.
 | New Relic | A User API key (`NRAK-...`) in `NEW_RELIC_API_KEY`, only to create things and to run data checks; the target account in `NEW_RELIC_ACCOUNT_ID`; the same id in `NEW_RELIC_ALLOWED_ACCOUNT_IDS`; EU accounts add `--region eu`. A plan-only run needs no New Relic key. An ingest licence key is not needed by the importer |
 | Network | Grafana reachable over https. Behind a TLS-inspecting proxy, set `SSL_CERT_FILE` to the corporate root certificate (PEM) |
 | Start | `bash scripts/migrate.sh`, then choose `3` |
+
+### Prerequisites: Datadog to New Relic
+
+| | |
+|---|---|
+| Accounts and roles | None for Datadog. The importer never contacts Datadog (its site is blocked on some corporate networks and bypassing that is not an option); someone who can reach Datadog saves the monitors once |
+| Credential | None. Input is exported JSON: the list `GET /api/v1/monitor` returns, or the integration monitor templates. Optional `name-map.json` beside it (`importer scaffold-datadog-names` writes a skeleton) |
+| `.env` variables | None; optional `IMPORTER_DATADOG_NAME_MAP` |
+| Install | Python 3.12+, [uv](https://docs.astral.sh/uv/), `uv sync` |
+| New Relic | User API key (`NRAK-...`) in `NEW_RELIC_API_KEY`, only to create things and for `check-datadog-data`; `NEW_RELIC_ACCOUNT_ID`; `NEW_RELIC_ALLOWED_ACCOUNT_IDS`; EU accounts add `--region eu`. There is no automatic route for Datadog agent data: metric names are assumed unchanged (UNVERIFIED) |
+| Network | Only for the New Relic steps. Behind a TLS-inspecting proxy, set `SSL_CERT_FILE` to the corporate root certificate (PEM) |
+| Start | `importer convert --source datadog --in <folder> --out out/datadog-alerts`, or `bash scripts/migrate.sh` and choose `11` |
 
 ### Prerequisites: Dynatrace to New Relic
 
@@ -120,7 +132,7 @@ command by command.
 | AWS CloudWatch | [runbook-aws-cloudwatch](docs/user/runbook-aws-cloudwatch.md) |
 | Google Cloud | [runbook-gcp](docs/user/runbook-gcp.md) |
 | Azure Monitor | [runbook-azure](docs/user/runbook-azure.md) |
-| Datadog | [runbook-datadog-and-azure](docs/user/runbook-datadog-and-azure.md) (not built) |
+| Datadog | [runbook-datadog](docs/user/runbook-datadog.md) (offline, exported JSON) |
 
 `importer migrate` is a shortcut for AWS CloudWatch only (read, convert, preview, then create after
 you answer `y`). The other sources use the menu or the runbook commands (`extract-<source>`,
@@ -203,11 +215,12 @@ customer results, and yours will differ.
 Order of maturity today: AWS CloudWatch, Google Cloud, Grafana (early), Dynatrace and Azure Monitor
 (earliest; Azure has only been built and tested offline). See the
 [Supported sources](#supported-sources) table and each runbook for what is and is not proven.
-Datadog support was built and then removed; it is paused. Azure alert rules are built (offline); a
+Datadog monitors are built (offline, from exported JSON); Azure alert rules are built (offline); a
 live test, notifications and dashboards are next. Planned, in this order:
 
 1. Azure: live test of the metric names, then notifications and dashboards
-2. Datadog (paused)
+2. Datadog: the approximate families (anomaly, forecast, composite), notifications, downtimes and
+   dashboards (milestones D4 to D7 of the [build plan](docs/research/datadog-verified.md))
 3. Deeper Grafana and Dynatrace coverage (dashboards, notifications, data paths)
 
 Want to help finish the project? Fork the repository, make your change on a branch and open a pull
