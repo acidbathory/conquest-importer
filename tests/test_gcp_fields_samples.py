@@ -28,21 +28,34 @@ def test_conditions_converted_per_kind() -> None:
         total[monitor.source_type] += 1
         done[monitor.source_type] += monitor.confidence in CONVERTED
     assert dict(total) == {"conditionThreshold": 18, "conditionAbsent": 5, "conditionMatchedLog": 8}
-    assert dict(done) == {"conditionThreshold": 4, "conditionAbsent": 4, "conditionMatchedLog": 8}
+    # data-path classification: a metric New Relic does not poll (Ops Agent, Prometheus, custom)
+    # converts as an approximation that names what must be sent, instead of refusing
+    assert dict(done) == {"conditionThreshold": 15, "conditionAbsent": 5, "conditionMatchedLog": 8}
 
 
 def test_what_stays_manual_is_explained() -> None:
     manual = {n: m for n, m in convert_all().items() if m.confidence is Confidence.MANUAL}
-    assert len(manual) == 15
-    uncollected = [
-        m
-        for m in manual.values()
-        if "not one of the Google Cloud" in m.reasons[-1]
-        or "not one of the Google Cloud" in m.reasons[0]
-    ]
-    assert len(uncollected) == 14
-    (other,) = (m for m in manual.values() if m not in uncollected)
-    assert "several polls" in other.reasons[0]
+    reasons = {n.split("__")[0]: m.reasons[0] for n, m in manual.items()}
+    assert sorted(reasons) == ["couchdb", "etcd-gke", "google-bigquery"]
+    assert "second-stage aggregation" in reasons["couchdb"]
+    assert "histogram" in reasons["etcd-gke"]
+    assert "several polls" in reasons["google-bigquery"]
+
+
+def test_newly_converted_samples_are_real_queries_that_name_their_data_path() -> None:
+    monitors = convert_all()
+    for name, monitor in monitors.items():
+        if monitor.confidence in CONVERTED and monitor.data_path not in (None, "native"):
+            assert nrql_for(monitor).startswith(("SELECT ", "FROM ")), name
+            assert (
+                "FROM Metric" in nrql_for(monitor) or monitor.source_type == "conditionMatchedLog"
+            )
+            assert monitor.reasons[0].startswith("data path: ") or monitor.source_type == (
+                "conditionMatchedLog"
+            ), name
+    assert nrql_for(monitors["apache__high-request-rate.v1.json"]) == (
+        "SELECT sum(apache.requests) FROM Metric"
+    )
 
 
 def test_converted_samples_keep_their_fields() -> None:
