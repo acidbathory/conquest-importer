@@ -166,8 +166,11 @@ RULES: list[Rule] = [
         "Dashboard query time or range function",
         [
             "`offset` is `COMPARE WITH` or a shifted `SINCE`; `*_over_time` is an aggregate per "
-            "`TIMESERIES` bucket, optionally with `SLIDE BY`; `delta`, `deriv` and "
-            "`predict_linear` have `derivative()` and `predictLinear()`; `absent()` is an alert "
+            "`TIMESERIES` bucket, optionally with `SLIDE BY`; `deriv` and "
+            "`predict_linear` have `derivative()` and `predictLinear()`; `delta` of a gauge is "
+            "not `latest() - earliest()` (Prometheus stretches the first and last sample to the "
+            "window), so write that difference by hand only if an approximation is enough and say "
+            "so on the widget; `absent()` is an alert "
             "condition on a missing signal, not a chart; `without()` lists the labels to "
             "keep, which FACET needs by name. Build the NRQL by hand and compare.",
         ],
@@ -187,8 +190,12 @@ RULES: list[Rule] = [
         [
             "`label_replace` and `label_join` derive a label; in NRQL a derived FACET uses "
             "`capture()` or `aparse()`. Math functions (`round`, `clamp_*`, `abs`, `ceil`) have "
-            "`round()`, `clamp_min()` and `clamp_max()` in NRQL for some; `time()`, `vector()` "
-            "and `scalar()` have none. Rewrite the query by hand.",
+            "`round()`, `clamp_min()` and `clamp_max()` in NRQL: the importer writes `round(x)`, "
+            "`round(x, n)` for a multiple of 0.1, 0.01, ... and `clamp_min`/`clamp_max` with a "
+            "plain number around a whole query, and leaves the rest. `round(x, 5)` is "
+            "`round(x / 5) * 5`; `time()` is the evaluation instant and a chart has no such "
+            "value (`aggregationendtime()` is the end of each bucket, which is a different "
+            "number); `vector()` and `scalar()` have none. Rewrite the query by hand.",
         ],
     ),
     (

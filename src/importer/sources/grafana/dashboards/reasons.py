@@ -57,10 +57,21 @@ Q_TOPK_ARG = "dashboard query uses topk with a count that is not a plain number"
 Q_ABSENT = "dashboard query uses absent()"
 Q_OVER_TIME = "dashboard query uses an _over_time function"
 Q_RANGE_FN = "dashboard query uses a range function other than rate, irate and increase"
+Q_DELTA = (
+    f"{Q_RANGE_FN}: delta() of a gauge is the last sample minus the first, stretched to the "
+    "window, which latest() minus earliest() does not reproduce"
+)
 Q_WITHOUT = "dashboard query uses without()"
 Q_COMPARE = "dashboard query uses a comparison, a set operator or an operator inside an aggregation"
 Q_LABEL_FN = "dashboard query rewrites labels with label_replace or label_join"
 Q_FUNCTION = "dashboard query uses a function with no New Relic counterpart in the converter"
+Q_TIME = (
+    f"{Q_FUNCTION}: time() is the moment of evaluation, and a chart has no such value per bucket"
+)
+Q_ROUND_STEP = (
+    f"{Q_FUNCTION}: round() to a multiple that is not 1 or a power of ten (NRQL rounds to "
+    "decimal places)"
+)
 Q_NESTED = "dashboard query aggregates an aggregation"
 Q_COUNTER = "dashboard query reads a counter metric (_total, _count, _sum or _bucket) without rate"
 Q_REGEX = (

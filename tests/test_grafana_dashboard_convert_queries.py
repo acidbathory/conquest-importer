@@ -11,6 +11,7 @@ from importer.sources.grafana.dashboard_convert.name_map import NameEntry, NameM
 from importer.sources.grafana.dashboard_convert.nrql import cond_sql
 from importer.sources.grafana.dashboard_convert.promql import QueryOptions, convert_query
 from importer.sources.grafana.dashboard_convert.reuse import Cond, Unconvertible
+from importer.sources.grafana.dashboards import reasons as r_q
 from importer.sources.grafana.dashboards.query_tier import classify_query
 
 LINE = QueryOptions(variables={"job": None, "env": "prod"}, name_map=NameMap(), timeseries=True)
@@ -392,9 +393,68 @@ def test_round_ceil_floor_and_abs_around_a_whole_query_are_written(expr: str, se
     assert classify_query(expr, "prometheus").tier in (2, 3)
 
 
-@pytest.mark.parametrize("expr", ["round(up, 0.5)", "round(up) + 1 > 2", "sum(round(up))"])
-def test_round_with_a_second_argument_or_inside_an_aggregation_stays_manual(expr: str) -> None:
-    assert classify_query(expr, "prometheus").tier is None
+RATE = "rate(sum(a_total), 1 second)"
+
+
+@pytest.mark.parametrize(
+    ("expr", "select"),
+    [
+        # PromQL rounds to a multiple of the second argument; NRQL rounds to decimal places, so
+        # only 1 and the powers of ten below it say the same thing
+        ("round(sum(rate(a_total[5m])), 1)", f"round({RATE})"),
+        ("round(sum(rate(a_total[5m])), 0.1)", f"round({RATE}, 1)"),
+        ("round(sum(rate(a_total[5m])), 0.01)", f"round({RATE}, 2)"),
+        ("round(sum(rate(a_total[5m])), 0.0010)", f"round({RATE}, 3)"),
+        ("round(sum(rate(a_total[5m])) * 100, .1)", f"round({RATE} * 100, 1)"),
+        ("round(sum(rate(a_total[5m])), 0.1) ", f"round({RATE}, 1)"),
+        # clamp_min and clamp_max with a plain number
+        ("clamp_min(sum(rate(a_total[5m])), 0)", f"clamp_min({RATE}, 0)"),
+        ("clamp_max(sum(rate(a_total[5m])), 100)", f"clamp_max({RATE}, 100)"),
+        ("clamp_min(sum(rate(a_total[5m])), -1.5)", f"clamp_min({RATE}, -1.5)"),
+        ("clamp_max(sum(rate(a_total[5m])), .5)", f"clamp_max({RATE}, 0.5)"),
+        ("clamp_min(sum(rate(a_total[5m])) / 2, 0)", f"clamp_min({RATE} / 2, 0)"),
+        ("clamp_min(max(up), 0)", "clamp_min(max(up), 0)"),
+    ],
+)
+def test_round_to_a_power_of_ten_and_clamp_with_a_number_are_written(
+    expr: str, select: str
+) -> None:
+    assert f"SELECT {select} FROM Metric" in nrql(expr, LINE)  # noqa: S608 - test text
+    assert classify_query(expr, "prometheus").tier in (2, 3)
+
+
+@pytest.mark.parametrize(
+    ("expr", "reason"),
+    [
+        ("round(up, 0.5)", r_q.Q_ROUND_STEP),
+        ("round(sum(rate(a_total[5m])), 5)", r_q.Q_ROUND_STEP),
+        ("round(sum(rate(a_total[5m])), 10)", r_q.Q_ROUND_STEP),
+        ("round(sum(rate(a_total[5m])), 0.25)", r_q.Q_ROUND_STEP),
+        ("round(sum(rate(a_total[5m])), 0)", r_q.Q_ROUND_STEP),
+        ("round(sum(rate(a_total[5m])), -1)", r_q.Q_ROUND_STEP),
+        ("round(sum(rate(a_total[5m])), 1e-1)", r_q.Q_ROUND_STEP),
+        ("round(sum(rate(a_total[5m])), $step)", r_q.Q_ROUND_STEP),
+        ("round(sum(rate(a_total[5m])), up)", r_q.Q_ROUND_STEP),
+        ("round(histogram_quantile(0.9, sum by (le) (rate(x_bucket[5m]))), 0.5)", r_q.Q_ROUND_STEP),
+        ("round(up) + 1 > 2", r_q.Q_FUNCTION),
+        ("sum(round(up))", r_q.Q_FUNCTION),
+        ("clamp_min(up, up)", r_q.Q_FUNCTION),
+        ("clamp_min(up, $floor)", r_q.Q_FUNCTION),
+        ("clamp_min(up, 1e3)", r_q.Q_FUNCTION),
+        ("clamp(up, 0, 1)", r_q.Q_FUNCTION),
+        ("clamp_min(up, 0) + 1", r_q.Q_FUNCTION),
+        ("time()", r_q.Q_TIME),
+        ("time() - max(process_start_time_seconds)", r_q.Q_TIME),
+        ("delta(temperature[5m])", r_q.Q_DELTA),
+        ("max(delta(temperature[5m]))", r_q.Q_DELTA),
+    ],
+)
+def test_round_to_another_multiple_and_the_other_math_functions_stay_manual_for_a_stated_reason(
+    expr: str, reason: str
+) -> None:
+    verdict = classify_query(expr, "prometheus")
+    assert verdict.tier is None
+    assert verdict.reason == reason
 
 
 @pytest.mark.parametrize(

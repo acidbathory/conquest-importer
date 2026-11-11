@@ -46,6 +46,7 @@ from importer.core.ir import (
 )
 from importer.sources.grafana.models import GfNode, GrafanaRule, parse_duration
 from importer.sources.grafana.notifications.promrules import split_comparison
+from importer.sources.grafana.promql_normalize import normalize_promql
 from importer.sources.grafana.rules2 import fields
 
 MIN_WINDOW_SECONDS = 60
@@ -970,6 +971,8 @@ def _grafana_plan(rule: GrafanaRule) -> _Plan:
     query, reducer, threshold, recovery, notes = _pipeline(rule)
     kind, inferred = _datasource_type(query)
     expr = str(query.model.get("expr", ""))
+    if kind == "prometheus":
+        expr = normalize_promql(expr)
     comparison = split_comparison(expr) if kind == "prometheus" else None
     if comparison is not None and comparison.operator == "eq":
         # `query == c` leaves only series whose value is exactly c, so the threshold node tests c
@@ -986,10 +989,11 @@ def _grafana_plan(rule: GrafanaRule) -> _Plan:
 
 def _rule_file_plan(rule: GrafanaRule) -> _Plan:
     """A Prometheus-style rule: the comparison with a number in the query is the threshold."""
-    comparison = split_comparison(rule.expr)
-    expr = comparison.query if comparison else rule.expr
+    kind, inferred = _kind_of(None, "", rule.expr)
+    source = normalize_promql(rule.expr) if kind == "prometheus" else rule.expr
+    comparison = split_comparison(source)
+    expr = comparison.query if comparison else source
     threshold = _make_threshold(comparison.operator, [comparison.value]) if comparison else None
-    kind, inferred = _kind_of(None, "", expr)
     return _Plan(kind, inferred, expr, Ctx("last", True, None, threshold, node=False), threshold)
 
 

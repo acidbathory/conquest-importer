@@ -22,10 +22,13 @@ import re
 from collections.abc import Callable, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass, replace
+from decimal import Decimal
+from itertools import pairwise
 from types import MappingProxyType
 
 from importer.sources.grafana.dashboards import reasons as r
 from importer.sources.grafana.dashboards.regex_matchers import mask
+from importer.sources.grafana.promql_normalize import normalize_promql
 from importer.sources.grafana.translate import (
     BODY,
     BOTH,
@@ -96,12 +99,14 @@ PROM_CHECKS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\b(?:bottomk|limitk|limit_ratio)\b"), r.Q_BOTTOMK),
     (re.compile(r"\babsent(?:_over_time)? ?\("), r.Q_ABSENT),
     (re.compile(r"(?<=\w)_over_time ?\("), r.Q_OVER_TIME),
-    (re.compile(r"\b(?:delta|idelta|deriv|predict_linear|changes|resets) ?\("), r.Q_RANGE_FN),
+    (re.compile(r"\bdelta ?\("), r.Q_DELTA),
+    (re.compile(r"\b(?:idelta|deriv|predict_linear|changes|resets) ?\("), r.Q_RANGE_FN),
+    (re.compile(r"\btime ?\("), r.Q_TIME),
     (re.compile(r"\bwithout\b"), r.Q_WITHOUT),
     (re.compile(r"\blabel_(?:replace|join) ?\("), r.Q_LABEL_FN),
     (
         re.compile(
-            r"\b(?:time|vector|scalar|round|clamp|clamp_min|clamp_max|ceil|floor|abs|sqrt|exp"
+            r"\b(?:vector|scalar|round|clamp|clamp_min|clamp_max|ceil|floor|abs|sqrt|exp"
             r"|ln|log2|log10|sort|sort_desc|stddev|stdvar|quantile|group|count_values"
             r"|timestamp|sgn|days_in_month|day_of_\w+|hour|minute|month|year) ?\("
             r"|\bhistogram_(?!quantile)\w+ ?\("
@@ -491,25 +496,90 @@ def _prepare(expr: str, language: str, known: frozenset[str] | None) -> tuple[st
     return text, used, _regex_reason(text, language)
 
 
-UNARY_MATH = re.compile(r"(round|ceil|floor|abs) ?\((.*)\)")
+MATH_CALL = re.compile(r"(round|ceil|floor|abs|clamp_min|clamp_max) ?\((.*)\)")
+PLAIN_NUMBER = re.compile(r"-?(?:\d+(?:\.\d+)?|\.\d+)")
+STEP = re.compile(r"\d+(?:\.\d+)?|\.\d+")
+MAX_NUMBER_TEXT = 20
+MAX_DECIMALS = 9
 
 
-def peel_math(expr: str) -> tuple[str, str]:
-    """(function, inner text) when `expr` is one `round(...)`, `ceil(...)`, `floor(...)` or
-    `abs(...)` call around everything; else ("", expr). NRQL has all four with one argument.
-    `round(x, 0.5)` is not peeled (NRQL rounds to a multiple the other way round)."""
-    found = UNARY_MATH.fullmatch(expr.strip())
-    if found is None:
-        return "", expr
+@dataclass(frozen=True)
+class Peeled:
+    """A math call around a whole query: the NRQL around the converted inner query, or why not."""
+
+    inner: str = ""  # empty when nothing was peeled
+    prefix: str = ""
+    suffix: str = ""
+    reason: str = ""  # set when the call is one the converter cannot write
+
+
+NOT_PEELED = Peeled()
+
+
+def _decimals(step: str) -> int | None:
+    """k when rounding to a multiple of `step` is rounding to k decimal places (0 for 1)."""
+    if STEP.fullmatch(step) is None or len(step) > MAX_NUMBER_TEXT:
+        return None
+    value = Decimal(step).normalize()
+    if value == 1:
+        return 0
+    sign, digits, exponent = value.as_tuple()
+    if sign or digits != (1,) or not isinstance(exponent, int):
+        return None
+    return -exponent if -MAX_DECIMALS <= exponent < 0 else None
+
+
+def _arguments(body: str) -> list[str] | None:
+    """The arguments of a call at depth 0, or None when the parentheses do not balance."""
     depth = 0
-    for ch in re.sub(QUOTED, '""', found[2]):
+    for ch in re.sub(QUOTED, '""', body):
         depth += ch == "("
         depth -= ch == ")"
         if depth < 0:
-            return "", expr
-    if depth != 0 or "," in _mask(found[2]):
-        return "", expr
-    return found[1], found[2]
+            return None
+    if depth != 0:
+        return None
+    masked = _mask(body)
+    cuts = [-1, *(i for i, ch in enumerate(masked) if ch == ","), len(body)]
+    return [body[a + 1 : b] for a, b in pairwise(cuts)]
+
+
+def _round(args: list[str]) -> Peeled:
+    if len(args) == 1:
+        return Peeled(args[0], "round(", ")")
+    if len(args) != 2:
+        return NOT_PEELED
+    # PromQL rounds to a multiple of the second argument, NRQL to a number of decimals: they
+    # agree only for 1 and for 0.1, 0.01, ...
+    places = _decimals(args[1].strip())
+    if places is None:
+        return Peeled(reason=r.Q_ROUND_STEP)
+    return Peeled(args[0], "round(", ")" if places == 0 else f", {places})")
+
+
+def _clamp(name: str, args: list[str]) -> Peeled:
+    bound = args[1].strip() if len(args) == 2 else ""
+    if PLAIN_NUMBER.fullmatch(bound) is None or len(bound) > MAX_NUMBER_TEXT:
+        return NOT_PEELED
+    return Peeled(args[0], f"{name}(", f", {format(Decimal(bound), 'f')})")
+
+
+def peel_math(expr: str) -> Peeled:
+    """One `round`, `ceil`, `floor`, `abs`, `clamp_min` or `clamp_max` call around everything.
+
+    NRQL has all of them. `round(x, n)` and `clamp_*(x, n)` are written only where NRQL says the
+    same thing: a round to 1 or to a power of ten (decimal places), a clamp to a plain number."""
+    found = MATH_CALL.fullmatch(expr.strip())
+    if found is None:
+        return NOT_PEELED
+    name, args = found[1], _arguments(found[2])
+    if args is None:
+        return NOT_PEELED
+    if name == "round":
+        return _round(args)
+    if name.startswith("clamp"):
+        return _clamp(name, args)
+    return Peeled(args[0], f"{name}(", ")") if len(args) == 1 else NOT_PEELED
 
 
 ENGINE_REASONS = frozenset({r.Q_COMPARE, r.Q_OVER_TIME, r.Q_NOT_SIMPLE, r.Q_NESTED})
@@ -522,6 +592,8 @@ def classify_query(expr: str, language: str, known: frozenset[str] | None = None
     A query the plain reader refuses gets a second look from the engine (dashboard_convert/
     promql_engine), which reads comparisons against a number and `_over_time` functions; the
     engine's answer is tier 3, and the converter decides the final form from the widget type."""
+    if language == "prometheus":
+        expr = normalize_promql(expr)
     verdict = _classify(expr, language, known)
     if verdict.tier is not None or language != "prometheus" or verdict.reason not in ENGINE_REASONS:
         return verdict
@@ -536,9 +608,11 @@ def _classify(expr: str, language: str, known: frozenset[str] | None = None) -> 
         return Verdict(None, r.Q_NOT_SIMPLE)
     if len(expr) > MAX_EXPRESSION:
         return Verdict(None, r.Q_TOO_LONG)
-    function, inner = peel_math(expr) if language == "prometheus" else ("", expr)
-    if function:
-        verdict = _classify(inner, language, known)
+    peeled = peel_math(expr) if language == "prometheus" else NOT_PEELED
+    if peeled.reason:
+        return Verdict(None, peeled.reason, frozenset(variables_in(expr)))
+    if peeled.inner:
+        verdict = _classify(peeled.inner, language, known)
         return replace(verdict, tier=max(2, verdict.tier) if verdict.tier else None)
     text, used, reason = _prepare(expr, language, known)
     variables = frozenset(used)
