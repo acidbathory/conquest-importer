@@ -20,6 +20,11 @@ CONVERTED = {
     ),
     "r2-counter-increase": "SELECT sum(orders_total) FROM Metric",
     "r2-error-ratio": "SELECT sum(errors_total) / sum(requests_total) FROM Metric",
+    # one metric under two filters: the engine gives each side its own filter()
+    "r2-error-ratio-one-metric": (
+        "SELECT filter(sum(requests_total), WHERE code = '500') / 300 / (sum(requests_total) / 300)"
+        " FROM Metric"
+    ),
     "r2-memory-percent": "SELECT average(mem_used) / average(mem_limit) * 100 FROM Metric",
     "r2-payments-absent": (
         "SELECT count(*) FROM Metric WHERE metricName = 'up' AND job = 'payments'"
@@ -40,7 +45,6 @@ CONVERTED = {
     ),
 }
 MANUAL = {
-    "r2-error-ratio-one-metric": t.R_RATIO_SHAPE,
     "r2-up-compared-in-query": t.R_COMPARE_NEVER.format(query='up{job="payments"}', value=0.0),
     "r2-rate-of-a-gauge": t.R_COUNTER_NAME,
     "r2-math-over-two-queries": t.R_MATH_QUERIES.format(count=2),

@@ -512,16 +512,33 @@ def peel_math(expr: str) -> tuple[str, str]:
     return found[1], found[2]
 
 
+ENGINE_REASONS = frozenset({r.Q_COMPARE, r.Q_OVER_TIME, r.Q_NOT_SIMPLE, r.Q_NESTED})
+
+
 def classify_query(expr: str, language: str, known: frozenset[str] | None = None) -> Verdict:
     """The tier `expr` reaches, or a reason. `known` lists the dashboard's variable names; with
-    None every `$name` counts as a variable. Never raises."""
+    None every `$name` counts as a variable. Never raises.
+
+    A query the plain reader refuses gets a second look from the engine (dashboard_convert/
+    promql_engine), which reads comparisons against a number and `_over_time` functions; the
+    engine's answer is tier 3, and the converter decides the final form from the widget type."""
+    verdict = _classify(expr, language, known)
+    if verdict.tier is not None or language != "prometheus" or verdict.reason not in ENGINE_REASONS:
+        return verdict
+    from importer.sources.grafana.dashboard_convert.promql_engine import reads_inner
+
+    inner = reads_inner(expr, lambda text: _classify(text, language, known).tier is not None)
+    return Verdict(3, "", verdict.variables) if inner else verdict
+
+
+def _classify(expr: str, language: str, known: frozenset[str] | None = None) -> Verdict:
     if language not in LANGUAGES:
         return Verdict(None, r.Q_NOT_SIMPLE)
     if len(expr) > MAX_EXPRESSION:
         return Verdict(None, r.Q_TOO_LONG)
     function, inner = peel_math(expr) if language == "prometheus" else ("", expr)
     if function:
-        verdict = classify_query(inner, language, known)
+        verdict = _classify(inner, language, known)
         return replace(verdict, tier=max(2, verdict.tier) if verdict.tier else None)
     text, used, reason = _prepare(expr, language, known)
     variables = frozenset(used)

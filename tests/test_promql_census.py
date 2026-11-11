@@ -8,7 +8,11 @@ from types import ModuleType
 import pytest
 
 from importer.sources.grafana.dashboard_convert.name_map import NameMap
-from importer.sources.grafana.dashboard_convert.promql import QueryOptions, convert_query
+from importer.sources.grafana.dashboard_convert.promql import (
+    QueryOptions,
+    convert_classic,
+    convert_query,
+)
 from importer.sources.grafana.dashboard_convert.reuse import Unconvertible
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -131,7 +135,13 @@ def test_unsupported_constructs_do_not_convert(construct: str) -> None:
     assert construct not in census.SUPPORTED_TODAY
     assert construct in ids(UNSUPPORTED_SAMPLES[construct])
     with pytest.raises(Unconvertible):
-        convert_query(UNSUPPORTED_SAMPLES[construct], "prometheus", OPTS)
+        convert_classic(UNSUPPORTED_SAMPLES[construct], "prometheus", OPTS)
+
+
+def test_the_engine_writes_a_comparison_the_plain_reader_does_not() -> None:
+    with pytest.raises(Unconvertible):
+        convert_classic("up > 0", "prometheus", OPTS)
+    assert "up > 0" in convert_query("up > 0", "prometheus", OPTS).nrql
 
 
 def test_every_supported_construct_has_a_verdict() -> None:

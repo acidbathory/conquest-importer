@@ -386,7 +386,7 @@ def reuse_body(source_expr: str, reuse_id: int = 1) -> dict[str, Any]:
     [
         ("up", 1, [], 1),
         ("rate(x_total[5m])", 1, [], 2),
-        ("up == 1", 1, [r.P_REUSE], None),
+        ("up or up", 1, [r.P_REUSE], None),
         ("up", 99, [r.P_REUSE], None),
         ("up", 2, [r.P_REUSE], None),
     ],
@@ -455,7 +455,7 @@ def test_a_mixed_panel_converts_only_when_every_visible_target_does() -> None:
             3,
         ),
         (
-            {"type": "heatmap", "targets": [{"refId": "A", "expr": "up == 1"}]},
+            {"type": "heatmap", "targets": [{"refId": "A", "expr": "up or up"}]},
             [r.P_WIDGET_GAP.format(label="heatmap"), r.Q_COMPARE],
             None,
             None,
@@ -506,7 +506,7 @@ def test_a_mixed_panel_converts_only_when_every_visible_target_does() -> None:
             {
                 "type": "graph",
                 "datasource": {"type": "prometheus"},
-                "targets": [{"refId": "A", "expr": "up"}, {"refId": "B", "expr": "up == 1"}],
+                "targets": [{"refId": "A", "expr": "up"}, {"refId": "B", "expr": "up or up"}],
             },
             [r.Q_COMPARE],
             None,

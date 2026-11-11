@@ -28,6 +28,7 @@ from importer.sources.grafana.dashboard_convert.legend import read_legend
 from importer.sources.grafana.dashboard_convert.name_map import active_name_map
 from importer.sources.grafana.dashboard_convert.promql import (
     QueryOptions,
+    convert_classic,
     convert_query,
 )
 from importer.sources.grafana.dashboard_convert.reuse import Unconvertible
@@ -71,8 +72,9 @@ class Expression:
     family: str
     parse_error: str = ""
     constructs: list[str] = field(default_factory=list)
-    converts: bool = False
-    reason: str = ""  # the converter's reason when it does not convert
+    converts: bool = False  # the plain reader (convert_classic) writes it: SUPPORTED_TODAY
+    engine: bool = False  # only the engine (promql_engine) writes it, see the rules registry
+    reason: str = ""  # the plain reader's reason when it does not convert
 
     @property
     def unsupported(self) -> set[str]:
@@ -143,13 +145,17 @@ def analyse_item(item: Item, census: Census, index: int) -> None:
             except PromQLSyntaxError as error:
                 exp.parse_error = str(error)
             opts = _options(drafted.ctx.variables.options, names, panel.type, drafted)
+            legend, repeat = read_legend(target.legend), panel.repeat or None
             try:
-                convert_query(
-                    target.expr, family, opts, read_legend(target.legend), panel.repeat or None
-                )
+                convert_classic(target.expr, family, opts, legend, repeat)
                 exp.converts = True
             except Unconvertible as stop:
                 exp.reason = stop.reason
+                try:
+                    convert_query(target.expr, family, opts, legend, repeat)
+                    exp.engine = True
+                except Unconvertible:
+                    pass
             except Exception as error:
                 exp.reason = f"error: {type(error).__name__}"
             row_ids.append(len(census.expressions))
@@ -392,9 +398,11 @@ def render(census: Census, alerts: tuple[int, int, list[tuple[str, int]]] | None
     )
     groups = Counter(group_of(p) for p in census.panels)
     converting = sum(e.converts for e in census.expressions)
+    engine = sum(e.engine for e in census.expressions)
     lines.append(f"PromQL panels by group: {dict(groups)}")
     lines.append(
         f"PromQL expressions the converter writes today: {converting} of {len(census.expressions)}"
+        f"; the engine adds {engine} more ({converting + engine} of {len(census.expressions)})"
     )
     lines.append("")
     lines.append(

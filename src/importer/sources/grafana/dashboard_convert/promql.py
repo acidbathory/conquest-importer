@@ -96,6 +96,28 @@ class QueryOptions:
     unavailable: frozenset[str] = frozenset()  # dashboard variables that did not convert
 
 
+@dataclass(frozen=True)
+class Statement:
+    """The parts of one converted query, kept so a rewrite can rebuild it (promql_engine)."""
+
+    select: str
+    alias: str  # the ` AS '...'` text, or ""
+    event: str
+    where: tuple[str, ...]
+    facet: tuple[str, ...]
+    limit: int | None  # LIMIT n for a facet; None is LIMIT MAX
+    timeseries: str  # ` TIMESERIES ...` text, or ""
+
+    def render(self) -> str:
+        query = f"SELECT {self.select}{self.alias} FROM {identifier_or_fail(self.event)}"  # noqa: S608
+        if self.where:
+            query += " WHERE " + " AND ".join(self.where)
+        if self.facet:
+            query += " FACET " + ", ".join(self.facet)
+            query += f" LIMIT {self.limit}" if self.limit is not None else " LIMIT MAX"
+        return query + self.timeseries
+
+
 @dataclass
 class Converted:
     nrql: str
@@ -104,6 +126,7 @@ class Converted:
     variables: list[str] = field(default_factory=list)
     numeric_variables: list[str] = field(default_factory=list)
     facet: list[str] = field(default_factory=list)
+    statement: Statement | None = None
 
 
 # --- text preparation ---
@@ -558,7 +581,33 @@ def convert_query(
     legend: Legend | None = None,
     repeat_var: str | None = None,
 ) -> Converted:
-    """NRQL for one Grafana query, or `Unconvertible`. `family` is prometheus or loki."""
+    """NRQL for one Grafana query, or `Unconvertible`. `family` is prometheus or loki.
+
+    The shapes the regular-expression reader writes come first, unchanged; a query it refuses
+    goes to the engine (promql_engine), which writes only rewrites it can prove and otherwise
+    leaves the original refusal in place.
+    """
+    try:
+        return convert_classic(expr, family, opts, legend, repeat_var)
+    except Unconvertible:
+        if family != "prometheus":
+            raise
+        from importer.sources.grafana.dashboard_convert.promql_engine import convert_with_engine
+
+        done = convert_with_engine(expr, opts, legend, repeat_var)
+        if done is None:
+            raise
+        return done
+
+
+def convert_classic(
+    expr: str,
+    family: str,
+    opts: QueryOptions,
+    legend: Legend | None = None,
+    repeat_var: str | None = None,
+) -> Converted:
+    """The original reader: `Unconvertible` for anything outside its shapes."""
     legend = legend or Legend(None, (), False)
     if len(expr) > MAX_EXPRESSION:
         raise Unconvertible(r.C_SHAPE)
@@ -589,7 +638,8 @@ def convert_query(
     select = strip_outer(render(node, common))
     if function:
         select = f"{function}({select})"
-    nrql = _statement(select, first, common, labels, parse, legend)
+    statement = _statement(select, first, common, labels, parse, legend)
+    nrql = statement.render()
     try:
         check_raw_nrql(nrql)
     except ValueError:
@@ -602,22 +652,20 @@ def convert_query(
         used,
         list(dict.fromkeys(parse.numeric)),
         labels,
+        statement,
     )
 
 
 def _statement(
     select: str, first: Leaf, common: list[str], labels: list[str], parse: _Parse, legend: Legend
-) -> str:
-    query = f"SELECT {select}{_alias(legend)} FROM {identifier_or_fail(first.event)}"  # noqa: S608
-    if common:
-        query += " WHERE " + " AND ".join(common)
-    if labels:
-        query += " FACET " + ", ".join(labels)
-        query += f" LIMIT {parse.limit}" if parse.limit is not None else " LIMIT MAX"
+) -> Statement:
+    seconds = parse.opts.bucket_seconds
+    series = ""
     if parse.opts.timeseries:
-        seconds = parse.opts.bucket_seconds
-        query += f" TIMESERIES {seconds} SECONDS" if seconds else " TIMESERIES AUTO"
-    return query
+        series = f" TIMESERIES {seconds} SECONDS" if seconds else " TIMESERIES AUTO"
+    return Statement(
+        select, _alias(legend), first.event, tuple(common), tuple(labels), parse.limit, series
+    )
 
 
 LOG_LINES = 200

@@ -107,7 +107,7 @@ def test_a_range_over_the_longest_window_is_manual() -> None:
     [
         ("sum(irate(x_total[5m]))", "rate, increase or another range function"),
         ("sum(rate(x_total[5m] offset 1d))", "offset"),
-        ("topk(3, sum by (pod) (rate(x_total[5m])))", "topk"),
+        ("bottomk(3, sum by (pod) (rate(x_total[5m])))", "topk"),
         ("sum by (a) (rate(x_total[5m])) by (b)", "rate, increase or another range function"),
     ],
 )

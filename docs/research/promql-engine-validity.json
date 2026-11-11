@@ -1,0 +1,137 @@
+{
+ "ARITH-01": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "bd12a8c80d7f91b4"
+ },
+ "ARITH-02": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "98c09234a2510c95"
+ },
+ "ARITH-03": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "6588ec8a60940064"
+ },
+ "ARITH-04": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "4c1c24f5a4c51a5c"
+ },
+ "ARITH-05": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "2ed0b1b177d4ad43"
+ },
+ "ARITH-BARE-02": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "16fbf6116d158003"
+ },
+ "CMP-BOOL-01": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "e13bfe7fe5189d23"
+ },
+ "CMP-COUNT-01": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "0cefdc3cbdc487c2"
+ },
+ "CMP-FILTER-01": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "b82e871d003aa2ad"
+ },
+ "CMP-FILTER-02": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "61fd0ef9e0bc7b58"
+ },
+ "CMP-FILTER-03": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "5c35cbec276f0f5b"
+ },
+ "CMP-FILTER-04": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "4740f84a34f08948"
+ },
+ "CMP-FILTER-06": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "f028bea5b8a8e687"
+ },
+ "GAUGE-SUM-01": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "ce6fe1a8ba1a3782"
+ },
+ "GAUGE-SUM-D01": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "a07e84308a1e3b41"
+ },
+ "OVER-TIME-01": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "82b0d1aece644526"
+ },
+ "OVER-TIME-02": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "dc4389f8d585aa18"
+ },
+ "OVER-TIME-05": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "414d49df7373459b"
+ },
+ "OVER-TIME-06": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "4220e150a79822f0"
+ },
+ "OVER-TIME-D01": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "8fa93a0154f4e30f"
+ },
+ "OVER-TIME-D02": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "0b218f6fcf8a627b"
+ },
+ "OVER-TIME-D03": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "e697aeede4ef31ee"
+ },
+ "OVER-TIME-D04": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "2333d0721440cddd"
+ },
+ "PLACEHOLDER-01": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "752b3e3b3bcdf46b"
+ },
+ "TOPK-01": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "474801123fb6ce8f"
+ },
+ "TOPK-03": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "fd9f5037681bcbfe"
+ },
+ "WITHOUT-01": {
+  "accepted": true,
+  "date": "2026-11-11",
+  "sha": "dc99cf6cc61283ec"
+ }
+}
