@@ -239,7 +239,7 @@ def test_subset_numbers_are_reproduced_by_the_commands_and_the_library(subset: P
     assert shapes["conditionThreshold: metric"]["converted"] >= 2
     assert shapes["conditionThreshold: ratio"] == {"manual": 1}
     assert shapes["conditionMonitoringQueryLanguage"] == {"manual": 1}
-    assert shapes["conditionPrometheusQueryLanguage"] == {"manual": 1}
+    assert shapes["conditionPrometheusQueryLanguage"] == {"converted": 1}  # PromQL now converts
     assert shapes["conditionAbsent"] == {"converted": 1}
     assert shapes["conditionMatchedLog"] == {"converted": 1}
     codes = dict(conditions["blockers"])
