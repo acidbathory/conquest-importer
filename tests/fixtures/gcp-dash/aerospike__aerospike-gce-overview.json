@@ -1,0 +1,322 @@
+{
+  "displayName": "Aerospike GCE Overview",
+  "dashboardFilters": [],
+  "labels": {},
+  "mosaicLayout": {
+    "columns": 12,
+    "tiles": [
+      {
+        "height": 4,
+        "width": 6,
+        "widget": {
+          "title": "Free Memory %",
+          "id": "",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": false
+            },
+            "dataSets": [
+              {
+                "breakdowns": [],
+                "dimensions": [],
+                "legendTemplate": "",
+                "measures": [],
+                "minAlignmentPeriod": "60s",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "outputFullDuration": false,
+                  "timeSeriesFilter": {
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "groupByFields": [],
+                      "perSeriesAligner": "ALIGN_NONE"
+                    },
+                    "filter": "metric.type=\"workload.googleapis.com/aerospike.node.memory.free\" resource.type=\"gce_instance\""
+                  },
+                  "unitOverride": ""
+                }
+              }
+            ],
+            "thresholds": [],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "label": "",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 6,
+        "height": 4,
+        "width": 6,
+        "widget": {
+          "title": "Open Connections",
+          "id": "",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": false
+            },
+            "dataSets": [
+              {
+                "breakdowns": [],
+                "dimensions": [],
+                "legendTemplate": "",
+                "measures": [],
+                "minAlignmentPeriod": "60s",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "outputFullDuration": false,
+                  "timeSeriesFilter": {
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "groupByFields": [],
+                      "perSeriesAligner": "ALIGN_NONE"
+                    },
+                    "filter": "metric.type=\"workload.googleapis.com/aerospike.node.connection.open\" resource.type=\"gce_instance\""
+                  },
+                  "unitOverride": ""
+                }
+              }
+            ],
+            "thresholds": [],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "label": "",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 4,
+        "height": 4,
+        "width": 4,
+        "widget": {
+          "title": "Namespace Transactions",
+          "id": "",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": false
+            },
+            "dataSets": [
+              {
+                "breakdowns": [],
+                "dimensions": [],
+                "legendTemplate": "",
+                "measures": [],
+                "minAlignmentPeriod": "60s",
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "outputFullDuration": false,
+                  "timeSeriesFilter": {
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "groupByFields": [],
+                      "perSeriesAligner": "ALIGN_RATE"
+                    },
+                    "filter": "metric.type=\"workload.googleapis.com/aerospike.namespace.transaction.count\" resource.type=\"gce_instance\""
+                  },
+                  "unitOverride": ""
+                }
+              }
+            ],
+            "thresholds": [],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "label": "",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 4,
+        "xPos": 4,
+        "height": 4,
+        "width": 4,
+        "widget": {
+          "title": "Namespace Memory Free",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR"
+            },
+            "dataSets": [
+              {
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "avg by (node_name, namespace_name) (workload_googleapis_com:aerospike_namespace_memory_free{monitored_resource=\"gce_instance\"})",
+                  "unitOverride": "%"
+                }
+              }
+            ],
+            "thresholds": [],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 4,
+        "xPos": 8,
+        "height": 4,
+        "width": 4,
+        "widget": {
+          "title": "Namespace Disk Free",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR"
+            },
+            "dataSets": [
+              {
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "avg by (node_name, namespace_name) (workload_googleapis_com:aerospike_namespace_disk_available{monitored_resource=\"gce_instance\"})",
+                  "unitOverride": "%"
+                }
+              }
+            ],
+            "thresholds": [],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 8,
+        "height": 4,
+        "width": 4,
+        "widget": {
+          "title": "VMs CPU %",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR"
+            },
+            "dataSets": [
+              {
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "(avg by (project_id, zone, instance_name) (\n    avg_over_time(\n      compute_googleapis_com:instance_cpu_utilization{monitored_resource=\"gce_instance\"}[${__interval}]\n    )\n    and\n    on(instance_id, project_id, zone)\n    (workload_googleapis_com:aerospike_node_memory_free{monitored_resource=\"gce_instance\"})\n  )\n)",
+                  "unitOverride": "10^2.%"
+                }
+              }
+            ],
+            "thresholds": [],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 8,
+        "xPos": 4,
+        "height": 4,
+        "width": 4,
+        "widget": {
+          "title": "VMs Memory %",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR"
+            },
+            "dataSets": [
+              {
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (project_id, zone, instance_id, metadata_system_name) (\n  avg_over_time(\n    agent_googleapis_com:memory_percent_used{monitored_resource=\"gce_instance\", state=\"used\"}[${__interval}]\n  )\n)\nand on(project_id, zone, instance_id) (\n  workload_googleapis_com:aerospike_node_memory_free{monitored_resource=\"gce_instance\"}\n)",
+                  "unitOverride": "%"
+                }
+              }
+            ],
+            "thresholds": [],
+            "timeshiftDuration": "0s",
+            "yAxis": {
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 8,
+        "xPos": 8,
+        "height": 4,
+        "width": 4,
+        "widget": {
+          "title": "Hosts by Region",
+          "id": "",
+          "xyChart": {
+            "chartOptions": {
+              "displayHorizontal": false,
+              "mode": "COLOR",
+              "showLegend": false
+            },
+            "dataSets": [
+              {
+                "breakdowns": [],
+                "dimensions": [],
+                "legendTemplate": "",
+                "measures": [],
+                "plotType": "STACKED_AREA",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "outputFullDuration": false,
+                  "prometheusQuery": "count by (region) (\n  label_replace(\n    sum by (project_id, zone, instance_id) (\n      count_over_time(workload_googleapis_com:aerospike_node_memory_free{monitored_resource=\"gce_instance\"}[${__interval}])\n    ),\n    \"region\",\n    \"$1\",\n    \"zone\",\n    \"([^-]+-[^-]+)-.*\"\n  )\n)",
+                  "unitOverride": ""
+                }
+              }
+            ],
+            "thresholds": [],
+            "yAxis": {
+              "label": "",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      },
+      {
+        "yPos": 12,
+        "height": 4,
+        "width": 4,
+        "widget": {
+          "title": "Aerospike Monitoring Links",
+          "id": "",
+          "text": {
+            "content": "[How to configure Aerospike Monitoring](https://cloud.google.com/monitoring/agent/ops-agent/third-party/aerospike)\n\n",
+            "format": "MARKDOWN",
+            "style": {
+              "backgroundColor": "",
+              "fontSize": "FONT_SIZE_UNSPECIFIED",
+              "horizontalAlignment": "H_LEFT",
+              "padding": "PADDING_SIZE_UNSPECIFIED",
+              "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+              "textColor": "",
+              "verticalAlignment": "V_TOP"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

@@ -229,6 +229,34 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^dashboard widget type has no new relic equivalent \(incident list\)"),
+        "Incident list widget",
+        [
+            "Add a link to the New Relic alerts page (Alerts, Issues & activity) in a markdown "
+            "widget, or an NRQL table over `NrAiIssue` for the open issues of the policies you "
+            "migrated.",
+        ],
+    ),
+    (
+        re.compile(r"^dashboard widget type has no new relic equivalent \(alert chart\)"),
+        "Alert chart widget",
+        [
+            "Chart the metric the alert policy watches (the policy is in the alert conversion "
+            "report) with the same threshold, or use an NRQL table over `NrAiIssue` for the "
+            "policy's issues.",
+        ],
+    ),
+    (
+        re.compile(r"^dashboard widget type has no new relic equivalent \(error reporting"),
+        "Error reporting panel",
+        [
+            "Google Error Reporting groups errors from your logs and exceptions. Send the same "
+            "errors to New Relic Errors Inbox (APM or browser agent) or forward the logs and "
+            "chart the error lines with an NRQL query over `Log`, then add that to the "
+            "dashboard.",
+        ],
+    ),
+    (
         re.compile(r"^dashboard widget type is not supported"),
         "Dashboard widget type not converted",
         [
