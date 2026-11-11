@@ -26,7 +26,7 @@ from importer.sources.azure import dashboard_reasons as DR
 from importer.sources.azure import reasons as R
 from importer.sources.azure.common import Fail
 from importer.sources.azure.models import NameMap
-from importer.sources.azure.names import dimension_attribute, metric_name
+from importer.sources.azure.names import PLATFORM_TYPE, dimension_attribute, metric_name
 
 MAX_TITLE = 200
 MAX_TEXT = 6000
@@ -170,8 +170,9 @@ def _series_for(
 ) -> MetricSignal:
     found = metric_name(names, spec.namespace, spec.name)
     if found is None:
-        custom = f"{R.M_CUSTOM_NAMESPACE}: {R.shown(spec.namespace, 60)}"
-        raise Fail(f"{DR.METRIC}: {custom if spec.namespace else R.M_NO_NAME}")
+        if spec.namespace and not PLATFORM_TYPE.fullmatch(spec.namespace.lower()):
+            raise Fail(f"{DR.METRIC}: {R.M_CUSTOM_NAMESPACE}: {R.shown(spec.namespace, 60)}")
+        raise Fail(f"{DR.METRIC}: {R.M_NO_NAME}: {R.shown(spec.name, 60)}")
     try:
         select = f"count({identifier(found.attribute)})" if spec.aggregation == "count" else None
         if select is None:
