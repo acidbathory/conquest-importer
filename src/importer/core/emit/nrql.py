@@ -17,6 +17,7 @@ from importer.core.ir import (
     HeartbeatSignal,
     IRMonitor,
     MetricSignal,
+    MetricTerm,
     NrTarget,
     Num,
     Ref,
@@ -79,14 +80,21 @@ def _target_sql(target: NrTarget, func: str) -> str:
     return f"{func}({identifier(target.attribute)})"
 
 
+def _term_sql(term: MetricTerm, func: str) -> str:
+    """The term's aggregate; a term with its own scope is wrapped in filter(..., WHERE ...)."""
+    if term.nr_target is None:
+        raise ValueError("term has no New Relic target")
+    select = _target_sql(term.nr_target, func)
+    if not term.scope:
+        return select
+    return f"filter({select}, WHERE " + " AND ".join(_tag_clause(f) for f in term.scope) + ")"
+
+
 def _expr_sql(expr: Expr, signal: MetricSignal, func: str, parent_prec: int = 0) -> str:
     if isinstance(expr, Num):
         return f"{expr.value:g}"
     if isinstance(expr, Ref):
-        target = signal.terms[expr.name].nr_target
-        if target is None:
-            raise ValueError("term has no New Relic target")
-        return _target_sql(target, func)
+        return _term_sql(signal.terms[expr.name], func)
     prec = PRECEDENCE[expr.op]
     left = _expr_sql(expr.left, signal, func, prec)
     # the right side of - and / needs parentheses even at equal precedence
@@ -124,8 +132,8 @@ def _metric_nrql(signal: MetricSignal, alias: str | None = None) -> str:
     if len(events) != 1:
         raise ValueError("metrics live on different New Relic events and cannot share one query")
     if signal.expression is None:
-        (target,) = (t for t in targets if t is not None)
-        select = _target_sql(target, func)
+        (term,) = signal.terms.values()
+        select = _term_sql(term, func)
     else:
         select = _expr_sql(signal.expression, signal, func)
     if alias:

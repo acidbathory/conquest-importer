@@ -15,6 +15,7 @@ from importer.core.emit.common import MAX_AGGREGATION_WINDOW_SECONDS, MAX_DURATI
 from importer.core.ids import source_id
 from importer.core.ir import (
     Aggregation,
+    BinOp,
     Confidence,
     CountSignal,
     HeartbeatSignal,
@@ -26,6 +27,7 @@ from importer.core.ir import (
     NrTarget,
     Occurrences,
     Operator,
+    Ref,
     Severity,
     Signal,
     SignalKind,
@@ -243,9 +245,11 @@ def metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[st
     return metric_type, scope, notes
 
 
-def _first_aggregation(body: dict[str, object]) -> tuple[dict[str, object], str]:
-    """The single aggregation stage of a condition and its aligner."""
-    aggregations = body.get("aggregations")
+def _first_aggregation(
+    body: dict[str, object], key: str = "aggregations"
+) -> tuple[dict[str, object], str]:
+    """The single aggregation stage of a condition (or of its denominator) and its aligner."""
+    aggregations = body.get(key)
     if isinstance(aggregations, list) and len(aggregations) > 1:
         raise Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
     first = aggregations[0] if isinstance(aggregations, list) and aggregations else {}
@@ -322,11 +326,71 @@ def metric_series(
     return signal, period, scale, notes
 
 
+def ratio_series(
+    body: dict[str, object], numerator: MetricSignal, aligner: str, period: int, notes: list[str]
+) -> tuple[MetricSignal, float, list[str]]:
+    """A ratio condition: the numerator signal divided by the series of the denominator filter.
+
+    Both sides must aggregate the same way (same aligner, window and group-by), so one NRQL query
+    expresses it; each side keeps its own label filters (`filter()`), the ones both share stay in
+    the WHERE. A counter ratio needs no rescaling: the window cancels.
+    """
+    try:
+        denominator = metric_scope({**body, "filter": body.get("denominatorFilter")})
+        key = "denominatorAggregations" if body.get("denominatorAggregations") else "aggregations"
+        agg, den_aligner = _first_aggregation(body, key)
+        den_period = seconds(agg.get("alignmentPeriod"))
+        den, *_ = metric_series(denominator[0], denominator[1], agg, den_aligner, den_period)
+    except Fail as fail:
+        raise Fail(Confidence.MANUAL, f"ratio denominator: {fail.reason}") from fail
+    (num_term,) = numerator.terms.values()
+    (den_term,) = den.terms.values()
+    window = numerator_window(period, aligner)
+    if (
+        ALIGNERS[aligner][0] != ALIGNERS[den_aligner][0]
+        or ALIGNERS[aligner][1] != ALIGNERS[den_aligner][1]
+        or window != numerator_window(den_period, den_aligner)
+        or numerator.group_by != den.group_by
+    ):
+        raise Fail(
+            Confidence.MANUAL,
+            "ratio conditions are not supported when the numerator and denominator differ in "
+            "aligner, alignment period or group-by (one New Relic query aggregates both alike)",
+        )
+    shared = [f for f in numerator.scope if f in den.scope]
+    num_term = num_term.model_copy(
+        update={"scope": [f for f in numerator.scope if f not in shared]}
+    )
+    den_term = den_term.model_copy(update={"scope": [f for f in den.scope if f not in shared]})
+    signal = MetricSignal(
+        terms={"a": num_term, "b": den_term},
+        expression=BinOp(op="/", left=Ref(name="a"), right=Ref(name="b")),
+        aggregation=numerator.aggregation,
+        scope=shared,
+        group_by=numerator.group_by,
+    )
+    kept = [n for n in notes if not n.startswith("a counter metric:")]
+    if ALIGNERS[aligner][1]:
+        kept.append(
+            f"a ratio of counters: New Relic adds up the changes in each window of {window}s for "
+            "both sides and divides, which is the ratio Google computes per alignment period, so "
+            "the threshold is not rescaled"
+        )
+    kept.append(
+        "the ratio is one query, sum(numerator) / sum(denominator); a window in which the "
+        "denominator is zero gives no value instead of failing"
+    )
+    return signal, 1.0, kept
+
+
+def numerator_window(period: int, aligner: str) -> int:
+    """The window a series is aggregated over in New Relic (counters use at least a poll)."""
+    return max(period, POLL_SECONDS) if ALIGNERS[aligner][1] else period
+
+
 def _metric_condition(
     body: dict[str, object],
 ) -> tuple[MetricSignal, int, int, float, list[str]]:
-    if body.get("denominatorFilter"):
-        raise Fail(Confidence.MANUAL, "ratio conditions (denominator filter) are not supported")
     if body.get("forecastOptions"):
         raise Fail(Confidence.MANUAL, "forecast conditions are not supported")
     trigger = body.get("trigger")
@@ -337,6 +401,8 @@ def _metric_condition(
     period = seconds(agg.get("alignmentPeriod"))
     duration = seconds(body.get("duration"))
     signal, period, scale, notes = metric_series(metric_type, scope, agg, aligner, period)
+    if body.get("denominatorFilter"):
+        signal, scale, notes = ratio_series(body, signal, aligner, period, notes)
     window, note = _whole_windows(duration, period)
     _check_limits(period, window)
     if note:

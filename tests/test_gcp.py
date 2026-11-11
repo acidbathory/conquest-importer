@@ -119,7 +119,7 @@ def test_label_filters_become_scope_and_counters_keep_google_name() -> None:
 @pytest.mark.parametrize(
     ("overrides", "needle"),
     [
-        ({"denominatorFilter": 'metric.type="x.googleapis.com/y"'}, "ratio"),
+        ({"denominatorFilter": 'metric.type="x.googleapis.com/y" OR a="b"'}, "ratio"),
         ({"forecastOptions": {"forecastHorizon": "3600s"}}, "forecast"),
         ({"trigger": {"percent": 50}}, "several time series"),
         ({"comparison": "COMPARISON_UNSPECIFIED"}, "comparison"),

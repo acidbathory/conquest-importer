@@ -87,6 +87,17 @@ class MetricTerm(BaseModel):
     metric: str  # source metric name, e.g. system.cpu.user
     space_aggregation: Aggregation
     nr_target: NrTarget | None = None
+    scope: list[
+        TagFilter
+    ] = []  # restricts this term only (emitted as filter(), on top of the signal's)
+
+    @model_serializer(mode="wrap")
+    def _omit_empty_scope(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        """Saved IR keeps its old shape: `scope` appears only when a term has its own."""
+        data: dict[str, Any] = handler(self)
+        if not data.get("scope"):
+            data.pop("scope", None)
+        return data
 
 
 class Num(BaseModel):

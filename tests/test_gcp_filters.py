@@ -414,3 +414,83 @@ def test_a_log_field_nrql_cannot_name_is_manual_not_an_emit_failure() -> None:
 
 def test_a_log_wildcard_character_in_a_contains_term_is_manual() -> None:
     assert logs('textPayload:"100%"').confidence is Confidence.MANUAL
+
+
+# ----- ratio conditions (denominatorFilter) ----------------------------------------------------
+
+
+def ratio(filter_text: str, denominator: str, **extra: Any) -> IRMonitor:
+    body: dict[str, Any] = {
+        "filter": filter_text,
+        "denominatorFilter": denominator,
+        "aggregations": [{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_RATE"}],
+        "denominatorAggregations": [{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_RATE"}],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0.05,
+        "duration": "300s",
+        **extra,
+    }
+    policy = GcpAlertPolicy.model_validate(
+        {
+            "displayName": "p",
+            "combiner": "OR",
+            "conditions": [{"displayName": "c", "conditionThreshold": body}],
+        }
+    )
+    (monitor,) = translate_policy(policy)
+    return monitor
+
+
+LB = "loadbalancing.googleapis.com/https/request_count"
+
+
+def test_denominator_filter_becomes_a_ratio_of_two_filtered_sums() -> None:
+    m = ratio(
+        f'resource.type="https_lb_rule" AND metric.type="{LB}" '
+        "AND metric.label.response_code_class=500",
+        f'resource.type="https_lb_rule" AND metric.type="{LB}"',
+    )
+    assert m.confidence is Confidence.APPROXIMATE
+    assert nrql_for(m) == (
+        "SELECT filter(sum(gcp.loadbalancing.https.request_count), "
+        "WHERE metric.response_code_class = '500') / "
+        "sum(gcp.loadbalancing.https.request_count) FROM Metric"
+    )
+    assert m.thresholds[0].value == 0.05  # both sides are counters, so the window cancels
+
+
+def test_a_ratio_of_two_metrics_shares_the_common_filters() -> None:
+    m = ratio(
+        'metric.type="pubsub.googleapis.com/subscription/dead_letter_message_count" '
+        'AND resource.label.subscription_id="s"',
+        'metric.type="pubsub.googleapis.com/subscription/sent_message_count" '
+        'AND resource.label.subscription_id="s"',
+    )
+    assert nrql_for(m) == (
+        "SELECT sum(gcp.pubsub.subscription.dead_letter_message_count) / "
+        "sum(gcp.pubsub.subscription.sent_message_count) FROM Metric "
+        "WHERE gcp.subscription_id = 's'"
+    )
+
+
+def test_a_ratio_with_different_aligners_stays_manual() -> None:
+    m = ratio(
+        f'metric.type="{LB}"',
+        f'metric.type="{LB}"',
+        denominatorAggregations=[{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_MEAN"}],
+    )
+    assert m.confidence is Confidence.MANUAL and "numerator and denominator" in m.reasons[0]
+
+
+def test_a_ratio_with_an_unreadable_denominator_filter_stays_manual() -> None:
+    m = ratio(f'metric.type="{LB}"', 'metric.type="a.googleapis.com/b" OR x="y"')
+    assert m.confidence is Confidence.MANUAL and "denominator" in m.reasons[0]
+
+
+def test_a_ratio_of_a_counter_and_a_gauge_stays_manual() -> None:
+    m = ratio(
+        f'metric.type="{LB}"',
+        'metric.type="compute.googleapis.com/instance/cpu/utilization"',
+        denominatorAggregations=[{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_MEAN"}],
+    )
+    assert m.confidence is Confidence.MANUAL
