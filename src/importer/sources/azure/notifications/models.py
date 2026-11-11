@@ -236,16 +236,24 @@ _HINTS = {
 
 
 def _kind(raw: dict[str, Any]) -> str:
-    """'group', 'rule' or '' for anything else (alert rules in the same folder are ignored)."""
+    """'group', 'rule' or '' for anything else (alert rules in the same folder are ignored).
+
+    A resource that names its type is decided by the type alone: metric and activity log alert
+    rules also have `scopes` and `actions`. An unnamed request body is decided by its shape.
+    """
     props = _props(raw)
     kind = str(raw.get("type") or "").lower()
-    if "actiongroups" in kind or "groupShortName" in props:
+    if kind:
+        if "actiongroups" in kind:
+            return "group"
+        return "rule" if "actionrules" in kind else ""
+    if "groupShortName" in props or any(k.endswith("Receivers") for k in props):
         return "group"
-    if "actionrules" in kind or {"actions", "scopes", "scope", "suppressionConfig"} & set(props):
-        return "rule"
-    if any(k.endswith("Receivers") for k in props):
-        return "group"
-    return ""
+    actions = props.get("actions")
+    typed = isinstance(actions, list) and any(
+        isinstance(a, dict) and "actionType" in a for a in actions
+    )
+    return "rule" if typed or "suppressionConfig" in props else ""
 
 
 def _walk(doc: Any, hint: str = "") -> Iterator[tuple[str, dict[str, Any], str]]:

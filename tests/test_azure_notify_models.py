@@ -115,3 +115,10 @@ def test_the_azure_pair_header_comes_from_the_shared_brand_table() -> None:
     assert header_lines("Azure notification conversion", "azure")[0] == (
         "# Azure notification conversion: Azure Monitor to New Relic"
     )
+
+
+def test_alert_rules_in_the_same_folder_are_not_read_as_processing_rules() -> None:
+    export = load_export(FIX)
+    names = {r.name for r in export.rules}
+    assert "SampleActivityLogAlertRule" not in names and "highcpu" not in names
+    assert len(export.rules) <= 12  # the processing rule and action rule examples only
