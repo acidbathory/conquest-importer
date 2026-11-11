@@ -1,0 +1,11 @@
+{
+ "_synthetic": "SYNTHETIC: hand-written hostile test case, not a Datadog export (monitor_composite)",
+ "name": "SYNTHETIC composite",
+ "type": "composite",
+ "query": "!1234 || (5678 && 91011) && !(12 && 13)",
+ "message": "{{#is_alert}}composite{{/is_alert}} {{a.status}} {{b.value}}",
+ "options": {
+  "notify_no_data": true,
+  "thresholds": {}
+ }
+}

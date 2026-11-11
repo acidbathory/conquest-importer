@@ -1,0 +1,16 @@
+{
+ "_synthetic": "SYNTHETIC: hand-written hostile test case, not a Datadog export (monitor_unicode)",
+ "name": "SYNTHETIC \u202eevil\u202c \ud83d\udd25 caf\u00e9 e\u0301 \u200bzero\u200bwidth \u0000nul \ud800lone-surrogate \u4e2d\u6587 \u0627\u0644\u0639\u0631\u0628\u064a\u0629",
+ "type": "query alert",
+ "query": "avg(last_5m):avg:system.cpu.user{host:h\u00e9\u00e9\u00e9,env:\u6d4b\u8bd5} by {host} > 90",
+ "message": "line1\r\nline2\u2028line3\u2029 tab\there \\ backslash \" quote ' apostrophe ${var} %{x} $(cmd) `tick`",
+ "tags": [
+  "team:\u00fcber",
+  "env:\u6d4b\u8bd5"
+ ],
+ "options": {
+  "thresholds": {
+   "critical": 90
+  }
+ }
+}

@@ -1,0 +1,13 @@
+{
+ "_synthetic": "SYNTHETIC: hand-written hostile test case, not a Datadog export (monitor_outlier_forecast)",
+ "name": "SYNTHETIC outlier and forecast",
+ "type": "query alert",
+ "query": "avg(last_30m):outliers(avg:system.cpu.user{role:es} by {host}, 'mad', 3, 20) > 0",
+ "message": "outlier",
+ "options": {
+  "thresholds": {
+   "critical": 0
+  }
+ },
+ "also_forecast": "max(next_1w):forecast(avg:system.disk.in_use{*} by {host}, 'linear', 1, interval=3600, history='1w', model='default') >= 0.9"
+}

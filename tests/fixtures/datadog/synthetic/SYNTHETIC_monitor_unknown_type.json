@@ -1,0 +1,21 @@
+{
+ "_synthetic": "SYNTHETIC: hand-written hostile test case, not a Datadog export (monitor_unknown_type)",
+ "name": "SYNTHETIC unknown type",
+ "type": "quantum-entanglement alert",
+ "query": "entangle(last_5m):foo{*} > 1",
+ "message": "{{#is_alert}}hi{{/is_alert}}",
+ "options": {
+  "thresholds": {
+   "critical": 1
+  },
+  "future_option": {
+   "a": [
+    1,
+    2,
+    {
+     "b": null
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,627 @@
+{
+ "_synthetic": "SYNTHETIC: hand-written hostile test case, not a Datadog export (dashboard_deep_groups_and_unknown_widgets)",
+ "title": "SYNTHETIC \u202edeep\u202c groups",
+ "layout_type": "ordered",
+ "description": null,
+ "template_variables": [
+  {
+   "name": "we ird-name!",
+   "prefix": "a:b",
+   "default": "*' OR 1=1",
+   "available_values": [
+    "",
+    null,
+    "\u0000",
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ]
+  },
+  {
+   "name": null,
+   "default": null
+  }
+ ],
+ "template_variable_presets": [
+  {
+   "name": "p",
+   "template_variables": [
+    {
+     "name": "we ird-name!",
+     "values": [
+      "a",
+      "b"
+     ]
+    },
+    {
+     "name": "missing",
+     "value": "z"
+    }
+   ]
+  }
+ ],
+ "widgets": [
+  {
+   "definition": {
+    "type": "group",
+    "title": "g59",
+    "layout_type": "ordered",
+    "widgets": [
+     {
+      "definition": {
+       "type": "group",
+       "title": "g58",
+       "layout_type": "ordered",
+       "widgets": [
+        {
+         "definition": {
+          "type": "group",
+          "title": "g57",
+          "layout_type": "ordered",
+          "widgets": [
+           {
+            "definition": {
+             "type": "group",
+             "title": "g56",
+             "layout_type": "ordered",
+             "widgets": [
+              {
+               "definition": {
+                "type": "group",
+                "title": "g55",
+                "layout_type": "ordered",
+                "widgets": [
+                 {
+                  "definition": {
+                   "type": "group",
+                   "title": "g54",
+                   "layout_type": "ordered",
+                   "widgets": [
+                    {
+                     "definition": {
+                      "type": "group",
+                      "title": "g53",
+                      "layout_type": "ordered",
+                      "widgets": [
+                       {
+                        "definition": {
+                         "type": "group",
+                         "title": "g52",
+                         "layout_type": "ordered",
+                         "widgets": [
+                          {
+                           "definition": {
+                            "type": "group",
+                            "title": "g51",
+                            "layout_type": "ordered",
+                            "widgets": [
+                             {
+                              "definition": {
+                               "type": "group",
+                               "title": "g50",
+                               "layout_type": "ordered",
+                               "widgets": [
+                                {
+                                 "definition": {
+                                  "type": "group",
+                                  "title": "g49",
+                                  "layout_type": "ordered",
+                                  "widgets": [
+                                   {
+                                    "definition": {
+                                     "type": "group",
+                                     "title": "g48",
+                                     "layout_type": "ordered",
+                                     "widgets": [
+                                      {
+                                       "definition": {
+                                        "type": "group",
+                                        "title": "g47",
+                                        "layout_type": "ordered",
+                                        "widgets": [
+                                         {
+                                          "definition": {
+                                           "type": "group",
+                                           "title": "g46",
+                                           "layout_type": "ordered",
+                                           "widgets": [
+                                            {
+                                             "definition": {
+                                              "type": "group",
+                                              "title": "g45",
+                                              "layout_type": "ordered",
+                                              "widgets": [
+                                               {
+                                                "definition": {
+                                                 "type": "group",
+                                                 "title": "g44",
+                                                 "layout_type": "ordered",
+                                                 "widgets": [
+                                                  {
+                                                   "definition": {
+                                                    "type": "group",
+                                                    "title": "g43",
+                                                    "layout_type": "ordered",
+                                                    "widgets": [
+                                                     {
+                                                      "definition": {
+                                                       "type": "group",
+                                                       "title": "g42",
+                                                       "layout_type": "ordered",
+                                                       "widgets": [
+                                                        {
+                                                         "definition": {
+                                                          "type": "group",
+                                                          "title": "g41",
+                                                          "layout_type": "ordered",
+                                                          "widgets": [
+                                                           {
+                                                            "definition": {
+                                                             "type": "group",
+                                                             "title": "g40",
+                                                             "layout_type": "ordered",
+                                                             "widgets": [
+                                                              {
+                                                               "definition": {
+                                                                "type": "group",
+                                                                "title": "g39",
+                                                                "layout_type": "ordered",
+                                                                "widgets": [
+                                                                 {
+                                                                  "definition": {
+                                                                   "type": "group",
+                                                                   "title": "g38",
+                                                                   "layout_type": "ordered",
+                                                                   "widgets": [
+                                                                    {
+                                                                     "definition": {
+                                                                      "type": "group",
+                                                                      "title": "g37",
+                                                                      "layout_type": "ordered",
+                                                                      "widgets": [
+                                                                       {
+                                                                        "definition": {
+                                                                         "type": "group",
+                                                                         "title": "g36",
+                                                                         "layout_type": "ordered",
+                                                                         "widgets": [
+                                                                          {
+                                                                           "definition": {
+                                                                            "type": "group",
+                                                                            "title": "g35",
+                                                                            "layout_type": "ordered",
+                                                                            "widgets": [
+                                                                             {
+                                                                              "definition": {
+                                                                               "type": "group",
+                                                                               "title": "g34",
+                                                                               "layout_type": "ordered",
+                                                                               "widgets": [
+                                                                                {
+                                                                                 "definition": {
+                                                                                  "type": "group",
+                                                                                  "title": "g33",
+                                                                                  "layout_type": "ordered",
+                                                                                  "widgets": [
+                                                                                   {
+                                                                                    "definition": {
+                                                                                     "type": "group",
+                                                                                     "title": "g32",
+                                                                                     "layout_type": "ordered",
+                                                                                     "widgets": [
+                                                                                      {
+                                                                                       "definition": {
+                                                                                        "type": "group",
+                                                                                        "title": "g31",
+                                                                                        "layout_type": "ordered",
+                                                                                        "widgets": [
+                                                                                         {
+                                                                                          "definition": {
+                                                                                           "type": "group",
+                                                                                           "title": "g30",
+                                                                                           "layout_type": "ordered",
+                                                                                           "widgets": [
+                                                                                            {
+                                                                                             "definition": {
+                                                                                              "type": "group",
+                                                                                              "title": "g29",
+                                                                                              "layout_type": "ordered",
+                                                                                              "widgets": [
+                                                                                               {
+                                                                                                "definition": {
+                                                                                                 "type": "group",
+                                                                                                 "title": "g28",
+                                                                                                 "layout_type": "ordered",
+                                                                                                 "widgets": [
+                                                                                                  {
+                                                                                                   "definition": {
+                                                                                                    "type": "group",
+                                                                                                    "title": "g27",
+                                                                                                    "layout_type": "ordered",
+                                                                                                    "widgets": [
+                                                                                                     {
+                                                                                                      "definition": {
+                                                                                                       "type": "group",
+                                                                                                       "title": "g26",
+                                                                                                       "layout_type": "ordered",
+                                                                                                       "widgets": [
+                                                                                                        {
+                                                                                                         "definition": {
+                                                                                                          "type": "group",
+                                                                                                          "title": "g25",
+                                                                                                          "layout_type": "ordered",
+                                                                                                          "widgets": [
+                                                                                                           {
+                                                                                                            "definition": {
+                                                                                                             "type": "group",
+                                                                                                             "title": "g24",
+                                                                                                             "layout_type": "ordered",
+                                                                                                             "widgets": [
+                                                                                                              {
+                                                                                                               "definition": {
+                                                                                                                "type": "group",
+                                                                                                                "title": "g23",
+                                                                                                                "layout_type": "ordered",
+                                                                                                                "widgets": [
+                                                                                                                 {
+                                                                                                                  "definition": {
+                                                                                                                   "type": "group",
+                                                                                                                   "title": "g22",
+                                                                                                                   "layout_type": "ordered",
+                                                                                                                   "widgets": [
+                                                                                                                    {
+                                                                                                                     "definition": {
+                                                                                                                      "type": "group",
+                                                                                                                      "title": "g21",
+                                                                                                                      "layout_type": "ordered",
+                                                                                                                      "widgets": [
+                                                                                                                       {
+                                                                                                                        "definition": {
+                                                                                                                         "type": "group",
+                                                                                                                         "title": "g20",
+                                                                                                                         "layout_type": "ordered",
+                                                                                                                         "widgets": [
+                                                                                                                          {
+                                                                                                                           "definition": {
+                                                                                                                            "type": "group",
+                                                                                                                            "title": "g19",
+                                                                                                                            "layout_type": "ordered",
+                                                                                                                            "widgets": [
+                                                                                                                             {
+                                                                                                                              "definition": {
+                                                                                                                               "type": "group",
+                                                                                                                               "title": "g18",
+                                                                                                                               "layout_type": "ordered",
+                                                                                                                               "widgets": [
+                                                                                                                                {
+                                                                                                                                 "definition": {
+                                                                                                                                  "type": "group",
+                                                                                                                                  "title": "g17",
+                                                                                                                                  "layout_type": "ordered",
+                                                                                                                                  "widgets": [
+                                                                                                                                   {
+                                                                                                                                    "definition": {
+                                                                                                                                     "type": "group",
+                                                                                                                                     "title": "g16",
+                                                                                                                                     "layout_type": "ordered",
+                                                                                                                                     "widgets": [
+                                                                                                                                      {
+                                                                                                                                       "definition": {
+                                                                                                                                        "type": "group",
+                                                                                                                                        "title": "g15",
+                                                                                                                                        "layout_type": "ordered",
+                                                                                                                                        "widgets": [
+                                                                                                                                         {
+                                                                                                                                          "definition": {
+                                                                                                                                           "type": "group",
+                                                                                                                                           "title": "g14",
+                                                                                                                                           "layout_type": "ordered",
+                                                                                                                                           "widgets": [
+                                                                                                                                            {
+                                                                                                                                             "definition": {
+                                                                                                                                              "type": "group",
+                                                                                                                                              "title": "g13",
+                                                                                                                                              "layout_type": "ordered",
+                                                                                                                                              "widgets": [
+                                                                                                                                               {
+                                                                                                                                                "definition": {
+                                                                                                                                                 "type": "group",
+                                                                                                                                                 "title": "g12",
+                                                                                                                                                 "layout_type": "ordered",
+                                                                                                                                                 "widgets": [
+                                                                                                                                                  {
+                                                                                                                                                   "definition": {
+                                                                                                                                                    "type": "group",
+                                                                                                                                                    "title": "g11",
+                                                                                                                                                    "layout_type": "ordered",
+                                                                                                                                                    "widgets": [
+                                                                                                                                                     {
+                                                                                                                                                      "definition": {
+                                                                                                                                                       "type": "group",
+                                                                                                                                                       "title": "g10",
+                                                                                                                                                       "layout_type": "ordered",
+                                                                                                                                                       "widgets": [
+                                                                                                                                                        {
+                                                                                                                                                         "definition": {
+                                                                                                                                                          "type": "group",
+                                                                                                                                                          "title": "g9",
+                                                                                                                                                          "layout_type": "ordered",
+                                                                                                                                                          "widgets": [
+                                                                                                                                                           {
+                                                                                                                                                            "definition": {
+                                                                                                                                                             "type": "group",
+                                                                                                                                                             "title": "g8",
+                                                                                                                                                             "layout_type": "ordered",
+                                                                                                                                                             "widgets": [
+                                                                                                                                                              {
+                                                                                                                                                               "definition": {
+                                                                                                                                                                "type": "group",
+                                                                                                                                                                "title": "g7",
+                                                                                                                                                                "layout_type": "ordered",
+                                                                                                                                                                "widgets": [
+                                                                                                                                                                 {
+                                                                                                                                                                  "definition": {
+                                                                                                                                                                   "type": "group",
+                                                                                                                                                                   "title": "g6",
+                                                                                                                                                                   "layout_type": "ordered",
+                                                                                                                                                                   "widgets": [
+                                                                                                                                                                    {
+                                                                                                                                                                     "definition": {
+                                                                                                                                                                      "type": "group",
+                                                                                                                                                                      "title": "g5",
+                                                                                                                                                                      "layout_type": "ordered",
+                                                                                                                                                                      "widgets": [
+                                                                                                                                                                       {
+                                                                                                                                                                        "definition": {
+                                                                                                                                                                         "type": "group",
+                                                                                                                                                                         "title": "g4",
+                                                                                                                                                                         "layout_type": "ordered",
+                                                                                                                                                                         "widgets": [
+                                                                                                                                                                          {
+                                                                                                                                                                           "definition": {
+                                                                                                                                                                            "type": "group",
+                                                                                                                                                                            "title": "g3",
+                                                                                                                                                                            "layout_type": "ordered",
+                                                                                                                                                                            "widgets": [
+                                                                                                                                                                             {
+                                                                                                                                                                              "definition": {
+                                                                                                                                                                               "type": "group",
+                                                                                                                                                                               "title": "g2",
+                                                                                                                                                                               "layout_type": "ordered",
+                                                                                                                                                                               "widgets": [
+                                                                                                                                                                                {
+                                                                                                                                                                                 "definition": {
+                                                                                                                                                                                  "type": "group",
+                                                                                                                                                                                  "title": "g1",
+                                                                                                                                                                                  "layout_type": "ordered",
+                                                                                                                                                                                  "widgets": [
+                                                                                                                                                                                   {
+                                                                                                                                                                                    "definition": {
+                                                                                                                                                                                     "type": "group",
+                                                                                                                                                                                     "title": "g0",
+                                                                                                                                                                                     "layout_type": "ordered",
+                                                                                                                                                                                     "widgets": [
+                                                                                                                                                                                      {
+                                                                                                                                                                                       "definition": {
+                                                                                                                                                                                        "type": "note",
+                                                                                                                                                                                        "content": "leaf"
+                                                                                                                                                                                       }
+                                                                                                                                                                                      }
+                                                                                                                                                                                     ]
+                                                                                                                                                                                    }
+                                                                                                                                                                                   }
+                                                                                                                                                                                  ]
+                                                                                                                                                                                 }
+                                                                                                                                                                                }
+                                                                                                                                                                               ]
+                                                                                                                                                                              }
+                                                                                                                                                                             }
+                                                                                                                                                                            ]
+                                                                                                                                                                           }
+                                                                                                                                                                          }
+                                                                                                                                                                         ]
+                                                                                                                                                                        }
+                                                                                                                                                                       }
+                                                                                                                                                                      ]
+                                                                                                                                                                     }
+                                                                                                                                                                    }
+                                                                                                                                                                   ]
+                                                                                                                                                                  }
+                                                                                                                                                                 }
+                                                                                                                                                                ]
+                                                                                                                                                               }
+                                                                                                                                                              }
+                                                                                                                                                             ]
+                                                                                                                                                            }
+                                                                                                                                                           }
+                                                                                                                                                          ]
+                                                                                                                                                         }
+                                                                                                                                                        }
+                                                                                                                                                       ]
+                                                                                                                                                      }
+                                                                                                                                                     }
+                                                                                                                                                    ]
+                                                                                                                                                   }
+                                                                                                                                                  }
+                                                                                                                                                 ]
+                                                                                                                                                }
+                                                                                                                                               }
+                                                                                                                                              ]
+                                                                                                                                             }
+                                                                                                                                            }
+                                                                                                                                           ]
+                                                                                                                                          }
+                                                                                                                                         }
+                                                                                                                                        ]
+                                                                                                                                       }
+                                                                                                                                      }
+                                                                                                                                     ]
+                                                                                                                                    }
+                                                                                                                                   }
+                                                                                                                                  ]
+                                                                                                                                 }
+                                                                                                                                }
+                                                                                                                               ]
+                                                                                                                              }
+                                                                                                                             }
+                                                                                                                            ]
+                                                                                                                           }
+                                                                                                                          }
+                                                                                                                         ]
+                                                                                                                        }
+                                                                                                                       }
+                                                                                                                      ]
+                                                                                                                     }
+                                                                                                                    }
+                                                                                                                   ]
+                                                                                                                  }
+                                                                                                                 }
+                                                                                                                ]
+                                                                                                               }
+                                                                                                              }
+                                                                                                             ]
+                                                                                                            }
+                                                                                                           }
+                                                                                                          ]
+                                                                                                         }
+                                                                                                        }
+                                                                                                       ]
+                                                                                                      }
+                                                                                                     }
+                                                                                                    ]
+                                                                                                   }
+                                                                                                  }
+                                                                                                 ]
+                                                                                                }
+                                                                                               }
+                                                                                              ]
+                                                                                             }
+                                                                                            }
+                                                                                           ]
+                                                                                          }
+                                                                                         }
+                                                                                        ]
+                                                                                       }
+                                                                                      }
+                                                                                     ]
+                                                                                    }
+                                                                                   }
+                                                                                  ]
+                                                                                 }
+                                                                                }
+                                                                               ]
+                                                                              }
+                                                                             }
+                                                                            ]
+                                                                           }
+                                                                          }
+                                                                         ]
+                                                                        }
+                                                                       }
+                                                                      ]
+                                                                     }
+                                                                    }
+                                                                   ]
+                                                                  }
+                                                                 }
+                                                                ]
+                                                               }
+                                                              }
+                                                             ]
+                                                            }
+                                                           }
+                                                          ]
+                                                         }
+                                                        }
+                                                       ]
+                                                      }
+                                                     }
+                                                    ]
+                                                   }
+                                                  }
+                                                 ]
+                                                }
+                                               }
+                                              ]
+                                             }
+                                            }
+                                           ]
+                                          }
+                                         }
+                                        ]
+                                       }
+                                      }
+                                     ]
+                                    }
+                                   }
+                                  ]
+                                 }
+                                }
+                               ]
+                              }
+                             }
+                            ]
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "definition": {
+    "type": "hologram",
+    "requests": [
+     {
+      "q": "avg:x{*}"
+     }
+    ]
+   }
+  },
+  {
+   "definition": null
+  },
+  {
+   "id": "str"
+  },
+  {
+   "definition": {
+    "type": "timeseries",
+    "requests": [
+     {
+      "queries": [
+       {
+        "data_source": "metrics",
+        "name": "q1",
+        "query": "avg:x{$we ird-name!} by {$missing}"
+       }
+      ],
+      "formulas": [
+       {
+        "formula": "q1 / (q2 + 0)"
+       }
+      ],
+      "response_format": "timeseries"
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,16 @@
+{
+ "_synthetic": "SYNTHETIC: hand-written hostile test case, not a Datadog export (monitor_service_check_hostile)",
+ "name": "SYNTHETIC service check hostile",
+ "type": "service check",
+ "query": "\"a\\\"b.check\".over(\"env:prod\",\"role:*\",\"x y\").by(\"host\",\"\\u0000\").last(100).count_by_status()",
+ "message": "{{check_message}} {{#is_no_data}}nd{{/is_no_data}}",
+ "options": {
+  "thresholds": {
+   "ok": 1,
+   "warning": 1,
+   "critical": 1
+  },
+  "notify_no_data": true,
+  "no_data_timeframe": 99999999
+ }
+}
