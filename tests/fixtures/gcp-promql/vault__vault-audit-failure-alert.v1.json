@@ -1,0 +1,29 @@
+{
+  "displayName": "Vault - Audit Failure Alert",
+  "documentation": {
+    "content": "This alert will be triggered whenever an audit request or audit response failure is greater than 0. This alert will help notify users when their audit device is potentially blocked. If it is blocked, Vault will become unresponsive.\n",
+    "mimeType": "text/markdown"
+  },
+  "userLabels": {},
+  "conditions": [
+    {
+      "displayName": "New condition",
+      "conditionPrometheusQueryLanguage": {
+        "duration": "0s",
+        "evaluationInterval": "30s",
+        "query": "rate({\"workload.googleapis.com/vault.audit.response.failed\", monitored_resource=\"gce_instance\"}[1m]) > 0\nor\nrate({\"workload.googleapis.com/vault.audit.request.failed\", monitored_resource=\"gce_instance\"}[1m]) > 0"
+      }
+    }
+  ],
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationPrompts": [
+      "OPENED",
+      "CLOSED"
+    ]
+  },
+  "combiner": "OR",
+  "enabled": true,
+  "notificationChannels": [],
+  "severity": "SEVERITY_UNSPECIFIED"
+}

@@ -1,0 +1,29 @@
+{
+  "displayName": "Zookeeper - Low Open File Descriptors",
+  "documentation": {
+    "content": "If `workload.googleapis.com/zookeeper.file_descriptor.open` is about to hit `workload.googleapis.com/zookeeper.file_descriptor.limit` zookeeper will not be able to handle any new requests and will fail to connect new clients. ",
+    "mimeType": "text/markdown"
+  },
+  "userLabels": {},
+  "conditions": [
+    {
+      "displayName": "New condition",
+      "conditionPrometheusQueryLanguage": {
+        "duration": "0s",
+        "evaluationInterval": "30s",
+        "query": "(\n  {\"workload.googleapis.com/zookeeper.file_descriptor.limit\", monitored_resource=\"gce_instance\"}\n  -\n  {\"workload.googleapis.com/zookeeper.file_descriptor.open\", monitored_resource=\"gce_instance\"}\n) < 1000"
+      }
+    }
+  ],
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationPrompts": [
+      "OPENED",
+      "CLOSED"
+    ]
+  },
+  "combiner": "OR",
+  "enabled": true,
+  "notificationChannels": [],
+  "severity": "SEVERITY_UNSPECIFIED"
+}
