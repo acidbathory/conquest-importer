@@ -29,7 +29,7 @@ def test_the_data_path_table_in_the_baseline_document_is_what_the_code_measures(
     document = (ROOT / "docs" / "research" / "azure-baseline.md").read_text(encoding="utf-8")
     metric = Counter(m.data_path for m in rows["Metric alerts"].monitors)
     activity = Counter(m.data_path for m in rows["Activity log alerts"].monitors)
-    assert (metric["native"], metric["needs-prometheus-remote-write"]) == (8, 2)
+    assert (metric["native"], metric["needs-prometheus-remote-write"]) == (8, 3)
     assert activity["needs-log-forwarding"] == 8
     assert "| Metric alerts (official examples) | 8 | 0 | 2 |" in document
     assert "| Activity log alerts (official examples) | 0 | 8 | 0 |" in document

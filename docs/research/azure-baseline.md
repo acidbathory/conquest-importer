@@ -26,12 +26,12 @@ already read).
 
 | Alert type | Rules | Converted (approximate or better) | Manual | Unsupported |
 |---|---|---|---|---|
-| Metric alerts | 22 | 10 | 12 | 0 |
+| Metric alerts | 22 | 11 | 11 | 0 |
 | Scheduled query rules (KQL) | 15 | 7 | 8 | 0 |
 | Activity log alerts | 10 | 8 | 2 | 0 |
 | Prometheus rule groups | 7 | 0 | 7 | 0 |
 | Smart detector rules | 7 | 0 | 0 | 7 |
-| All | 61 | 25 | 29 | 7 |
+| All | 61 | 26 | 28 | 7 |
 
 Before the metric, activity and KQL work of 2026-11-11 the same table read: metric alerts 6 of 22,
 scheduled query rules 0 of 15, activity log alerts 0 of 10, all 6 of 61. The scheduled query rule
