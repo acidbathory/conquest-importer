@@ -1,0 +1,561 @@
+{
+ "_comment": "Where an Ops Agent metric (agent.googleapis.com/...) comes from in a plain OpenTelemetry Collector and what it is called in New Relic. status VERIFIED = read in the cited source (docs/research/gcp-metric-name-mapping.md); UNVERIFIED = our reading, the Google name is kept in the query. factor: the Google value equals the OpenTelemetry value times factor, so a Google threshold is divided by it. labels: Google label -> OpenTelemetry attribute. drop: label filters that have no equivalent (removed when they match). add: attribute filters the split into Google metrics needs.",
+ "agent": {
+  "agent.googleapis.com/cpu/utilization": {
+   "name": "system.cpu.utilization",
+   "status": "VERIFIED",
+   "factor": 100,
+   "labels": {
+    "cpu_state": "state",
+    "cpu_number": "cpu"
+   },
+   "drop": [],
+   "add": [],
+   "nr_type": "gauge",
+   "unit": "1 (ratio)",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/opentelemetry-operations-collector/master/components/otelopscol/processor/agentmetricsprocessor/utils_calculate_utilizations.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/cpuscraper/documentation.md"
+   ],
+   "note": "optional metric of the hostmetrics cpu scraper: enable it; Google averages over cores and keeps the state label. Google reports percent (0-100); the OpenTelemetry metric is a ratio (0-1), so a Google threshold is divided by 100."
+  },
+  "agent.googleapis.com/cpu/load_1m": {
+   "name": "system.cpu.load_average.1m",
+   "status": "VERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "gauge",
+   "unit": "{thread}",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/loadscraper/documentation.md"
+   ],
+   "note": ""
+  },
+  "agent.googleapis.com/cpu/load_5m": {
+   "name": "system.cpu.load_average.5m",
+   "status": "VERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "gauge",
+   "unit": "{thread}",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/loadscraper/documentation.md"
+   ],
+   "note": ""
+  },
+  "agent.googleapis.com/cpu/load_15m": {
+   "name": "system.cpu.load_average.15m",
+   "status": "VERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "gauge",
+   "unit": "{thread}",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/loadscraper/documentation.md"
+   ],
+   "note": ""
+  },
+  "agent.googleapis.com/memory/percent_used": {
+   "name": "system.memory.utilization",
+   "status": "VERIFIED",
+   "factor": 100,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "gauge",
+   "unit": "1 (ratio)",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/opentelemetry-operations-collector/master/components/otelopscol/processor/agentmetricsprocessor/utils_calculate_utilizations.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/memoryscraper/documentation.md"
+   ],
+   "note": "optional metric of the hostmetrics memory scraper: enable it; Google's state `slab` is slab_reclaimable plus slab_unreclaimable in OpenTelemetry. Google reports percent (0-100); the OpenTelemetry metric is a ratio (0-1), so a Google threshold is divided by 100."
+  },
+  "agent.googleapis.com/memory/bytes_used": {
+   "name": "system.memory.usage",
+   "status": "VERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "gauge",
+   "unit": "By",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/memoryscraper/documentation.md"
+   ],
+   "note": "a non-monotonic cumulative sum, which New Relic stores as a gauge; Google's state `slab` is slab_reclaimable plus slab_unreclaimable."
+  },
+  "agent.googleapis.com/disk/percent_used": {
+   "name": "system.filesystem.utilization",
+   "status": "VERIFIED",
+   "factor": 100,
+   "labels": {},
+   "drop": [
+    {
+     "key": "state",
+     "value": "used"
+    }
+   ],
+   "add": [],
+   "nr_type": "gauge",
+   "unit": "1 (ratio)",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/opentelemetry-operations-collector/master/components/otelopscol/processor/agentmetricsprocessor/utils_calculate_utilizations.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/filesystemscraper/documentation.md"
+   ],
+   "note": "optional metric of the hostmetrics filesystem scraper: enable it. It has no `state` attribute (it is the used fraction), so a filter state = used is dropped; Google keeps the highest value over the mount points of a device (use max()). Google reports percent (0-100); the OpenTelemetry metric is a ratio (0-1), so a Google threshold is divided by 100."
+  },
+  "agent.googleapis.com/disk/bytes_used": {
+   "name": "system.filesystem.usage",
+   "status": "VERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "gauge",
+   "unit": "By",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/filesystemscraper/documentation.md"
+   ],
+   "note": "a non-monotonic cumulative sum, which New Relic stores as a gauge; Google keeps the highest value over the mount points of a device."
+  },
+  "agent.googleapis.com/disk/read_bytes_count": {
+   "name": "system.disk.io",
+   "status": "VERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [
+    {
+     "key": "direction",
+     "value": "read"
+    }
+   ],
+   "nr_type": "cumulativeCount",
+   "unit": "By",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/diskscraper/documentation.md"
+   ],
+   "note": "Google splits one OpenTelemetry metric by its `direction` attribute; the filter direction = read is added."
+  },
+  "agent.googleapis.com/disk/write_bytes_count": {
+   "name": "system.disk.io",
+   "status": "VERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [
+    {
+     "key": "direction",
+     "value": "write"
+    }
+   ],
+   "nr_type": "cumulativeCount",
+   "unit": "By",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/diskscraper/documentation.md"
+   ],
+   "note": "Google splits one OpenTelemetry metric by its `direction` attribute; the filter direction = write is added."
+  },
+  "agent.googleapis.com/interface/traffic": {
+   "name": "system.network.io",
+   "status": "VERIFIED",
+   "factor": 1,
+   "labels": {
+    "device": "interface"
+   },
+   "drop": [],
+   "add": [],
+   "nr_type": "cumulativeCount",
+   "unit": "By",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/networkscraper/documentation.md"
+   ],
+   "note": "Google's attribute `device` is `interface` in OpenTelemetry, and its direction values rx and tx are receive and transmit."
+  },
+  "agent.googleapis.com/interface/errors": {
+   "name": "system.network.errors",
+   "status": "VERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "cumulativeCount",
+   "unit": "{errors}",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/networkscraper/documentation.md"
+   ],
+   "note": "Google's direction values rx and tx are receive and transmit."
+  },
+  "agent.googleapis.com/swap/percent_used": {
+   "name": "system.paging.utilization",
+   "status": "VERIFIED",
+   "factor": 100,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "gauge",
+   "unit": "1 (ratio)",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/opentelemetry-operations-collector/master/components/otelopscol/processor/agentmetricsprocessor/utils_calculate_utilizations.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/pagingscraper/documentation.md"
+   ],
+   "note": "optional metric of the hostmetrics paging scraper: enable it. Google reports percent (0-100); the OpenTelemetry metric is a ratio (0-1), so a Google threshold is divided by 100."
+  },
+  "agent.googleapis.com/pagefile/percent_used": {
+   "name": "system.paging.utilization",
+   "status": "VERIFIED",
+   "factor": 100,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "gauge",
+   "unit": "1 (ratio)",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/opentelemetry-operations-collector/master/components/otelopscol/processor/agentmetricsprocessor/utils_calculate_utilizations.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/pagingscraper/documentation.md"
+   ],
+   "note": "Windows only; Google sums over the page files (device). Google reports percent (0-100); the OpenTelemetry metric is a ratio (0-1), so a Google threshold is divided by 100."
+  },
+  "agent.googleapis.com/processes/count_by_state": {
+   "name": "system.processes.count",
+   "status": "VERIFIED",
+   "factor": 1,
+   "labels": {
+    "state": "status"
+   },
+   "drop": [],
+   "add": [],
+   "nr_type": "gauge",
+   "unit": "{processes}",
+   "sources": [
+    "https://raw.githubusercontent.com/GoogleCloudPlatform/ops-agent/master/apps/hostmetrics.go",
+    "https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/hostmetricsreceiver/internal/scraper/processesscraper/documentation.md"
+   ],
+   "note": "Google's attribute `state` is `status` in OpenTelemetry."
+  },
+  "agent.googleapis.com/iis/current_connections": {
+   "name": null,
+   "status": "UNVERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "",
+   "unit": "",
+   "sources": [
+    "https://cloud.google.com/monitoring/api/metrics_agent"
+   ],
+   "otel_hint": "iis.connection.active (iisreceiver; same Windows performance counter family, not a documented mapping)",
+   "note": ""
+  },
+  "agent.googleapis.com/iis/new_connection_count": {
+   "name": null,
+   "status": "UNVERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "",
+   "unit": "",
+   "sources": [
+    "https://cloud.google.com/monitoring/api/metrics_agent"
+   ],
+   "otel_hint": "iis.connection.attempt.count (iisreceiver)",
+   "note": ""
+  },
+  "agent.googleapis.com/iis/request_count": {
+   "name": null,
+   "status": "UNVERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "",
+   "unit": "",
+   "sources": [
+    "https://cloud.google.com/monitoring/api/metrics_agent"
+   ],
+   "otel_hint": "iis.request.count (iisreceiver, attribute request)",
+   "note": ""
+  },
+  "agent.googleapis.com/iis/network/transferred_bytes_count": {
+   "name": null,
+   "status": "UNVERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "",
+   "unit": "",
+   "sources": [
+    "https://cloud.google.com/monitoring/api/metrics_agent"
+   ],
+   "otel_hint": "iis.network.io (iisreceiver, attribute direction)",
+   "note": ""
+  },
+  "agent.googleapis.com/mssql/connections/user": {
+   "name": null,
+   "status": "UNVERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "",
+   "unit": "",
+   "sources": [
+    "https://cloud.google.com/monitoring/api/metrics_agent"
+   ],
+   "otel_hint": "sqlserver.user.connection.count (sqlserverreceiver)",
+   "note": ""
+  },
+  "agent.googleapis.com/mssql/transaction_rate": {
+   "name": null,
+   "status": "UNVERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "",
+   "unit": "",
+   "sources": [
+    "https://cloud.google.com/monitoring/api/metrics_agent"
+   ],
+   "otel_hint": "sqlserver.transaction.rate (sqlserverreceiver, Windows only)",
+   "note": ""
+  },
+  "agent.googleapis.com/mssql/write_transaction_rate": {
+   "name": null,
+   "status": "UNVERIFIED",
+   "factor": 1,
+   "labels": {},
+   "drop": [],
+   "add": [],
+   "nr_type": "",
+   "unit": "",
+   "sources": [
+    "https://cloud.google.com/monitoring/api/metrics_agent"
+   ],
+   "otel_hint": "sqlserver.transaction.write.rate (sqlserverreceiver, Windows only)",
+   "note": ""
+  }
+ },
+ "workload_names": {
+  "active_directory.ds.bind.rate": "contrib:activedirectorydsreceiver",
+  "active_directory.ds.ldap.bind.last_successful.time": "contrib:activedirectorydsreceiver",
+  "active_directory.ds.ldap.bind.rate": "contrib:activedirectorydsreceiver",
+  "active_directory.ds.ldap.client.session.count": "contrib:activedirectorydsreceiver",
+  "active_directory.ds.ldap.search.rate": "contrib:activedirectorydsreceiver",
+  "active_directory.ds.name_cache.hit_rate": "contrib:activedirectorydsreceiver",
+  "active_directory.ds.notification.queued": "contrib:activedirectorydsreceiver",
+  "active_directory.ds.operation.rate": "contrib:activedirectorydsreceiver",
+  "active_directory.ds.replication.operation.pending": "contrib:activedirectorydsreceiver",
+  "active_directory.ds.security_descriptor_propagations_event.queued": "contrib:activedirectorydsreceiver",
+  "active_directory.ds.suboperation.rate": "contrib:activedirectorydsreceiver",
+  "active_directory.ds.thread.count": "contrib:activedirectorydsreceiver",
+  "activemq.connection.count": "jmx:activemq",
+  "activemq.disk.store_usage": "jmx:activemq",
+  "activemq.disk.temp_usage": "jmx:activemq",
+  "aerospike.namespace.disk.available": "contrib:aerospikereceiver",
+  "aerospike.namespace.memory.free": "contrib:aerospikereceiver",
+  "aerospike.node.memory.free": "contrib:aerospikereceiver",
+  "apache.requests": "contrib:apachereceiver",
+  "cassandra.client.request.count": "jmx:cassandra",
+  "cassandra.client.request.error.count": "jmx:cassandra",
+  "cassandra.client.request.read.latency.50p": "jmx:cassandra",
+  "couchbase.bucket.error.oom.count": "ops-agent apps/couchbase.go",
+  "couchbase.bucket.item.count": "ops-agent apps/couchbase.go",
+  "couchbase.bucket.item.ejection.count": "ops-agent apps/couchbase.go",
+  "couchbase.bucket.memory.usage": "ops-agent apps/couchbase.go",
+  "couchbase.bucket.operation.count": "ops-agent apps/couchbase.go",
+  "couchdb.average_request_time": "contrib:couchdbreceiver",
+  "couchdb.database.open": "contrib:couchdbreceiver",
+  "couchdb.database.operations": "contrib:couchdbreceiver",
+  "couchdb.file_descriptor.open": "contrib:couchdbreceiver",
+  "couchdb.httpd.bulk_requests": "contrib:couchdbreceiver",
+  "couchdb.httpd.requests": "contrib:couchdbreceiver",
+  "couchdb.httpd.responses": "contrib:couchdbreceiver",
+  "couchdb.httpd.views": "contrib:couchdbreceiver",
+  "dcgm.gpu.profiling.nvlink_traffic_rate": "ops-agent apps/dcgm.go",
+  "dcgm.gpu.profiling.pcie_traffic_rate": "ops-agent apps/dcgm.go",
+  "dcgm.gpu.profiling.pipe_utilization": "ops-agent apps/dcgm.go",
+  "dcgm.gpu.profiling.sm_occupancy": "ops-agent apps/dcgm.go",
+  "dcgm.gpu.profiling.sm_utilization": "ops-agent apps/dcgm.go",
+  "elasticsearch.cluster.health": "contrib:elasticsearchreceiver",
+  "hadoop.name_node.capacity.limit": "jmx:hadoop",
+  "hadoop.name_node.capacity.usage": "jmx:hadoop",
+  "hadoop.name_node.data_node.count": "jmx:hadoop",
+  "hadoop.name_node.volume.failed": "jmx:hadoop",
+  "hbase.region_server.authentication.count": "jmx:hbase",
+  "hbase.region_server.operation.append.latency.p99": "jmx:hbase",
+  "hbase.region_server.operation.delete.latency.p99": "jmx:hbase",
+  "hbase.region_server.operation.get.latency.p99": "jmx:hbase",
+  "hbase.region_server.operation.increment.latency.p99": "jmx:hbase",
+  "hbase.region_server.operation.put.latency.p99": "jmx:hbase",
+  "hbase.region_server.operation.replay.latency.p99": "jmx:hbase",
+  "hbase.region_server.operations.slow": "jmx:hbase",
+  "iis.connection.active": "contrib:iisreceiver",
+  "iis.connection.anonymous": "contrib:iisreceiver",
+  "iis.connection.attempt.count": "contrib:iisreceiver",
+  "iis.network.blocked": "contrib:iisreceiver",
+  "iis.network.file.count": "contrib:iisreceiver",
+  "iis.network.io": "contrib:iisreceiver",
+  "iis.request.count": "contrib:iisreceiver",
+  "iis.request.queue.count": "contrib:iisreceiver",
+  "iis.request.rejected": "contrib:iisreceiver",
+  "iis.thread.active": "contrib:iisreceiver",
+  "iis.uptime": "contrib:iisreceiver",
+  "jetty.select.count": "jmx:jetty",
+  "jetty.session.count": "jmx:jetty",
+  "jetty.session.time.max": "jmx:jetty",
+  "jetty.session.time.total": "jmx:jetty",
+  "jetty.thread.count": "jmx:jetty",
+  "jetty.thread.queue.count": "jmx:jetty",
+  "jvm.classes.loaded": "contrib:elasticsearchreceiver",
+  "jvm.gc.collections.count": "contrib:elasticsearchreceiver",
+  "jvm.gc.collections.elapsed": "contrib:elasticsearchreceiver",
+  "jvm.memory.heap.committed": "contrib:elasticsearchreceiver",
+  "jvm.memory.heap.max": "contrib:elasticsearchreceiver",
+  "jvm.memory.heap.used": "contrib:elasticsearchreceiver",
+  "jvm.memory.nonheap.committed": "contrib:elasticsearchreceiver",
+  "jvm.memory.nonheap.used": "contrib:elasticsearchreceiver",
+  "jvm.threads.count": "contrib:elasticsearchreceiver",
+  "kafka.isr.operation.count": "jmx:kafka",
+  "kafka.message.count": "jmx:kafka",
+  "kafka.network.io": "jmx:kafka",
+  "kafka.partition.count": "jmx:kafka",
+  "kafka.partition.offline": "jmx:kafka",
+  "kafka.partition.under_replicated": "jmx:kafka",
+  "kafka.purgatory.size": "jmx:kafka",
+  "kafka.request.count": "jmx:kafka",
+  "kafka.request.failed": "jmx:kafka",
+  "memcached.bytes": "contrib:memcachedreceiver",
+  "memcached.commands": "contrib:memcachedreceiver",
+  "memcached.connections.current": "contrib:memcachedreceiver",
+  "memcached.connections.total": "contrib:memcachedreceiver",
+  "memcached.cpu.usage": "contrib:memcachedreceiver",
+  "memcached.current_items": "contrib:memcachedreceiver",
+  "memcached.evictions": "contrib:memcachedreceiver",
+  "memcached.network": "contrib:memcachedreceiver",
+  "memcached.operations": "contrib:memcachedreceiver",
+  "memcached.threads": "contrib:memcachedreceiver",
+  "mongodb.connection.count": "contrib:mongodbreceiver",
+  "mongodb.memory.usage": "contrib:mongodbreceiver",
+  "nginx.connections_accepted": "contrib:nginxreceiver",
+  "nginx.connections_handled": "contrib:nginxreceiver",
+  "nginx.requests": "contrib:nginxreceiver",
+  "oracle.disk.operation.size": "ops-agent apps/oracledb.go",
+  "oracle.logon.current": "ops-agent apps/oracledb.go",
+  "oracle.network.data": "ops-agent apps/oracledb.go",
+  "oracle.process.count": "ops-agent apps/oracledb.go",
+  "oracle.process.limit": "ops-agent apps/oracledb.go",
+  "oracle.service.response_time": "ops-agent apps/oracledb.go",
+  "oracle.session.count": "ops-agent apps/oracledb.go",
+  "oracle.session.limit": "ops-agent apps/oracledb.go",
+  "oracle.tablespace.size": "ops-agent apps/oracledb.go",
+  "postgresql.backends": "contrib:postgresqlreceiver",
+  "postgresql.bgwriter.maxwritten": "contrib:postgresqlreceiver",
+  "postgresql.connection.max": "contrib:postgresqlreceiver",
+  "postgresql.db_size": "contrib:postgresqlreceiver",
+  "postgresql.operations": "contrib:postgresqlreceiver",
+  "rabbitmq.consumer.count": "contrib:rabbitmqreceiver",
+  "rabbitmq.message.acknowledged": "contrib:rabbitmqreceiver",
+  "rabbitmq.message.current": "contrib:rabbitmqreceiver",
+  "rabbitmq.message.delivered": "contrib:rabbitmqreceiver",
+  "rabbitmq.message.dropped": "contrib:rabbitmqreceiver",
+  "rabbitmq.message.published": "contrib:rabbitmqreceiver",
+  "redis.keys.evicted": "contrib:redisreceiver",
+  "redis.memory.fragmentation_ratio": "contrib:redisreceiver",
+  "saphana.alert.count": "contrib:saphanareceiver",
+  "saphana.connection.count": "contrib:saphanareceiver",
+  "saphana.instance.memory.current": "contrib:saphanareceiver",
+  "saphana.instance.memory.shared.allocated": "contrib:saphanareceiver",
+  "saphana.instance.memory.used.peak": "contrib:saphanareceiver",
+  "saphana.row_store.memory.used": "contrib:saphanareceiver",
+  "saphana.schema.memory.used.max": "contrib:saphanareceiver",
+  "saphana.schema.operation.count": "contrib:saphanareceiver",
+  "saphana.schema.record.count": "contrib:saphanareceiver",
+  "saphana.service.memory.used": "contrib:saphanareceiver",
+  "saphana.transaction.blocked": "contrib:saphanareceiver",
+  "solr.cache.eviction.count": "jmx:solr",
+  "solr.request.count": "jmx:solr",
+  "solr.request.error.count": "jmx:solr",
+  "sqlserver.batch.request.rate": "contrib:sqlserverreceiver",
+  "sqlserver.batch.sql_compilation.rate": "contrib:sqlserverreceiver",
+  "sqlserver.batch.sql_recompilation.rate": "contrib:sqlserverreceiver",
+  "sqlserver.lock.wait.rate": "contrib:sqlserverreceiver",
+  "sqlserver.lock.wait_time.avg": "contrib:sqlserverreceiver",
+  "sqlserver.page.buffer_cache.hit_ratio": "contrib:sqlserverreceiver",
+  "sqlserver.page.checkpoint.flush.rate": "contrib:sqlserverreceiver",
+  "sqlserver.page.lazy_write.rate": "contrib:sqlserverreceiver",
+  "sqlserver.page.life_expectancy": "contrib:sqlserverreceiver",
+  "sqlserver.page.operation.rate": "contrib:sqlserverreceiver",
+  "sqlserver.page.split.rate": "contrib:sqlserverreceiver",
+  "sqlserver.user.connection.count": "contrib:sqlserverreceiver",
+  "tomcat.max_time": "jmx:tomcat",
+  "tomcat.processing_time": "jmx:tomcat",
+  "tomcat.request_count": "jmx:tomcat",
+  "tomcat.sessions": "jmx:tomcat",
+  "tomcat.threads": "jmx:tomcat",
+  "tomcat.traffic": "jmx:tomcat",
+  "varnish.backend.connection.count": "contrib:varnishreceiver",
+  "varnish.backend.request.count": "contrib:varnishreceiver",
+  "varnish.cache.operation.count": "contrib:varnishreceiver",
+  "varnish.client.request.error.count": "contrib:varnishreceiver",
+  "varnish.object.count": "contrib:varnishreceiver",
+  "varnish.object.expired": "contrib:varnishreceiver",
+  "varnish.object.moved": "contrib:varnishreceiver",
+  "varnish.object.nuked": "contrib:varnishreceiver",
+  "varnish.session.count": "contrib:varnishreceiver",
+  "varnish.thread.operation.count": "contrib:varnishreceiver",
+  "vault.audit.request.failed": "ops-agent apps/vault.go",
+  "vault.audit.response.failed": "ops-agent apps/vault.go",
+  "vault.core.request.count": "ops-agent apps/vault.go",
+  "vault.memory.usage": "ops-agent apps/vault.go",
+  "vault.token.count": "ops-agent apps/vault.go",
+  "vault.token.lease.count": "ops-agent apps/vault.go",
+  "vault.token.renew.time": "ops-agent apps/vault.go",
+  "vault.token.revoke.time": "ops-agent apps/vault.go",
+  "wildfly.jdbc.connection.open": "jmx:wildfly",
+  "wildfly.jdbc.request.wait": "jmx:wildfly",
+  "wildfly.jdbc.rollback.count": "jmx:wildfly",
+  "wildfly.jdbc.transaction.count": "jmx:wildfly",
+  "wildfly.network.io": "jmx:wildfly",
+  "wildfly.request.count": "jmx:wildfly",
+  "wildfly.request.server_error": "jmx:wildfly",
+  "wildfly.request.time": "jmx:wildfly",
+  "wildfly.session.count": "jmx:wildfly",
+  "wildfly.session.expired": "jmx:wildfly",
+  "wildfly.session.rejected": "jmx:wildfly",
+  "zookeeper.connection.active": "contrib:zookeeperreceiver",
+  "zookeeper.data_tree.size": "contrib:zookeeperreceiver",
+  "zookeeper.file_descriptor.limit": "contrib:zookeeperreceiver",
+  "zookeeper.file_descriptor.open": "contrib:zookeeperreceiver",
+  "zookeeper.follower.count": "contrib:zookeeperreceiver",
+  "zookeeper.fsync.exceeded_threshold.count": "contrib:zookeeperreceiver",
+  "zookeeper.latency.avg": "contrib:zookeeperreceiver",
+  "zookeeper.latency.max": "contrib:zookeeperreceiver",
+  "zookeeper.packet.count": "contrib:zookeeperreceiver",
+  "zookeeper.request.active": "contrib:zookeeperreceiver",
+  "zookeeper.znode.count": "contrib:zookeeperreceiver"
+ }
+}
