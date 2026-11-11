@@ -18,8 +18,8 @@ heading and a text badge line only.
   `simple-icons-LICENSE.md`.
 - The path data is embedded in `src/importer/core/brand_marks.py`; the SVG files here are the
   reference copies. Update both together.
-- Not available in Simple Icons: AWS CloudWatch (and Microsoft Azure) were removed. AWS reports use
-  a neutral text badge, never an imitation of a logo.
+- Not available in Simple Icons: AWS CloudWatch (and Microsoft Azure) were removed. AWS and Azure
+  Monitor reports use a neutral text badge, never an imitation of a logo.
 - The names and marks are trademarks of their owners. They are used only to identify the source
   or target product of a migration, with no claim of endorsement.
 - Brand colours appear only as a thin accent border next to the name. The marks use the text

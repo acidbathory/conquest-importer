@@ -105,7 +105,7 @@ def test_menu_lists_every_choice_and_quits(tmp_path: Path) -> None:
 
 
 def test_bad_choice_reprompts(tmp_path: Path) -> None:
-    menu, console, _, _, _ = make(tmp_path, ["x", "10", "0"])
+    menu, console, _, _, _ = make(tmp_path, ["x", "11", "0"])
     menu.run()
     assert console.text.count("Please type a number") == 2
 
@@ -147,8 +147,8 @@ def test_skipping_a_secret_stops_the_flow(tmp_path: Path, monkeypatch: pytest.Mo
 def test_check_my_setup_runs_doctor_for_each_source(tmp_path: Path) -> None:
     menu, console, run, _, _ = make(tmp_path, ["6", "0"], FakeRunner({"doctor": 1}))
     menu.run()
-    assert run.names().count("doctor") == 4
-    assert console.text.count("Next:") >= 4
+    assert run.names().count("doctor") == 5
+    assert console.text.count("Next:") >= 5
 
 
 def test_sample_runs_offline_and_does_not_open_report(tmp_path: Path) -> None:
@@ -229,3 +229,21 @@ def test_what_did_i_just_do_names_disabled_things_and_rolled_back_state(tmp_path
     store.save(record)
     menu.run()
     assert "1 still in New Relic" in console.text and "disabled" in console.text
+
+
+def test_azure_is_choice_10_and_runs_the_azure_extract_and_convert(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name, value in (
+        ("AZURE_TENANT_ID", "t"),
+        ("AZURE_CLIENT_ID", "c"),
+        ("AZURE_SUBSCRIPTION_ID", "s"),
+        ("AZURE_CLIENT_SECRET", "x"),
+    ):
+        monkeypatch.setenv(name, value)
+    menu, console, run, _, _ = make(tmp_path, ["10", "0"])
+    menu.run()
+    assert "10  Azure" in console.text
+    assert run.calls[0] == ["doctor", "--source", "azure"]
+    assert any(c[0] == "extract-azure" for c in run.calls)
+    assert any(c[:3] == ["convert", "--source", "azure"] for c in run.calls)

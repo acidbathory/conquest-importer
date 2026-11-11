@@ -5,7 +5,7 @@ images). HTML gets inline SVG marks from the Simple Icons project (CC0, see docs
 nothing is fetched at view time. All text here is constant, never source-controlled.
 
 The marks are trademarks of their owners, used only to identify the source product. Where no mark
-exists (AWS CloudWatch) a neutral text badge is drawn instead of imitating a logo.
+exists (AWS CloudWatch, Azure Monitor) a neutral text badge is drawn instead of imitating a logo.
 """
 
 from importer.core.brand_marks import MARKS
@@ -17,8 +17,8 @@ PAIRS: dict[str, tuple[str, str | None, str]] = {
     "dynatrace": ("Dynatrace", "dynatrace", "#1496ff"),
     "dynatrace-classic": ("Dynatrace", "dynatrace", "#1496ff"),
     "grafana": ("Grafana", "grafana", "#f46800"),
-    "datadog": ("Datadog", "datadog", "#632ca6"),
     "azure": ("Azure Monitor", None, "#0078d4"),
+    "datadog": ("Datadog", "datadog", "#632ca6"),
 }
 TARGET = "New Relic"
 TARGET_COLOUR = "#1ce783"
