@@ -4,8 +4,8 @@ This guide is for a person who has never done this. It creates one identity (a "
 that can only read your Azure Monitor setup: alert rules, action groups, alert processing rules,
 dashboards and workbooks. It cannot create, change or delete anything.
 
-The Azure migration is not built yet (see [Datadog and Azure](runbook-datadog-and-azure.md)); this
-page prepares the credentials so they are ready. Nothing here calls the migration tool.
+The Azure source is described in the [Azure runbook](runbook-azure.md); this page creates the
+credentials it reads with. Nothing here calls the migration tool.
 
 How each step is marked:
 
@@ -27,8 +27,8 @@ AZURE_CLIENT_SECRET=<the secret value, shown once>
 AZURE_SUBSCRIPTION_ID=<subscription id>
 ```
 
-These four names are the planned names. The tool does not read them yet (UNVERIFIED future
-behaviour). For a national cloud see section 8.
+`extract-azure` reads these four names (or `AZURE_ACCESS_TOKEN` instead of the first three) and
+`importer doctor --source azure` checks them. For a national cloud see section 8.
 
 ## 1. Who is allowed to do this
 

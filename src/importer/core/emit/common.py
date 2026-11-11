@@ -65,8 +65,9 @@ SOURCE_LABELS = {
     "cloudwatch": "CloudWatch alarm",
     "gcp": "Google Cloud alert policy",
     "dynatrace-classic": "Dynatrace classic alerting object",
+    "azure": "Azure Monitor alert rule",
 }
-RESOURCE_PREFIXES = {"cloudwatch": "cw", "gcp": "gcp", "dynatrace-classic": "dtc"}
+RESOURCE_PREFIXES = {"cloudwatch": "cw", "gcp": "gcp", "dynatrace-classic": "dtc", "azure": "az"}
 
 
 def condition_name(name: str) -> str:
@@ -82,6 +83,11 @@ def source_description(monitor: IRMonitor) -> str:
     label = SOURCE_LABELS.get(monitor.source_system, monitor.source_system)
     ident = monitor.source_key or str(monitor.source_id)
     text = f"Imported from {label} {condition_name(ident)}"
+    unmapped_note = monitor.unmapped.get(
+        "description_note"
+    )  # a source's one-line fact, e.g. Azure severity
+    if isinstance(unmapped_note, str) and unmapped_note:
+        text = f"{text} ({condition_name(unmapped_note)})"
     options = monitor.emit
     if options is None or not options.description_note:
         return text

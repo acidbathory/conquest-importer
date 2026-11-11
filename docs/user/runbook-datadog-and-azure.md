@@ -20,17 +20,9 @@ What to do instead today: nothing in this tool. Export your monitors and dashboa
 plan the move by hand, or wait. The shared pieces (the intermediate format, the New Relic emitters, the
 guarded `apply`, rollback) would be reused when Datadog returns.
 
-## Azure: not started
+## Azure: now built
 
-- No Azure Monitor code, fixtures or research exist yet beyond a note in the roadmap that the New Relic
-  Azure integration is the data route to study (streaming against polling).
-- The importer has no Azure command and no `--source azure`.
-- Azure comes next after AWS and Google Cloud in the plan, with the same shape: read alerts, convert,
-  check the data, create disabled.
-
-What to do instead today: nothing in this tool. For Azure metrics, New Relic's own Azure integration
-is outside this project. A Dynatrace dashboard plan may name Azure metrics and their New Relic
-counterparts. That is a plan, not an Azure migration.
+Azure Monitor alert rules have their own page: [runbook-azure.md](runbook-azure.md).
 
 ## What you can do now
 

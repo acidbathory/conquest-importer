@@ -110,6 +110,17 @@ SPECS: dict[str, Spec] = {
         ("DYNATRACE_API_TOKEN",),
         "Check DYNATRACE_ENV_URL and DYNATRACE_API_TOKEN in your .env, then pick this again.",
     ),
+    # Azure joined after the numbers 5 to 9 were in use in the docs and tests, so it is 10
+    "10": Spec(
+        "10",
+        "Azure",
+        "azure",
+        ("--source", "azure"),
+        ("AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_SUBSCRIPTION_ID"),
+        ("AZURE_CLIENT_SECRET",),
+        "Check AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_SUBSCRIPTION_ID and AZURE_CLIENT_SECRET in "
+        "your .env (docs/user/azure-credentials.md), then pick this again.",
+    ),
 }
 MAIN = (
     "\nConquest Importer",
@@ -122,6 +133,7 @@ MAIN = (
     "  7  Try on sample data",
     "  8  What did I just do?",
     "  9  Check my migration (parity)",
+    " 10  Azure",
     "  0  Quit",
 )
 
@@ -265,6 +277,8 @@ class Menu:
             region = self.c.ask("AWS region [us-east-1]:") or "us-east-1"
             args = ["extract-cloudwatch", "--account-id", account, "--region", region]
             return args, ["--region", region]
+        if spec.key == "10":
+            return ["extract-azure"], []
         return [("extract-grafana" if spec.key == "3" else "extract-dynatrace")], []
 
     def _nr_account(self) -> int | None:

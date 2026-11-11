@@ -104,7 +104,7 @@ def test_commands_and_flags_are_real(guide: Path) -> None:
 
 
 IMAGE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
-SOURCES = ["Grafana", "Dynatrace", "AWS CloudWatch", "Google Cloud"]
+SOURCES = ["Grafana", "Dynatrace", "AWS CloudWatch", "Google Cloud", "Azure"]
 
 
 def test_readme_images_exist_and_are_small() -> None:
@@ -126,7 +126,12 @@ def test_readme_covers_every_source_with_prerequisites() -> None:
         assert source in text.split("## Supported sources")[1].split("## What you need")[0]
         assert any(source in h for h in headings), f"no prerequisites heading for {source}"
     assert "bash scripts/migrate.sh" in text
-    for variable in ("GRAFANA_SA_TOKEN", "DYNATRACE_API_TOKEN", "NEW_RELIC_ALLOWED_ACCOUNT_IDS"):
+    for variable in (
+        "GRAFANA_SA_TOKEN",
+        "DYNATRACE_API_TOKEN",
+        "AZURE_CLIENT_SECRET",
+        "NEW_RELIC_ALLOWED_ACCOUNT_IDS",
+    ):
         assert variable in text
     assert "SSL_CERT_FILE" in text
 
@@ -138,6 +143,7 @@ def test_permissions_has_a_section_per_source() -> None:
         "Google Cloud Monitoring",
         "Grafana",
         "Dynatrace",
+        "Azure Monitor",
         "New Relic",
     ):
         assert re.search(rf"^## {heading}", text, re.MULTILINE), heading
