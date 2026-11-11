@@ -246,7 +246,7 @@ def test_subset_numbers_are_reproduced_by_the_commands_and_the_library(subset: P
     assert "ratio" not in codes and codes["mql"] == 1 and "promql" not in codes  # both convert
     widgets = summary["widgets"]
     assert widgets["scoreboard_converted"] >= 4
-    assert widgets["by_kind"]["logsPanel"] == {"placeholder": 1}
+    assert widgets["by_kind"]["logsPanel"] == {"converted": 1}  # a logs panel is now a log table
     assert summary["cross_check"]["cli_conditions_total"] == conditions["total"]
     assert summary["notifications"]["channels"] == 20 and summary["uptime"]["checks"] == 12
 

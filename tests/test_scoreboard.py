@@ -372,3 +372,14 @@ def test_parity_source_key_names_the_scope(out: Path) -> None:
     (out / "parity.json").write_text(json.dumps({"source": "dynatrace", "verdicts": {"match": 2}}))
     m = sb.gather([out], root=None, evidence=None, today="d")["metrics"]
     assert m["out/dynatrace/parity_match"] == 2
+
+
+def test_one_rule_says_what_a_placeholder_widget_is() -> None:
+    from importer.core.scoreboard import widget_class
+
+    assert [widget_class(k) for k in ("chart", "unsupported", "markdown", None)] == [
+        "converted",
+        "placeholder",
+        "other",
+        "other",
+    ]

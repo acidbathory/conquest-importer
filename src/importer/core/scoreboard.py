@@ -98,6 +98,14 @@ def _scan_alerts(folder: Path, metrics: dict[str, int], warnings: list[str]) -> 
             warnings.append(f"{printable(path.name, 60)} skipped: unknown confidence")
 
 
+def widget_class(kind: object) -> str:
+    """How the scoreboard counts a converted widget: "converted" (a real chart), "placeholder"
+    (a "Not migrated" note, never converted) or "other" (text, headings). One rule everywhere."""
+    if kind == "chart":
+        return "converted"
+    return "placeholder" if kind == "unsupported" else "other"
+
+
 def _scan_dashboards(folder: Path, metrics: dict[str, int], warnings: list[str]) -> None:
     ir = folder / "dashboard-ir"
     if ir.is_symlink() or not ir.is_dir():
@@ -114,12 +122,12 @@ def _scan_dashboards(folder: Path, metrics: dict[str, int], warnings: list[str])
         _bump(metrics, prefix + "dashboards")
         for widget in widgets:
             kind = widget.get("kind") if isinstance(widget, dict) else None
-            if kind == "chart":
+            if widget_class(kind) == "converted":
                 _bump(metrics, prefix + "widgets_converted")
                 _count_data_path(
                     metrics, prefix, "widgets", _key(data.get("source_system", "unknown")), widget
                 )
-            elif kind == "unsupported":
+            elif widget_class(kind) == "placeholder":
                 _bump(metrics, prefix + "widgets_placeholders")  # never counted as converted
 
 

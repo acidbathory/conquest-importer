@@ -36,11 +36,10 @@ from typing import Any
 from typer.testing import CliRunner
 
 from importer.cli import app
-from importer.core.dashboard_ir import WidgetKind
 from importer.core.ir import Confidence
+from importer.core.scoreboard import widget_class
 from importer.sources.gcp.dashboard_models import GcpDashboard
-from importer.sources.gcp.dashboards import LAYOUTS, translate_widget
-from importer.sources.gcp.datapath import tag_widget
+from importer.sources.gcp.dashboards import LAYOUTS, translate_dashboard
 from importer.sources.gcp.extract import _channel_summary, _uptime_summary
 from importer.sources.gcp.models import GcpAlertPolicy
 from importer.sources.gcp.translate import NAMING_NOTE, translate_policy
@@ -275,28 +274,30 @@ def measure_conditions(corpus: Corpus) -> list[dict[str, Any]]:
 
 
 def measure_widgets(corpus: Corpus) -> list[dict[str, Any]]:
+    """One row per widget the converter writes (the same list `convert` puts in the dashboard IR:
+    group headers become pages and blanks are dropped), counted by the scoreboard's rule."""
     rows: list[dict[str, Any]] = []
     for path, raw in corpus.dashboards:
         dash = GcpDashboard.model_validate(raw)
         key, layout = dash.layout
-        placed = LAYOUTS[key](layout) if key else []
-        for widget, lay in placed:
-            result = tag_widget(translate_widget(widget, lay))
+        sources: dict[str, list[str]] = {}  # the source JSON of each widget, by title, in order
+        for source, _lay in LAYOUTS[key](layout) if key else []:
+            sources.setdefault(str(source.get("title") or ""), []).append(json.dumps(source))
+        for result in translate_dashboard(dash).widgets:
             kind = result.source_type
             structural = kind in STRUCTURAL
-            if result.kind == WidgetKind.CHART:
-                verdict = "converted"
-            elif result.kind == WidgetKind.MARKDOWN:
-                verdict = "markdown"
-            else:
-                verdict = "placeholder"
+            verdict = {"converted": "converted", "placeholder": "placeholder", "other": "markdown"}[
+                widget_class(result.kind.value)
+            ]
+            queue = sources.get(result.title)
+            text = queue.pop(0) if queue else result.model_dump_json()
             rows.append(
                 {
                     "file": path,
                     "origin": "synthetic" if path.startswith("synthetic/") else "public",
                     "kind": kind,
                     "structural": structural,
-                    "family": metric_family(json.dumps(widget)),
+                    "family": metric_family(text),
                     "data_path": (result.data_path or "native") if verdict == "converted" else "",
                     "verdict": verdict,
                     "code": primary_code(result.reasons)
