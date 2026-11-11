@@ -14,6 +14,7 @@ import typer
 from importer.core.text import printable
 from importer.sources.grafana.extract import GrafanaError, api_token, grafana_url, validate_host
 from importer.sources.grafana.prom_hints import (
+    direct_hint_getter,
     find_datasource,
     hint_getter,
     hints_document,
@@ -25,9 +26,6 @@ from importer.sources.grafana.prom_hints import (
 def register(app: typer.Typer) -> None:
     @app.command("grafana-prom-hints")
     def grafana_prom_hints(
-        datasource: Annotated[
-            str, typer.Option("--datasource", help="Uid or name of the Prometheus data source")
-        ],
         metrics_from: Annotated[
             Path,
             typer.Option(
@@ -35,6 +33,18 @@ def register(app: typer.Typer) -> None:
                 help="Folder from `extract-grafana-dashboards`, or converted dashboard IR",
             ),
         ],
+        datasource: Annotated[
+            str | None,
+            typer.Option("--datasource", help="Uid or name of the Prometheus data source"),
+        ] = None,
+        prometheus_url: Annotated[
+            str | None,
+            typer.Option(
+                "--prometheus-url",
+                help="Read a Prometheus directly instead (http://127.0.0.1:9090, or https with "
+                "--allow-host); no Grafana sign-in is needed",
+            ),
+        ] = None,
         out: Annotated[Path, typer.Option(help="Hints file to write (must not exist)")] = Path(
             "hints.json"
         ),
@@ -52,17 +62,27 @@ def register(app: typer.Typer) -> None:
         `convert-grafana-dashboards --hints <file>`; a metric left out keeps the suffix guess.
         """
         try:
+            if (datasource is None) == (prometheus_url is None):
+                raise GrafanaError("give exactly one of --datasource and --prometheus-url")
             if out.exists():
                 raise GrafanaError(f"{out} already exists; choose a new file")
             wanted = metric_names(metrics_from)
             if not wanted:
                 raise GrafanaError(f"no Prometheus metric names found in {metrics_from}")
-            token = api_token()
-            base = validate_host(grafana_url(), allow_host)
-            with hint_getter(token, base, allow_host=allow_host) as get:
-                uid = find_datasource(get, datasource)
-                hints = read_hints(get, uid, wanted)
-            out.write_text(json.dumps(hints_document(hints), indent=2) + "\n")
+            if prometheus_url is not None:
+                with direct_hint_getter(prometheus_url, allow_host=allow_host) as get:
+                    hints = read_hints(get, None, wanted)
+            else:
+                token = api_token()
+                base = validate_host(grafana_url(), allow_host)
+                with hint_getter(token, base, allow_host=allow_host) as get:
+                    hints = read_hints(get, find_datasource(get, str(datasource)), wanted)
+            out.write_text(
+                json.dumps(
+                    hints_document(hints, prometheus_url or f"data source {datasource}"), indent=2
+                )
+                + "\n"
+            )
         except (GrafanaError, ValueError, OSError) as exc:
             typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
             raise typer.Exit(code=1) from None

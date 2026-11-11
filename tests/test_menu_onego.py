@@ -47,7 +47,7 @@ def _menu(
 
 def test_grafana_one_pass_preview_names_account_counts_and_reasons(tmp_path: Path) -> None:
     runner = HybridRunner()
-    menu, console, store, _ = _menu(tmp_path, ["3", "no", "0"], runner)
+    menu, console, store, _ = _menu(tmp_path, ["3", "", "no", "0"], runner)
     assert menu.run() == 0
     text = console.text
     # everything is read and converted before the single question
@@ -72,7 +72,7 @@ def test_grafana_one_pass_preview_names_account_counts_and_reasons(tmp_path: Pat
 
 def test_reasons_come_from_the_real_remediation_reader(tmp_path: Path) -> None:
     runner = HybridRunner()
-    menu, console, _, _ = _menu(tmp_path, ["3", "no", "0"], runner)
+    menu, console, _, _ = _menu(tmp_path, ["3", "", "no", "0"], runner)
     menu.run()
     plan = next(Path(tmp_path).rglob("remediation-plan.md")).read_text()
     start = next(i for i, line in enumerate(console.lines) if "Most common reasons" in line)
@@ -90,7 +90,7 @@ def test_one_yes_creates_all_kinds_in_order_with_one_run_and_rolls_all_back(
     runner = HybridRunner()
     nr = NamedNR({})
     menu, console, store, _ = _menu(
-        tmp_path, ["3", "yes", "8", "5", "1", "yes", "5", "0"], runner, nr
+        tmp_path, ["3", "", "yes", "8", "5", "1", "yes", "5", "0"], runner, nr
     )
     original = runner.__call__
 
@@ -131,7 +131,7 @@ def test_failure_midway_stops_says_what_exists_and_offers_rollback(tmp_path: Pat
             nr.objects[("condition", "10")] = "ckg-grafana-cpu"
         return code
 
-    menu, console, store, _ = _menu(tmp_path, ["3", "yes", "1", "yes", "0"], runner, nr)
+    menu, console, store, _ = _menu(tmp_path, ["3", "", "yes", "1", "yes", "0"], runner, nr)
     menu.runner = failing
     menu.run()
     assert runner.writes() == ["apply", "apply-notifications"]  # dashboards never tried
@@ -153,7 +153,7 @@ def test_failure_midway_can_continue(tmp_path: Path) -> None:
             return 1
         return original(args)
 
-    menu, console, store, _ = _menu(tmp_path, ["3", "yes", "2", "0"], runner)
+    menu, console, store, _ = _menu(tmp_path, ["3", "", "yes", "2", "0"], runner)
     menu.runner = flaky
     menu.run()
     assert runner.writes()[-1] == "apply-dashboards"
@@ -164,7 +164,7 @@ def test_failure_midway_can_continue(tmp_path: Path) -> None:
 
 def test_declining_leaves_nothing_created(tmp_path: Path) -> None:
     runner = HybridRunner()
-    menu, _, store, _ = _menu(tmp_path, ["3", "", "0"], runner)  # Enter is not yes
+    menu, _, store, _ = _menu(tmp_path, ["3", "", "", "0"], runner)  # Enter is not yes
     menu.run()
     assert runner.writes() == [] and store.list() == []
 
@@ -174,7 +174,7 @@ def test_not_allow_listed_account_is_refused_before_asking(
 ) -> None:
     monkeypatch.delenv("NEW_RELIC_ALLOWED_ACCOUNT_IDS")
     runner = HybridRunner()
-    menu, console, store, _ = _menu(tmp_path, ["3", "0"], runner)
+    menu, console, store, _ = _menu(tmp_path, ["3", "", "0"], runner)
     menu.run()
     assert "NEW_RELIC_ALLOWED_ACCOUNT_IDS" in console.text
     assert "Type 'yes'" not in console.text
@@ -183,7 +183,7 @@ def test_not_allow_listed_account_is_refused_before_asking(
 
 def test_a_failed_dashboard_read_leaves_those_out_but_continues(tmp_path: Path) -> None:
     runner = HybridRunner(fail={"extract-grafana-dashboards"})
-    menu, console, store, _ = _menu(tmp_path, ["3", "yes", "0"], runner)
+    menu, console, store, _ = _menu(tmp_path, ["3", "", "yes", "0"], runner)
     menu.run()
     assert "convert-grafana-dashboards" not in runner.names()
     assert "dashboards did not work" in console.text
@@ -194,7 +194,7 @@ def test_a_failed_dashboard_read_leaves_those_out_but_continues(tmp_path: Path) 
 
 def test_a_failed_alert_read_stops_everything(tmp_path: Path) -> None:
     runner = HybridRunner(fail={"extract-grafana"})
-    menu, console, store, _ = _menu(tmp_path, ["3", "0"], runner)
+    menu, console, store, _ = _menu(tmp_path, ["3", "", "0"], runner)
     menu.run()
     assert runner.names() == ["doctor", "extract-grafana"]
     assert "Nothing was changed" in console.text and store.list() == []

@@ -50,6 +50,9 @@ class HybridRunner:
             return 1
         if name == "doctor":
             return 0
+        if name == "grafana-prom-hints":  # the read is faked: a hints file as the command writes
+            Path(args[args.index("--out") + 1]).write_text('{"types": {}, "series": {}}')
+            return 0
         if name.startswith("extract-"):
             fixture, sub = READS.get(name, (FIX / "grafana", ""))
             shutil.copytree(fixture, Path(args[args.index("--out") + 1]) / sub)

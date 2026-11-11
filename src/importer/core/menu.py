@@ -39,10 +39,12 @@ from importer.core.menu_flow import (
     Summary,
     build_kinds,
     extra_plans,
+    hints_step,
     planned_names,
     read_int,
     summarise,
     triage_buckets,
+    with_hints,
 )
 from importer.core.migration_summary import load_summary
 from importer.core.remediation_plan import build_plan, read_items
@@ -54,6 +56,7 @@ from importer.core.run_rollback import (
     rollback_run,
 )
 from importer.core.runs import RunRecord, RunStore
+from importer.parity.source import SourceError, check_direct
 
 Runner = Callable[[list[str]], int]
 OBJECT_OF = {"alerts": "condition", "notifications": "workflow", "dashboards": "dashboard"}
@@ -186,6 +189,9 @@ def open_in_browser(uri: str) -> bool:
     return bool(webbrowser.open(uri))
 
 
+MAX_URL_TRIES = 3
+
+
 class Menu:
     def __init__(
         self,
@@ -316,6 +322,7 @@ class Menu:
         if inputs is None:
             return
         extract, doctor_extra = inputs
+        prometheus = self._ask_prometheus(spec)
         self.c.say("\nStep 1 of 4: checking your setup")
         if not self._doctor(spec, tuple(doctor_extra)):
             return
@@ -325,6 +332,7 @@ class Menu:
         kinds = self._stage(kinds, "read", "Reading")
         if not kinds:
             return
+        kinds = self._hints(kinds, lay, prometheus)
         self.c.say("\nStep 3 of 4: converting everything (local files only)")
         kinds = self._stage(kinds, "convert", "Converting")
         if not kinds:
@@ -347,6 +355,44 @@ class Menu:
             self.c.say("There is nothing to create from this source. Nothing was created.")
             return
         self._create_all(spec, lay, summary, account, name)
+
+    def _ask_prometheus(self, spec: Spec) -> str:
+        """Grafana only: a Prometheus URL on this machine; Enter or three bad tries skip."""
+        if spec.key != "3":
+            return ""
+        for _ in range(MAX_URL_TRIES):
+            url = self.c.ask(
+                "Prometheus URL for exact metric types (optional, Enter to skip). It must run "
+                "on this machine, such as http://127.0.0.1:9090. Series are looked for over the "
+                "last 7 days:"
+            )
+            if not url:
+                break
+            try:
+                check_direct(url, None)
+            except SourceError as exc:
+                self.c.say(f"{exc}. Try again, or press Enter to skip.")
+                continue
+            return url
+        self.c.say(
+            "Skipping the Prometheus step. Without it the importer cannot tell which "
+            "dashboard panels that sum() or count() a gauge show one series, so those panels "
+            "stay manual (they are listed in the report). Give a URL next time to convert them."
+        )
+        return ""
+
+    def _hints(self, kinds: list[KindPlan], lay: Layout, url: str) -> list[KindPlan]:
+        """Read hints (read-only) for the dashboard conversion; a failure only costs the hints."""
+        if not url:
+            return kinds
+        self.c.say("\nReading metric types and series from your Prometheus (read-only)")
+        if self.runner(hints_step(url, lay)) != 0:
+            self.c.say(
+                "The Prometheus step did not work (see above), so the dashboards are converted "
+                "without hints and gauge sums stay manual. Nothing was changed."
+            )
+            return kinds
+        return with_hints(kinds, lay.hints)
 
     def _stage(self, kinds: list[KindPlan], which: str, verb: str) -> list[KindPlan]:
         """Run one stage for every kind. Alerts failing ends the flow; other kinds are dropped."""
