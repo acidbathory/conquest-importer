@@ -1,0 +1,36 @@
+{
+  "displayName": "Server Error is high. (GKE Workload: ${WORKLOAD_NAME})",
+  "documentation": {
+    "content": "[View Workload Details](https://console.cloud.google.com/kubernetes/deployment/${metric_or_resource.label.location}/${metric_or_resource.label.cluster_name}/${metric_or_resource.label.namespace_name}/${metric.label.metadata_system_top_level_controller_name}/observability?project=${metric_or_resource.label.project_id}).\n- If alerts tend to be false positive or noisy, consider visiting the alert policy page and changing the threshold, the rolling (alignment) window, and the retest (duration) window. [Alerting policies documentation](https://cloud.google.com/monitoring/alerts/concepts-indepth), [PromQL documentation](https://cloud.google.com/monitoring/promql/create-promql-alerts-console)",
+    "mimeType": "text/markdown"
+  },
+  "userLabels": {
+    "workload_name": "${WORKLOAD_NAME}",
+    "workload_type": "${WORKLOAD_TYPE}",
+    "project_id": "${PROJECT_ID}",
+    "location": "${CLUSTER_LOCATION}",
+    "cluster": "${CLUSTER_NAME}",
+    "namespace": "${NAMESPACE}"
+  },
+  "conditions": [
+    {
+      "displayName": "Server Error is high for a method",
+      "conditionPrometheusQueryLanguage": {
+        "duration": "0s",
+        "evaluationInterval": "30s",
+        "query": "(\n  sum by (grpc_method) (\n    rate({\n      \"grpc_server_handled_total\",\n      project_id=~\"${PROJECT_ID}\",\n      cluster=~\"${CLUSTER_NAME}\",\n      location=~\"${CLUSTER_LOCATION}\",\n      namespace=~\"${NAMESPACE}\",\n      pod=~\"${WORKLOAD_NAME}-[a-f0-9]{7,10}-[a-z0-9]{5}\",\n      grpc_code=~\"(Internal|Unknown|Unavailable|Unimplemented)\"\n    }[5m])\n  )\n  /\n  sum by (grpc_method) (\n    rate({\n      \"grpc_server_handled_total\",\n      project_id=~\"${PROJECT_ID}\",\n      cluster=~\"${CLUSTER_NAME}\",\n      location=~\"${CLUSTER_LOCATION}\",\n      namespace=~\"${NAMESPACE}\",\n      pod=~\"${WORKLOAD_NAME}-[a-f0-9]{7,10}-[a-z0-9]{5}\"\n    }[5m])\n  )\n) > 0.05"
+      }
+    }
+  ],
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationPrompts": [
+      "OPENED",
+      "CLOSED"
+    ]
+  },
+  "combiner": "OR",
+  "enabled": true,
+  "notificationChannels": [],
+  "severity": "SEVERITY_UNSPECIFIED"
+}

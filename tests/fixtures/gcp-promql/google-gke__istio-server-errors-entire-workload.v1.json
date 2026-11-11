@@ -1,0 +1,36 @@
+{
+  "displayName": "Server Error (5xx) is high. (GKE Workload: ${WORKLOAD_NAME})",
+  "documentation": {
+    "content": "[View Workload Details](https://console.cloud.google.com/kubernetes/deployment/${metric_or_resource.label.location}/${metric_or_resource.label.cluster_name}/${metric_or_resource.label.namespace_name}/${metric.label.metadata_system_top_level_controller_name}/observability?project=${metric_or_resource.label.project_id}).\n- If alerts tend to be false positive or noisy, consider visiting the alert policy page and changing the threshold, the rolling (alignment) window, and the retest (duration) window. [Alerting policies documentation](https://cloud.google.com/monitoring/alerts/concepts-indepth), [PromQL documentation](https://cloud.google.com/monitoring/promql/create-promql-alerts-console)",
+    "mimeType": "text/markdown"
+  },
+  "userLabels": {
+    "workload_name": "${WORKLOAD_NAME}",
+    "workload_type": "${WORKLOAD_TYPE}",
+    "project_id": "${PROJECT_ID}",
+    "location": "${CLUSTER_LOCATION}",
+    "cluster": "${CLUSTER_NAME}",
+    "namespace": "${NAMESPACE}"
+  },
+  "conditions": [
+    {
+      "displayName": "Server Error (5xx) is high for an operation",
+      "conditionPrometheusQueryLanguage": {
+        "duration": "0s",
+        "evaluationInterval": "30s",
+        "query": "(\n  sum by (request_operation) (\n    rate({\n      \"istio.io/service/server/request_count\",\n      monitored_resource=\"k8s_container\",\n      project_id=~\"${PROJECT_ID}\",\n      location=~\"${CLUSTER_LOCATION}\",\n      cluster_name=~\"${CLUSTER_NAME}\",\n      namespace_name=~\"${NAMESPACE}\",\n      metadata_system_top_level_controller_name=~\"${WORKLOAD_NAME}\",\n      metadata_system_top_level_controller_type=~\"${TOP_LEVEL_CONTROLLER_TYPE}\",\n      response_code=~\"5[0-9][0-9]\"\n    }[5m])\n  )\n  /\n  sum by (request_operation) (\n    rate({\n      \"istio.io/service/server/request_count\",\n      monitored_resource=\"k8s_container\",\n      project_id=~\"${PROJECT_ID}\",\n      location=~\"${CLUSTER_LOCATION}\",\n      cluster_name=~\"${CLUSTER_NAME}\",\n      namespace_name=~\"${NAMESPACE}\",\n      metadata_system_top_level_controller_name=~\"${WORKLOAD_NAME}\",\n      metadata_system_top_level_controller_type=~\"${TOP_LEVEL_CONTROLLER_TYPE}\"\n    }[5m])\n  )\n) > 0.05"
+      }
+    }
+  ],
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationPrompts": [
+      "OPENED",
+      "CLOSED"
+    ]
+  },
+  "combiner": "OR",
+  "enabled": true,
+  "notificationChannels": [],
+  "severity": "SEVERITY_UNSPECIFIED"
+}

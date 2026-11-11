@@ -273,7 +273,8 @@ def test_promql_is_not_filed_under_the_mql_steps() -> None:
     (m,) = translate_policy(
         policy({"conditionPrometheusQueryLanguage": {"query": "up == 0", "duration": "60s"}})
     )
-    assert [r.title for r in remedies_for(m.reasons)] == ["PromQL condition"]
+    titles = [r.title for r in remedies_for(m.reasons)]
+    assert titles and "Monitoring Query Language condition" not in titles
 
 
 def test_an_uptime_check_alert_gets_synthetics_steps() -> None:

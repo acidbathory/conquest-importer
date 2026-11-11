@@ -19,7 +19,11 @@ seen working on a live system.
 
 What you do NOT get:
 
-- MQL, PromQL, SQL, ratio and forecast conditions, filters with OR, regular expressions or functions,
+- Most PromQL conditions stay manual too (a simple gauge or a sum of rates over one metric converts;
+  ratios of plain selectors, `_over_time`, joins, `offset`, subqueries, `topk` and `${NAME}` placeholders do
+  not), each with the exact reason. A converted one assumes the metric reaches New Relic by Prometheus
+  remote write under its Prometheus name; the notes say how the name was spelled.
+- MQL, SQL, ratio and forecast conditions, filters with OR, regular expressions or functions,
   and uptime-check alerts stay manual. So do alerts on custom, Ops Agent, Prometheus and log-based
   metrics: New Relic does not document collecting those from Google Cloud, so a converted query would
   return nothing.

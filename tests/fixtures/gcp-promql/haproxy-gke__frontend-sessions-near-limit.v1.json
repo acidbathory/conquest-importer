@@ -1,0 +1,29 @@
+{
+  "displayName": "HAProxy - Prometheus - Frontend Sessions Reaching Limit",
+  "documentation": {
+    "content": "When the session limit is reached, any new incoming connections will be rejected. This is typically caused by a sudden influx of traffic, and may indicate the configured max number of sessions needs to be adjusted.",
+    "mimeType": "text/markdown"
+  },
+  "userLabels": {},
+  "conditions": [
+    {
+      "displayName": "Prometheus Target - prometheus/haproxy_backend_limit_sessions/gauge",
+      "conditionPrometheusQueryLanguage": {
+        "duration": "300s",
+        "evaluationInterval": "60s",
+        "query": "(\n  {\"haproxy_frontend_current_sessions\"}\n  /\n  {\"haproxy_frontend_limit_sessions\"}\n) > 0.9"
+      }
+    }
+  ],
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationPrompts": [
+      "OPENED",
+      "CLOSED"
+    ]
+  },
+  "combiner": "OR",
+  "enabled": true,
+  "notificationChannels": [],
+  "severity": "SEVERITY_UNSPECIFIED"
+}
