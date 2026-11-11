@@ -220,3 +220,36 @@ def test_a_two_stage_condition_that_needs_a_nested_query_says_so() -> None:
     (monitor,) = translate_policy(policy(body))
     assert monitor.confidence is Confidence.MANUAL
     assert "nested query" in monitor.reasons[0] and "alert condition" in monitor.reasons[0]
+
+
+# --- resampling aligners ------------------------------------------------------------------
+
+
+def test_next_older_over_one_poll_is_the_polled_value() -> None:
+    # one poll per 300s: the newest point at or before the boundary is the only point
+    text, _, notes = query(CPU, "ALIGN_NEXT_OLDER", "REDUCE_NONE", 300)
+    assert text == f"SELECT average({NAME}) FROM Metric"
+    assert any("period boundary" in n for n in notes)
+
+
+def test_next_older_over_several_polls_is_the_latest_value() -> None:
+    # polls at 0, 300, 600, 900 s read 10, 20, 30, 40: the 1200s boundary takes 40, not the
+    # average 25
+    text, _, _ = query(CPU, "ALIGN_NEXT_OLDER", "REDUCE_NONE", 1200)
+    assert text == f"SELECT latest({NAME}) FROM Metric"
+
+
+def test_interpolate_is_written_like_next_older_and_says_it_is_approximate() -> None:
+    text, _, notes = query(CPU, "ALIGN_INTERPOLATE", "REDUCE_NONE", 1200)
+    assert text == f"SELECT latest({NAME}) FROM Metric"
+    assert any("interpolat" in n for n in notes)
+
+
+def test_a_reducer_after_a_resampler_over_several_polls_stays_manual() -> None:
+    with pytest.raises(Fail) as err:
+        query(CPU, "ALIGN_NEXT_OLDER", "REDUCE_MAX", 1200)
+    assert "nested query" in err.value.reason
+
+
+def test_a_resampler_with_a_reducer_over_one_poll_uses_the_reducer() -> None:
+    assert query(CPU, "ALIGN_NEXT_OLDER", "REDUCE_MAX", 300)[0].startswith("SELECT max(")

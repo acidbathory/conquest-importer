@@ -63,15 +63,15 @@ ALIGNERS = {
     "ALIGN_STDDEV": (Aggregation.STDDEV, False),
     "ALIGN_NONE": (Aggregation.AVG, False),
     "": (Aggregation.AVG, False),
+    # resampling aligners: written as the newest value of the window (see metric_series)
+    "ALIGN_NEXT_OLDER": (Aggregation.AVG, False),
+    "ALIGN_INTERPOLATE": (Aggregation.AVG, False),
 }
+RESAMPLERS = ("ALIGN_NEXT_OLDER", "ALIGN_INTERPOLATE")
 BOOLEAN = (
     "the aligner {name} works on a boolean metric; New Relic documents no encoding for boolean "
     "Google metrics, so check the values the metric holds there (for example 0 and 1) and build "
     "percentage(count(*), WHERE <metric> = 1) or sum() by hand"
-)
-RESAMPLES = (
-    "the aligner {name} resamples the points onto the period boundaries, which New Relic "
-    "does not do"
 )
 UNSUPPORTED_ALIGNERS = {
     "ALIGN_COUNT": (
@@ -86,8 +86,6 @@ UNSUPPORTED_ALIGNERS = {
         "the aligner ALIGN_PERCENT_CHANGE is the percent change between consecutive points; "
         "NRQL derivative() gives an absolute rate of change, not a percent change"
     ),
-    "ALIGN_INTERPOLATE": RESAMPLES.format(name="ALIGN_INTERPOLATE"),
-    "ALIGN_NEXT_OLDER": RESAMPLES.format(name="ALIGN_NEXT_OLDER"),
     "ALIGN_PERCENTILE_05": (
         "the aligner ALIGN_PERCENTILE_05 is the 5th percentile; New Relic publishes only the "
         "50th, 95th and 99th percentile series of a distribution metric"
@@ -114,7 +112,7 @@ REDUCERS = {
     "REDUCE_STDDEV": Aggregation.STDDEV,
 }
 # every perSeriesAligner and crossSeriesReducer in Google's enums (alert.proto, common.proto)
-KNOWN_ALIGNERS = {*ALIGNERS, *UNSUPPORTED_ALIGNERS, "ALIGN_PERCENTILE_05", "ALIGN_INTERPOLATE"}
+KNOWN_ALIGNERS = {*ALIGNERS, *UNSUPPORTED_ALIGNERS, "ALIGN_PERCENTILE_05"}
 KNOWN_REDUCERS = {
     "REDUCE_NONE",
     "REDUCE_STDDEV",
@@ -484,6 +482,18 @@ def metric_series(
         name, aligner, uses_labels=bool(scope or group_by), metric_type=metric_type
     )
     target = NrTarget(event="Metric", attribute=name)
+    if aligner in RESAMPLERS:
+        notes.append(_resample_note(aligner))
+        if period > POLL_SECONDS:
+            if agg.get("crossSeriesReducer", "REDUCE_NONE") not in ("", "REDUCE_NONE"):
+                raise Fail(
+                    Confidence.MANUAL,
+                    f"{agg['crossSeriesReducer']} after {aligner} over {period}s: the newest "
+                    "value of each series comes first and the reduction across series second, "
+                    "and one query cannot do both (a nested query would, which a New Relic "
+                    "alert condition does not allow)",
+                )
+            target.select = f"latest({identifier(name)})"
     if percentile is not None:
         # the percentile is one of three fixed integers and the name was validated above
         target.select = f"percentile({identifier(name)}, {percentile})"
@@ -492,6 +502,20 @@ def metric_series(
         terms={"a": term}, aggregation=aggregation, scope=scope, group_by=group_by
     )
     return signal, period, scale, notes
+
+
+def _resample_note(aligner: str) -> str:
+    if aligner == "ALIGN_NEXT_OLDER":
+        return (
+            f"{aligner} takes the newest point at or before each period boundary; New Relic has "
+            "one point per 5 minute poll, so the window's newest value is used and the time "
+            "stays the poll time, not the period boundary"
+        )
+    return (
+        f"{aligner} interpolates between neighbouring points onto the period boundary; New "
+        "Relic has one point per 5 minute poll, so the window's newest value is used, which "
+        "differs from the interpolated value by at most one poll's change"
+    )
 
 
 def _trigger_size(body: dict[str, object]) -> tuple[int, float]:
