@@ -208,10 +208,10 @@ def test_a_widget_that_raises_becomes_a_failed_widget_and_the_run_continues(
 ) -> None:
     real = gd._text
 
-    def boom(body: dict[str, Any], title: str, layout: Layout) -> IRWidget:
+    def boom(body: dict[str, Any], title: str, layout: Layout, *, titled: bool) -> IRWidget:
         if title == "bad":
             raise RuntimeError("boom")
-        return real(body, title, layout)
+        return real(body, title, layout, titled=titled)
 
     monkeypatch.setattr(gd, "_text", boom)
     dash = build(gridLayout={"widgets": [text("bad"), text("good")]})

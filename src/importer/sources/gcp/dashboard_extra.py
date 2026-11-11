@@ -16,7 +16,7 @@ from importer.core.dashboard_ir import (
     Visualization,
     WidgetKind,
 )
-from importer.core.emit.nrql import identifier, quote_string
+from importer.core.emit.nrql import field_identifier, identifier, quote_string
 from importer.core.ir import Confidence
 from importer.core.text import printable
 from importer.sources.gcp.filter import FilterError, parse_filter
@@ -38,10 +38,6 @@ SEVERITIES = [
 ]
 
 NOT_SHOWN = {
-    "incidentList": (
-        "dashboard widget type has no New Relic equivalent (incident list): New Relic has no "
-        "widget that lists Google Cloud incidents; use the alerts page or an issues table"
-    ),
     "errorReportingPanel": (
         "dashboard widget type has no New Relic equivalent (error reporting panel): "
         "Google Error Reporting data is not collected by New Relic, so no widget can show it"
@@ -52,6 +48,11 @@ NOT_SHOWN = {
         "watches instead"
     ),
 }
+ISSUE_NOTE = (
+    "an incident list is shown as a table of New Relic issues (NrAiIssue), which exist once the "
+    "converted alert conditions are created and fire: it lists the issues of the whole account, "
+    "not the incidents of the Google alert policies named in the source widget"
+)
 LOG_NOTE = (
     "logs panel shown as a table over Log; the logs must be forwarded to New Relic, and the "
     "attribute names of forwarded Google Cloud logs are not confirmed"
@@ -124,7 +125,10 @@ def _log_where(filter_text: str) -> list[str] | None:
         terms = parse_filter(filter_text)
         where: list[str] = []
         for term in terms:
+            # a label key such as `.serviceId` leaves an empty segment, valid only in backticks
             name = identifier(term.field)
+            if ".." in name:
+                name = field_identifier(f"`{term.field}`")
             not_ = "NOT " if term.negate else ""
             if term.field == "severity" and term.op in (">=", ">", "<=", "<"):
                 if term.value.upper() not in SEVERITIES:
@@ -143,6 +147,10 @@ def _log_where(filter_text: str) -> list[str] | None:
                 where.append(f"{name} {'!=' if term.negate else '='} {quote_string(term.value)}")
             elif term.op == "!=":
                 where.append(f"{name} {'=' if term.negate else '!='} {quote_string(term.value)}")
+            elif term.op in ("=~", "regex_full") and "${" not in term.value:
+                # RLIKE matches the whole value; a Cloud Logging =~ matches anywhere in it
+                pattern = term.value if term.op == "regex_full" else f".*({term.value}).*"
+                where.append(f"{name} {not_}RLIKE {quote_string(pattern)}")
             elif term.op == ":":
                 where.append(f"{name} {not_}LIKE {quote_string('%' + term.value + '%')}")
             else:
@@ -170,6 +178,23 @@ def logs_panel(body: dict[str, Any], title: str, layout: Layout) -> IRWidget:
         "logsPanel",
         Confidence.APPROXIMATE,
         reasons,
+        visualization=Visualization.TABLE,
+        raw_series=[RawNrqlSeries(nrql=query)],
+    )
+
+
+def incident_list(title: str, layout: Layout) -> IRWidget:
+    """Google's incident list as a table over the issues New Relic opens from alert conditions."""
+    query = (
+        "SELECT latest(title) AS 'Issue', latest(priority) AS 'Priority', "
+        "latest(timestamp) AS 'Last update' FROM NrAiIssue FACET issueId LIMIT 50"
+    )
+    return result(
+        title,
+        layout,
+        "incidentList",
+        Confidence.APPROXIMATE,
+        [ISSUE_NOTE],
         visualization=Visualization.TABLE,
         raw_series=[RawNrqlSeries(nrql=query)],
     )

@@ -35,6 +35,7 @@ from importer.sources.gcp.dashboard_extra import (
     NOT_SHOWN,
     PAGE_KINDS,
     failed,
+    incident_list,
     kind_of,
     logs_panel,
     result,
@@ -42,11 +43,13 @@ from importer.sources.gcp.dashboard_extra import (
     split_pages,
 )
 from importer.sources.gcp.dashboard_models import MAX_WIDGETS, GcpDashboard
+from importer.sources.gcp.dashboard_options import options_of, thresholds_of, unit_of
 from importer.sources.gcp.dashboard_promql import promql_nrql
 from importer.sources.gcp.translate import (
     POLL_SECONDS,
     Fail,
     check_aligner,
+    merge_two,
     metric_scope,
     metric_series,
     ratio_series,
@@ -215,19 +218,30 @@ LAYOUTS = {
 }
 
 
-def _second_stage(body: dict[str, Any]) -> list[str]:
-    """Notes for a second-stage aggregation that changes nothing material; Fail otherwise."""
+def _second_stage(
+    body: dict[str, Any], agg: dict[str, object]
+) -> tuple[dict[str, object], list[str]]:
+    """The aggregation with the dashboard's second stage merged in, and notes; Fail if it cannot
+    be written as one query."""
     second = body.get("secondaryAggregation")
     if not isinstance(second, dict) or not second:
-        return []
+        return agg, []
     smooths = (
         not second.get("groupByFields")
         and second.get("crossSeriesReducer") in (None, "", "REDUCE_NONE")
         and second.get("perSeriesAligner") in (None, "", "ALIGN_NONE", "ALIGN_MEAN")
     )
-    if not smooths:
-        raise Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
-    return [SECOND_STAGE_NOTE]
+    if smooths:
+        return agg, [SECOND_STAGE_NOTE]
+    fields = second.get("groupByFields")
+    if isinstance(fields, list):
+        second = {
+            **second,
+            "groupByFields": [
+                QUOTED_LABEL.sub(r"\1", f) if isinstance(f, str) else f for f in fields
+            ],
+        }
+    return merge_two(agg, second)
 
 
 QUOTED_LABEL = re.compile(r'(?<=\.label\.)"([A-Za-z_][A-Za-z0-9_]*)"')
@@ -246,9 +260,9 @@ def _filter_series(body: dict[str, Any], notes: set[str]) -> Series | str:
         body = {**body, "aggregation": {**agg, "groupByFields": fields}}
     try:
         metric_type, scope, scope_notes = metric_scope(body)
-        second_notes = _second_stage(body)
         raw = body.get("aggregation")
-        agg, aligner = check_aligner(raw if isinstance(raw, dict) else {})
+        agg, second_notes = _second_stage(body, raw if isinstance(raw, dict) else {})
+        agg, aligner = check_aligner(agg)
         period = seconds(agg.get("alignmentPeriod")) or POLL_SECONDS
         if period > MAX_SECONDS:
             raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
@@ -389,9 +403,12 @@ def _chart(body: dict[str, Any], title: str, layout: Layout, kind: str, ctx: Con
     if scorecard:
         reasons += [
             f"{printable(k, 20)} is not migrated"
-            for k in ("gaugeView", "sparkChartView", "thresholds")
-            if k in body
+            for k in ("gaugeView", "sparkChartView")
+            if body.get(k)
         ]
+    unit, unit_notes = unit_of(queries)
+    thresholds, threshold_notes = thresholds_of(body.get("thresholds"), viz)
+    reasons += unit_notes + threshold_notes
     if kind == "timeSeriesTable":
         reasons.append(TABLE_NOTE)
     if kind == "pieChart":
@@ -412,14 +429,27 @@ def _chart(body: dict[str, Any], title: str, layout: Layout, kind: str, ctx: Con
         Confidence.APPROXIMATE,
         reasons,
         visualization=viz,
+        options=options_of(unit, viz),
+        thresholds=thresholds,
         **extra,
     )
 
 
-def _text(body: dict[str, Any], title: str, layout: Layout) -> IRWidget:
+def _text(body: dict[str, Any], title: str, layout: Layout, *, titled: bool) -> IRWidget:
     content = body.get("content")
     if not isinstance(content, str) or not content.strip():
-        return _failed(title, layout, "text", [NO_CONTENT])
+        if not titled:
+            return _failed(title, layout, "text", [NO_CONTENT])
+        return _result(
+            title,
+            layout,
+            "text",
+            Confidence.APPROXIMATE,
+            ["an empty text box with a title is shown as a heading"],
+            widget_kind=WidgetKind.MARKDOWN,
+            visualization=Visualization.MARKDOWN,
+            text=f"## {title}",
+        )
     raw = str(body.get("format", "MARKDOWN")) == "RAW"
     return _result(
         title,
@@ -446,11 +476,15 @@ def translate_widget(
     if kind in CHART_KINDS:
         return _chart(body, title, layout, kind, ctx or Context())
     if kind == "text":
-        return _text(body, title, layout)
+        return _text(
+            body, title, layout, titled=isinstance(raw_title, str) and bool(raw_title.strip())
+        )
     if kind == "sectionHeader":
         return section_header(body, title, layout)
     if kind == "logsPanel":
         return logs_panel(body, title, layout)
+    if kind == "incidentList":
+        return incident_list(title, layout)
     if kind in NOT_SHOWN:
         return _failed(title, layout, kind, [NOT_SHOWN[kind]])
     return _failed(title, layout, kind, ["dashboard widget type is not supported"])

@@ -339,8 +339,6 @@ def test_aligner_stddev_needs_several_polls_in_the_period() -> None:
         ("ALIGN_COUNT_FALSE", "boolean"),
         ("ALIGN_FRACTION_TRUE", "boolean"),
         ("ALIGN_PERCENT_CHANGE", "percent change"),
-        ("ALIGN_INTERPOLATE", "resampl"),
-        ("ALIGN_NEXT_OLDER", "resampl"),
         ("ALIGN_PERCENTILE_05", "5th percentile"),
     ],
 )

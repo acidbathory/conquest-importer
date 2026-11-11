@@ -102,7 +102,7 @@ def convert(extras: GcpExtras, name: str, body: dict[str, object]) -> Built | No
     except ScopeFail as err:
         raise Fail(Confidence.MANUAL, f"log-based metric {name!r}: {err}") from err
     filters = [*filters, *_label_filters(metric, scope.filters)]
-    agg, aligner = _first_aggregation(body)
+    agg, aligner, stage_notes = _first_aggregation(body)
     mode = COUNT_ALIGNERS.get(aligner)
     if mode is None:
         raise Fail(
@@ -114,7 +114,7 @@ def convert(extras: GcpExtras, name: str, body: dict[str, object]) -> Built | No
     if reducer not in ("REDUCE_NONE", "REDUCE_SUM"):
         raise Fail(Confidence.MANUAL, f"the reducer {reducer} on log counts is not supported")
     group_by = _group_by(metric, agg)
-    notes = [*notes, *_threshold_trigger(body, agg), *scope.notes]
+    notes = [*notes, *stage_notes, *_threshold_trigger(body, agg), *scope.notes]
     period, period_note = whole_minutes(period_of(agg))
     window, window_note = _whole_windows(seconds(body.get("duration")), period)
     _check_limits(period, window)

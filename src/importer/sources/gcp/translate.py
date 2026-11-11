@@ -39,6 +39,7 @@ from importer.sources.gcp.log_scope import log_filters
 from importer.sources.gcp.models import GcpAlertPolicy, GcpCondition
 from importer.sources.gcp.promql import PROMQL_KIND, translate_condition
 from importer.sources.gcp.scope import ScopeFail, label_name, metric_filter
+from importer.sources.gcp.stages import StageError, merge_stages
 
 OPERATORS = {
     "COMPARISON_GT": Operator.ABOVE,
@@ -62,15 +63,15 @@ ALIGNERS = {
     "ALIGN_STDDEV": (Aggregation.STDDEV, False),
     "ALIGN_NONE": (Aggregation.AVG, False),
     "": (Aggregation.AVG, False),
+    # resampling aligners: written as the newest value of the window (see metric_series)
+    "ALIGN_NEXT_OLDER": (Aggregation.AVG, False),
+    "ALIGN_INTERPOLATE": (Aggregation.AVG, False),
 }
+RESAMPLERS = ("ALIGN_NEXT_OLDER", "ALIGN_INTERPOLATE")
 BOOLEAN = (
     "the aligner {name} works on a boolean metric; New Relic documents no encoding for boolean "
     "Google metrics, so check the values the metric holds there (for example 0 and 1) and build "
     "percentage(count(*), WHERE <metric> = 1) or sum() by hand"
-)
-RESAMPLES = (
-    "the aligner {name} resamples the points onto the period boundaries, which New Relic "
-    "does not do"
 )
 UNSUPPORTED_ALIGNERS = {
     "ALIGN_COUNT": (
@@ -85,8 +86,6 @@ UNSUPPORTED_ALIGNERS = {
         "the aligner ALIGN_PERCENT_CHANGE is the percent change between consecutive points; "
         "NRQL derivative() gives an absolute rate of change, not a percent change"
     ),
-    "ALIGN_INTERPOLATE": RESAMPLES.format(name="ALIGN_INTERPOLATE"),
-    "ALIGN_NEXT_OLDER": RESAMPLES.format(name="ALIGN_NEXT_OLDER"),
     "ALIGN_PERCENTILE_05": (
         "the aligner ALIGN_PERCENTILE_05 is the 5th percentile; New Relic publishes only the "
         "50th, 95th and 99th percentile series of a distribution metric"
@@ -113,7 +112,7 @@ REDUCERS = {
     "REDUCE_STDDEV": Aggregation.STDDEV,
 }
 # every perSeriesAligner and crossSeriesReducer in Google's enums (alert.proto, common.proto)
-KNOWN_ALIGNERS = {*ALIGNERS, *UNSUPPORTED_ALIGNERS, "ALIGN_PERCENTILE_05", "ALIGN_INTERPOLATE"}
+KNOWN_ALIGNERS = {*ALIGNERS, *UNSUPPORTED_ALIGNERS, "ALIGN_PERCENTILE_05"}
 KNOWN_REDUCERS = {
     "REDUCE_NONE",
     "REDUCE_STDDEV",
@@ -227,7 +226,7 @@ def _counter_window(aligner: str, period: int, *, chart: bool) -> tuple[int, flo
 
 
 def _reducer(
-    agg: dict[str, object], aggregation: Aggregation, aligner: str, period: int
+    agg: dict[str, object], aggregation: Aggregation, aligner: str, period: int, *, polled: bool
 ) -> tuple[list[str], list[str], Aggregation, int | None]:
     """Group-by labels, notes, time aggregation and percentile (if any) for the cross-series
     reducer of a condition."""
@@ -247,10 +246,35 @@ def _reducer(
             percentile,
         )
     if reducer in REDUCERS:
-        if REDUCERS[reducer] != aggregation:
-            notes.append(
-                f"{reducer} and {aligner} become one {aggregation.value} in New Relic's query"
-            )
+        target = REDUCERS[reducer]
+        if target != aggregation:
+            # Google takes the aligned value of each series first, then reduces across series.
+            # With one row per series in the window that is the reducer over the rows. New
+            # Relic's own poll gives exactly one row per 300s; a metric you send yourself is
+            # assumed to give one row per alignment period.
+            if polled and period > POLL_SECONDS:
+                raise Fail(
+                    Confidence.MANUAL,
+                    f"{reducer} after {aligner or 'no aligner'} over {period}s: each series has "
+                    f"several polls in the window, Google takes the {aggregation.value} of each "
+                    f"series first and the {target.value} across series second, and one query "
+                    f"cannot do both; use {target.value} over the same window of "
+                    f"{POLL_SECONDS}s, or in a chart a nested query (not allowed in alert "
+                    "conditions)",
+                )
+            if polled:
+                notes.append(
+                    f"{reducer} after {aligner or 'no aligner'} runs over the one point each "
+                    f"series has in the window, so it is {target.value} of those points"
+                )
+            else:
+                notes.append(
+                    f"{reducer} after {aligner or 'no aligner'} is written as {target.value} of "
+                    "the points in the window, which is exact when your collector sends one "
+                    "point per series for each alignment period; if it sends more points, the "
+                    "value differs (a sum is multiplied by the number of points)"
+                )
+            aggregation = target
         return group_by, notes, aggregation, None
     if reducer in UNSUPPORTED_REDUCERS:
         raise Fail(Confidence.MANUAL, f"reducer {reducer} {UNSUPPORTED_REDUCERS[reducer]}")
@@ -265,9 +289,27 @@ def _reducer(
 
 def _check_one_point_per_series(reducer: str, aligner: str, period: int) -> None:
     """A percentile or deviation across series equals one across polled points only when every
-    series has a single point in the window and the aligner leaves that point as it is."""
+    series has a single point in the window and the aligner leaves that point as it is.
+
+    ALIGN_RATE leaves it (a rate is the change in the poll over a constant); ALIGN_DELTA does too
+    on a counter, but also reads distribution metrics, whose per-series distributions Google
+    merges before taking the percentile, which New Relic (one percentile per series) cannot.
+    """
+    if aligner == "ALIGN_DELTA":
+        raise Fail(
+            Confidence.MANUAL,
+            f"{reducer} after ALIGN_DELTA: on a distribution metric (a latency or size) Google "
+            "merges the per-series distributions and then takes the percentile, and New Relic "
+            "keeps only a percentile per series, so the two differ; on a plain counter the "
+            "same function over the polled changes would do, so check the metric "
+            "kind in Cloud Monitoring and write that query by hand",
+        )
     counter = ALIGNERS.get(aligner, (Aggregation.AVG, False))[1]
-    if period > POLL_SECONDS or counter or aligner.startswith("ALIGN_PERCENTILE_"):
+    if (
+        period > POLL_SECONDS
+        or (counter and aligner != "ALIGN_RATE")
+        or aligner.startswith("ALIGN_PERCENTILE_")
+    ):
         raise Fail(
             Confidence.MANUAL,
             f"{reducer} after {aligner or 'no aligner'} over {period}s: each series has several "
@@ -349,23 +391,45 @@ def metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[st
 
 def _first_aggregation(
     body: dict[str, object], key: str = "aggregations"
-) -> tuple[dict[str, object], str]:
-    """The single aggregation stage of a condition (or of its denominator) and its aligner."""
+) -> tuple[dict[str, object], str, list[str]]:
+    """The single aggregation stage of a condition (or of its denominator), its aligner and the
+    notes of merging a second stage into it."""
     aggregations = body.get(key)
-    if isinstance(aggregations, list) and len(aggregations) > 1:
-        raise Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
-    first = aggregations[0] if isinstance(aggregations, list) and aggregations else {}
-    return check_aligner(first if isinstance(first, dict) else {})
+    listed = aggregations if isinstance(aggregations, list) else []
+    stages = [a for a in listed if isinstance(a, dict)]
+    first: dict[str, object] = stages[0] if stages else {}
+    notes: list[str] = []
+    if len(stages) > 2:
+        raise Fail(Confidence.MANUAL, "more than two aggregation stages are not supported")
+    if len(stages) == 2:
+        first, notes = merge_two(first, stages[1])
+    agg, aligner = check_aligner(first)
+    return agg, aligner, notes
+
+
+def merge_two(
+    first: dict[str, object], second: dict[str, object]
+) -> tuple[dict[str, object], list[str]]:
+    """`merge_stages` with a failure as the converter's manual reason."""
+    try:
+        return merge_stages(first, second)
+    except StageError as err:
+        raise Fail(Confidence.MANUAL, str(err)) from err
 
 
 def check_aligner(agg: dict[str, object]) -> tuple[dict[str, object], str]:
     """The aggregation stage and its aligner; manual when the aligner is not mapped."""
     aligner = str(agg.get("perSeriesAligner", ""))
     if aligner not in ALIGNERS:
-        raise Fail(
-            Confidence.MANUAL,
-            UNSUPPORTED_ALIGNERS.get(aligner, f"aligner {aligner!r} is not supported"),
-        )
+        other = re.fullmatch(r"ALIGN_PERCENTILE_(\d\d)", aligner)
+        reason = UNSUPPORTED_ALIGNERS.get(aligner, f"aligner {aligner!r} is not supported")
+        if other and aligner not in UNSUPPORTED_ALIGNERS:
+            reason = (
+                f"the aligner {aligner} is the {int(other[1])}th percentile; New Relic publishes "
+                "only the 50th, 95th and 99th percentile series of a distribution metric, so "
+                "use one of those or chart the metric's distribution by hand"
+            )
+        raise Fail(Confidence.MANUAL, reason)
     return agg, aligner
 
 
@@ -413,7 +477,10 @@ def metric_series(
             f"{POLL_SECONDS}s), which gives no meaningful deviation; use a period of "
             f"{STDDEV_MIN_PERIOD_SECONDS}s or more",
         )
-    group_by, notes, aggregation, percentile = _reducer(agg, aggregation, aligner, period)
+    name = nr_metric_name(metric_type)  # a metric with no usable name is refused first
+    group_by, notes, aggregation, percentile = _reducer(
+        agg, aggregation, aligner, period, polled=datapath.is_polled(metric_type)
+    )
     if period_note:
         notes.append(period_note)
     if not datapath.is_polled(metric_type):
@@ -424,7 +491,6 @@ def metric_series(
                 "sent by Prometheus, the Ops Agent or a custom route",
             )
         group_by = [datapath.arrival_label(g, metric_type) for g in group_by]
-    name = nr_metric_name(metric_type)
     if aligner.startswith("ALIGN_PERCENTILE_"):
         name += "." + "p" + aligner.rsplit("_", 1)[1]
         notes.append(
@@ -441,6 +507,18 @@ def metric_series(
         name, aligner, uses_labels=bool(scope or group_by), metric_type=metric_type
     )
     target = NrTarget(event="Metric", attribute=name)
+    if aligner in RESAMPLERS:
+        notes.append(_resample_note(aligner))
+        if period > POLL_SECONDS:
+            if agg.get("crossSeriesReducer", "REDUCE_NONE") not in ("", "REDUCE_NONE"):
+                raise Fail(
+                    Confidence.MANUAL,
+                    f"{agg['crossSeriesReducer']} after {aligner} over {period}s: the newest "
+                    "value of each series comes first and the reduction across series second, "
+                    "and one query cannot do both (a nested query would, which a New Relic "
+                    "alert condition does not allow)",
+                )
+            target.select = f"latest({identifier(name)})"
     if percentile is not None:
         # the percentile is one of three fixed integers and the name was validated above
         target.select = f"percentile({identifier(name)}, {percentile})"
@@ -449,6 +527,20 @@ def metric_series(
         terms={"a": term}, aggregation=aggregation, scope=scope, group_by=group_by
     )
     return signal, period, scale, notes
+
+
+def _resample_note(aligner: str) -> str:
+    if aligner == "ALIGN_NEXT_OLDER":
+        return (
+            f"{aligner} takes the newest point at or before each period boundary; New Relic has "
+            "one point per 5 minute poll, so the window's newest value is used and the time "
+            "stays the poll time, not the period boundary"
+        )
+    return (
+        f"{aligner} interpolates between neighbouring points onto the period boundary; New "
+        "Relic has one point per 5 minute poll, so the window's newest value is used, which "
+        "differs from the interpolated value by at most one poll's change"
+    )
 
 
 def _trigger_size(body: dict[str, object]) -> tuple[int, float]:
@@ -514,7 +606,7 @@ def ratio_series(
     try:
         denominator = metric_scope({**body, "filter": body.get("denominatorFilter")})
         key = "denominatorAggregations" if body.get("denominatorAggregations") else "aggregations"
-        agg, den_aligner = _first_aggregation(body, key)
+        agg, den_aligner, _stage_notes = _first_aggregation(body, key)
         den_period = period_of(agg)
         den, *_ = metric_series(denominator[0], denominator[1], agg, den_aligner, den_period)
     except Fail as fail:
@@ -577,8 +669,8 @@ def _metric_condition(
     body: dict[str, object],
 ) -> tuple[MetricSignal, int, int, float, list[str]]:
     metric_type, scope, scope_notes = metric_scope(body)
-    agg, aligner = _first_aggregation(body)
-    trigger_notes = _threshold_trigger(body, agg)
+    agg, aligner, stage_notes = _first_aggregation(body)
+    trigger_notes = [*stage_notes, *_threshold_trigger(body, agg)]
     period = period_of(agg)
     duration = seconds(body.get("duration"))
     signal, period, scale, notes = metric_series(metric_type, scope, agg, aligner, period)

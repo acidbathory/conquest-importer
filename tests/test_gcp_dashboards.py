@@ -183,7 +183,7 @@ def test_a_label_value_with_quotes_is_escaped_in_the_nrql() -> None:
 @pytest.mark.parametrize(
     ("aggregation", "reason"),
     [
-        ({"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_NEXT_OLDER"}, "aligner"),
+        ({"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_COUNT_TRUE"}, "aligner"),
         (
             {
                 "alignmentPeriod": "300s",
