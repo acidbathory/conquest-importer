@@ -107,6 +107,73 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"not one of the google cloud service metrics"),
+        "Metric New Relic does not collect from Google Cloud",
+        [
+            "Collect the data in New Relic directly. For a metric from the Ops Agent, install the "
+            "New Relic infrastructure agent or the OpenTelemetry Collector on the VM. For a "
+            "custom or Prometheus metric, send it to New Relic with OpenTelemetry (OTLP) or "
+            "Prometheus remote write from where it is produced.",
+            "For an alert on a log-based metric, forward the logs and alert on a `Log` query "
+            "instead (the same way log-match conditions convert).",
+            "Then write the NRQL condition over the new metric by hand.",
+        ],
+    ),
+    (
+        re.compile(r"system label has no confirmed"),
+        "System label filter",
+        [
+            "The condition narrows by a VM or node system label (`metadata.system_labels.*`, "
+            "such as the instance name). New Relic's name for that attribute is not confirmed, "
+            "so the importer does not guess one.",
+            "Find the real attribute: run `SELECT keyset() FROM Metric WHERE metricName = "
+            "'<the gcp. metric>'` in New Relic, pick the one that holds the label, then add "
+            "`WHERE <attribute> = '<value>'` (or `LIKE 'prefix%'` for starts_with) to the NRQL "
+            "condition by hand.",
+        ],
+    ),
+    (
+        re.compile(r"selects a service level objective"),
+        "SLO selector",
+        [
+            "The condition alerts on a Google SLO (`select_slo_*`). Run `importer extract-gcp` "
+            "so the SLO definitions are read next to the policies and the condition can convert; "
+            "otherwise recreate the SLO as a New Relic service level and alert on that.",
+        ],
+    ),
+    (
+        re.compile(r"holds a template placeholder, so it is not a real pattern"),
+        "Filter value is a template placeholder",
+        [
+            "The filter compares with a pattern that is a `${NAME}` placeholder from a Google "
+            "sample policy, so nothing says what it should match. Decide the real value (a "
+            "service name, a pod prefix, a list of names) and put it in the policy, then "
+            "convert again; or write the `WHERE` clause by hand with that value.",
+        ],
+    ),
+    (
+        re.compile(r"is not a plain prefix, suffix, substring or list of values"),
+        "Regular expression filter",
+        [
+            "The filter uses a regular expression with real syntax (character classes, repeats, "
+            "groups). The importer converts only literals, lists and prefix or suffix patterns, "
+            "which are exact. Write the clause by hand with `RLIKE`: it matches the whole value, "
+            "so a Cloud Logging `=~` (matches anywhere) becomes `RLIKE '.*(pattern).*'`, and a "
+            "`monitoring.regex.full_match` keeps its pattern as it is. Escape quotes and "
+            "backslashes for NRQL.",
+        ],
+    ),
+    (
+        re.compile(r"\ban or (between|over|that is not)\b"),
+        "Filter with an OR",
+        [
+            "A New Relic scope or count filter is a list joined by AND, so an OR of different "
+            "labels, of patterns or of negations cannot be carried over. Write the OR in the "
+            "`WHERE` clause by hand: `WHERE (a = 'x' OR b LIKE 'y%')`, or make one condition per "
+            "branch.",
+        ],
+    ),
+    (
         re.compile(r"filter (term|not supported)|log filter"),
         "Filter not supported",
         [
@@ -142,19 +209,6 @@ RULES: list[Rule] = [
             "Find the attribute New Relic stores for this label (run `SELECT keyset() FROM "
             "Metric WHERE metricName = '<name>'`) and write the `WHERE` or `FACET` clause by "
             "hand with that name in backticks.",
-        ],
-    ),
-    (
-        re.compile(r"not one of the google cloud service metrics"),
-        "Metric New Relic does not collect from Google Cloud",
-        [
-            "Collect the data in New Relic directly. For a metric from the Ops Agent, install the "
-            "New Relic infrastructure agent or the OpenTelemetry Collector on the VM. For a "
-            "custom or Prometheus metric, send it to New Relic with OpenTelemetry (OTLP) or "
-            "Prometheus remote write from where it is produced.",
-            "For an alert on a log-based metric, forward the logs and alert on a `Log` query "
-            "instead (the same way log-match conditions convert).",
-            "Then write the NRQL condition over the new metric by hand.",
         ],
     ),
     (
