@@ -1,0 +1,37 @@
+{
+  "value": [
+    {
+      "etag": "\"GUID-02\"",
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.OperationalInsights/workspaces/ckg-law",
+      "location": "eastus",
+      "name": "ckg-law",
+      "properties": {
+        "createdDate": "2026-11-11T04:50:50.7378092Z",
+        "customerId": "GUID-01",
+        "features": {
+          "enableLogAccessUsingOnlyResourcePermissions": true,
+          "legacy": 0,
+          "searchVersion": 1
+        },
+        "modifiedDate": "2026-11-11T04:56:33.7131317Z",
+        "provisioningState": "Succeeded",
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled",
+        "retentionInDays": 30,
+        "sku": {
+          "lastSkuUpdate": "2026-11-11T04:50:50.7378092Z",
+          "name": "PerGB2018"
+        },
+        "workspaceCapping": {
+          "dailyQuotaGb": -1.0,
+          "dataIngestionStatus": "RespectQuota",
+          "quotaNextResetTime": "2026-11-11T13:00:00Z"
+        }
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.OperationalInsights/workspaces"
+    }
+  ]
+}

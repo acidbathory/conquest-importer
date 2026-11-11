@@ -1,0 +1,39 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/actionGroups/ag-synthetic",
+  "name": "ag-synthetic",
+  "type": "Microsoft.Insights/actionGroups",
+  "location": "Global",
+  "properties": {
+    "groupShortName": "synthetic-name-longer-than-12",
+    "enabled": true,
+    "emailReceivers": null,
+    "pagerDutyReceivers": [
+      {
+        "name": "pd",
+        "integrationKey": "SYNTHETIC-NOT-A-KEY"
+      }
+    ],
+    "slackReceivers": [
+      {
+        "name": "slack",
+        "channel": "#ops"
+      }
+    ],
+    "smsReceivers": [
+      {
+        "name": "sms",
+        "countryCode": "999",
+        "phoneNumber": "0000000000"
+      }
+    ],
+    "webhookReceivers": [
+      {
+        "name": "wh-no-uri"
+      }
+    ],
+    "futureReceivers": {
+      "a": 1
+    }
+  }
+}

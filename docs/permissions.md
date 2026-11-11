@@ -102,6 +102,20 @@ Read-only. The importer sends only `GET` requests, on a fixed list of paths.
 
 Details: [runbook-grafana](user/runbook-grafana.md#2-prerequisites).
 
+## Azure Monitor
+
+Read-only. The importer sends only `GET` requests, to `management.azure.com`, and one token request
+to `login.microsoftonline.com`.
+
+- A service principal with the **Reader** role at subscription scope; `AZURE_TENANT_ID`,
+  `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` and `AZURE_SUBSCRIPTION_ID` in `.env`, or an
+  `AZURE_ACCESS_TOKEN`. Create it with [Azure credentials](user/azure-credentials.md).
+- It reads: metric alerts, scheduled query rules, activity log alerts, action groups, alert
+  processing rules, Prometheus rule groups and smart detector rules.
+- Webhook URLs, callback URLs, secure webhook ids and passwords are dropped as they are read.
+
+Details: [runbook-azure](user/runbook-azure.md#2-prerequisites).
+
 ## Dynatrace
 
 Read-only token in `DYNATRACE_API_TOKEN`, tenant address in `DYNATRACE_ENV_URL`

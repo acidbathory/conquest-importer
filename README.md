@@ -22,7 +22,7 @@ rest.
 | [AWS CloudWatch](docs/user/runbook-aws-cloudwatch.md) | Most tested. Alarms, dashboards, SNS notifications, Metric Streams Terraform | A real AWS account, end to end with data | Metric names outside the verified list |
 | [Google Cloud Monitoring](docs/user/runbook-gcp.md) | Alert policies and dashboards convert | A sandbox project, including the data link | VM CPU data does not arrive; no firing test |
 | Datadog | Paused (built, then removed) | | [Details](docs/user/runbook-datadog-and-azure.md) |
-| Azure | Not started | | [Details](docs/user/runbook-datadog-and-azure.md) |
+| [Azure Monitor](docs/user/runbook-azure.md) | Built offline, never run live. Metric alerts with one static criterion and simple KQL log counts convert; activity log alerts, dynamic thresholds, smart detectors and most KQL are manual or unsupported | Nothing yet; offline on the official Azure examples | Metric and attribute names (derived, UNVERIFIED), data arrival, notifications |
 
 Sample exports in `tests/fixtures` cover the working sources, so the tests and the images below run
 without any account. The menu has a "Try on sample data" item (7).
@@ -57,6 +57,18 @@ read-only and add only what an error asks for.
 | New Relic | User API key (`NRAK-...`) in `NEW_RELIC_API_KEY`, only to create things and for data checks; `NEW_RELIC_ACCOUNT_ID`; `NEW_RELIC_ALLOWED_ACCOUNT_IDS`; EU accounts add `--region eu`. No ingest licence key is used by the importer, and there is no automatic route for OneAgent data |
 | Network | Tenant reachable over https. Behind a TLS-inspecting proxy, set `SSL_CERT_FILE` to the corporate root certificate (PEM) |
 | Start | `bash scripts/migrate.sh`, then choose `4` |
+
+### Prerequisites: Azure Monitor to New Relic
+
+| | |
+|---|---|
+| Accounts and roles | An Azure subscription, and someone who can register an application and assign it a role there ([step by step](docs/user/azure-credentials.md)) |
+| Credential | A read-only service principal with the Reader role at subscription scope. The importer sends only `GET` requests to `management.azure.com` and one token request to `login.microsoftonline.com`; secrets in the rules (webhook URLs and so on) are dropped as they are read |
+| `.env` variables | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_SUBSCRIPTION_ID` (or `AZURE_ACCESS_TOKEN` instead of the first three) |
+| Install | Python 3.12+, [uv](https://docs.astral.sh/uv/), `uv sync` |
+| New Relic | User API key (`NRAK-...`) in `NEW_RELIC_API_KEY`, only to create things and for data checks; `NEW_RELIC_ACCOUNT_ID`; `NEW_RELIC_ALLOWED_ACCOUNT_IDS`. The New Relic Azure Monitor integration (and the Event Hub log forwarder for log alerts) must be on, or converted conditions have no data |
+| Network | `management.azure.com` and `login.microsoftonline.com` reachable over https. Behind a TLS-inspecting proxy, set `SSL_CERT_FILE` to the corporate root certificate (PEM) |
+| Start | `bash scripts/migrate.sh`, then choose `10` |
 
 ### Prerequisites: AWS CloudWatch to New Relic
 
@@ -107,7 +119,8 @@ command by command.
 | Dynatrace | [runbook-dynatrace](docs/user/runbook-dynatrace.md) |
 | AWS CloudWatch | [runbook-aws-cloudwatch](docs/user/runbook-aws-cloudwatch.md) |
 | Google Cloud | [runbook-gcp](docs/user/runbook-gcp.md) |
-| Datadog, Azure | [runbook-datadog-and-azure](docs/user/runbook-datadog-and-azure.md) (not built) |
+| Azure Monitor | [runbook-azure](docs/user/runbook-azure.md) |
+| Datadog | [runbook-datadog-and-azure](docs/user/runbook-datadog-and-azure.md) (not built) |
 
 `importer migrate` is a shortcut for AWS CloudWatch only (read, convert, preview, then create after
 you answer `y`). The other sources use the menu or the runbook commands (`extract-<source>`,
@@ -187,12 +200,13 @@ customer results, and yours will differ.
 
 ## Roadmap
 
-Order of maturity today: AWS CloudWatch, Google Cloud, Grafana (early), Dynatrace (earliest). See the
+Order of maturity today: AWS CloudWatch, Google Cloud, Grafana (early), Dynatrace and Azure Monitor
+(earliest; Azure has only been built and tested offline). See the
 [Supported sources](#supported-sources) table and each runbook for what is and is not proven.
-Datadog support was built and then removed; it is paused. Azure is next to build. Planned, in this
-order:
+Datadog support was built and then removed; it is paused. Azure alert rules are built (offline); a
+live test, notifications and dashboards are next. Planned, in this order:
 
-1. Microsoft Azure
+1. Azure: live test of the metric names, then notifications and dashboards
 2. Datadog (paused)
 3. Deeper Grafana and Dynatrace coverage (dashboards, notifications, data paths)
 

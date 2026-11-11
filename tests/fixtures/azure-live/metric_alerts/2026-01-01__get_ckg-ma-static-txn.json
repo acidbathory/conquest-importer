@@ -1,0 +1,39 @@
+{
+  "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/metricAlerts/ckg-ma-static-txn",
+  "location": "global",
+  "name": "ckg-ma-static-txn",
+  "properties": {
+    "actions": [
+      {
+        "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+      }
+    ],
+    "autoMitigate": true,
+    "criteria": {
+      "allOf": [
+        {
+          "criterionType": "StaticThresholdCriterion",
+          "metricName": "Transactions",
+          "metricNamespace": "Microsoft.Storage/storageAccounts",
+          "name": "txn",
+          "operator": "GreaterThan",
+          "threshold": 1000.0,
+          "timeAggregation": "Total"
+        }
+      ],
+      "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+    },
+    "description": "ckg test metric alert (disabled)",
+    "enabled": false,
+    "evaluationFrequency": "PT1M",
+    "scopes": [
+      "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/ckgstoregdtuih"
+    ],
+    "severity": 0,
+    "windowSize": "PT5M"
+  },
+  "tags": {
+    "ckg_test": "true"
+  },
+  "type": "Microsoft.Insights/metricAlerts"
+}

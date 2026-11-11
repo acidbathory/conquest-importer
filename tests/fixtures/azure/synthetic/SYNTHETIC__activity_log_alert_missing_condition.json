@@ -1,0 +1,16 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/activityLogAlerts/no-cond",
+  "name": "no-cond",
+  "type": "Microsoft.Insights/activityLogAlerts",
+  "location": "Global",
+  "properties": {
+    "scopes": [
+      "/subscriptions/00000000-0000-0000-0000-000000000000"
+    ],
+    "enabled": true,
+    "actions": {
+      "actionGroups": []
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/metricAlerts/nulls",
+  "name": "nulls",
+  "type": "Microsoft.Insights/metricAlerts",
+  "location": "global",
+  "tags": null,
+  "properties": {
+    "description": null,
+    "severity": null,
+    "enabled": null,
+    "scopes": null,
+    "evaluationFrequency": null,
+    "criteria": null,
+    "actions": null,
+    "autoMitigate": null
+  }
+}

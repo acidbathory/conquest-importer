@@ -1,0 +1,34 @@
+{
+  "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/actionGroups/ckg-ag-eventhub",
+  "kind": null,
+  "location": "Global",
+  "name": "ckg-ag-eventhub",
+  "properties": {
+    "armRoleReceivers": [],
+    "automationRunbookReceivers": [],
+    "azureAppPushReceivers": [],
+    "azureFunctionReceivers": [],
+    "emailReceivers": [],
+    "enabled": true,
+    "eventHubReceivers": [
+      {
+        "eventHubName": "ckg-hub",
+        "eventHubNameSpace": "ckg-ns-placeholder",
+        "name": "ckg-eventhub",
+        "subscriptionId": "SUBSCRIPTION_ID",
+        "tenantId": "TENANT_ID",
+        "useCommonAlertSchema": true
+      }
+    ],
+    "groupShortName": "ckgeventhub",
+    "itsmReceivers": [],
+    "logicAppReceivers": [],
+    "smsReceivers": [],
+    "voiceReceivers": [],
+    "webhookReceivers": []
+  },
+  "tags": {
+    "ckg_test": "true"
+  },
+  "type": "Microsoft.Insights/ActionGroups"
+}

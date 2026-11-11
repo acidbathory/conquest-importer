@@ -4,7 +4,8 @@
 - Runbooks, one per source product:
   [AWS CloudWatch](user/runbook-aws-cloudwatch.md), [Google Cloud](user/runbook-gcp.md),
   [Grafana](user/runbook-grafana.md), [Dynatrace](user/runbook-dynatrace.md),
-  [Datadog and Azure (not built)](user/runbook-datadog-and-azure.md)
+  [Azure Monitor](user/runbook-azure.md), [Datadog (not built)](user/runbook-datadog-and-azure.md)
+- [Azure credentials](user/azure-credentials.md): a read-only service principal, step by step
 - [Script and command reference](user/script-reference.md): every script and command, by source
 - [The guided menu and rollback](user/menu-and-rollback.md)
 - [Remediation cookbook](user/remediation-cookbook.md): ranked ways to finish what New Relic cannot do one-to-one
