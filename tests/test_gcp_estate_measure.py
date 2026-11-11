@@ -243,7 +243,7 @@ def test_subset_numbers_are_reproduced_by_the_commands_and_the_library(subset: P
     assert shapes["conditionAbsent"] == {"converted": 1}
     assert shapes["conditionMatchedLog"] == {"converted": 1}
     codes = dict(conditions["blockers"])
-    assert codes["ratio"] == 1 and codes["mql"] == 1 and codes["promql"] == 1
+    assert "ratio" not in codes and codes["mql"] == 1 and codes["promql"] == 1
     widgets = summary["widgets"]
     assert widgets["scoreboard_converted"] >= 4
     assert widgets["by_kind"]["logsPanel"] == {"placeholder": 1}
