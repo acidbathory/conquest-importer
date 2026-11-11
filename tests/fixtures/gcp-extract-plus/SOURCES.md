@@ -31,3 +31,8 @@ with a live response: UNVERIFIED against live data.
 - Uptime checks: a plain GET, a content matcher, basic auth with a planted password and a header
   holding a planted token, a POST with a planted body, TCP, an internal check, a one region
   check and a header check. The planted secrets must never appear in an export or a plan.
+
+## Licence
+
+These files are our own synthetic data, written from the public API reference pages and containing no
+third-party material; they are released with the repository under its Apache-2.0 licence.
