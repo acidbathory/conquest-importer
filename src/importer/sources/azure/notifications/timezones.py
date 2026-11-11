@@ -58,7 +58,7 @@ WINDOWS_TO_IANA: dict[str, str] = {
     "Canada Central Standard Time": "America/Regina",
     "Central Standard Time (Mexico)": "America/Mexico_City",
     "Eastern Standard Time": "America/New_York",
-    "US Eastern Standard Time": "America/Indianapolis",
+    "US Eastern Standard Time": "America/Indiana/Indianapolis",
     "SA Pacific Standard Time": "America/Bogota",
     "Atlantic Standard Time": "America/Halifax",
     "Newfoundland Standard Time": "America/St_Johns",

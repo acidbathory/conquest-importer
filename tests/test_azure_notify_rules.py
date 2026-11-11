@@ -264,3 +264,17 @@ def test_zone_lookup_is_case_insensitive_and_does_not_guess() -> None:
     assert to_iana("europe/berlin") == "Europe/Berlin"
     assert to_iana("") == "UTC"
     assert to_iana("Nowhere Standard Time") is None
+
+
+def test_no_zone_in_the_table_is_a_legacy_alias_that_newer_tz_databases_drop() -> None:
+    """CI's tz database lacks America/Indianapolis (a link); use the canonical name."""
+    from importer.sources.azure.notifications import timezones
+
+    legacy = {
+        "America/Indianapolis",
+        "Asia/Calcutta",
+        "Asia/Katmandu",
+        "Asia/Saigon",
+        "Asia/Rangoon",
+    }
+    assert not (set(timezones.WINDOWS_TO_IANA.values()) & legacy)
