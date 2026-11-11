@@ -229,7 +229,7 @@ def _chart(
     )
     series = done.series
     grouped = bool((series and series.signal.group_by) or (done.nrql and " FACET " in done.nrql))
-    if grouped and kind in ("timeseries", "query_table"):
+    if grouped and kind in ("timeseries", "query_table") and not done.limited:
         notes.append(DR.N_FACET_LIMIT)
     fields: dict[str, Any] = (
         {"series": [series]} if series else {"raw_series": [{"nrql": done.nrql}]}

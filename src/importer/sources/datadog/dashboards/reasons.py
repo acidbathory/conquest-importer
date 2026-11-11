@@ -19,6 +19,8 @@ W_SEVERAL = (
 )
 W_FORMULA = "dashboard widget uses a formula over its queries, which is not converted yet"
 W_FUNCTION = "dashboard query function is not converted yet: {name}()"
+W_NO_FORM = "dashboard query function has no New Relic form: {name}() ({why})"
+W_FUNC_ARGS = "dashboard query function: {name}() {why}"
 W_ARITHMETIC = "dashboard query uses arithmetic between series, which is not converted yet"
 W_UNREADABLE = "dashboard query could not be read"
 W_AGGREGATOR = (
@@ -37,6 +39,26 @@ V_DEFAULT = "dashboard template variable default is not a scope that can be conv
 V_INVALID = "dashboard template variable is not accepted as a New Relic variable: {name}"
 
 # -- notes on converted widgets --------------------------------------------------------------
+N_RATE = (
+    "rate functions are written as rate(sum(x), 1 second), which is right for a metric that "
+    "arrives as counts; set the metric kind to count in name-map.json if it does"
+)
+N_SPACE_SUM = (
+    "the space aggregator {aggr} was replaced by sum for a count or rate; the numbers are the "
+    "same when each group is one series, and larger by the number of series otherwise"
+)
+N_ROLLUP_AUTO = (
+    "rollup() bucket size is not carried over; New Relic chooses the bucket with TIMESERIES AUTO"
+)
+N_FILL = "fill() is not carried over; New Relic shows a gap where there is no data"
+N_TOP = (
+    "top() is a FACET with a LIMIT; Datadog ranks the series over the widget's time range with "
+    "the function given, New Relic over the dashboard time picker"
+)
+N_DAILY = (
+    "rollup(daily) is written as TIMESERIES 1 day; Datadog daily buckets start at midnight UTC, "
+    "New Relic buckets are aligned to the time picker"
+)
 N_SUM_GAUGE = (
     "dashboard sum adds every data point in a bucket, where Datadog adds one value per series; "
     "if the metric reports more than once per bucket the New Relic values are larger (set the "

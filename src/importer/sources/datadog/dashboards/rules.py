@@ -66,11 +66,14 @@ RULES: list[Rule] = [
         re.compile(r"^dashboard query function"),
         "Datadog dashboard query function",
         [
-            "Dashboards can do what alerts cannot, so these have a New Relic form: top() is "
-            "FACET with LIMIT, rollup() is TIMESERIES with a bucket size, timeshift() is "
-            "COMPARE WITH, as_rate() and per_second() are rate(), derivative() is derivative(), "
-            "fill() and default_zero() are filter() or an empty-bucket setting. The converter "
-            "does not apply them yet; write the NRQL by hand.",
+            "Dashboards can do what alerts cannot, so most of these have a New Relic form: top() is"
+            " FACET with ORDER BY and LIMIT, rollup() is TIMESERIES with a bucket size, "
+            "timeshift() is COMPARE WITH, as_rate() and per_second() are "
+            "rate(sum(x), 1 second), derivative() is derivative(). The converter applies top(), "
+            "as_count(), as_rate(), per_second(), fill() and rollup() of avg, min or max (or sum "
+            "with daily); a reason that names one of them says which form was not safe (an "
+            "argument it does not read, a gauge, a bucket size that changes a sum). Write the NRQL "
+            "by hand.",
             "weighted(), autosmooth() and the statistical functions have no direct NRQL "
             "equivalent; rebuild the chart with the closest aggregate and say so in its title.",
         ],
@@ -153,7 +156,10 @@ TAXONOMY: list[tuple[Category, str]] = [
         Category.APPROXIMATION,
         r"^(dashboard (sum adds|widget has its own time range|note text is copied"
         r"|template variable has no tag key)|bars over time|new relic shows at most"
-        r"|number formats, conditional|\d+ widgets overlapped)",
+        r"|number formats, conditional|\d+ widgets overlapped|rate functions are written"
+        r"|the space aggregator .* was replaced by sum|rollup\(\) bucket size"
+        r"|fill\(\) is not carried"
+        r"|top\(\) is a facet|rollup\(daily\) is written)",
     ),
     (Category.CANNOT_EMIT, r"^\d+ widgets are beyond the new relic page limits"),
 ]

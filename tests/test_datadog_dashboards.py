@@ -170,9 +170,9 @@ def test_widget_time_span_is_reported(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("w", "start"),
     [
-        (ts("top(avg:a.b{*} by {host}, 10, 'mean', 'desc')"), "dashboard query function"),
-        (ts("avg:a.b{*}.as_count()"), "dashboard query function"),
-        (ts("avg:a.b{*}.rollup(60)"), "dashboard query function"),
+        (ts("timeshift(avg:a.b{*}, 3600)"), "dashboard query function"),
+        (ts("derivative(avg:a.b{*})"), "dashboard query function"),
+        (ts("avg:a.b{*}.weighted()"), "dashboard query function"),
         (ts("avg:a.b{*} / avg:a.c{*}"), "dashboard query uses arithmetic"),
         (ts("avg:a.b{*"), "dashboard query could not be read"),
         (ts("p95:a.b{*}"), "query function"),
@@ -479,10 +479,176 @@ def test_overlapping_boxes_are_moved_and_counted(tmp_path: Path) -> None:
     assert any("overlapped" in r for r in d.reasons)
 
 
+# -- step 3: the function table -------------------------------------------------------------------
+COUNT_MAP = {"metrics": {"a.b": {"event": "Metric", "attribute": "a.b", "kind": "count"}}}
+GAUGE_MAP = {"metrics": {"a.b": {"event": "Metric", "attribute": "a.b", "kind": "gauge"}}}
+
+
+@pytest.mark.parametrize(
+    ("w", "nrql"),
+    [
+        (
+            ts("top(avg:a.b{*} by {host}, 10, 'mean', 'desc')"),
+            "SELECT average(a.b) FROM Metric FACET host LIMIT 10 TIMESERIES AUTO",
+        ),
+        (
+            ts("top(avg:a.b{*} by {host}, 5, 'max', 'desc')"),
+            "SELECT average(a.b) FROM Metric FACET host ORDER BY max(a.b) DESC LIMIT 5 "
+            "TIMESERIES AUTO",
+        ),
+        (
+            ts("top(max:a.b{*} by {host}, 5, 'min', 'asc')"),
+            "SELECT max(a.b) FROM Metric FACET host ORDER BY min(a.b) ASC LIMIT 5 TIMESERIES AUTO",
+        ),
+        (
+            ts("top(avg:a.b{*} by {host}, 5, 'last', 'desc')"),
+            "SELECT average(a.b) FROM Metric FACET host ORDER BY latest(a.b) DESC LIMIT 5 "
+            "TIMESERIES AUTO",
+        ),
+        (
+            widget("toplist", requests=[{"q": "top(avg:a.b{*} by {host}, 7, 'mean', 'desc')"}]),
+            "SELECT average(a.b) FROM Metric FACET host LIMIT 7",
+        ),
+        (
+            ts("avg:a.b{*} by {host}.fill(0)"),
+            "SELECT average(a.b) FROM Metric FACET host TIMESERIES AUTO",
+        ),
+        (
+            ts("avg:a.b{*}.rollup(avg, 300)"),
+            "SELECT average(a.b) FROM Metric TIMESERIES AUTO",
+        ),
+        (
+            ts("max:a.b{*}.rollup(60)"),
+            "SELECT max(a.b) FROM Metric TIMESERIES AUTO",
+        ),
+        (
+            ts("sum:a.b{*} by {host}.rollup(sum, daily)"),
+            "SELECT sum(a.b) FROM Metric FACET host TIMESERIES 1 day",
+        ),
+    ],
+)
+def test_the_function_table_converts(tmp_path: Path, w: dict[str, Any], nrql: str) -> None:
+    _, item, queries = one(tmp_path, w)
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert item.confidence is Confidence.APPROXIMATE
+    assert queries == [nrql]
+
+
+def test_top_with_a_variable_keeps_the_variable_in_the_filter(tmp_path: Path) -> None:
+    _, item, queries = one(
+        tmp_path, ts("top(avg:a.b{$host} by {az}, 3, 'mean', 'desc')"), variables=[HOST]
+    )
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert queries == [
+        "SELECT average(a.b) FROM Metric WHERE host IN ({{host}}) FACET az LIMIT 3 TIMESERIES AUTO"
+    ]
+
+
+def test_top_does_not_warn_about_the_ten_group_limit(tmp_path: Path) -> None:
+    _, item, _ = one(tmp_path, ts("top(avg:a.b{*} by {host}, 30, 'mean', 'desc')"))
+    assert not any(r.startswith("New Relic shows at most") for r in item.reasons)
+
+
+@pytest.mark.parametrize(
+    ("q", "nrql"),
+    [
+        (
+            "sum:a.b{*} by {host}.as_count()",
+            "SELECT sum(a.b) FROM Metric FACET host TIMESERIES AUTO",
+        ),
+        (
+            "avg:a.b{*} by {host}.as_count()",
+            "SELECT sum(a.b) FROM Metric FACET host TIMESERIES AUTO",
+        ),
+        (
+            "sum:a.b{*} by {host}.as_rate()",
+            "SELECT rate(sum(a.b), 1 second) FROM Metric FACET host TIMESERIES AUTO",
+        ),
+        (
+            "per_second(avg:a.b{env:x} by {host})",
+            "SELECT rate(sum(a.b), 1 second) FROM Metric WHERE env = 'x' FACET host "
+            "TIMESERIES AUTO",
+        ),
+        (
+            "sum:a.b{*}.as_rate().rollup(10)",
+            "SELECT rate(sum(a.b), 1 second) FROM Metric TIMESERIES AUTO",
+        ),
+    ],
+)
+def test_counts_and_rates(tmp_path: Path, q: str, nrql: str) -> None:
+    _, item, queries = one(tmp_path, ts(q), name_map=COUNT_MAP)
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert item.confidence is Confidence.APPROXIMATE
+    assert queries == [nrql]
+
+
+def test_a_rate_over_a_replaced_space_aggregator_says_so(tmp_path: Path) -> None:
+    _, item, _ = one(tmp_path, ts("avg:a.b{*}.as_rate()"), name_map=COUNT_MAP)
+    assert any(
+        r.startswith("the space aggregator avg was replaced by sum") for r in item.reasons
+    ), item.reasons
+
+
+def test_a_rate_keeps_the_unit_scale_outside_rate(tmp_path: Path) -> None:
+    nm = {
+        "metrics": {
+            "a.b": {"event": "Metric", "attribute": "a.b", "kind": "count", "unit_scale": 8}
+        }
+    }
+    _, item, queries = one(tmp_path, ts("sum:a.b{*}.as_rate()"), name_map=nm)
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert queries == ["SELECT rate(sum(a.b), 1 second) * 8 FROM Metric TIMESERIES AUTO"]
+
+
+@pytest.mark.parametrize(
+    ("w", "start"),
+    [
+        (ts("sum:a.b{*}.weighted()"), "dashboard query function has no New Relic form: weighted()"),
+        (ts("autosmooth(avg:a.b{*})"), "dashboard query function"),
+        (ts("top(avg:a.b{*}, 5, 'mean', 'desc')"), "dashboard query function: top() needs"),
+        (ts("top(avg:a.b{*} by {h}, 5, 'l2norm', 'desc')"), "dashboard query function: top()"),
+        (ts("top(avg:a.b{*} by {h}, 0, 'mean', 'desc')"), "dashboard query function: top()"),
+        (ts("top(avg:a.b{*} by {h}, 5, 'mean')"), "dashboard query function: top()"),
+        (
+            ts("top(timeshift(avg:a.b{*} by {h}, 40), 5, 'mean', 'desc')"),
+            "dashboard query function is not converted yet: timeshift()",
+        ),
+        (ts("sum:a.b{*}.rollup(sum, 60)"), "dashboard query function: rollup()"),
+        (ts("sum:a.b{*}.rollup(sum, monthly)"), "dashboard query function: rollup()"),
+        (ts("derivative(avg:a.b{*})"), "dashboard query function is not converted yet"),
+    ],
+)
+def test_functions_without_a_correct_form_stay_placeholders(
+    tmp_path: Path, w: dict[str, Any], start: str
+) -> None:
+    _, item, _ = one(tmp_path, w)
+    assert item.kind is WidgetKind.UNSUPPORTED, item.reasons
+    assert item.reasons[0].startswith(start), item.reasons
+    assert steps_for(item.reasons)
+    assert classify(item.reasons[0]) is not Category.OTHER
+
+
+def test_rates_of_gauges_are_refused(tmp_path: Path) -> None:
+    for q in ("avg:a.b{*}.as_rate()", "per_second(avg:a.b{*})", "avg:a.b{*}.as_count()"):
+        _, item, _ = one(tmp_path, ts(q), name_map=GAUGE_MAP)
+        assert item.kind is WidgetKind.UNSUPPORTED, q
+        assert steps_for(item.reasons)
+
+
+def test_a_query_value_with_a_function_still_converts(tmp_path: Path) -> None:
+    _, item, queries = one(
+        tmp_path,
+        widget("query_value", requests=[{"q": "sum:a.b{*}.as_count()", "aggregator": "sum"}]),
+        name_map=COUNT_MAP,
+    )
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert queries == ["SELECT sum(a.b) FROM Metric"]
+
+
 def test_the_real_dashboards_measure_is_pinned() -> None:
     """Data widgets exclude notes. Before this converter nothing converted (0 of 454)."""
     m = measure(DASHBOARD_REGISTRY["datadog"].convert(REAL))
-    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 123, 331)
+    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 190, 264)
     assert (m.notes, m.note_placeholders) == (62, 0)
     assert m.converted + m.placeholders == m.data_widgets
     assert sum(m.by_reason.values()) == m.placeholders
