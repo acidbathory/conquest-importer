@@ -90,13 +90,17 @@ class OmitDefaults(BaseModel):
     """Leaves the named optional fields out of serialised output while they hold their default."""
 
     omit_when_default: ClassVar[tuple[str, ...]] = ()
+    # field -> extra values that are left out as well ("native" data path: nothing to set up)
+    omit_values: ClassVar[dict[str, tuple[str, ...]]] = {}
 
     @model_serializer(mode="wrap")
     def _serialise(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
         data: dict[str, Any] = handler(self)
         for name in self.omit_when_default:
             default = type(self).model_fields[name].get_default(call_default_factory=True)
-            if getattr(self, name) == default:
+            if getattr(self, name) == default or getattr(self, name) in self.omit_values.get(
+                name, ()
+            ):
                 data.pop(name, None)
         return data
 
@@ -191,7 +195,14 @@ class WidgetOptions(BaseModel):
 
 
 class IRWidget(OmitDefaults):
-    omit_when_default: ClassVar[tuple[str, ...]] = ("raw_series", "options", "thresholds", "page")
+    omit_when_default: ClassVar[tuple[str, ...]] = (
+        "raw_series",
+        "options",
+        "thresholds",
+        "page",
+        "data_path",
+    )
+    omit_values: ClassVar[dict[str, tuple[str, ...]]] = {"data_path": ("native",)}
 
     kind: WidgetKind
     source_type: str  # the source's own widget type, for the report
@@ -207,6 +218,8 @@ class IRWidget(OmitDefaults):
     thresholds: list[Threshold] = Field(default=[], max_length=MAX_THRESHOLDS)
     # The page this widget sits on; None = the dashboard's one page. Rows restart at 1 on each page.
     page: str | None = Field(default=None, min_length=1, max_length=MAX_TEXT)
+    # What must be in place for the query to return data (see IRMonitor.data_path)
+    data_path: str | None = Field(default=None, max_length=MAX_TEXT)
 
     @model_validator(mode="after")
     def _options_fit_the_widget(self) -> Self:

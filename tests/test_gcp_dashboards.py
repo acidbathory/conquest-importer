@@ -107,6 +107,12 @@ def test_a_failed_widget_keeps_its_source_type_for_the_report() -> None:
     assert widget("Ops overview", "Open alerts").source_type == "alertChart"
 
 
+def test_a_custom_metric_widget_converts_and_names_its_data_path() -> None:
+    w = widget("Ops overview", "Custom metric")
+    assert w.kind is WidgetKind.CHART and w.data_path == "needs-custom-ingest"
+    assert any(r.startswith("data path: needs-custom-ingest") for r in w.reasons)
+
+
 @pytest.mark.parametrize(
     ("title", "reason"),
     [
@@ -114,7 +120,6 @@ def test_a_failed_widget_keeps_its_source_type_for_the_report() -> None:
         ("Error ratio", "ratio"),
         ("Open alerts", "alert chart"),
         ("Uptime", "uptime check"),
-        ("Custom metric", "not one of the google cloud service metrics"),
     ],
 )
 def test_everything_else_is_a_failed_widget_with_a_reason_and_steps(

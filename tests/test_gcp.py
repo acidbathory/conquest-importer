@@ -251,16 +251,9 @@ def test_an_unseen_metric_keeps_the_unconfirmed_name_warning() -> None:
 
 
 @pytest.mark.parametrize(
-    "metric",
-    [
-        "custom.googleapis.com/orders/failed",
-        "agent.googleapis.com/memory/percent_used",
-        "workload.googleapis.com/jvm.memory.used",
-        "prometheus.googleapis.com/up/gauge",
-        "logging.googleapis.com/user/timeouts",
-    ],
+    "metric", ["logging.googleapis.com/user/timeouts", "example.com/unknown/route"]
 )
-def test_metrics_new_relic_does_not_document_collecting_stay_manual_with_steps(metric: str) -> None:
+def test_metrics_with_no_route_to_new_relic_stay_manual_with_steps(metric: str) -> None:
     (m,) = translate_policy(policy(threshold(filter=f'metric.type="{metric}"')))
     assert m.confidence is Confidence.MANUAL
     assert "not one of the Google Cloud service metrics" in m.reasons[0]
@@ -438,7 +431,10 @@ def test_absence_of_a_metric_that_never_arrives_says_so() -> None:
 @pytest.mark.parametrize(
     ("overrides", "fragment"),
     [
-        ({"filter": 'metric.type="custom.googleapis.com/x"'}, "not one of the google cloud"),
+        (
+            {"filter": 'metric.type="logging.googleapis.com/user/x"'},
+            "not one of the google cloud",
+        ),
         ({"filter": 'resource.type="pubsub_subscription"'}, "no metric.type"),
         ({"filter": 'metric.type="a" OR metric.type="b"'}, "filter"),
         ({"filter": 'metric.type="pubsub.googleapis.com/subscription/x" AND zone=~"a"'}, "filter"),

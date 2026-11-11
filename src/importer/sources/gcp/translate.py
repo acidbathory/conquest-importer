@@ -34,7 +34,7 @@ from importer.core.ir import (
     Threshold,
 )
 from importer.core.text import printable
-from importer.sources.gcp import alert_fields
+from importer.sources.gcp import alert_fields, datapath
 from importer.sources.gcp.filter import FilterError, Term, parse_filter
 from importer.sources.gcp.models import GcpAlertPolicy, GcpCondition
 from importer.sources.gcp.promql import PROMQL_KIND, translate_condition
@@ -201,6 +201,11 @@ def nr_metric_name(metric_type: str) -> str:
     is otherwise unchanged. No suffix is added: Google's own counter names already end in
     `_count` where they should (`disk/read_bytes_count`).
     """
+    if not datapath.is_polled(metric_type):
+        try:
+            return datapath.arrival(metric_type).name
+        except datapath.DataPathError as err:
+            raise Fail(Confidence.MANUAL, str(err)) from err
     match = SERVICE_SEGMENT.match(metric_type)
     if match is None or not SAFE_PATH.match(match["path"]):
         raise Fail(Confidence.MANUAL, f"metric type {metric_type!r} is not a recognised name")
@@ -208,21 +213,6 @@ def nr_metric_name(metric_type: str) -> str:
 
 
 PROJECT_LABELS = {"project_id": "gcp.projectId"}
-
-
-NOT_GOOGLE_SERVICE = (
-    "custom.googleapis.com/",
-    "external.googleapis.com/",
-    "workload.googleapis.com/",
-    "prometheus.googleapis.com/",
-    "agent.googleapis.com/",
-    "logging.googleapis.com/user/",
-)
-UNCOLLECTED = (
-    "the metric is not one of the Google Cloud service metrics that New Relic documents "
-    "collecting (custom, Ops Agent, Prometheus and log-based metrics are not listed), so a "
-    "converted query would return no data"
-)
 
 
 def _label_name(field: str) -> str | None:
@@ -392,9 +382,10 @@ def metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[st
             Confidence.MANUAL,
             "an uptime check alert depends on the check itself, which is not migrated",
         )
-    if metric_type.startswith(NOT_GOOGLE_SERVICE):
-        raise Fail(Confidence.MANUAL, UNCOLLECTED)
-    return metric_type, scope, notes
+    refusal = datapath.refusal(metric_type)
+    if refusal:
+        raise Fail(Confidence.MANUAL, refusal)
+    return metric_type, datapath.relabel(metric_type, scope), notes
 
 
 def _first_aggregation(body: dict[str, object]) -> tuple[dict[str, object], str]:
@@ -456,6 +447,14 @@ def metric_series(
             f"{STDDEV_MIN_PERIOD_SECONDS}s or more",
         )
     group_by, notes, aggregation, percentile = _reducer(agg, aggregation, aligner, period)
+    if not datapath.is_polled(metric_type):
+        if aligner.startswith("ALIGN_PERCENTILE_"):
+            raise Fail(
+                Confidence.MANUAL,
+                "a percentile of a distribution metric is not expressible once the metric is "
+                "sent by Prometheus, the Ops Agent or a custom route",
+            )
+        group_by = [datapath.arrival_label(g) for g in group_by]
     name = nr_metric_name(metric_type)
     if aligner.startswith("ALIGN_PERCENTILE_"):
         name += "." + "p" + aligner.rsplit("_", 1)[1]
@@ -467,7 +466,9 @@ def metric_series(
     if counter:
         period, scale, note = _counter_window(aligner, period, chart=chart)
         notes.append(note)
-    notes += _name_notes(name, aligner, uses_labels=bool(scope or group_by))
+    notes += _name_notes(
+        name, aligner, uses_labels=bool(scope or group_by), metric_type=metric_type
+    )
     target = NrTarget(event="Metric", attribute=name)
     if percentile is not None:
         # the percentile is one of three fixed integers and the name was validated above
@@ -550,9 +551,19 @@ def _metric_condition(
 
 
 def _name_notes(
-    name: str, aligner: str, *, uses_labels: bool, missing_note: str = MISSING_NOTE
+    name: str,
+    aligner: str,
+    *,
+    uses_labels: bool,
+    missing_note: str = MISSING_NOTE,
+    metric_type: str = "",
 ) -> list[str]:
     """Say what is and is not confirmed about the New Relic name and attributes."""
+    if metric_type and not datapath.is_polled(metric_type):
+        return [
+            *datapath.arrival(metric_type).notes,
+            *([datapath.LABEL_NOTE] if uses_labels else []),
+        ]
     notes: list[str] = []
     base = name.rsplit(".", 1)[0] if aligner.startswith("ALIGN_PERCENTILE_") else name
     if base in NOT_RECEIVED:
@@ -593,6 +604,8 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
         raise Fail(Confidence.MANUAL, f"duration {duration}s is not supported")
     name = nr_metric_name(metric_type)
     group_by, notes = _group_labels(agg)
+    if not datapath.is_polled(metric_type):
+        group_by = [datapath.arrival_label(g) for g in group_by]
     notes.append(ABSENCE_NOTE)
     notes += _absence_trigger(body, agg)
     reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
@@ -618,7 +631,11 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
             "series reports, so group by the resource id to alert for each one"
         )
     notes += _name_notes(
-        name, aligner, uses_labels=bool(scope or group_by), missing_note=ABSENCE_MISSING_NOTE
+        name,
+        aligner,
+        uses_labels=bool(scope or group_by),
+        missing_note=ABSENCE_MISSING_NOTE,
+        metric_type=metric_type,
     )
     signal = HeartbeatSignal(
         check=name,
@@ -711,8 +728,9 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
         )
 
     if cond.kind == PROMQL_KIND:
-        severity = Severity.WARNING if policy.severity == "WARNING" else Severity.CRITICAL
-        return translate_condition(base, cond.body, severity=severity, prior=reasons)
+        severity, severity_note = alert_fields.severity_for(policy.severity)
+        prior = [*reasons, severity_note] if severity_note else reasons
+        return translate_condition(base, cond.body, severity=severity, prior=prior)
     if cond.kind in MANUAL_KINDS:
         return failed(Confidence.MANUAL, MANUAL_KINDS[cond.kind])
     if not cond.kind:
@@ -802,6 +820,7 @@ def translate_policy(policy: GcpAlertPolicy) -> list[IRMonitor]:
     for cond in policy.conditions:
         name = f"{policy.displayName} / {cond.displayName}" if many else policy.displayName
         monitor = _convert(policy, cond, name)
+        datapath.tag_monitor(monitor, cond.body, cond.kind)
         if many and policy.combiner.startswith("AND") and monitor.confidence != Confidence.MANUAL:
             monitor.reasons.append(
                 f"the Google policy fires only when all {len(policy.conditions)} conditions "

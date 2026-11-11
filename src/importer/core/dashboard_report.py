@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 from importer.core.dashboard_ir import IRDashboard, IRWidget, WidgetKind
 from importer.core.ir import Confidence
-from importer.core.report import md_cell
+from importer.core.report import data_path_section, md_cell
 from importer.core.report_brand import header_lines
 from importer.core.text import printable
 
@@ -44,6 +44,7 @@ def build_dashboard_report(
     ]
     lines += [f"| {c.value} | {counts[c]} |" for c in Confidence]
     lines += ["", "## Notes", ""] + [f"- {n}" for n in NOTES]
+    lines += data_path_section([w.data_path for w in converted])
     for d in sorted(dashboards, key=lambda x: x.source_key):
         done = sum(w.kind != WidgetKind.UNSUPPORTED for w in d.widgets)
         lines += [

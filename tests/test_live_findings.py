@@ -1,6 +1,7 @@
 """Regression tests for bugs found by the live suite (docs/testing-results/2026-11-04.md)."""
 
 import json
+import webbrowser
 from pathlib import Path
 from typing import Any
 
@@ -235,7 +236,7 @@ def prompt_world(monkeypatch: pytest.MonkeyPatch) -> Created:
     created = Created()
     monkeypatch.setattr(ex, "run_boto3", DashboardsOnlyAws())
     monkeypatch.setattr(cli, "apply_dashboards_command", created)
-    monkeypatch.setattr(cli.webbrowser, "open", lambda *_a, **_k: True)  # never a real tab
+    monkeypatch.setattr(webbrowser, "open", lambda *_a, **_k: True)  # never a real tab
     monkeypatch.setenv("NEW_RELIC_API_KEY", "k")
     monkeypatch.setenv("NEW_RELIC_ALLOWED_ACCOUNT_IDS", "7")
     return created

@@ -30,6 +30,7 @@ from importer.core.dashboard_nrql import VARIABLE_NAME
 from importer.core.emit.nrql import identifier, widget_nrql
 from importer.core.ir import Confidence
 from importer.core.text import printable
+from importer.sources.gcp import datapath
 from importer.sources.gcp.dashboard_extra import (
     NOT_SHOWN,
     PAGE_KINDS,
@@ -420,7 +421,7 @@ def translate_widget(
 
 def _safe_widget(widget: dict[str, Any], layout: Layout, ctx: Context) -> IRWidget:
     try:
-        return translate_widget(widget, layout, ctx)
+        return datapath.tag_widget(translate_widget(widget, layout, ctx))
     except Exception:
         return _failed("widget", layout, "unknown", [READ_FAILED])
 

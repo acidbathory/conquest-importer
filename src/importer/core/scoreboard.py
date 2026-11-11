@@ -28,6 +28,9 @@ LOWER_IS_BETTER = ("alerts_manual", "alerts_unsupported", "widgets_placeholders"
 HIGHER_IS_BETTER = ("alerts_converted", "widgets_converted", "verified")
 BAD_VERDICTS = frozenset({"mismatch", "mismatched", "diverge", "diverged", "fail", "failed"})
 GOOD_VERDICTS = frozenset({"match", "matched", "verified", "pass", "passed"})
+# Sources whose converted items without a `data_path` in the saved IR are native (the field is
+# left out of the file for them). Other sources are not counted by data path at all.
+DEFAULT_DATA_PATH = {"gcp": "native"}
 EVIDENCE_FIELDS = ("id", "source", "claim", "date", "method", "evidence")
 
 
@@ -59,6 +62,18 @@ def _bump(metrics: dict[str, int], name: str, by: int = 1) -> None:
     metrics[name] = metrics.get(name, 0) + by
 
 
+def _count_data_path(
+    metrics: dict[str, int], prefix: str, noun: str, source: str, data: dict[str, Any]
+) -> None:
+    """Count a converted item by the data path it needs; `datapath_known` leaves out `unknown`."""
+    path = data.get("data_path") or DEFAULT_DATA_PATH.get(source)
+    if not isinstance(path, str):
+        return
+    _bump(metrics, f"{prefix}{noun}_datapath_{_key(path)}")
+    if path != "unknown":
+        _bump(metrics, f"{prefix}{noun}_datapath_known")
+
+
 def _scan_alerts(folder: Path, metrics: dict[str, int], warnings: list[str]) -> None:
     ir = folder / "ir"
     if ir.is_symlink() or not ir.is_dir():
@@ -76,6 +91,7 @@ def _scan_alerts(folder: Path, metrics: dict[str, int], warnings: list[str]) -> 
         if confidence in CONVERTED:
             _bump(metrics, prefix + "alerts_converted")
             _bump(metrics, prefix + f"alerts_{confidence}")
+            _count_data_path(metrics, prefix, "alerts", source, data)
         elif confidence in ("manual", "unsupported"):
             _bump(metrics, prefix + f"alerts_{confidence}")
         else:
@@ -100,6 +116,9 @@ def _scan_dashboards(folder: Path, metrics: dict[str, int], warnings: list[str])
             kind = widget.get("kind") if isinstance(widget, dict) else None
             if kind == "chart":
                 _bump(metrics, prefix + "widgets_converted")
+                _count_data_path(
+                    metrics, prefix, "widgets", _key(data.get("source_system", "unknown")), widget
+                )
             elif kind == "unsupported":
                 _bump(metrics, prefix + "widgets_placeholders")  # never counted as converted
 
