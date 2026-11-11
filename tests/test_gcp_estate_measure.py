@@ -194,6 +194,26 @@ def test_metric_family(text: str, family: str) -> None:
     assert measure.metric_family(text) == family
 
 
+@pytest.mark.parametrize(
+    ("path", "reasons", "status"),
+    [
+        ("needs-ops-agent-or-otel", ["x: metric name VERIFIED: y"], "verified"),
+        ("needs-ops-agent-or-otel", ["metric name UNVERIFIED"], "unverified"),
+        (
+            "needs-ops-agent-or-otel",
+            ["metric name VERIFIED", "metric name UNVERIFIED"],
+            "unverified",
+        ),
+        ("needs-custom-ingest", ["a name map: UNVERIFIED"], "unverified"),
+        ("native", ["metric name VERIFIED"], ""),
+        ("", [], ""),
+        ("needs-log-forwarding", [], ""),
+    ],
+)
+def test_name_status(path: str, reasons: list[str], status: str) -> None:
+    assert measure.name_status(path, reasons) == status
+
+
 def test_prepare_promql_rewrites_the_two_gcp_only_forms() -> None:
     prepared = measure.prepare_promql(
         'sum(rate({"workload.googleapis.com/a.b", k="v", ${Cluster}}[${__interval}]))'
