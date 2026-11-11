@@ -67,7 +67,7 @@ Columns after the verdict are the worst relative divergence per scenario.
 | WITHOUT-01 | WITHOUT | DIFFERS_AT_EDGES | 0.0007 | 0.0019 | 0.6600 | 0.0341 | 0.0025 | MEDIUM |  |
 | WITHOUT-02 | WITHOUT | REFUSED |  |  |  |  |  |  | promql uses rate, increase or another range function |
 | PLACEHOLDER-01 | PLACEHOLDER | DIFFERS_AT_EDGES | 0.0005 | 0.0011 | 0.7907 | 0.0243 | 0.0016 | MEDIUM |  |
-| PLACEHOLDER-02 | PLACEHOLDER | REFUSED |  |  |  |  |  |  | promql query contains a template placeholder such as ${NAME}; fill it in with the real value before the condition can be converted |
+| PLACEHOLDER-02 | PLACEHOLDER | REFUSED |  |  |  |  |  |  | promql query contains a template placeholder (${CLUSTER}) with no value in the name map (variables); the policy does not say what it stands for, so give it a value before the condition can be converted |
 | CMP-FILTER-01 | CMP-FILTER | DIFFERS_AT_EDGES | 0.0000 | 0.0000 | 0.0000 | 0.0000 +M | 0.0000 | MEDIUM | flapping state: PromQL tests the latest sample, NRQL filters every sample |
 | CMP-FILTER-02 | CMP-FILTER | DIFFERS_AT_EDGES | 0.0000 | 0.0000 | 0.0000 | 0.0000 +M | 0.0000 | MEDIUM | flapping value: PromQL tests the latest sample, NRQL averages the samples above 0 |
 | CMP-FILTER-03 | CMP-FILTER | NOT_MODELLED |  |  |  |  |  |  | NRQL: sub-query |
