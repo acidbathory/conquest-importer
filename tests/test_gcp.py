@@ -120,7 +120,7 @@ def test_label_filters_become_scope_and_counters_keep_google_name() -> None:
     ("overrides", "needle"),
     [
         ({"denominatorFilter": 'metric.type="x.googleapis.com/y"'}, "ratio"),
-        ({"forecastOptions": {"forecastHorizon": "3600s"}}, "forecast"),
+        ({"forecastOptions": {"forecastHorizon": "60s"}}, "forecast"),
         ({"trigger": {"percent": 50}}, "several time series"),
         ({"comparison": "COMPARISON_UNSPECIFIED"}, "comparison"),
         ({"aggregations": [{"alignmentPeriod": "30s"}]}, "alignment period"),
@@ -451,7 +451,7 @@ def test_absence_of_a_metric_that_never_arrives_says_so() -> None:
             "second-stage",
         ),
         (
-            {"aggregations": [{"alignmentPeriod": "300s", "crossSeriesReducer": "REDUCE_COUNT"}]},
+            {"aggregations": [{"alignmentPeriod": "300s", "crossSeriesReducer": "REDUCE_BOGUS"}]},
             "reducer",
         ),
         ({"aggregations": [{"alignmentPeriod": "30s"}]}, "alignment period"),

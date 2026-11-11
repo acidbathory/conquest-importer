@@ -50,6 +50,7 @@ class GcpAlertPolicy(BaseModel):
     notificationChannels: list[str] = []
     documentation: dict[str, Any] = {}
     alertStrategy: dict[str, Any] = {}
+    userLabels: dict[str, Any] = {}
 
 
 def _files(path: Path) -> list[Path]:

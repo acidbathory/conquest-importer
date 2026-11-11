@@ -1,10 +1,9 @@
 """Emitter settings the Google Cloud converter uses: description note, prediction, expiration."""
 
-from test_emit import convert
-
 from importer.core.emit.nerdgraph import nerdgraph_payload
 from importer.core.emit.terraform import resource_block
 from importer.core.ir import EmitOptions, IRMonitor
+from test_emit import convert
 
 
 def with_emit(monitor: IRMonitor, **options: object) -> IRMonitor:
@@ -20,8 +19,10 @@ def condition(monitor: IRMonitor) -> dict[str, object]:
 
 def test_description_note_follows_the_source_line_and_is_cleaned() -> None:
     m = with_emit(convert(), description_note="Subject: disk\x1b[31m full")
-    assert condition(m)["description"] == "Imported from AWS CloudWatch 7\nSubject: disk?[31m full"
-    assert '"Imported from AWS CloudWatch 7\\nSubject: disk?[31m full"' in resource_block(m)
+    assert (
+        condition(m)["description"] == "Imported from CloudWatch alarm 7\nSubject: disk?[31m full"
+    )
+    assert '"Imported from CloudWatch alarm 7\\nSubject: disk?[31m full"' in resource_block(m)
 
 
 def test_description_is_capped() -> None:

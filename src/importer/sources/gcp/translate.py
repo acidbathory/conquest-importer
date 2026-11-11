@@ -28,12 +28,12 @@ from importer.core.ir import (
     NrTarget,
     Occurrences,
     Operator,
-    Severity,
     Signal,
     SignalKind,
     TagFilter,
     Threshold,
 )
+from importer.sources.gcp import alert_fields
 from importer.sources.gcp.filter import FilterError, Term, parse_filter
 from importer.sources.gcp.models import GcpAlertPolicy, GcpCondition
 
@@ -56,15 +56,69 @@ ALIGNERS = {
     "ALIGN_PERCENTILE_50": (Aggregation.AVG, False),
     "ALIGN_PERCENTILE_95": (Aggregation.AVG, False),
     "ALIGN_PERCENTILE_99": (Aggregation.AVG, False),
+    "ALIGN_STDDEV": (Aggregation.STDDEV, False),
     "ALIGN_NONE": (Aggregation.AVG, False),
     "": (Aggregation.AVG, False),
+}
+BOOLEAN = (
+    "the aligner {name} works on a boolean metric; New Relic documents no encoding for boolean "
+    "Google metrics, so check the values the metric holds there (for example 0 and 1) and build "
+    "percentage(count(*), WHERE <metric> = 1) or sum() by hand"
+)
+RESAMPLES = (
+    "the aligner {name} resamples the points onto the period boundaries, which New Relic "
+    "does not do"
+)
+UNSUPPORTED_ALIGNERS = {
+    "ALIGN_COUNT": (
+        "the aligner ALIGN_COUNT counts the samples in each period; Google samples at the "
+        "metric's own rate and New Relic stores one sample per 5 minute poll, so the counts "
+        "are not comparable"
+    ),
+    "ALIGN_COUNT_TRUE": BOOLEAN.format(name="ALIGN_COUNT_TRUE"),
+    "ALIGN_COUNT_FALSE": BOOLEAN.format(name="ALIGN_COUNT_FALSE"),
+    "ALIGN_FRACTION_TRUE": BOOLEAN.format(name="ALIGN_FRACTION_TRUE"),
+    "ALIGN_PERCENT_CHANGE": (
+        "the aligner ALIGN_PERCENT_CHANGE is the percent change between consecutive points; "
+        "NRQL derivative() gives an absolute rate of change, not a percent change"
+    ),
+    "ALIGN_INTERPOLATE": RESAMPLES.format(name="ALIGN_INTERPOLATE"),
+    "ALIGN_NEXT_OLDER": RESAMPLES.format(name="ALIGN_NEXT_OLDER"),
+    "ALIGN_PERCENTILE_05": (
+        "the aligner ALIGN_PERCENTILE_05 is the 5th percentile; New Relic publishes only the "
+        "50th, 95th and 99th percentile series of a distribution metric"
+    ),
+}
+PERCENTILE_REDUCERS = {
+    "REDUCE_PERCENTILE_50": 50,
+    "REDUCE_PERCENTILE_95": 95,
+    "REDUCE_PERCENTILE_99": 99,
+}
+UNSUPPORTED_REDUCERS = {
+    "REDUCE_COUNT": "counts the time series, which a New Relic condition query cannot do",
+    "REDUCE_COUNT_TRUE": "works on a boolean metric whose New Relic encoding is not documented",
+    "REDUCE_COUNT_FALSE": "works on a boolean metric whose New Relic encoding is not documented",
+    "REDUCE_FRACTION_TRUE": "works on a boolean metric whose New Relic encoding is not documented",
+    "REDUCE_PERCENTILE_05": "is the 5th percentile, which New Relic does not publish for a "
+    "distribution metric",
 }
 REDUCERS = {
     "REDUCE_MEAN": Aggregation.AVG,
     "REDUCE_MAX": Aggregation.MAX,
     "REDUCE_MIN": Aggregation.MIN,
     "REDUCE_SUM": Aggregation.SUM,
+    "REDUCE_STDDEV": Aggregation.STDDEV,
 }
+# every perSeriesAligner and crossSeriesReducer in Google's enums (alert.proto, common.proto)
+KNOWN_ALIGNERS = {*ALIGNERS, *UNSUPPORTED_ALIGNERS, "ALIGN_PERCENTILE_05", "ALIGN_INTERPOLATE"}
+KNOWN_REDUCERS = {
+    "REDUCE_NONE",
+    "REDUCE_STDDEV",
+    *REDUCERS,
+    *PERCENTILE_REDUCERS,
+    *UNSUPPORTED_REDUCERS,
+}
+STDDEV_MIN_PERIOD_SECONDS = 3 * 300  # three polls: fewer points give no meaningful deviation
 MANUAL_KINDS = {
     "conditionMonitoringQueryLanguage": "MQL conditions are not converted",
     "conditionPrometheusQueryLanguage": "PromQL conditions are not converted",
@@ -241,24 +295,53 @@ def _counter_window(aligner: str, period: int, *, chart: bool) -> tuple[int, flo
 
 
 def _reducer(
-    agg: dict[str, object], aggregation: Aggregation, aligner: str
-) -> tuple[list[str], list[str]]:
-    """Group-by labels and notes for the cross-series reducer of a condition."""
+    agg: dict[str, object], aggregation: Aggregation, aligner: str, period: int
+) -> tuple[list[str], list[str], Aggregation, int | None]:
+    """Group-by labels, notes, time aggregation and percentile (if any) for the cross-series
+    reducer of a condition."""
     reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
     group_by, notes = _group_labels(agg)
+    if reducer in PERCENTILE_REDUCERS or reducer == "REDUCE_STDDEV":
+        _check_one_point_per_series(reducer, aligner, period)
+        notes.append(
+            f"{reducer} runs over the points polled in each window, one for each series, so it "
+            "is the same as taking it across series"
+        )
+        percentile = PERCENTILE_REDUCERS.get(reducer)
+        return (
+            group_by,
+            notes,
+            Aggregation.STDDEV if percentile is None else aggregation,
+            percentile,
+        )
     if reducer in REDUCERS:
         if REDUCERS[reducer] != aggregation:
             notes.append(
                 f"{reducer} and {aligner} become one {aggregation.value} in New Relic's query"
             )
-        return group_by, notes
+        return group_by, notes, aggregation, None
+    if reducer in UNSUPPORTED_REDUCERS:
+        raise Fail(Confidence.MANUAL, f"reducer {reducer} {UNSUPPORTED_REDUCERS[reducer]}")
     if reducer != "REDUCE_NONE":
         raise Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
     notes.append(
         "Google evaluates each time series on its own; the New Relic query combines them "
         "unless you facet by the resource id"
     )
-    return group_by, notes
+    return group_by, notes, aggregation, None
+
+
+def _check_one_point_per_series(reducer: str, aligner: str, period: int) -> None:
+    """A percentile or deviation across series equals one across polled points only when every
+    series has a single point in the window and the aligner leaves that point as it is."""
+    counter = ALIGNERS.get(aligner, (Aggregation.AVG, False))[1]
+    if period > POLL_SECONDS or counter or aligner.startswith("ALIGN_PERCENTILE_"):
+        raise Fail(
+            Confidence.MANUAL,
+            f"{reducer} after {aligner or 'no aligner'} over {period}s: each series has several "
+            "polls in the window and the per-series value is taken first, but a New Relic "
+            "percentile or deviation mixes all the polls, so the result would differ",
+        )
 
 
 def _whole_windows(duration: int, period: int) -> tuple[int, str]:
@@ -317,7 +400,10 @@ def check_aligner(agg: dict[str, object]) -> tuple[dict[str, object], str]:
     """The aggregation stage and its aligner; manual when the aligner is not mapped."""
     aligner = str(agg.get("perSeriesAligner", ""))
     if aligner not in ALIGNERS:
-        raise Fail(Confidence.MANUAL, f"aligner {aligner!r} is not supported")
+        raise Fail(
+            Confidence.MANUAL,
+            UNSUPPORTED_ALIGNERS.get(aligner, f"aligner {aligner!r} is not supported"),
+        )
     return agg, aligner
 
 
@@ -350,9 +436,16 @@ def metric_series(
     Shared by alert conditions and dashboard charts (`chart` words the counter note for a chart).
     """
     aggregation, counter = ALIGNERS[aligner]
-    group_by, notes = _reducer(agg, aggregation, aligner)
     if period < 60 or period % 60:
         raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
+    if aligner == "ALIGN_STDDEV" and period < STDDEV_MIN_PERIOD_SECONDS:
+        raise Fail(
+            Confidence.MANUAL,
+            f"ALIGN_STDDEV over {period}s has one point or two per series (New Relic polls every "
+            f"{POLL_SECONDS}s), which gives no meaningful deviation; use a period of "
+            f"{STDDEV_MIN_PERIOD_SECONDS}s or more",
+        )
+    group_by, notes, aggregation, percentile = _reducer(agg, aggregation, aligner, period)
     name = nr_metric_name(metric_type)
     if aligner.startswith("ALIGN_PERCENTILE_"):
         name += "." + "p" + aligner.rsplit("_", 1)[1]
@@ -365,15 +458,66 @@ def metric_series(
         period, scale, note = _counter_window(aligner, period, chart=chart)
         notes.append(note)
     notes += _name_notes(name, aligner, uses_labels=bool(scope or group_by))
-    term = MetricTerm(
-        metric=metric_type,
-        space_aggregation=aggregation,
-        nr_target=NrTarget(event="Metric", attribute=name),
-    )
+    target = NrTarget(event="Metric", attribute=name)
+    if percentile is not None:
+        # the percentile is one of three fixed integers and the name was validated above
+        target.select = f"percentile({identifier(name)}, {percentile})"
+    term = MetricTerm(metric=metric_type, space_aggregation=aggregation, nr_target=target)
     signal = MetricSignal(
         terms={"a": term}, aggregation=aggregation, scope=scope, group_by=group_by
     )
     return signal, period, scale, notes
+
+
+def _trigger_size(body: dict[str, object]) -> tuple[int, float]:
+    """(count, percent) of the trigger; (1, 0) when it asks for any one series."""
+    trigger = body.get("trigger")
+    if not isinstance(trigger, dict):
+        return 1, 0.0
+    try:
+        return int(trigger.get("count") or 1), float(trigger.get("percent") or 0)
+    except (TypeError, ValueError):
+        raise Fail(
+            Confidence.MANUAL, "the trigger is not a number of series or a percent"
+        ) from None
+
+
+def _one_series(agg: dict[str, object]) -> bool:
+    """True when the aggregation reduces everything to a single series."""
+    reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
+    return reducer not in ("REDUCE_NONE", "") and not agg.get("groupByFields")
+
+
+def _trigger_text(count: int, percent: float) -> str:
+    return f"{percent:g}% of the time series" if percent else f"{count} time series"
+
+
+def _threshold_trigger(body: dict[str, object], agg: dict[str, object]) -> list[str]:
+    """Notes for a trigger on a threshold condition; manual when several series must breach."""
+    count, percent = _trigger_size(body)
+    if count <= 1 and not percent:
+        return []
+    if _one_series(agg):
+        return [
+            f"the trigger of {_trigger_text(count, percent)} does not matter here: the "
+            "aggregation reduces everything to a single series"
+        ]
+    raise Fail(
+        Confidence.MANUAL,
+        "a trigger on several time series is not supported: it needs "
+        f"{_trigger_text(count, percent)} to breach together, and New Relic evaluates each "
+        "series on its own",
+    )
+
+
+def _absence_trigger(body: dict[str, object], agg: dict[str, object]) -> list[str]:
+    count, percent = _trigger_size(body)
+    if (count <= 1 and not percent) or percent >= 100 or _one_series(agg):
+        return []
+    return [
+        f"Google fires when {_trigger_text(count, percent)} stop reporting; this condition "
+        "fires only when no series reports at all, so it fires later and less often"
+    ]
 
 
 def _metric_condition(
@@ -381,16 +525,13 @@ def _metric_condition(
 ) -> tuple[MetricSignal, int, int, float, list[str]]:
     if body.get("denominatorFilter"):
         raise Fail(Confidence.MANUAL, "ratio conditions (denominator filter) are not supported")
-    if body.get("forecastOptions"):
-        raise Fail(Confidence.MANUAL, "forecast conditions are not supported")
-    trigger = body.get("trigger")
-    if isinstance(trigger, dict) and (trigger.get("percent") or int(trigger.get("count", 1)) > 1):
-        raise Fail(Confidence.MANUAL, "a trigger on several time series is not supported")
     metric_type, scope, scope_notes = metric_scope(body)
     agg, aligner = _first_aggregation(body)
+    trigger_notes = _threshold_trigger(body, agg)
     period = seconds(agg.get("alignmentPeriod"))
     duration = seconds(body.get("duration"))
     signal, period, scale, notes = metric_series(metric_type, scope, agg, aligner, period)
+    notes = [*trigger_notes, *notes]
     window, note = _whole_windows(duration, period)
     _check_limits(period, window)
     if note:
@@ -413,13 +554,27 @@ def _name_notes(
     return notes
 
 
+def _absence_aggregation(body: dict[str, object]) -> tuple[dict[str, object], str]:
+    """The aggregation stage of an absence check. Any aligner or reducer in Google's enums is
+    accepted: the check only asks whether a data point arrived."""
+    aggregations = body.get("aggregations")
+    if isinstance(aggregations, list) and len(aggregations) > 1:
+        raise Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
+    first = aggregations[0] if isinstance(aggregations, list) and aggregations else {}
+    agg = first if isinstance(first, dict) else {}
+    aligner = str(agg.get("perSeriesAligner", ""))
+    reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
+    if aligner not in KNOWN_ALIGNERS:
+        raise Fail(Confidence.MANUAL, f"aligner {aligner!r} is not supported")
+    if reducer not in KNOWN_REDUCERS:
+        raise Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
+    return agg, aligner
+
+
 def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, int, list[str]]:
     """A loss-of-signal check: heartbeat signal, aggregation window, duration and notes."""
     metric_type, scope, scope_notes = metric_scope(body)
-    agg, aligner = _first_aggregation(body)
-    reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
-    if reducer not in (*REDUCERS, "REDUCE_NONE"):
-        raise Fail(Confidence.MANUAL, f"reducer {reducer!r} is not supported")
+    agg, aligner = _absence_aggregation(body)
     period = seconds(agg.get("alignmentPeriod"))
     if period < 60 or period % 60:
         raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
@@ -429,6 +584,13 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
     name = nr_metric_name(metric_type)
     group_by, notes = _group_labels(agg)
     notes.append(ABSENCE_NOTE)
+    notes += _absence_trigger(body, agg)
+    reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
+    if aligner not in ALIGNERS or reducer not in (*REDUCERS, "REDUCE_NONE"):
+        notes.append(
+            f"the aligner {aligner or 'none'} and reducer {reducer} do not change what an "
+            "absence check sees: it only asks whether any data point arrived"
+        )
     if period < POLL_SECONDS:
         notes.append(
             f"the alignment period of {period}s is raised to {POLL_SECONDS}s, the polling interval"
@@ -524,9 +686,11 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
         return failed(Confidence.MANUAL, MANUAL_KINDS[cond.kind])
     if not cond.kind:
         return failed(Confidence.MANUAL, "condition type is not recognised")
-    severity = Severity.WARNING if policy.severity == "WARNING" else Severity.CRITICAL
+    severity, severity_note = alert_fields.severity_for(policy.severity)
     body = cond.body
     no_data = NoData()
+    extra: dict[str, object] = {}
+    log = cond.kind == "conditionMatchedLog"
     try:
         if cond.kind == ABSENCE_KIND:
             heartbeat, period, duration, notes = _absence_condition(cond.body)
@@ -560,16 +724,19 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
                 return failed(
                     Confidence.MANUAL, f"comparison {body.get('comparison')!r} is not supported"
                 )
+            forecast_emit, forecast_note, forecast_fail = alert_fields.forecast(body)
+            if forecast_fail:
+                raise Fail(Confidence.MANUAL, forecast_fail)
             metric, period, duration, scale, notes = _metric_condition(body)
             reasons += notes
-            missing = str(body.get("evaluationMissingData", ""))
-            if missing.endswith("_ACTIVE"):
-                no_data = NoData(notify=True, timeout_minutes=max(1, duration // 60))
-            elif missing.endswith(("_INACTIVE", "_NO_OP")):
-                reasons.append(
-                    f"{missing} has no equivalent; New Relic leaves the condition unchanged "
-                    "when data is missing"
-                )
+            if forecast_note:
+                reasons.append(forecast_note)
+            no_data, missing_emit, missing_note = alert_fields.missing_data(
+                str(body.get("evaluationMissingData", "")), duration
+            )
+            extra |= forecast_emit | missing_emit
+            if missing_note:
+                reasons.append(missing_note)
             signal = Signal(
                 kind=SignalKind.METRIC,
                 raw_query=name,
@@ -584,8 +751,12 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
     except Fail as fail:
         prefix = ABSENCE_PREFIX if cond.kind == ABSENCE_KIND else ""
         return failed(fail.confidence, prefix + fail.reason)
+    settings = alert_fields.carry_fields(policy, body, log=log)
+    reasons += [*([severity_note] if severity_note else []), *settings.notes]
     return IRMonitor(
         **base,
+        tags=settings.tags,
+        emit=alert_fields.emit_options(settings, extra),
         signal=signal,
         thresholds=thresholds,
         no_data=no_data,
