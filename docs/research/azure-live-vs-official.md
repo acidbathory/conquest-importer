@@ -28,7 +28,7 @@ Total 29 created. The list calls returned exactly these (`_meta.json`).
 | Action groups with a webhook, secure webhook, Logic App, Azure Function or Automation runbook receiver, URL on `example.invalid` | 400 `WebhookServiceUriBlocked`, `LogicAppCallbackUrlBlocked`, `AzureFunctionHttpTriggerUrlBlocked`, `AutomationRunbookServiceUriBlocked` (message is the code only) | Not a permission error. Azure blocks the host. No other host was tried: only `.invalid` was authorised. Those five receiver types are therefore **not tested live** |
 | Metric alert pointing at a missing action group | 400 `Action Group <id> is invalid` | Referenced action groups are validated at write time |
 | Metric alert `UsedCapacity` with `Minimum` | 400 `Time aggregation must be one of [Average]` | Per-metric allowed aggregations are enforced at write time |
-| Metric alert `SuccessServerLatency`/`Transactions` with `Count` | 400 `Time aggregation must be one of [Total]` (for Transactions) | same |
+| Metric alert `Transactions` with `Count` | 400 `Time aggregation must be one of [Total]` | same |
 | Scheduled query rule with `muteActionsDuration` and `autoMitigate` true or unset | 400 `Auto mitigation must be disabled when action suppression is set` | Mute and auto-mitigate exclude each other. The research doc did not know this |
 | Scheduled query rule, 1-minute frequency, `union Usage, Heartbeat \| take 5` | 400 `One-minute frequency is not supported for this query...` | Confirms the Learn page rule (union and take at 1 minute) |
 
@@ -53,9 +53,9 @@ probe above is the only KQL rejected.
 5. Defaults the API does and does not fill in:
    - Not filled: `autoMitigate` on scheduled query rules (absent unless sent, although the swagger says default true), `kind` on a `LogAlert` rule
      (absent, not `"LogAlert"`), `resolveConfiguration`, `muteActionsDuration`.
-   - Filled: `dimensions: []` stays as sent on dynamic metric criteria; every action group returns all the empty receiver arrays
-     (`smsReceivers: []`, `voiceReceivers: []`, ...), so "array present" does not mean "receiver exists".
-   - `failingPeriods` was returned as sent (1 of 1 where I sent 1 of 1); a rule that omitted it was returned without it.
+   - Filled: every action group returns all eleven receiver arrays, empty when unused (`smsReceivers: []`, `voiceReceivers: []`, ...), so
+     "array present" does not mean "receiver exists".
+   - Echoed as sent: `failingPeriods`, `dimensions: []`, `ignoreDataBefore`. Every request here set them, so what the API fills in when they are omitted is **not tested**.
    - A `SimpleLogAlert` has no `evaluationFrequency` or `windowSize` in the response.
    - Numbers: `threshold` comes back as a float (`1000.0`).
    - Every disabled rule is stored with `enabled: false` and kept in the list.
@@ -93,7 +93,7 @@ There is no legacy (2018-04-16 `source`/`schedule`/`action`) log alert in this s
   or other alert rules when they are disabled." All 21 alert rules are disabled, so alert rules and processing rules: expected 0. (The page text has no price
   figures in the HTML; they come from the Microsoft Retail Prices API below.)
 - Microsoft Retail Prices API (`https://prices.azure.com/api/retail/prices`, eastus), fetched: Log Analytics analytics-logs ingestion 2.3 per GB
-  (a 0.0 entry also exists, free allowance); retention 0.1 per GB-month beyond the included period; general block blob v2 Hot LRS storage about 0.02 per GB-month.
+  (a 0.0 entry also exists, free allowance); retention 0.1 per GB-month (the included period was not read); general block blob v2 Hot LRS storage about 0.02 per GB-month.
 - The workspace has no connected data source and the storage account is empty and unused, so the expected bill is about zero (cents at most from the
   platform tables and idle storage). This is an estimate from list prices: the actual charge was **not checked** in Cost Management (the app has no cost read role).
 - Action groups: no price was found for them on the fetched page and the email receivers will not be called: **not checked**.
