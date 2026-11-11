@@ -1,0 +1,31 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_RATE"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"compute.googleapis.com/instance/disk/read_bytes_count\"",
+    "thresholdValue": 50000000.0,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Disk read rate"
+  }
+ ],
+ "displayName": "VM disk read bytes rate",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1002"
+ ],
+ "severity": "WARNING",
+ "userLabels": {}
+}

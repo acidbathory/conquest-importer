@@ -1,0 +1,28 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "3600s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "259200s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"agent.googleapis.com/disk/percent_used\"",
+    "thresholdValue": 95,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Slow burn"
+  }
+ ],
+ "displayName": "Disk fill, 3 day duration",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

@@ -1,0 +1,287 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "instance_id",
+   "valueType": "STRING"
+  },
+  {
+   "filterType": "METRIC_LABEL",
+   "labelKey": "database",
+   "valueType": "STRING"
+  },
+  {
+   "filterType": "METRIC_LABEL",
+   "labelKey": "method",
+   "valueType": "STRING"
+  }
+ ],
+ "displayName": "Cloud Spanner",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "Throughput",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${shortMetric}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"spanner.googleapis.com/api/received_bytes_count\" resource.type=\"spanner_instance\""
+         }
+        }
+       },
+       {
+        "legendTemplate": "${shortMetric}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"spanner.googleapis.com/api/sent_bytes_count\" resource.type=\"spanner_instance\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Read Requests",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${metric.labels.method}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "metric.label.\"method\""
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"spanner.googleapis.com/api/request_count\" resource.type=\"spanner_instance\" metric.label.\"method\"=one_of(\"Read\",\"StreamingRead\",\"ExecuteSql\",\"ExecuteStreamingSql\")"
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Write Requests",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "Commit",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "crossSeriesReducer": "REDUCE_SUM",
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"spanner.googleapis.com/api/request_count\" resource.type=\"spanner_instance\" metric.label.\"method\"=\"Commit\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Errors by Method",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${metric.labels.method}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "metric.label.\"method\""
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"spanner.googleapis.com/api/request_count\" resource.type=\"spanner_instance\" metric.label.\"status\"!=\"OK\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Total Storage",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "crossSeriesReducer": "REDUCE_SUM",
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"spanner.googleapis.com/instance/storage/used_bytes\" resource.type=\"spanner_instance\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "incidentList": {
+      "monitoredResources": [
+       {
+        "type": "spanner_instance"
+       }
+      ]
+     },
+     "title": "Incidents"
+    },
+    "width": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "timeSeriesTable": {
+      "columnSettings": [
+       {
+        "column": "database",
+        "visible": true
+       },
+       {
+        "column": "instance_id",
+        "visible": true
+       },
+       {
+        "column": "project_id",
+        "visible": true
+       },
+       {
+        "column": "Name (from instance_id)",
+        "visible": false
+       },
+       {
+        "column": "value",
+        "visible": false
+       }
+      ],
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "metric.label.\"database\"",
+            "resource.label.\"instance_id\"",
+            "resource.label.\"project_id\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"spanner.googleapis.com/query_count\" resource.type=\"spanner_instance\""
+         }
+        }
+       }
+      ],
+      "displayColumnType": false,
+      "metricVisualization": "NUMBER"
+     },
+     "title": "Databases"
+    },
+    "width": 24
+   }
+  ]
+ }
+}

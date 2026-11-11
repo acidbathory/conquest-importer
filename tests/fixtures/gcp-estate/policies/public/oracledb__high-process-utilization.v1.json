@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "60s",
+    "evaluationInterval": "60s",
+    "query": "sum by (instance_id) (\n  {\"workload.googleapis.com/oracle.process.count\", monitored_resource=\"gce_instance\"}\n  /\n  {\"workload.googleapis.com/oracle.process.limit\", monitored_resource=\"gce_instance\"}\n) > 0.9"
+   },
+   "displayName": "Processes near system max"
+  }
+ ],
+ "displayName": "Oracle Database - High Process Utilization",
+ "documentation": {
+  "content": "Alert fires when the database is nearing the process limit, which could result in new processes being blocked from starting.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

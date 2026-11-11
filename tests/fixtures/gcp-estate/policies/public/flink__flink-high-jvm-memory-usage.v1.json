@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "300s",
+    "evaluationInterval": "60s",
+    "query": "(\n    {\"workload.googleapis.com/flink.jvm.memory.heap.used\", monitored_resource=\"gce_instance\", resource_type=\"jobmanager\"}\n    /\n    {\"workload.googleapis.com/flink.jvm.memory.heap.max\", monitored_resource=\"gce_instance\", resource_type=\"jobmanager\"}\n) > 0.9"
+   },
+   "displayName": "Flink - JVM Heap Memory Near Max"
+  }
+ ],
+ "displayName": "Flink - high jvm heap memory usage",
+ "documentation": {
+  "content": "When the JVM heap ratio of heap used over max heap exceeds a threshold(default is 90%), then application's performance may start to degrade. This alert can trigger when for a jobmanager or a taskmanager. To specify a jobmanager, the resource_type should be jobmanager. To specify a taskmanager, the taskmanager_id filter should target the correct taskmanager instance.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

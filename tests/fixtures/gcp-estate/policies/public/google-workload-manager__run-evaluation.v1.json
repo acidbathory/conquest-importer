@@ -1,0 +1,20 @@
+{
+ "alertStrategy": {
+  "notificationRateLimit": {
+   "period": "300s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMatchedLog": {
+    "filter": "operation.producer = \"workloadmanager.googleapis.com\" operation.last = true severity = \"NOTICE\" protoPayload.methodName = \"google.cloud.workloadmanager.v1.WorkloadManager.RunEvaluation\" protoPayload.resourceName =~ \"/${EVALUATION_NAME}/\""
+   },
+   "displayName": "Log match condition"
+  }
+ ],
+ "displayName": "Run Evaluation Alert Policy",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

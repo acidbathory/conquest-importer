@@ -1,0 +1,25 @@
+{
+ "alertStrategy": {
+  "notificationRateLimit": {
+   "period": "600s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMatchedLog": {
+    "filter": "textPayload:\"Out of memory: Killed process\" AND resource.type=\"gce_instance\"",
+    "labelExtractors": {
+     "instance": "EXTRACT(resource.labels.instance_id)"
+    }
+   },
+   "displayName": "OOM"
+  }
+ ],
+ "displayName": "OOM kills in logs",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1001"
+ ],
+ "userLabels": {}
+}

@@ -1,0 +1,19 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMonitoringQueryLanguage": {
+    "duration": "300s",
+    "query": "fetch global::custom.googleapis.com/app/queue_depth | group_by 1m, [m: max(val())] | every 1m | condition m > 100 '1'",
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "MQL custom"
+  }
+ ],
+ "displayName": "MQL custom",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

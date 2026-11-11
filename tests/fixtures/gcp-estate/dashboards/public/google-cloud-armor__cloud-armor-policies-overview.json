@@ -1,0 +1,522 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "project_id"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "location"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "policy_name",
+   "valueType": "STRING"
+  }
+ ],
+ "displayName": "Cloud Armor Policies Overview",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "Requests",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "Total Requests",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"project_id\"",
+            "resource.label.\"policy_name\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/request_count\" resource.type=\"network_security_policy\""
+         }
+        }
+       },
+       {
+        "legendTemplate": "Allowed Requests",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"project_id\"",
+            "resource.label.\"policy_name\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/request_count\" resource.type=\"network_security_policy\" metric.label.\"blocked\"=\"false\""
+         }
+        }
+       },
+       {
+        "legendTemplate": "Blocked Requests",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"project_id\"",
+            "resource.label.\"policy_name\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/request_count\" resource.type=\"network_security_policy\" metric.label.\"blocked\"=\"true\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24
+   },
+   {
+    "height": 14,
+    "widget": {
+     "incidentList": {
+      "monitoredResources": [
+       {
+        "type": "network_security_policy"
+       }
+      ]
+     },
+     "title": "Incidents"
+    },
+    "width": 24
+   },
+   {
+    "height": 14,
+    "widget": {
+     "timeSeriesTable": {
+      "columnSettings": [
+       {
+        "column": "policy_name",
+        "visible": true
+       },
+       {
+        "column": "backend_target_name",
+        "visible": true
+       },
+       {
+        "column": "value",
+        "visible": false
+       }
+      ],
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"policy_name\"",
+            "metric.label.\"backend_target_name\"",
+            "resource.label.\"project_id\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/request_count\" resource.type=\"network_security_policy\"",
+          "pickTimeSeriesFilter": {
+           "direction": "TOP",
+           "numTimeSeries": 30,
+           "rankingMethod": "METHOD_MEAN"
+          }
+         }
+        }
+       }
+      ],
+      "metricVisualization": "BAR"
+     },
+     "title": "Active Policy Backends"
+    },
+    "width": 24,
+    "yPos": 14
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Previewed Requests",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "Total Requests",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"project_id\"",
+            "resource.label.\"policy_name\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/previewed_request_count\" resource.type=\"network_security_policy\""
+         }
+        }
+       },
+       {
+        "legendTemplate": "Allowed Requests",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"project_id\"",
+            "resource.label.\"policy_name\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/previewed_request_count\" resource.type=\"network_security_policy\" metric.label.\"blocked\"=\"false\""
+         }
+        }
+       },
+       {
+        "legendTemplate": "Blocked Requests",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"project_id\"",
+            "resource.label.\"policy_name\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/previewed_request_count\" resource.type=\"network_security_policy\" metric.label.\"blocked\"=\"true\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Previewed Requests (Total)",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"policy_name\"",
+            "resource.label.\"project_id\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/previewed_request_count\" resource.type=\"network_security_policy\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Previewed Requests (Allowed)",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"policy_name\"",
+            "resource.label.\"project_id\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/previewed_request_count\" resource.type=\"network_security_policy\" metric.label.\"blocked\"=\"false\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Previewed Requests (Blocked)",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"policy_name\"",
+            "resource.label.\"project_id\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/previewed_request_count\" resource.type=\"network_security_policy\" metric.label.\"blocked\"=\"true\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 64
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Requests (Blocked)",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"policy_name\"",
+            "resource.label.\"project_id\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/request_count\" resource.type=\"network_security_policy\" metric.label.\"blocked\"=\"true\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 64
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Requests (Allowed)",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"policy_name\"",
+            "resource.label.\"project_id\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/request_count\" resource.type=\"network_security_policy\" metric.label.\"blocked\"=\"false\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Requests (Total)",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"policy_name\"",
+            "resource.label.\"project_id\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/request_count\" resource.type=\"network_security_policy\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 32
+   },
+   {
+    "height": 48,
+    "widget": {
+     "collapsibleGroup": {
+      "collapsed": false
+     },
+     "title": "Breakdown by Policy Name"
+    },
+    "width": 48,
+    "yPos": 32
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "[Manage Policies](/net-security/securitypolicies/list)",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#FFFFFF",
+       "fontSize": "FS_EXTRA_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     }
+    },
+    "width": 12,
+    "yPos": 28
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "[Learn more](https://cloud.google.com/armor/docs/monitoring)",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#FFFFFF",
+       "fontSize": "FS_EXTRA_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_CENTER"
+      }
+     }
+    },
+    "width": 12,
+    "xPos": 12,
+    "yPos": 28
+   }
+  ]
+ }
+}

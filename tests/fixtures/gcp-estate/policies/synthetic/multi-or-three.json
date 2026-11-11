@@ -1,0 +1,57 @@
+{
+ "alertStrategy": {
+  "autoClose": "86400s",
+  "notificationRateLimit": {
+   "period": "900s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_PERCENTILE_99"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"https_lb_rule\" AND metric.type = \"loadbalancing.googleapis.com/https/total_latencies\"",
+    "thresholdValue": 2000,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Latency"
+  },
+  {
+   "conditionAbsent": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_RATE"
+     }
+    ],
+    "duration": "600s",
+    "filter": "resource.type = \"https_lb_rule\" AND metric.type = \"loadbalancing.googleapis.com/https/request_count\""
+   },
+   "displayName": "No requests"
+  },
+  {
+   "conditionMatchedLog": {
+    "filter": "severity>=ERROR AND resource.type=\"http_load_balancer\""
+   },
+   "displayName": "Errors"
+  }
+ ],
+ "displayName": "Service health (any)",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1002",
+  "projects/example-project/notificationChannels/1003"
+ ],
+ "userLabels": {}
+}

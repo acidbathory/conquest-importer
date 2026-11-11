@@ -1,0 +1,727 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "cluster",
+   "templateVariable": "Cluster"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "location",
+   "templateVariable": "Location"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "namespace",
+   "templateVariable": "Namespace"
+  }
+ ],
+ "displayName": "Elasticsearch Prometheus Overview",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 8,
+    "widget": {
+     "title": "Cluster Status",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_cluster_health_status{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 21
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "gaugeView": {
+       "lowerBound": 0,
+       "upperBound": 100
+      },
+      "thresholds": [
+       {
+        "color": "RED",
+        "direction": "ABOVE",
+        "label": "",
+        "value": 50
+       },
+       {
+        "color": "YELLOW",
+        "direction": "ABOVE",
+        "label": "",
+        "value": 30
+       }
+      ],
+      "timeSeriesQuery": {
+       "prometheusQuery": "count(elasticsearch_breakers_tripped{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Tripped Breakers"
+    },
+    "width": 8
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "gaugeView": {
+       "lowerBound": 0,
+       "upperBound": 100
+      },
+      "thresholds": [
+       {
+        "color": "RED",
+        "direction": "ABOVE",
+        "label": "",
+        "value": 80
+       },
+       {
+        "color": "YELLOW",
+        "direction": "ABOVE",
+        "label": "",
+        "value": 50
+       }
+      ],
+      "timeSeriesQuery": {
+       "prometheusQuery": "sum (elasticsearch_process_cpu_percent{${Cluster},${Location},${Namespace}} ) / count (elasticsearch_process_cpu_percent{${Cluster},${Location},${Namespace}} )",
+       "unitOverride": ""
+      }
+     },
+     "title": "CPU Avg Usage %"
+    },
+    "width": 8,
+    "xPos": 8
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "gaugeView": {
+       "lowerBound": 0,
+       "upperBound": 100
+      },
+      "thresholds": [
+       {
+        "color": "RED",
+        "direction": "ABOVE",
+        "label": "",
+        "value": 80
+       },
+       {
+        "color": "YELLOW",
+        "direction": "ABOVE",
+        "label": "",
+        "value": 50
+       }
+      ],
+      "timeSeriesQuery": {
+       "prometheusQuery": "avg(elasticsearch_jvm_memory_used_bytes{${Cluster},${Location},${Namespace}} / elasticsearch_jvm_memory_max_bytes{${Cluster},${Location},${Namespace}} * 100)",
+       "unitOverride": ""
+      }
+     },
+     "title": "JVM Memory Avg Usage %"
+    },
+    "width": 8,
+    "xPos": 16
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "prometheusQuery": "sum(elasticsearch_cluster_health_number_of_nodes{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Nodes"
+    },
+    "width": 8,
+    "xPos": 24
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "prometheusQuery": "sum(elasticsearch_cluster_health_number_of_data_nodes{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Data Nodes"
+    },
+    "width": 8,
+    "xPos": 32
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "prometheusQuery": "sum(elasticsearch_cluster_health_number_of_pending_tasks{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Pending Tasks"
+    },
+    "width": 8,
+    "xPos": 40
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Open File Descriptors",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_process_open_files_count{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 21
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "OS Load Average over 15min",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_os_load15{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 29
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "CPU Usage % ",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_process_cpu_percent{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 37
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "JVM Memory Pool Peak Used Bytes VS Max",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_jvm_memory_pool_peak_used_bytes{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_jvm_memory_max_bytes{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 53
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Disk Usage %",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "100 * (1-(elasticsearch_filesystem_data_available_bytes{${Cluster},${Location},${Namespace}}/elasticsearch_filesystem_data_size_bytes{${Cluster},${Location},${Namespace}}))",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 45
+   },
+   {
+    "height": 9,
+    "widget": {
+     "title": "Network Usage",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "irate(elasticsearch_transport_rx_size_bytes_total{${Cluster},${Location},${Namespace}}[${__interval}])",
+         "unitOverride": ""
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "irate(elasticsearch_transport_tx_size_bytes_total{${Cluster},${Location},${Namespace}}[${__interval}])",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 48,
+    "yPos": 8
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Unassigned Shards",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_cluster_health_delayed_unassigned_shards{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 53
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Active Primary Shards",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_cluster_health_active_primary_shards{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 29
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#FFFFFF",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "Node Performance"
+    },
+    "width": 24,
+    "yPos": 17
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#FFFFFF",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "Cluster Health"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 17
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Relocating Shards",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_cluster_health_relocating_shards{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 37
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Initializing Shards",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_cluster_health_initializing_shards{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 45
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#FFFFFF",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "Index"
+    },
+    "width": 24,
+    "yPos": 61
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Documents",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_indices_docs{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 65
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Search Queries",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_indices_search_query_total{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 73
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Query Cache Evictions",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_indices_query_cache_evictions{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 81
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Query Cache Hit Ratio",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "elasticsearch_indices_query_cache_count{${Cluster},${Location},${Namespace}} / (elasticsearch_indices_query_cache_count{${Cluster},${Location},${Namespace}} + elasticsearch_indices_query_miss_count{${Cluster},${Location},${Namespace}})",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 89
+   }
+  ]
+ }
+}

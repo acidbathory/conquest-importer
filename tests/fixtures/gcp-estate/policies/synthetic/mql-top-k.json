@@ -1,0 +1,19 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMonitoringQueryLanguage": {
+    "duration": "300s",
+    "query": "fetch gce_instance::compute.googleapis.com/instance/disk/write_bytes_count\n| filter resource.zone =~ 'us-.*'\n| align rate(1m) | every 1m\n| group_by [resource.instance_id], [w: sum(val())]\n| top 3 | condition w > 1e8 'By/s'",
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "MQL top"
+  }
+ ],
+ "displayName": "MQL top disks",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

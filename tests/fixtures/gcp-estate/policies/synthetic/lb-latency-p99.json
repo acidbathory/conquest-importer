@@ -1,0 +1,33 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_MEAN",
+      "groupByFields": [
+       "resource.label.url_map_name"
+      ],
+      "perSeriesAligner": "ALIGN_PERCENTILE_99"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"https_lb_rule\" AND metric.type = \"loadbalancing.googleapis.com/https/total_latencies\"",
+    "thresholdValue": 2000,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "p99 latency"
+  }
+ ],
+ "displayName": "Load balancer p99 latency",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1001"
+ ],
+ "userLabels": {}
+}

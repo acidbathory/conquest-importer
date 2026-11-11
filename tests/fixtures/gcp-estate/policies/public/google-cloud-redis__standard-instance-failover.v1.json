@@ -1,0 +1,39 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s"
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "perSeriesAligner": "ALIGN_STDDEV"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "0s",
+    "filter": "resource.type = \"redis_instance\" AND resource.labels.instance_id = \"projects/${PROJECT_ID}/locations/${REGION}/instances/${INSTANCE_ID}\" AND metric.type = \"redis.googleapis.com/replication/role\"",
+    "thresholdValue": 0,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Cloud Memorystore Redis Instance - Node Role"
+  }
+ ],
+ "displayName": "Cloud Redis - Standard Instance Failover for ${INSTANCE_ID}(${REGION})",
+ "documentation": {
+  "content": "This alert fires if failover occurs for a standard tier instance. To ensure that alerts always fire, we recommend keeping the threshold value to 0",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "userLabels": {
+  "context": "${CONTEXT}",
+  "instance_id": "${INSTANCE_ID}",
+  "project_id": "${PROJECT_ID}",
+  "region": "${REGION}",
+  "resource_type": "${RESOURCE_TYPE}"
+ }
+}

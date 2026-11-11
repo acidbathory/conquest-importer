@@ -1,0 +1,666 @@
+{
+ "dashboardFilters": [],
+ "displayName": "Vault GCE Overview",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 12,
+  "tiles": [
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "title": "Token Count",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.token.count\" resource.type=\"gce_instance\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 6
+   },
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "title": "Lease Count",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.token.lease.count\" resource.type=\"gce_instance\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 6,
+    "xPos": 6
+   },
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "title": "Average Revoke Time",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.token.revoke.time\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 6,
+    "yPos": 4
+   },
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "title": "Average Renew Time",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.token.renew.time\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 6,
+    "xPos": 6,
+    "yPos": 4
+   },
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "title": "Storage Operations Count",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.storage.operation.list.count\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.storage.operation.put.count\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.storage.operation.get.count\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.storage.operation.delete.count\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 6,
+    "yPos": 8
+   },
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "title": "Storage Operation Time",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.storage.operation.list.time\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.storage.operation.get.time\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.storage.operation.put.time\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.storage.operation.delete.time\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 6,
+    "xPos": 6,
+    "yPos": 8
+   },
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "title": "Request Count",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.core.request.count\" resource.type=\"gce_instance\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 6,
+    "yPos": 12
+   },
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "title": "Memory Usage",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/vault.memory.usage\" resource.type=\"gce_instance\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 6,
+    "xPos": 6,
+    "yPos": 12
+   },
+   {
+    "height": 4,
+    "widget": {
+     "title": "VMs CPU %",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "(avg by (project_id, zone, instance_name) (\n    avg_over_time(\n      compute_googleapis_com:instance_cpu_utilization{monitored_resource=\"gce_instance\"}[${__interval}]\n    )\n    and\n    on(instance_id, project_id, zone)\n    (workload_googleapis_com:vault_memory_usage{monitored_resource=\"gce_instance\"})\n  )\n)",
+         "unitOverride": "10^2.%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 4,
+    "yPos": 16
+   },
+   {
+    "height": 4,
+    "widget": {
+     "title": "VMs Memory %",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum by (project_id, zone, instance_id, metadata_system_name) (\n  avg_over_time(\n    agent_googleapis_com:memory_percent_used{monitored_resource=\"gce_instance\", state=\"used\"}[${__interval}]\n  )\n)\nand on(project_id, zone, instance_id) (\n  workload_googleapis_com:vault_core_request_count{monitored_resource=\"gce_instance\"}\n)",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 4,
+    "xPos": 4,
+    "yPos": 16
+   },
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "title": "Hosts by Region",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "prometheusQuery": "count by (region) (\n  label_replace(\n    sum by (project_id, zone, instance_id) (\n      count_over_time(workload_googleapis_com:vault_core_request_count{monitored_resource=\"gce_instance\"}[${__interval}])\n    ),\n    \"region\",\n    \"$1\",\n    \"zone\",\n    \"([^-]+-[^-]+)-.*\"\n  )\n)",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 4,
+    "xPos": 8,
+    "yPos": 16
+   },
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "text": {
+      "content": "[How to configure Vault Monitoring](https://cloud.google.com/monitoring/agent/ops-agent/third-party/vault)\n\n[View Vault_audit Logs](https://console.cloud.google.com/logs/query?query=logName:%22vault_audit%22%0Aresource.type%3D%22gce_instance%22)\n\n",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "",
+       "fontSize": "FONT_SIZE_UNSPECIFIED",
+       "horizontalAlignment": "HORIZONTAL_ALIGNMENT_UNSPECIFIED",
+       "padding": "PADDING_SIZE_UNSPECIFIED",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "",
+       "verticalAlignment": "VERTICAL_ALIGNMENT_UNSPECIFIED"
+      }
+     },
+     "title": "Vault Monitoring Links"
+    },
+    "width": 4,
+    "yPos": 20
+   }
+  ]
+ }
+}

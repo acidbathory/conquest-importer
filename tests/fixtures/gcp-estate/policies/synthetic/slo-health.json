@@ -1,0 +1,22 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [],
+    "comparison": "COMPARISON_LT",
+    "duration": "0s",
+    "filter": "select_slo_health(\"projects/example-project/services/checkout/serviceLevelObjectives/availability-99-9\")",
+    "thresholdValue": 0.99,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Health"
+  }
+ ],
+ "displayName": "SLO health",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

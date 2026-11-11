@@ -1,0 +1,130 @@
+{
+ "displayName": "Chart options",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "Top 5 CPU",
+     "xyChart": {
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.instance_id}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\"",
+          "pickTimeSeriesFilter": {
+           "direction": "TOP",
+           "numTimeSeries": 5,
+           "rankingMethod": "METHOD_MEAN"
+          }
+         },
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [
+       {
+        "color": "RED",
+        "direction": "ABOVE",
+        "label": "high",
+        "value": 0.8
+       }
+      ]
+     }
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 0
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Secondary aggregation",
+     "xyChart": {
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "300s",
+           "crossSeriesReducer": "REDUCE_MAX"
+          }
+         }
+        }
+       }
+      ]
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 0
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Two datasets",
+     "xyChart": {
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\""
+         }
+        }
+       },
+       {
+        "plotType": "LINE",
+        "timeSeriesQuery": {
+         "timeSeriesQueryLanguage": "fetch gce_instance::compute.googleapis.com/instance/uptime"
+        }
+       }
+      ]
+     }
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Statistical filter",
+     "xyChart": {
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\""
+         }
+        }
+       }
+      ]
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   }
+  ]
+ }
+}

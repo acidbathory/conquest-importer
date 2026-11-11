@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "0s",
+    "evaluationInterval": "30s",
+    "query": "(\n  rate(\n    {\"interconnect.googleapis.com/network/attachment/sent_bytes_count\", monitored_resource=\"interconnect_attachment\"}[30s]\n  )\n  /\n  avg_over_time(\n    {\"interconnect.googleapis.com/network/attachment/capacity\", monitored_resource=\"interconnect_attachment\"}[30s]\n  ) \n) > 0.7"
+   },
+   "displayName": "VLAN attachment egress usage"
+  }
+ ],
+ "displayName": "High interconnect egress",
+ "documentation": {
+  "content": "Alerts when the Egress bytes per second exceeds 70% of an interconnect VLAN attachment's capacity. This can help you decide whether to provision additional capacity or create additional attachments.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

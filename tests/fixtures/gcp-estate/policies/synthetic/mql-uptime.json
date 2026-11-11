@@ -1,0 +1,19 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMonitoringQueryLanguage": {
+    "duration": "300s",
+    "query": "fetch uptime_url::monitoring.googleapis.com/uptime_check/check_passed\n| group_by 1m, [f: fraction_true(val())] | every 1m | condition f < 0.9 '1'",
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "MQL uptime"
+  }
+ ],
+ "displayName": "MQL uptime",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

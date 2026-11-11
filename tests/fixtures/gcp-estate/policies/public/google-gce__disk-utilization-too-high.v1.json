@@ -1,0 +1,34 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s"
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "0s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"agent.googleapis.com/disk/percent_used\" AND metric.labels.state = \"used\"",
+    "thresholdValue": 95,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "VM Instance - High disk utilization"
+  }
+ ],
+ "displayName": "VM Instance - High Disk Utilization",
+ "documentation": {
+  "content": "This alert fires when the disk utilization on any VM instance in the project rises above 95% for 5 minutes or more.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "userLabels": {}
+}

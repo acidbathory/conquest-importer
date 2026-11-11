@@ -1,0 +1,60 @@
+{
+ "displayName": "PromQL charts",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "PromQL rate",
+     "xyChart": {
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum(rate(http_requests_total[5m])) by (code)"
+        }
+       }
+      ]
+     }
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 0
+   },
+   {
+    "height": 16,
+    "widget": {
+     "scorecard": {
+      "timeSeriesQuery": {
+       "prometheusQuery": "avg(up)"
+      }
+     },
+     "title": "PromQL gauge"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 0
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "PromQL p99",
+     "xyChart": {
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "timeSeriesQuery": {
+         "prometheusQuery": "histogram_quantile(0.99, sum by (le)(rate(request_duration_seconds_bucket[5m])))"
+        }
+       }
+      ]
+     }
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 16
+   }
+  ]
+ }
+}

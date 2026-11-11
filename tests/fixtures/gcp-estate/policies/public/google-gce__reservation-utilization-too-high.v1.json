@@ -1,0 +1,25 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "300s",
+    "evaluationInterval": "60s",
+    "query": "(\n  {\"compute.googleapis.com/reservation/used\", monitored_resource=\"compute.googleapis.com/Reservation\"}\n    / on (reservation_id)\n  {\"compute.googleapis.com/reservation/reserved\", monitored_resource=\"compute.googleapis.com/Reservation\"}\n) >= 0.9"
+   },
+   "displayName": "High Reservation Utilization"
+  }
+ ],
+ "displayName": "Reservation - High Utilization",
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

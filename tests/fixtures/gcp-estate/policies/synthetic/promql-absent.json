@@ -1,0 +1,17 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "600s",
+    "evaluationInterval": "60s",
+    "query": "absent(up{job=\"api\"})"
+   },
+   "displayName": "PromQL absent"
+  }
+ ],
+ "displayName": "PromQL absent",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

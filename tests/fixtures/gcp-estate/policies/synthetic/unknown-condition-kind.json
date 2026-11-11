@@ -1,0 +1,15 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionNewKindFromTheFuture": {
+    "x": 1
+   },
+   "displayName": "Future"
+  }
+ ],
+ "displayName": "Future condition",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

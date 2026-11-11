@@ -1,0 +1,25 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [],
+    "comparison": "COMPARISON_GT",
+    "duration": "0s",
+    "filter": "select_slo_burn_rate(\"projects/example-project/services/checkout/serviceLevelObjectives/availability-99-9\", \"21600s\")",
+    "thresholdValue": 2,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Slow burn"
+  }
+ ],
+ "displayName": "SLO slow burn",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1001"
+ ],
+ "severity": "WARNING",
+ "userLabels": {}
+}

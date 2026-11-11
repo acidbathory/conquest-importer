@@ -1,0 +1,23 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationRateLimit": {
+   "period": "300s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMatchedLog": {
+    "filter": "resource.type=\"k8s_container\" AND severity>=ERROR"
+   },
+   "displayName": "App errors"
+  }
+ ],
+ "displayName": "Errors in app logs",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1002"
+ ],
+ "userLabels": {}
+}

@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "0s",
+    "evaluationInterval": "30s",
+    "query": "sum by (instance_id) (\n  {\"workload.googleapis.com/oracle.session.count\", monitored_resource=\"gce_instance\"}\n  /\n  {\"workload.googleapis.com/oracle.session.limit\", monitored_resource=\"gce_instance\"}\n) > 0.9"
+   },
+   "displayName": "Sessions near system max"
+  }
+ ],
+ "displayName": "Oracle Database - High Session Utilization",
+ "documentation": {
+  "content": "Alerts whenever the database is nearing the session limit, which could result in connections being refused.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

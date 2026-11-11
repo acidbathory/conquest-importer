@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "3600s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "60s",
+    "evaluationInterval": "30s",
+    "query": "(\n  {\"workload.googleapis.com/jvm.memory.heap.used\", monitored_resource=\"gce_instance\"}\n  /\n  {\"workload.googleapis.com/jvm.memory.heap.max\", monitored_resource=\"gce_instance\"}\n) > 0.9"
+   },
+   "displayName": "JVM - Heap Memory Near Max"
+  }
+ ],
+ "displayName": "JVM - Heap Memory Usage Near Max",
+ "documentation": {
+  "content": "Alert for JVM heap memory usage being near maximum. When the JVM reaches its max, depending on the JVM configuration, this could lead to Out of Memory errors.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

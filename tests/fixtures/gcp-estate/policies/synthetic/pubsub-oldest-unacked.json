@@ -1,0 +1,35 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_MAX",
+      "groupByFields": [
+       "resource.label.subscription_id"
+      ],
+      "perSeriesAligner": "ALIGN_MAX"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "120s",
+    "filter": "resource.type = \"pubsub_subscription\" AND metric.type = \"pubsub.googleapis.com/subscription/oldest_unacked_message_age\"",
+    "thresholdValue": 600,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Oldest unacked"
+  }
+ ],
+ "displayName": "Pub/Sub oldest unacked message age",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1004",
+  "projects/example-project/notificationChannels/1011"
+ ],
+ "severity": "ERROR",
+ "userLabels": {}
+}

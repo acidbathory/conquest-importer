@@ -1,0 +1,25 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionAbsent": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_SUM",
+      "perSeriesAligner": "ALIGN_RATE"
+     }
+    ],
+    "duration": "900s",
+    "filter": "resource.type = \"pubsub_topic\" AND metric.type = \"pubsub.googleapis.com/topic/send_message_operation_count\" AND resource.label.topic_id = \"orders\""
+   },
+   "displayName": "No publishes"
+  }
+ ],
+ "displayName": "No Pub/Sub publishes",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1004"
+ ],
+ "userLabels": {}
+}

@@ -1,0 +1,3583 @@
+{
+ "public_repo": "GoogleCloudPlatform/monitoring-dashboard-samples",
+ "public_repo_tree_sha": "2ef05daf347a39a9c9afe9accba464799a06b637",
+ "fetched": "2026-11-11",
+ "files": [
+  {
+   "file": "policies/public/active-directory__ldap-connections.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/active-directory/ldap-connections.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/active-directory/ldap-connections.v1.json"
+  },
+  {
+   "file": "policies/public/active-directory__long-replication.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/active-directory/long-replication.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/active-directory/long-replication.v1.json"
+  },
+  {
+   "file": "policies/public/activemq__activemq-dropped-connection.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/activemq/activemq-dropped-connection.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/activemq/activemq-dropped-connection.v1.json"
+  },
+  {
+   "file": "policies/public/activemq__activemq-high-disk-storage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/activemq/activemq-high-disk-storage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/activemq/activemq-high-disk-storage.v1.json"
+  },
+  {
+   "file": "policies/public/activemq__activemq-high-temp-storage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/activemq/activemq-high-temp-storage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/activemq/activemq-high-temp-storage.v1.json"
+  },
+  {
+   "file": "policies/public/aerospike__aerospike-high-memory-utilization.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/aerospike/aerospike-high-memory-utilization.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/aerospike/aerospike-high-memory-utilization.v1.json"
+  },
+  {
+   "file": "policies/public/aerospike__aerospike-high-namespace-disk-utilization.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/aerospike/aerospike-high-namespace-disk-utilization.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/aerospike/aerospike-high-namespace-disk-utilization.v1.json"
+  },
+  {
+   "file": "policies/public/aerospike__aerospike-high-namespace-memory-utilization.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/aerospike/aerospike-high-namespace-memory-utilization.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/aerospike/aerospike-high-namespace-memory-utilization.v1.json"
+  },
+  {
+   "file": "policies/public/airflow-gke__dag-import-errors.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/airflow-gke/dag-import-errors.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/airflow-gke/dag-import-errors.v1.json"
+  },
+  {
+   "file": "policies/public/apache__high-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/apache/high-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/apache/high-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/apache__high-server-error-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/apache/high-server-error-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/apache/high-server-error-rate.v1.json"
+  },
+  {
+   "file": "policies/public/apache__low-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/apache/low-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/apache/low-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/argo-server-gke__workflow-errors.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/argo-server-gke/workflow-errors.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/argo-server-gke/workflow-errors.v1.json"
+  },
+  {
+   "file": "policies/public/cassandra__high-error-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/cassandra/high-error-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/cassandra/high-error-rate.v1.json"
+  },
+  {
+   "file": "policies/public/cassandra__high-read-latency.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/cassandra/high-read-latency.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/cassandra/high-read-latency.v1.json"
+  },
+  {
+   "file": "policies/public/cassandra__high-throughput.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/cassandra/high-throughput.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/cassandra/high-throughput.v1.json"
+  },
+  {
+   "file": "policies/public/couchbase__high-memory-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/couchbase/high-memory-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/couchbase/high-memory-usage.v1.json"
+  },
+  {
+   "file": "policies/public/couchbase__spiking-evictions.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/couchbase/spiking-evictions.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/couchbase/spiking-evictions.v1.json"
+  },
+  {
+   "file": "policies/public/couchbase__unrecoverable-oom-errors.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/couchbase/unrecoverable-oom-errors.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/couchbase/unrecoverable-oom-errors.v1.json"
+  },
+  {
+   "file": "policies/public/couchdb__couchdb-high-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/couchdb/couchdb-high-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/couchdb/couchdb-high-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/couchdb__couchdb-high-server-error-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/couchdb/couchdb-high-server-error-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/couchdb/couchdb-high-server-error-rate.v1.json"
+  },
+  {
+   "file": "policies/public/couchdb__couchdb-low-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/couchdb/couchdb-low-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/couchdb/couchdb-low-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/elasticsearch-gke__high-jvm-memory-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/elasticsearch-gke/high-jvm-memory-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/elasticsearch-gke/high-jvm-memory-usage.v1.json"
+  },
+  {
+   "file": "policies/public/elasticsearch-gke__red-cluster-status.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/elasticsearch-gke/red-cluster-status.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/elasticsearch-gke/red-cluster-status.v1.json"
+  },
+  {
+   "file": "policies/public/elasticsearch-gke__yellow-cluster-status.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/elasticsearch-gke/yellow-cluster-status.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/elasticsearch-gke/yellow-cluster-status.v1.json"
+  },
+  {
+   "file": "policies/public/elasticsearch__elasticsearch-high-jvm-memory-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/elasticsearch/elasticsearch-high-jvm-memory-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/elasticsearch/elasticsearch-high-jvm-memory-usage.v1.json"
+  },
+  {
+   "file": "policies/public/elasticsearch__elasticsearch-red-cluster-status.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/elasticsearch/elasticsearch-red-cluster-status.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/elasticsearch/elasticsearch-red-cluster-status.v1.json"
+  },
+  {
+   "file": "policies/public/elasticsearch__elasticsearch-yellow-cluster-status.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/elasticsearch/elasticsearch-yellow-cluster-status.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/elasticsearch/elasticsearch-yellow-cluster-status.v1.json"
+  },
+  {
+   "file": "policies/public/etcd-gke__long-fsync-duration.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/etcd-gke/long-fsync-duration.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/etcd-gke/long-fsync-duration.v1.json"
+  },
+  {
+   "file": "policies/public/etcd-gke__rapid-leader-changes.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/etcd-gke/rapid-leader-changes.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/etcd-gke/rapid-leader-changes.v1.json"
+  },
+  {
+   "file": "policies/public/flink__flink-high-job-restarts.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/flink/flink-high job-restarts.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/flink/flink-high%20job-restarts.v1.json"
+  },
+  {
+   "file": "policies/public/flink__flink-high-failed-checkpoints.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/flink/flink-high-failed-checkpoints.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/flink/flink-high-failed-checkpoints.v1.json"
+  },
+  {
+   "file": "policies/public/flink__flink-high-jvm-memory-non-heap-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/flink/flink-high-jvm-memory-non-heap-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/flink/flink-high-jvm-memory-non-heap-usage.v1.json"
+  },
+  {
+   "file": "policies/public/flink__flink-high-jvm-memory-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/flink/flink-high-jvm-memory-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/flink/flink-high-jvm-memory-usage.v1.json"
+  },
+  {
+   "file": "policies/public/google-application-integration__high-data-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-application-integration/high-data-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-application-integration/high-data-usage.v1.json"
+  },
+  {
+   "file": "policies/public/google-application-integration__high-integration-execution-latency.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-application-integration/high-integration-execution-latency.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-application-integration/high-integration-execution-latency.v1.json"
+  },
+  {
+   "file": "policies/public/google-application-integration__integration-execution-failure.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-application-integration/integration-execution-failure.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-application-integration/integration-execution-failure.v1.json"
+  },
+  {
+   "file": "policies/public/google-application-integration__integration-execution-retry.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-application-integration/integration-execution-retry.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-application-integration/integration-execution-retry.v1.json"
+  },
+  {
+   "file": "policies/public/google-application-integration__multiple-task-suspension.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-application-integration/multiple-task-suspension.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-application-integration/multiple-task-suspension.v1.json"
+  },
+  {
+   "file": "policies/public/google-bigquery__background-metadata-cache-slot-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-bigquery/background-metadata-cache-slot-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-bigquery/background-metadata-cache-slot-usage.v1.json"
+  },
+  {
+   "file": "policies/public/google-bigquery__background-metadata-cache-slot-usage.v2.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-bigquery/background-metadata-cache-slot-usage.v2.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-bigquery/background-metadata-cache-slot-usage.v2.json"
+  },
+  {
+   "file": "policies/public/google-bigquery__column-metadata-index-percent-change.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-bigquery/column-metadata-index-percent-change.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-bigquery/column-metadata-index-percent-change.v1.json"
+  },
+  {
+   "file": "policies/public/google-bigquery__single-reservation-slot-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-bigquery/single-reservation-slot-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-bigquery/single-reservation-slot-usage.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-agent-for-sap__host-memory-alert.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-agent-for-sap/host-memory-alert.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-agent-for-sap/host-memory-alert.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-agent-for-sap__location-constraint-detected.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-agent-for-sap/location-constraint-detected.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-agent-for-sap/location-constraint-detected.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-agent-for-sap__pacemaker-resource-stopped.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-agent-for-sap/pacemaker-resource-stopped.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-agent-for-sap/pacemaker-resource-stopped.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-agent-for-sap__replication-not-in-sync.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-agent-for-sap/replication-not-in-sync.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-agent-for-sap/replication-not-in-sync.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-alerting__entries-exceeds.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-alerting/entries-exceeds.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-alerting/entries-exceeds.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-alerting__log-match-condition.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-alerting/log-match-condition.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-alerting/log-match-condition.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-alerting__promql-policy.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-alerting/promql-policy.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-alerting/promql-policy.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-alerting__utilization-too-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-alerting/utilization-too-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-alerting/utilization-too-high.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-chronicle__all-silent-forwarder-logtype-combinations-except-few-logtypes.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-chronicle/all-silent-forwarder-logtype-combinations-except-few-logtypes.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-chronicle/all-silent-forwarder-logtype-combinations-except-few-logtypes.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-chronicle__all-silent-forwarder-logtype-combinations.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-chronicle/all-silent-forwarder-logtype-combinations.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-chronicle/all-silent-forwarder-logtype-combinations.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-chronicle__forwarder-buffer-usage-more-than-threshold-with-filters.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-chronicle/forwarder-buffer-usage-more-than-threshold-with-filters.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-chronicle/forwarder-buffer-usage-more-than-threshold-with-filters.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-chronicle__ingestion-quota-limit-approaching.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-chronicle/ingestion-quota-limit-approaching.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-chronicle/ingestion-quota-limit-approaching.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-chronicle__ingestion-quota-limit-approaching.v2.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-chronicle/ingestion-quota-limit-approaching.v2.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-chronicle/ingestion-quota-limit-approaching.v2.json"
+  },
+  {
+   "file": "policies/public/google-cloud-chronicle__ingestion-quota-rejects.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-chronicle/ingestion-quota-rejects.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-chronicle/ingestion-quota-rejects.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-chronicle__ingestion-quota-rejects.v2.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-chronicle/ingestion-quota-rejects.v2.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-chronicle/ingestion-quota-rejects.v2.json"
+  },
+  {
+   "file": "policies/public/google-cloud-chronicle__silent-forwarder.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-chronicle/silent-forwarder.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-chronicle/silent-forwarder.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-deploy__release-render-failure-within-pipeline.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-deploy/release-render-failure-within-pipeline.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-deploy/release-render-failure-within-pipeline.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-deploy__rollout-approval-required-within-pipeline.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-deploy/rollout-approval-required-within-pipeline.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-deploy/rollout-approval-required-within-pipeline.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-deploy__rollout-canary-advance-required-within-pipeline.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-deploy/rollout-canary-advance-required-within-pipeline.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-deploy/rollout-canary-advance-required-within-pipeline.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-deploy__rollout-failure-within-pipeline.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-deploy/rollout-failure-within-pipeline.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-deploy/rollout-failure-within-pipeline.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-redis__integrations-redis-engine-cpu-utilization-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-redis/integrations-redis-engine-cpu-utilization-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-redis/integrations-redis-engine-cpu-utilization-high.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-redis__integrations-standard-instance-failover.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-redis/integrations-standard-instance-failover.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-redis/integrations-standard-instance-failover.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-redis__integrations-system-memory-usage-ratio-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-redis/integrations-system-memory-usage-ratio-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-redis/integrations-system-memory-usage-ratio-high.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-redis__redis-engine-cpu-utilization-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-redis/redis-engine-cpu-utilization-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-redis/redis-engine-cpu-utilization-high.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-redis__standard-instance-failover.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-redis/standard-instance-failover.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-redis/standard-instance-failover.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-redis__system-memory-usage-ratio-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-redis/system-memory-usage-ratio-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-redis/system-memory-usage-ratio-high.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloud-retail__unjoined-user-event-last-hour.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloud-retail/unjoined-user-event-last-hour.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloud-retail/unjoined-user-event-last-hour.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloudsql__1p-cloudsql-instance-in-failed-state.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloudsql/1p-cloudsql-instance-in-failed-state.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloudsql/1p-cloudsql-instance-in-failed-state.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloudsql__1p-postgresql-slow-transactions.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloudsql/1p-postgresql-slow-transactions.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloudsql/1p-postgresql-slow-transactions.v1.json"
+  },
+  {
+   "file": "policies/public/google-cloudsql__1p-replication-in-error-state.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-cloudsql/1p-replication-in-error-state.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-cloudsql/1p-replication-in-error-state.v1.json"
+  },
+  {
+   "file": "policies/public/google-dataproc__create-cluster-latency-too-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-dataproc/create-cluster-latency-too-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-dataproc/create-cluster-latency-too-high.v1.json"
+  },
+  {
+   "file": "policies/public/google-dataproc__failed-job.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-dataproc/failed-job.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-dataproc/failed-job.v1.json"
+  },
+  {
+   "file": "policies/public/google-dataproc__hdfs-capacity.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-dataproc/hdfs-capacity.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-dataproc/hdfs-capacity.v1.json"
+  },
+  {
+   "file": "policies/public/google-dataproc__hdfs-running-datanodes-too-low.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-dataproc/hdfs-running-datanodes-too-low.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-dataproc/hdfs-running-datanodes-too-low.v1.json"
+  },
+  {
+   "file": "policies/public/google-dataproc__long-running-job.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-dataproc/long-running-job.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-dataproc/long-running-job.v1.json"
+  },
+  {
+   "file": "policies/public/google-dataproc__stale-cluster.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-dataproc/stale-cluster.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-dataproc/stale-cluster.v1.json"
+  },
+  {
+   "file": "policies/public/google-dataproc__stale-job.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-dataproc/stale-job.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-dataproc/stale-job.v1.json"
+  },
+  {
+   "file": "policies/public/google-dataproc__yarn-pending-memory.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-dataproc/yarn-pending-memory.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-dataproc/yarn-pending-memory.v1.json"
+  },
+  {
+   "file": "policies/public/google-firebase-crashlytics__new-issue-alert.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-firebase-crashlytics/new-issue-alert.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-firebase-crashlytics/new-issue-alert.v1.json"
+  },
+  {
+   "file": "policies/public/google-firebase-crashlytics__regressed-issue-alert.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-firebase-crashlytics/regressed-issue-alert.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-firebase-crashlytics/regressed-issue-alert.v1.json"
+  },
+  {
+   "file": "policies/public/google-gce__cpu-utilization-too-high-within-vm.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gce/cpu-utilization-too-high-within-vm.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gce/cpu-utilization-too-high-within-vm.v1.json"
+  },
+  {
+   "file": "policies/public/google-gce__cpu-utilization-too-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gce/cpu-utilization-too-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gce/cpu-utilization-too-high.v1.json"
+  },
+  {
+   "file": "policies/public/google-gce__disk-utilization-too-high-within-vm.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gce/disk-utilization-too-high-within-vm.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gce/disk-utilization-too-high-within-vm.v1.json"
+  },
+  {
+   "file": "policies/public/google-gce__disk-utilization-too-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gce/disk-utilization-too-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gce/disk-utilization-too-high.v1.json"
+  },
+  {
+   "file": "policies/public/google-gce__host-error-log-detected-within-vm.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gce/host-error-log-detected-within-vm.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gce/host-error-log-detected-within-vm.v1.json"
+  },
+  {
+   "file": "policies/public/google-gce__host-error-log-detected.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gce/host-error-log-detected.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gce/host-error-log-detected.v1.json"
+  },
+  {
+   "file": "policies/public/google-gce__memory-utilization-too-high-within-vm.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gce/memory-utilization-too-high-within-vm.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gce/memory-utilization-too-high-within-vm.v1.json"
+  },
+  {
+   "file": "policies/public/google-gce__memory-utilization-too-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gce/memory-utilization-too-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gce/memory-utilization-too-high.v1.json"
+  },
+  {
+   "file": "policies/public/google-gce__reservation-utilization-too-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gce/reservation-utilization-too-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gce/reservation-utilization-too-high.v1.json"
+  },
+  {
+   "file": "policies/public/google-gce__reservation-utilization-too-low.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gce/reservation-utilization-too-low.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gce/reservation-utilization-too-low.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__cpu-limit-utilization-all-containers.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/cpu-limit-utilization-all-containers.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/cpu-limit-utilization-all-containers.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__cpu-limit-utilization-containers-within-cluster.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/cpu-limit-utilization-containers-within-cluster.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/cpu-limit-utilization-containers-within-cluster.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__cpu-limit-utilization-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/cpu-limit-utilization-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/cpu-limit-utilization-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__cpu-limit-utilization-for-jobset.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/cpu-limit-utilization-for-jobset.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/cpu-limit-utilization-for-jobset.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__cpu-request-utilization-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/cpu-request-utilization-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/cpu-request-utilization-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__failedscheduling-log-event-within-cluster.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/failedscheduling-log-event-within-cluster.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/failedscheduling-log-event-within-cluster.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__gke-ingress-latency-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/gke-ingress-latency-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/gke-ingress-latency-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__gke-ingress-server-errors-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/gke-ingress-server-errors-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/gke-ingress-server-errors-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__gpu-processing-utilization-for-jobset.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/gpu-processing-utilization-for-jobset.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/gpu-processing-utilization-for-jobset.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__grpc-latency-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/grpc-latency-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/grpc-latency-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__grpc-server-errors-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/grpc-server-errors-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/grpc-server-errors-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__http-gmp-latency-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/http-gmp-latency-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/http-gmp-latency-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__http-gmp-server-errors-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/http-gmp-server-errors-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/http-gmp-server-errors-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__istio-gmp-latency-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/istio-gmp-latency-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/istio-gmp-latency-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__istio-gmp-server-errors-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/istio-gmp-server-errors-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/istio-gmp-server-errors-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__istio-latency-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/istio-latency-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/istio-latency-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__istio-server-errors-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/istio-server-errors-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/istio-server-errors-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__jobs-failure-for-jobset.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/jobs-failure-for-jobset.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/jobs-failure-for-jobset.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__memory-limit-utilization-all-containers.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/memory-limit-utilization-all-containers.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/memory-limit-utilization-all-containers.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__memory-limit-utilization-containers-within-cluster.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/memory-limit-utilization-containers-within-cluster.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/memory-limit-utilization-containers-within-cluster.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__memory-limit-utilization-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/memory-limit-utilization-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/memory-limit-utilization-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__memory-limit-utilization-for-jobset.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/memory-limit-utilization-for-jobset.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/memory-limit-utilization-for-jobset.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__memory-request-utilization-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/memory-request-utilization-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/memory-request-utilization-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__memory-request-utilization-for-jobset.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/memory-request-utilization-for-jobset.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/memory-request-utilization-for-jobset.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__nginx-ingress-latency-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/nginx-ingress-latency-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/nginx-ingress-latency-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__nginx-ingress-server-errors-entire-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/nginx-ingress-server-errors-entire-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/nginx-ingress-server-errors-entire-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__restarts-all-containers.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/restarts-all-containers.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/restarts-all-containers.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__restarts-containers-within-cluster.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/restarts-containers-within-cluster.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/restarts-containers-within-cluster.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__restarts-containers-within-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/restarts-containers-within-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/restarts-containers-within-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__tpu-tensorcore-utilization-for-jobset.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/tpu-tensorcore-utilization-for-jobset.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/tpu-tensorcore-utilization-for-jobset.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__upgrade-notification-gke-security-bulletin-event.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/upgrade-notification-gke-security-bulletin-event.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/upgrade-notification-gke-security-bulletin-event.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__upgrade-notification-upgrade-available-event.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/upgrade-notification-upgrade-available-event.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/upgrade-notification-upgrade-available-event.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__upgrade-notification-upgrade-event.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/upgrade-notification-upgrade-event.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/upgrade-notification-upgrade-event.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__upgrade-notification-upgrade-info-event-end-of-support.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/upgrade-notification-upgrade-info-event-end-of-support.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/upgrade-notification-upgrade-info-event-end-of-support.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__upgrade-notification-upgrade-info-event-upgrade-lifecycle.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/upgrade-notification-upgrade-info-event-upgrade-lifecycle.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/upgrade-notification-upgrade-info-event-upgrade-lifecycle.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__utilization-container-cpu-within-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/utilization-container-cpu-within-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/utilization-container-cpu-within-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-gke__utilization-container-memory-within-workload.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-gke/utilization-container-memory-within-workload.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-gke/utilization-container-memory-within-workload.v1.json"
+  },
+  {
+   "file": "policies/public/google-network-intelligence-center__interconnect-egress.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-network-intelligence-center/interconnect-egress.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-network-intelligence-center/interconnect-egress.v1.json"
+  },
+  {
+   "file": "policies/public/google-network-intelligence-center__interconnect-ingress.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-network-intelligence-center/interconnect-ingress.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-network-intelligence-center/interconnect-ingress.v1.json"
+  },
+  {
+   "file": "policies/public/google-network-intelligence-center__network-incident.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-network-intelligence-center/network-incident.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-network-intelligence-center/network-incident.v1.json"
+  },
+  {
+   "file": "policies/public/google-network-intelligence-center__packet-loss-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-network-intelligence-center/packet-loss-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-network-intelligence-center/packet-loss-high.v1.json"
+  },
+  {
+   "file": "policies/public/google-network-intelligence-center__packet-loss-high.v2.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-network-intelligence-center/packet-loss-high.v2.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-network-intelligence-center/packet-loss-high.v2.json"
+  },
+  {
+   "file": "policies/public/google-network-intelligence-center__vpn-tunnel-bps.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-network-intelligence-center/vpn-tunnel-bps.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-network-intelligence-center/vpn-tunnel-bps.v1.json"
+  },
+  {
+   "file": "policies/public/google-network-intelligence-center__vpn-tunnel-bps.v2.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-network-intelligence-center/vpn-tunnel-bps.v2.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-network-intelligence-center/vpn-tunnel-bps.v2.json"
+  },
+  {
+   "file": "policies/public/google-network-intelligence-center__vpn-tunnel-pps.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-network-intelligence-center/vpn-tunnel-pps.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-network-intelligence-center/vpn-tunnel-pps.v1.json"
+  },
+  {
+   "file": "policies/public/google-network-intelligence-center__vpn-tunnel-pps.v2.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-network-intelligence-center/vpn-tunnel-pps.v2.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-network-intelligence-center/vpn-tunnel-pps.v2.json"
+  },
+  {
+   "file": "policies/public/google-quotas__all-adjustments-by-quota-adjuster.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/all-adjustments-by-quota-adjuster.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/all-adjustments-by-quota-adjuster.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__exceeded-quota.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/exceeded-quota.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/exceeded-quota.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__qa-scoped-limit-all-adjustments.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/qa-scoped-limit-all-adjustments.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/qa-scoped-limit-all-adjustments.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__qa-scoped-limit-all-failures.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/qa-scoped-limit-all-failures.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/qa-scoped-limit-all-failures.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__qa-scoped-limit-location-all-adjustments.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/qa-scoped-limit-location-all-adjustments.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/qa-scoped-limit-location-all-adjustments.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__qa-scoped-limit-location-all-failures.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/qa-scoped-limit-location-all-failures.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/qa-scoped-limit-location-all-failures.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__quota-adjuster-errors-and-failures.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/quota-adjuster-errors-and-failures.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/quota-adjuster-errors-and-failures.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__quota-usage-mql.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/quota-usage-mql.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/quota-usage-mql.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__quota-usage-promql.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/quota-usage-promql.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/quota-usage-promql.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__single-allocation-quota.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/single-allocation-quota.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/single-allocation-quota.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__single-daily-rate-quota.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/single-daily-rate-quota.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/single-daily-rate-quota.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__single-per-minute-rate-quota.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/single-per-minute-rate-quota.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/single-per-minute-rate-quota.v1.json"
+  },
+  {
+   "file": "policies/public/google-quotas__single-per-second-rate-quota.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-quotas/single-per-second-rate-quota.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-quotas/single-per-second-rate-quota.v1.json"
+  },
+  {
+   "file": "policies/public/google-vertex-ai__429-out-of-capacity.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-vertex-ai/429-out-of-capacity.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-vertex-ai/429-out-of-capacity.v1.json"
+  },
+  {
+   "file": "policies/public/google-vertex-ai__agent-runtime-high-error-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-vertex-ai/agent-runtime-high-error-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-vertex-ai/agent-runtime-high-error-rate.v1.json"
+  },
+  {
+   "file": "policies/public/google-vertex-ai__agent-runtime-high-latency.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-vertex-ai/agent-runtime-high-latency.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-vertex-ai/agent-runtime-high-latency.v1.json"
+  },
+  {
+   "file": "policies/public/google-vertex-ai__pt-utilization-100.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-vertex-ai/pt-utilization-100.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-vertex-ai/pt-utilization-100.v1.json"
+  },
+  {
+   "file": "policies/public/google-vertex-ai__pt-utilization-80.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-vertex-ai/pt-utilization-80.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-vertex-ai/pt-utilization-80.v1.json"
+  },
+  {
+   "file": "policies/public/google-vertex-ai__pt-utilization-90.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-vertex-ai/pt-utilization-90.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-vertex-ai/pt-utilization-90.v1.json"
+  },
+  {
+   "file": "policies/public/google-workload-manager__run-evaluation.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-workload-manager/run-evaluation.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-workload-manager/run-evaluation.v1.json"
+  },
+  {
+   "file": "policies/public/google-workload-manager__sap-hana-availability-low.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-workload-manager/sap-hana-availability-low.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-workload-manager/sap-hana-availability-low.v1.json"
+  },
+  {
+   "file": "policies/public/google-workload-manager__sap-hana-high-availability-low.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/google-workload-manager/sap-hana-high-availability-low.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/google-workload-manager/sap-hana-high-availability-low.v1.json"
+  },
+  {
+   "file": "policies/public/hadoop__hadoop-dead-data-nodes.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/hadoop/hadoop-dead-data-nodes.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/hadoop/hadoop-dead-data-nodes.v1.json"
+  },
+  {
+   "file": "policies/public/hadoop__hadoop-low-available-capacity.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/hadoop/hadoop-low-available-capacity.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/hadoop/hadoop-low-available-capacity.v1.json"
+  },
+  {
+   "file": "policies/public/hadoop__hadoop-volume-failure.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/hadoop/hadoop-volume-failure.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/hadoop/hadoop-volume-failure.v1.json"
+  },
+  {
+   "file": "policies/public/haproxy-gke__frontend-sessions-near-limit.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/haproxy-gke/frontend-sessions-near-limit.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/haproxy-gke/frontend-sessions-near-limit.v1.json"
+  },
+  {
+   "file": "policies/public/haproxy-gke__server-down.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/haproxy-gke/server-down.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/haproxy-gke/server-down.v1.json"
+  },
+  {
+   "file": "policies/public/hbase__authentication-errors.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/hbase/authentication-errors.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/hbase/authentication-errors.v1.json"
+  },
+  {
+   "file": "policies/public/hbase__server-down.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/hbase/server-down.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/hbase/server-down.v1.json"
+  },
+  {
+   "file": "policies/public/hbase__slow-operations.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/hbase/slow-operations.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/hbase/slow-operations.v1.json"
+  },
+  {
+   "file": "policies/public/iis__high-connections.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/iis/high-connections.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/iis/high-connections.v1.json"
+  },
+  {
+   "file": "policies/public/iis__long-request-queue.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/iis/long-request-queue.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/iis/long-request-queue.v1.json"
+  },
+  {
+   "file": "policies/public/iis__site-down.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/iis/site-down.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/iis/site-down.v1.json"
+  },
+  {
+   "file": "policies/public/istio-proxy-gke__degraded-endpoint.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/istio-proxy-gke/degraded-endpoint.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/istio-proxy-gke/degraded-endpoint.v1.json"
+  },
+  {
+   "file": "policies/public/istio-proxy-gke__high-request-duration.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/istio-proxy-gke/high-request-duration.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/istio-proxy-gke/high-request-duration.v1.json"
+  },
+  {
+   "file": "policies/public/jenkins-gke__health-score-below-1.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/jenkins-gke/health-score-below-1.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/jenkins-gke/health-score-below-1.v1.json"
+  },
+  {
+   "file": "policies/public/jenkins-gke__plugin-failure.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/jenkins-gke/plugin-failure.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/jenkins-gke/plugin-failure.v1.json"
+  },
+  {
+   "file": "policies/public/jetty__access_log_failures.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/jetty/access_log_failures.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/jetty/access_log_failures.v1.json"
+  },
+  {
+   "file": "policies/public/jetty__failed_config_parsing.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/jetty/failed_config_parsing.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/jetty/failed_config_parsing.v1.json"
+  },
+  {
+   "file": "policies/public/jetty__long_thread_queue.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/jetty/long_thread_queue.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/jetty/long_thread_queue.v1.json"
+  },
+  {
+   "file": "policies/public/jetty__no_threads_available.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/jetty/no_threads_available.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/jetty/no_threads_available.v1.json"
+  },
+  {
+   "file": "policies/public/jvm__heap-memory-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/jvm/heap-memory-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/jvm/heap-memory-usage.v1.json"
+  },
+  {
+   "file": "policies/public/jvm__thread-count.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/jvm/thread-count.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/jvm/thread-count.v1.json"
+  },
+  {
+   "file": "policies/public/kafka-gke__kafka-change-in-number-of-isrs.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/kafka-gke/kafka-change-in-number-of-isrs.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/kafka-gke/kafka-change-in-number-of-isrs.v1.json"
+  },
+  {
+   "file": "policies/public/kafka-gke__kafka-under-replicated-partitions.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/kafka-gke/kafka-under-replicated-partitions.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/kafka-gke/kafka-under-replicated-partitions.v1.json"
+  },
+  {
+   "file": "policies/public/kafka__kafka-high-failed-broker-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/kafka/kafka-high-failed-broker-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/kafka/kafka-high-failed-broker-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/kafka__kafka-offline-partition-alert.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/kafka/kafka-offline-partition-alert.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/kafka/kafka-offline-partition-alert.v1.json"
+  },
+  {
+   "file": "policies/public/kafka__kafka-under-replicated-partitions-alerts.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/kafka/kafka-under-replicated-partitions-alerts.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/kafka/kafka-under-replicated-partitions-alerts.v1.json"
+  },
+  {
+   "file": "policies/public/kibana-gke__high-cpu-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/kibana-gke/high-cpu-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/kibana-gke/high-cpu-usage.v1.json"
+  },
+  {
+   "file": "policies/public/kibana-gke__high-memory-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/kibana-gke/high-memory-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/kibana-gke/high-memory-usage.v1.json"
+  },
+  {
+   "file": "policies/public/kube-state-gke__job-failure.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/kube-state-gke/job-failure.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/kube-state-gke/job-failure.v1.json"
+  },
+  {
+   "file": "policies/public/kube-state-gke__pod-disruption-budget-exceeded.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/kube-state-gke/pod-disruption-budget-exceeded.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/kube-state-gke/pod-disruption-budget-exceeded.v1.json"
+  },
+  {
+   "file": "policies/public/kube-state-gke__volume-reaching-capacity.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/kube-state-gke/volume-reaching-capacity.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/kube-state-gke/volume-reaching-capacity.v1.json"
+  },
+  {
+   "file": "policies/public/memcached-gke__high-evictions.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/memcached-gke/high-evictions.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/memcached-gke/high-evictions.v1.json"
+  },
+  {
+   "file": "policies/public/memcached-gke__no-connections.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/memcached-gke/no-connections.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/memcached-gke/no-connections.v1.json"
+  },
+  {
+   "file": "policies/public/memcached__high-cpu-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/memcached/high-cpu-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/memcached/high-cpu-usage.v1.json"
+  },
+  {
+   "file": "policies/public/memcached__high-evictions.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/memcached/high-evictions.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/memcached/high-evictions.v1.json"
+  },
+  {
+   "file": "policies/public/memcached__no-connections.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/memcached/no-connections.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/memcached/no-connections.v1.json"
+  },
+  {
+   "file": "policies/public/mongodb-gke__connection-near-max.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/mongodb-gke/connection-near-max.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/mongodb-gke/connection-near-max.v1.json"
+  },
+  {
+   "file": "policies/public/mongodb__connection-near-max.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/mongodb/connection-near-max.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/mongodb/connection-near-max.v1.json"
+  },
+  {
+   "file": "policies/public/mongodb__high-cpu-utilization.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/mongodb/high-cpu-utilization.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/mongodb/high-cpu-utilization.v1.json"
+  },
+  {
+   "file": "policies/public/mongodb__high-disk-utilization.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/mongodb/high-disk-utilization.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/mongodb/high-disk-utilization.v1.json"
+  },
+  {
+   "file": "policies/public/mssql-server__connections-near-limit.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/mssql-server/connections-near-limit.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/mssql-server/connections-near-limit.v1.json"
+  },
+  {
+   "file": "policies/public/mssql-server__high-lock-wait-rates.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/mssql-server/high-lock-wait-rates.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/mssql-server/high-lock-wait-rates.v1.json"
+  },
+  {
+   "file": "policies/public/mssql-server__high-page-split-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/mssql-server/high-page-split-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/mssql-server/high-page-split-rate.v1.json"
+  },
+  {
+   "file": "policies/public/mysql-gke__connection-errors.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/mysql-gke/connection-errors.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/mysql-gke/connection-errors.v1.json"
+  },
+  {
+   "file": "policies/public/nginx-gke__connections-dropped.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/nginx-gke/connections-dropped.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/nginx-gke/connections-dropped.v1.json"
+  },
+  {
+   "file": "policies/public/nginx-gke__high-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/nginx-gke/high-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/nginx-gke/high-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/nginx-gke__low-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/nginx-gke/low-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/nginx-gke/low-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/nginx-ingress-gke__connections-dropped.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/nginx-ingress-gke/connections-dropped.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/nginx-ingress-gke/connections-dropped.v1.json"
+  },
+  {
+   "file": "policies/public/nginx-ingress-gke__high-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/nginx-ingress-gke/high-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/nginx-ingress-gke/high-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/nginx-ingress-gke__low-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/nginx-ingress-gke/low-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/nginx-ingress-gke/low-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/nginx__connections-dropped.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/nginx/connections-dropped.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/nginx/connections-dropped.v1.json"
+  },
+  {
+   "file": "policies/public/nginx__high-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/nginx/high-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/nginx/high-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/nginx__high-server-error-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/nginx/high-server-error-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/nginx/high-server-error-rate.v1.json"
+  },
+  {
+   "file": "policies/public/nginx__low-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/nginx/low-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/nginx/low-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/node-exporter-gke__high-cpu-usage.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/node-exporter-gke/high-cpu-usage.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/node-exporter-gke/high-cpu-usage.v1.json"
+  },
+  {
+   "file": "policies/public/node-exporter-gke__low-available-memory.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/node-exporter-gke/low-available-memory.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/node-exporter-gke/low-available-memory.v1.json"
+  },
+  {
+   "file": "policies/public/node-exporter-gke__low-filesystem-space.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/node-exporter-gke/low-filesystem-space.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/node-exporter-gke/low-filesystem-space.v1.json"
+  },
+  {
+   "file": "policies/public/oracledb__high-process-utilization.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/oracledb/high-process-utilization.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/oracledb/high-process-utilization.v1.json"
+  },
+  {
+   "file": "policies/public/oracledb__high-session-utilization.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/oracledb/high-session-utilization.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/oracledb/high-session-utilization.v1.json"
+  },
+  {
+   "file": "policies/public/oracledb__high-tablespace-utilization.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/oracledb/high-tablespace-utilization.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/oracledb/high-tablespace-utilization.v1.json"
+  },
+  {
+   "file": "policies/public/otel-genai__otel-genai-agent-model-error-rate-urn.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/otel-genai/otel-genai-agent-model-error-rate-urn.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/otel-genai/otel-genai-agent-model-error-rate-urn.v1.json"
+  },
+  {
+   "file": "policies/public/otel-genai__otel-genai-agent-model-error-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/otel-genai/otel-genai-agent-model-error-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/otel-genai/otel-genai-agent-model-error-rate.v1.json"
+  },
+  {
+   "file": "policies/public/otel-genai__otel-genai-agent-token-usage-high-urn.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/otel-genai/otel-genai-agent-token-usage-high-urn.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/otel-genai/otel-genai-agent-token-usage-high-urn.v1.json"
+  },
+  {
+   "file": "policies/public/otel-genai__otel-genai-agent-token-usage-high.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/otel-genai/otel-genai-agent-token-usage-high.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/otel-genai/otel-genai-agent-token-usage-high.v1.json"
+  },
+  {
+   "file": "policies/public/otel-genai__otel-genai-agent-tool-error-rate-urn.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/otel-genai/otel-genai-agent-tool-error-rate-urn.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/otel-genai/otel-genai-agent-tool-error-rate-urn.v1.json"
+  },
+  {
+   "file": "policies/public/otel-genai__otel-genai-agent-tool-error-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/otel-genai/otel-genai-agent-tool-error-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/otel-genai/otel-genai-agent-tool-error-rate.v1.json"
+  },
+  {
+   "file": "policies/public/otel-genai__otel-genai-workflow-error-rate-urn.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/otel-genai/otel-genai-workflow-error-rate-urn.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/otel-genai/otel-genai-workflow-error-rate-urn.v1.json"
+  },
+  {
+   "file": "policies/public/otel-genai__otel-genai-workflow-error-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/otel-genai/otel-genai-workflow-error-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/otel-genai/otel-genai-workflow-error-rate.v1.json"
+  },
+  {
+   "file": "policies/public/otel-genai__otel-genai-workflow-p95-latency-urn.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/otel-genai/otel-genai-workflow-p95-latency-urn.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/otel-genai/otel-genai-workflow-p95-latency-urn.v1.json"
+  },
+  {
+   "file": "policies/public/otel-genai__otel-genai-workflow-p95-latency.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/otel-genai/otel-genai-workflow-p95-latency.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/otel-genai/otel-genai-workflow-p95-latency.v1.json"
+  },
+  {
+   "file": "policies/public/postgres-gke__database-size-too-large.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/postgres-gke/database-size-too-large.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/postgres-gke/database-size-too-large.v1.json"
+  },
+  {
+   "file": "policies/public/postgresql__high-connection-utilization.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/postgresql/high-connection-utilization.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/postgresql/high-connection-utilization.v1.json"
+  },
+  {
+   "file": "policies/public/postgresql__high-cpu-utilization.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/postgresql/high-cpu-utilization.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/postgresql/high-cpu-utilization.v1.json"
+  },
+  {
+   "file": "policies/public/postgresql__high-db-size.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/postgresql/high-db-size.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/postgresql/high-db-size.v1.json"
+  },
+  {
+   "file": "policies/public/postgresql__max-writes.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/postgresql/max-writes.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/postgresql/max-writes.v1.json"
+  },
+  {
+   "file": "policies/public/rabbitmq-gke__rabbitmq-high-unacknowledged-messages.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/rabbitmq-gke/rabbitmq-high-unacknowledged-messages.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/rabbitmq-gke/rabbitmq-high-unacknowledged-messages.v1.json"
+  },
+  {
+   "file": "policies/public/rabbitmq-gke__rabbitmq-high-unroutable-messages.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/rabbitmq-gke/rabbitmq-high-unroutable-messages.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/rabbitmq-gke/rabbitmq-high-unroutable-messages.v1.json"
+  },
+  {
+   "file": "policies/public/rabbitmq-gke__rabbitmq-low-deliverable-messages.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/rabbitmq-gke/rabbitmq-low-deliverable-messages.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/rabbitmq-gke/rabbitmq-low-deliverable-messages.v1.json"
+  },
+  {
+   "file": "policies/public/rabbitmq__rabbitmq-high-unacknowledged-messages.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/rabbitmq/rabbitmq-high-unacknowledged-messages.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/rabbitmq/rabbitmq-high-unacknowledged-messages.v1.json"
+  },
+  {
+   "file": "policies/public/rabbitmq__rabbitmq-high-unroutable-messages.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/rabbitmq/rabbitmq-high-unroutable-messages.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/rabbitmq/rabbitmq-high-unroutable-messages.v1.json"
+  },
+  {
+   "file": "policies/public/rabbitmq__rabbitmq-low-deliverable-messages-alert.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/rabbitmq/rabbitmq-low-deliverable-messages alert.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/rabbitmq/rabbitmq-low-deliverable-messages%20alert.v1.json"
+  },
+  {
+   "file": "policies/public/redis-gke__evicted-keys.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/redis-gke/evicted-keys.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/redis-gke/evicted-keys.v1.json"
+  },
+  {
+   "file": "policies/public/redis-gke__fragmentation-ratio.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/redis-gke/fragmentation-ratio.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/redis-gke/fragmentation-ratio.v1.json"
+  },
+  {
+   "file": "policies/public/redis__evicted-keys.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/redis/evicted-keys.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/redis/evicted-keys.v1.json"
+  },
+  {
+   "file": "policies/public/redis__fragmentation-ratio.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/redis/fragmentation-ratio.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/redis/fragmentation-ratio.v1.json"
+  },
+  {
+   "file": "policies/public/saphana__saphana-high-priority-alert.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/saphana/saphana-high-priority-alert.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/saphana/saphana-high-priority-alert.v1.json"
+  },
+  {
+   "file": "policies/public/saphana__saphana-old-backups-alert.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/saphana/saphana-old-backups-alert.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/saphana/saphana-old-backups-alert.v1.json"
+  },
+  {
+   "file": "policies/public/saphana__saphana-server-down.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/saphana/saphana-server-down.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/saphana/saphana-server-down.v1.json"
+  },
+  {
+   "file": "policies/public/scylla-gke__high-compaction-load.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/scylla-gke/high-compaction-load.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/scylla-gke/high-compaction-load.v1.json"
+  },
+  {
+   "file": "policies/public/scylla-gke__high-prepared-statement-eviction-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/scylla-gke/high-prepared-statement-eviction-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/scylla-gke/high-prepared-statement-eviction-rate.v1.json"
+  },
+  {
+   "file": "policies/public/solr__high-cache-evictions.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/solr/high-cache-evictions.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/solr/high-cache-evictions.v1.json"
+  },
+  {
+   "file": "policies/public/solr__high-request-count.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/solr/high-request-count.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/solr/high-request-count.v1.json"
+  },
+  {
+   "file": "policies/public/solr__high-request-errors.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/solr/high-request-errors.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/solr/high-request-errors.v1.json"
+  },
+  {
+   "file": "policies/public/tomcat__tomcat-high-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/tomcat/tomcat-high-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/tomcat/tomcat-high-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/tomcat__tomcat-high-server-error-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/tomcat/tomcat-high-server-error-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/tomcat/tomcat-high-server-error-rate.v1.json"
+  },
+  {
+   "file": "policies/public/tomcat__tomcat-low-request-rate.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/tomcat/tomcat-low-request-rate.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/tomcat/tomcat-low-request-rate.v1.json"
+  },
+  {
+   "file": "policies/public/varnish__backend-connection-failure.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/varnish/backend-connection-failure.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/varnish/backend-connection-failure.v1.json"
+  },
+  {
+   "file": "policies/public/varnish__high-cache-evictions.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/varnish/high-cache-evictions.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/varnish/high-cache-evictions.v1.json"
+  },
+  {
+   "file": "policies/public/varnish__high-server-limit.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/varnish/high-server-limit.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/varnish/high-server-limit.v1.json"
+  },
+  {
+   "file": "policies/public/varnish__sessions-dropped.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/varnish/sessions-dropped.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/varnish/sessions-dropped.v1.json"
+  },
+  {
+   "file": "policies/public/vault__vault-audit-failure-alert.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/vault/vault-audit-failure-alert.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/vault/vault-audit-failure-alert.v1.json"
+  },
+  {
+   "file": "policies/public/vault__vault-token-creation-alert.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/vault/vault-token-creation-alert.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/vault/vault-token-creation-alert.v1.json"
+  },
+  {
+   "file": "policies/public/vault__vault-token-renew-revoke-alert.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/vault/vault-token-renew-revoke-alert.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/vault/vault-token-renew-revoke-alert.v1.json"
+  },
+  {
+   "file": "policies/public/velero-gke__backup-failure.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/velero-gke/backup-failure.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/velero-gke/backup-failure.v1.json"
+  },
+  {
+   "file": "policies/public/velero-gke__partial-backup-failure.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/velero-gke/partial-backup-failure.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/velero-gke/partial-backup-failure.v1.json"
+  },
+  {
+   "file": "policies/public/velero-gke__restore-failure.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/velero-gke/restore-failure.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/velero-gke/restore-failure.v1.json"
+  },
+  {
+   "file": "policies/public/wildfly__jdbc-connections-maximum.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/wildfly/jdbc-connections-maximum.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/wildfly/jdbc-connections-maximum.v1.json"
+  },
+  {
+   "file": "policies/public/wildfly__server-errors.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/wildfly/server-errors.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/wildfly/server-errors.v1.json"
+  },
+  {
+   "file": "policies/public/wildfly__waiting-requests.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/wildfly/waiting-requests.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/wildfly/waiting-requests.v1.json"
+  },
+  {
+   "file": "policies/public/zookeeper-gke__high-average-latency.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/zookeeper-gke/high-average-latency.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/zookeeper-gke/high-average-latency.v1.json"
+  },
+  {
+   "file": "policies/public/zookeeper-gke__high-fsync-duration.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/zookeeper-gke/high-fsync-duration.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/zookeeper-gke/high-fsync-duration.v1.json"
+  },
+  {
+   "file": "policies/public/zookeeper-gke__low-free-file-descriptors.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/zookeeper-gke/low-free-file-descriptors.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/zookeeper-gke/low-free-file-descriptors.v1.json"
+  },
+  {
+   "file": "policies/public/zookeeper__high-average-latency.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/zookeeper/high-average-latency.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/zookeeper/high-average-latency.v1.json"
+  },
+  {
+   "file": "policies/public/zookeeper__high-fsync-duration.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/zookeeper/high-fsync-duration.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/zookeeper/high-fsync-duration.v1.json"
+  },
+  {
+   "file": "policies/public/zookeeper__low-open-file-descriptors.v1.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "alerts/zookeeper/low-open-file-descriptors.v1.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/alerts/zookeeper/low-open-file-descriptors.v1.json"
+  },
+  {
+   "file": "dashboards/public/active-directory-ds__active-directory-domain-services-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/active-directory-ds/active-directory-domain-services-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/active-directory-ds/active-directory-domain-services-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/activemq__activemq-prometheus-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/activemq/activemq-prometheus-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/activemq/activemq-prometheus-overview.json"
+  },
+  {
+   "file": "dashboards/public/aerospike__aerospike-prometheus-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/aerospike/aerospike-prometheus-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/aerospike/aerospike-prometheus-overview.json"
+  },
+  {
+   "file": "dashboards/public/anthos-config-management__ACM-ConfigSync.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/anthos-config-management/ACM-ConfigSync.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/anthos-config-management/ACM-ConfigSync.json"
+  },
+  {
+   "file": "dashboards/public/apache__apache-prometheus-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/apache/apache-prometheus-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/apache/apache-prometheus-overview.json"
+  },
+  {
+   "file": "dashboards/public/apache-airflow__apache-airflow-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/apache-airflow/apache-airflow-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/apache-airflow/apache-airflow-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/apigee__hybrid-cassandra-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/apigee/hybrid-cassandra-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/apigee/hybrid-cassandra-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/argo-workflows__argo-workflows-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/argo-workflows/argo-workflows-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/argo-workflows/argo-workflows-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/bigdata__bigquery-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/bigdata/bigquery-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/bigdata/bigquery-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/bindplane__host-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/bindplane/host-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/bindplane/host-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/claude-code__claude-code-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/claude-code/claude-code-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/claude-code/claude-code-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/consul__consul-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/consul/consul-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/consul/consul-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/couchbase__gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/couchbase/gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/couchbase/gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/couchdb__couchdb-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/couchdb/couchdb-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/couchdb/couchdb-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/dataflow__dataflow-job.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/dataflow/dataflow-job.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/dataflow/dataflow-job.json"
+  },
+  {
+   "file": "dashboards/public/elasticsearch__elasticsearch-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/elasticsearch/elasticsearch-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/elasticsearch/elasticsearch-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/etcd__etcd-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/etcd/etcd-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/etcd/etcd-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/flink__flink-gce-jobs-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/flink/flink-gce-jobs-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/flink/flink-gce-jobs-overview.json"
+  },
+  {
+   "file": "dashboards/public/gemini-cli__gemini-cli-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/gemini-cli/gemini-cli-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/gemini-cli/gemini-cli-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/golang__go-runtime-view-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/golang/go-runtime-view-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/golang/go-runtime-view-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/google-anthos__anthos-cluster-kubevirt-vm-status.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-anthos/anthos-cluster-kubevirt-vm-status.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-anthos/anthos-cluster-kubevirt-vm-status.json"
+  },
+  {
+   "file": "dashboards/public/google-application-integration__integration-executions.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-application-integration/integration-executions.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-application-integration/integration-executions.json"
+  },
+  {
+   "file": "dashboards/public/google-backupdr__backupdr-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-backupdr/backupdr-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-backupdr/backupdr-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/google-bigquery__bigquery-managed-routine-query.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-bigquery/bigquery-managed-routine-query.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-bigquery/bigquery-managed-routine-query.json"
+  },
+  {
+   "file": "dashboards/public/google-blockchain-node-engine__blockchain_node_engine_dashboard.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-blockchain-node-engine/blockchain_node_engine_dashboard.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-blockchain-node-engine/blockchain_node_engine_dashboard.json"
+  },
+  {
+   "file": "dashboards/public/google-cloud-agent-for-sap__agent-for-sap-hana-detailed-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-cloud-agent-for-sap/agent-for-sap-hana-detailed-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-cloud-agent-for-sap/agent-for-sap-hana-detailed-overview.json"
+  },
+  {
+   "file": "dashboards/public/google-cloud-armor__cloud-armor-policies-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-cloud-armor/cloud-armor-policies-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-cloud-armor/cloud-armor-policies-overview.json"
+  },
+  {
+   "file": "dashboards/public/google-cloud-composer__cloud-composer-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-cloud-composer/cloud-composer-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-cloud-composer/cloud-composer-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/google-cloud-data-fusion__cloud-data-fusion-logging.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-cloud-data-fusion/cloud-data-fusion-logging.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-cloud-data-fusion/cloud-data-fusion-logging.json"
+  },
+  {
+   "file": "dashboards/public/google-cloud-functions__cloudfunctions-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-cloud-functions/cloudfunctions-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-cloud-functions/cloudfunctions-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/google-cloud-storage__cloud-storage.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-cloud-storage/cloud-storage.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-cloud-storage/cloud-storage.json"
+  },
+  {
+   "file": "dashboards/public/google-cloud-tasks__cloud-tasks.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-cloud-tasks/cloud-tasks.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-cloud-tasks/cloud-tasks.json"
+  },
+  {
+   "file": "dashboards/public/google-cloud-vpn__vpn.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-cloud-vpn/vpn.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-cloud-vpn/vpn.json"
+  },
+  {
+   "file": "dashboards/public/google-cloudsql__cloudsql-transactions.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-cloudsql/cloudsql-transactions.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-cloudsql/cloudsql-transactions.json"
+  },
+  {
+   "file": "dashboards/public/google-compute-disk__compute-disk.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-compute-disk/compute-disk.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-compute-disk/compute-disk.json"
+  },
+  {
+   "file": "dashboards/public/google-compute-engine__reservations-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-compute-engine/reservations-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-compute-engine/reservations-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/google-dataflow__dataflow-job.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-dataflow/dataflow-job.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-dataflow/dataflow-job.json"
+  },
+  {
+   "file": "dashboards/public/google-dns-query__dns-query.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-dns-query/dns-query.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-dns-query/dns-query.json"
+  },
+  {
+   "file": "dashboards/public/google-filestore__filestore_dashboard.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-filestore/filestore_dashboard.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-filestore/filestore_dashboard.json"
+  },
+  {
+   "file": "dashboards/public/google-gemini-code-assist__gemini-code-assist-overview-from-metadata-logs.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-gemini-code-assist/gemini-code-assist-overview-from-metadata-logs.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-gemini-code-assist/gemini-code-assist-overview-from-metadata-logs.json"
+  },
+  {
+   "file": "dashboards/public/google-immersive-stream__immersive-stream.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-immersive-stream/immersive-stream.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-immersive-stream/immersive-stream.json"
+  },
+  {
+   "file": "dashboards/public/google-internal-tcp-lb-rule__internal-tcp-lb-rule.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-internal-tcp-lb-rule/internal-tcp-lb-rule.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-internal-tcp-lb-rule/internal-tcp-lb-rule.json"
+  },
+  {
+   "file": "dashboards/public/google-kubernetes-engine__gke-optimization-signals.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-kubernetes-engine/gke-optimization-signals.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-kubernetes-engine/gke-optimization-signals.json"
+  },
+  {
+   "file": "dashboards/public/google-kubernetes-engine-enterprise__gke-enterprise-cluster-observability-cpu.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-kubernetes-engine-enterprise/gke-enterprise-cluster-observability-cpu.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-kubernetes-engine-enterprise/gke-enterprise-cluster-observability-cpu.json"
+  },
+  {
+   "file": "dashboards/public/google-network-lb-rule__network-lb-rule.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-network-lb-rule/network-lb-rule.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-network-lb-rule/network-lb-rule.json"
+  },
+  {
+   "file": "dashboards/public/google-pub-sub__pub-sub-topic.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-pub-sub/pub-sub-topic.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-pub-sub/pub-sub-topic.json"
+  },
+  {
+   "file": "dashboards/public/google-recaptcha__recaptcha-key.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-recaptcha/recaptcha-key.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-recaptcha/recaptcha-key.json"
+  },
+  {
+   "file": "dashboards/public/google-spanner__spanner.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-spanner/spanner.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-spanner/spanner.json"
+  },
+  {
+   "file": "dashboards/public/google-tcp-ssl-proxy-rule__tcp-ssl-proxy-rule.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-tcp-ssl-proxy-rule/tcp-ssl-proxy-rule.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-tcp-ssl-proxy-rule/tcp-ssl-proxy-rule.json"
+  },
+  {
+   "file": "dashboards/public/google-vertex-ai__vertex-ai-endpoints.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/google-vertex-ai/vertex-ai-endpoints.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/google-vertex-ai/vertex-ai-endpoints.json"
+  },
+  {
+   "file": "dashboards/public/hadoop__hadoop-prometheus-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/hadoop/hadoop-prometheus-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/hadoop/hadoop-prometheus-overview.json"
+  },
+  {
+   "file": "dashboards/public/haproxy__haproxy-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/haproxy/haproxy-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/haproxy/haproxy-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/hbase__hbase-gce-operation-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/hbase/hbase-gce-operation-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/hbase/hbase-gce-operation-overview.json"
+  },
+  {
+   "file": "dashboards/public/iis__iis-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/iis/iis-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/iis/iis-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/ingress-nginx__nginx-ingress-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/ingress-nginx/nginx-ingress-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/ingress-nginx/nginx-ingress-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/istio__istio-envoy-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/istio/istio-envoy-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/istio/istio-envoy-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/jenkins__jenkins-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/jenkins/jenkins-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/jenkins/jenkins-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/jetty__jetty-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/jetty/jetty-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/jetty/jetty-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/jvm__overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/jvm/overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/jvm/overview.json"
+  },
+  {
+   "file": "dashboards/public/kafka__kafka-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/kafka/kafka-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/kafka/kafka-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/kibana__kibana-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/kibana/kibana-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/kibana/kibana-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/kubernetes__k8s-cluster-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/kubernetes/k8s-cluster-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/kubernetes/k8s-cluster-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/logging__kubernetes-usage.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/logging/kubernetes-usage.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/logging/kubernetes-usage.json"
+  },
+  {
+   "file": "dashboards/public/memcached__memcached-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/memcached/memcached-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/memcached/memcached-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/microservices__usecase-payment-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/microservices/usecase-payment-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/microservices/usecase-payment-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/mongodb__mongodb-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/mongodb/mongodb-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/mongodb/mongodb-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/mssql-server__sqlserver-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/mssql-server/sqlserver-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/mssql-server/sqlserver-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/multicloud-amazon-ec2__overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/multicloud-amazon-ec2/overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/multicloud-amazon-ec2/overview.json"
+  },
+  {
+   "file": "dashboards/public/multicloud-azure-container-service__cluster-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/multicloud-azure-container-service/cluster-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/multicloud-azure-container-service/cluster-overview.json"
+  },
+  {
+   "file": "dashboards/public/multicloud-azure-databases__databases.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/multicloud-azure-databases/databases.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/multicloud-azure-databases/databases.json"
+  },
+  {
+   "file": "dashboards/public/multicloud-azure-virtual-machine__os.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/multicloud-azure-virtual-machine/os.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/multicloud-azure-virtual-machine/os.json"
+  },
+  {
+   "file": "dashboards/public/mysql__mysql-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/mysql/mysql-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/mysql/mysql-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/networking__https-lb-backend-services-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/networking/https-lb-backend-services-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/networking/https-lb-backend-services-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/nginx__nginx-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/nginx/nginx-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/nginx/nginx-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/nvidia-gpu__nvidia-dcgm.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/nvidia-gpu/nvidia-dcgm.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/nvidia-gpu/nvidia-dcgm.json"
+  },
+  {
+   "file": "dashboards/public/opentelemetry-collector__opentelemetry-collector.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/opentelemetry-collector/opentelemetry-collector.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/opentelemetry-collector/opentelemetry-collector.json"
+  },
+  {
+   "file": "dashboards/public/oracledb__oracledb-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/oracledb/oracledb-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/oracledb/oracledb-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/postgresql__postgresql-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/postgresql/postgresql-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/postgresql/postgresql-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/rabbitmq__rabbitmq-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/rabbitmq/rabbitmq-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/rabbitmq/rabbitmq-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/redis__redis-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/redis/redis-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/redis/redis-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/sap-hana__sap-hana-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/sap-hana/sap-hana-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/sap-hana/sap-hana-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/scylladb__scylladb-prometheus-v2.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/scylladb/scylladb-prometheus-v2.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/scylladb/scylladb-prometheus-v2.json"
+  },
+  {
+   "file": "dashboards/public/servicemesh__anthos-service-mesh-control-plane-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/servicemesh/anthos-service-mesh-control-plane-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/servicemesh/anthos-service-mesh-control-plane-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/solr__solr-prometheus-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/solr/solr-prometheus-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/solr/solr-prometheus-overview.json"
+  },
+  {
+   "file": "dashboards/public/spanner__spanner.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/spanner/spanner.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/spanner/spanner.json"
+  },
+  {
+   "file": "dashboards/public/storage__cloudsql-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/storage/cloudsql-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/storage/cloudsql-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/tomcat__tomcat-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/tomcat/tomcat-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/tomcat/tomcat-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/tools__cloudtasks-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/tools/cloudtasks-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/tools/cloudtasks-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/torchserve__torchserve-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/torchserve/torchserve-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/torchserve/torchserve-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/varnish__varnish-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/varnish/varnish-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/varnish/varnish-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/vault__vault-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/vault/vault-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/vault/vault-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/velero__velero-prometheus.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/velero/velero-prometheus.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/velero/velero-prometheus.json"
+  },
+  {
+   "file": "dashboards/public/vmware__contention.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/vmware/contention.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/vmware/contention.json"
+  },
+  {
+   "file": "dashboards/public/wildfly__wildfly-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/wildfly/wildfly-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/wildfly/wildfly-gce-overview.json"
+  },
+  {
+   "file": "dashboards/public/windows__windows-server-monitoring.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/windows/windows-server-monitoring.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/windows/windows-server-monitoring.json"
+  },
+  {
+   "file": "dashboards/public/zookeeper__zookeeper-gce-overview.json",
+   "origin": "public",
+   "source": "monitoring-dashboard-samples",
+   "upstream_path": "dashboards/zookeeper/zookeeper-gce-overview.json",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/GoogleCloudPlatform/monitoring-dashboard-samples/blob/master/dashboards/zookeeper/zookeeper-gce-overview.json"
+  },
+  {
+   "file": "policies/synthetic/gce-cpu-high-pager.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "threshold, verified-name metric, REDUCE_MEAN group by instance, critical, pagerduty + slack",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/gce-disk-read-rate.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "counter with ALIGN_RATE",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/gce-network-delta.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "counter with ALIGN_DELTA, label filter",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/pubsub-oldest-unacked.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "threshold, Pub/Sub (verified names), group by label",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/gcs-total-bytes.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "threshold, Cloud Storage, less-than",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/cloudsql-cpu.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "threshold, Cloud SQL, unconfirmed name",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/run-5xx.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "threshold, Cloud Run counter filtered on metric label",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/lb-latency-p99.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "threshold, distribution metric with ALIGN_PERCENTILE_99",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/lb-latency-p90.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "distribution metric with ALIGN_PERCENTILE_90 (not mapped)",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/gke-memory.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "threshold, GKE container memory",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/bq-slots.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "threshold, BigQuery",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/spanner-cpu-regex.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "filter using monitoring.regex.full_match (unsupported filter function)",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/gce-or-filter.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "filter with OR",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/gce-one-of.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "filter using one_of()",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/gce-starts-with.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "filter using starts_with()",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/gce-metadata-user-label.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "filter on a metadata.user_labels term",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/second-stage.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "two aggregation stages",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/trigger-percent.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "trigger on a percent of time series",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/trigger-count.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "trigger on several time series",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/missing-data-active.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "evaluationMissingData EVALUATION_MISSING_DATA_ACTIVE",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/long-duration.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "duration beyond New Relic limit",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/odd-aligner.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "ALIGN_INTERPOLATE aligner",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/fraction-true.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "ALIGN_FRACTION_TRUE aligner on a boolean metric",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/next-older-reduce-count.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "ALIGN_NEXT_OLDER + REDUCE_COUNT_TRUE",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/disabled-policy.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "disabled policy",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/ratio-lb-5xx.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "ratio with denominatorFilter and denominatorAggregations (Google's documented pattern)",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/ratio-pubsub-dlq.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "ratio, no group by, counters",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/absent-vm-uptime.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "conditionAbsent on a verified metric, group by instance",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/absent-pubsub.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "conditionAbsent, label scope, reducer",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/absent-custom.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "conditionAbsent on a custom metric",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/absent-short.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "conditionAbsent with duration under a minute",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/log-error-severity.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "matched log, severity >= ERROR on a resource type",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/log-text-match.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "matched log, textPayload substring, with labelExtractors",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/log-jsonpayload.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "matched log, jsonPayload field equality",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/log-regex.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "matched log with the regex operator",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/log-or-not.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "matched log with OR and NOT",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/mql-basic-condition.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "MQL: fetch | group_by | condition",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/mql-ratio-join.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "MQL: two fetches with ratio",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/mql-absent-for.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "MQL: absent_for",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/mql-time-shift.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "MQL: time_shift week-over-week",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/mql-top-k.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "MQL: top and filter on resource label",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/mql-gke-custom-metric.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "MQL on a custom metric",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/mql-uptime.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "MQL on uptime check",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/promql-simple-threshold.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "PromQL: gauge compared to a constant",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/promql-rate-ratio.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "PromQL: rate ratio",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/promql-histogram.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "PromQL: histogram_quantile",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/promql-absent.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "PromQL: absent()",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/promql-alertrule-fields.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "PromQL with alertRule and ruleGroup",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/sql-bq-row-count.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "conditionSql row count (BigQuery SQL alert)",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/sql-boolean.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "conditionSql boolean test",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/forecast-disk.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "forecast: forecastOptions on a threshold",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/forecast-quota.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "forecast on a verified metric",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/uptime-check-failed.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "uptime check alert: check_passed, grouped by host",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/uptime-ssl-expiry.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "uptime check SSL expiry",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/uptime-latency.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "uptime check latency",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/slo-burn-fast.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "SLO burn rate, fast window (select_slo_burn_rate)",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/slo-burn-slow.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "SLO burn rate, slow window",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/slo-budget-fraction.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "SLO error budget remaining (select_slo_budget_fraction)",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/slo-health.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "SLO health (select_slo_health)",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/multi-and-cpu-mem.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "two conditions, combiner AND",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/multi-or-three.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "three conditions, combiner OR, mixed kinds",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/multi-and-same-resource.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "AND_WITH_MATCHING_RESOURCE combiner",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/agent-memory.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "Ops Agent legacy metric agent.googleapis.com",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/custom-queue-depth.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "custom.googleapis.com metric",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/logging-user-metric.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "log-based metric (logging.googleapis.com/user)",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/gmp-prometheus-metric.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "Managed Prometheus metric through a threshold condition",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/unknown-condition-kind.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "a condition kind the importer does not know (future field)",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/no-conditions.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "policy with no conditions",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/bad-comparison.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "COMPARISON_UNSPECIFIED",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/fine-grained-period.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "alignment period of 30s",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "policies/synthetic/duration-not-multiple.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "duration 450s on a 300s window",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "channels/channels.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the NotificationChannel API reference; every address, number, token and key is a placeholder",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "uptime-checks/uptime-checks.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the UptimeCheckConfig API reference; hosts, credentials and headers are placeholders",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/grid-basic.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "gridLayout, plain charts and scorecards on verified metrics",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/column-layout.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "columnLayout with weights",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/row-layout.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "rowLayout",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/mql-charts.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "xyChart and scorecard with timeSeriesQueryLanguage (MQL)",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/promql-charts.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "xyChart/scorecard with prometheusQuery",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/ratio-charts.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "timeSeriesFilterRatio in a chart and a scorecard",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/mixed-panels.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "alertChart, logsPanel, pieChart, timeSeriesTable, incidentList, sectionHeader, collapsibleGroup",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/scorecard-views.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "scorecards with gaugeView, sparkChartView and thresholds",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/chart-options.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "xyChart with secondaryAggregation, pickTimeSeriesFilter, unit override, legend template, thresholds",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/slo-and-sqls.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "SLO status widget, opsAnalyticsQuery (SQL) chart, errorReportingPanel, singleViewGroup, blank",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/custom-and-other-sources.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "charts over custom, agent, Prometheus and log-based metrics",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/dashboard-filters.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "dashboard with dashboardFilters (template variables) and labels",
+   "licence": "project (own work)"
+  },
+  {
+   "file": "dashboards/synthetic/empty.json",
+   "origin": "SYNTHETIC",
+   "source": "modelled on the Cloud Monitoring API reference (AlertPolicy / Dashboard)",
+   "note": "dashboard with no layout",
+   "licence": "project (own work)"
+  }
+ ]
+}

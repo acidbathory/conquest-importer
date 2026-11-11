@@ -1,0 +1,30 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s"
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_LT",
+    "duration": "3600s",
+    "filter": "resource.type = \"cloud_dataproc_cluster\" AND metric.type = \"dataproc.googleapis.com/cluster/job/running_count\"",
+    "thresholdValue": 0,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Stale Cluster - No Running Jobs"
+  }
+ ],
+ "displayName": "Stale Cluster - No Running Jobs",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

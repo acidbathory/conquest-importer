@@ -1,0 +1,33 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_MAX",
+      "groupByFields": [
+       "resource.label.database_id"
+      ],
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"cloudsql_database\" AND metric.type = \"cloudsql.googleapis.com/database/cpu/utilization\"",
+    "thresholdValue": 0.9,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Cloud SQL CPU"
+  }
+ ],
+ "displayName": "Cloud SQL CPU high",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1001"
+ ],
+ "userLabels": {}
+}

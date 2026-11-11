@@ -1,0 +1,19 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMonitoringQueryLanguage": {
+    "duration": "0s",
+    "query": "fetch gce_instance::compute.googleapis.com/instance/uptime\n| absent_for 10m",
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "MQL absent"
+  }
+ ],
+ "displayName": "MQL absent",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

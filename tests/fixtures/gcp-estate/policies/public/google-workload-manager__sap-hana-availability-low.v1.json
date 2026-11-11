@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "0s",
+    "evaluationInterval": "30s",
+    "query": "({\"workload.googleapis.com/sap/hana/availability\", monitored_resource=\"gce_instance\"} < 1)\nand \n({\"workload.googleapis.com/sap/mntmode\", monitored_resource=\"gce_instance\"} = 0)"
+   },
+   "displayName": "SAPHanaAvailabilityCheck"
+  }
+ ],
+ "displayName": "SAP HANA Availability",
+ "documentation": {
+  "content": "# SAPHanaAvailability\n\nAn alert is triggered if the HANA standalone system is not up and running. The metrics frequency is 5 seconds(default). The query window is 1m to tolerate one-off measurements. The following metrics are used in this alert:\n\n```\nworkload.googleapis.com/sap/mntmode\n    0 -- no maintenance; alert if system not available\n    1 -- maintenance; no alert (availability of system does not matter)\nworkload.googleapis.com/sap/hana/availability\n    1 -- system available\n    <1 -- system not available\n```",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

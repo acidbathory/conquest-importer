@@ -1,0 +1,39 @@
+{
+ "alertStrategy": {
+  "autoClose": "3600s"
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "3600s",
+      "crossSeriesReducer": "REDUCE_SUM",
+      "perSeriesAligner": "ALIGN_SUM"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "denominatorAggregations": [
+     {
+      "alignmentPeriod": "3600s",
+      "crossSeriesReducer": "REDUCE_SUM",
+      "perSeriesAligner": "ALIGN_SUM"
+     }
+    ],
+    "denominatorFilter": "metric.type=\"retail.googleapis.com/catalog/processed_user_events\" AND resource.type=\"retail.googleapis.com/Catalog\"",
+    "duration": "0s",
+    "filter": "metric.type=\"retail.googleapis.com/catalog/processed_user_events\" AND resource.type=\"retail.googleapis.com/Catalog\" AND metric.label.status=\"unjoined\"",
+    "thresholdValue": 0.1,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Ratio of unjoined user events exceeded above threshold for last hour"
+  }
+ ],
+ "displayName": "Ratio of Unjoined User Events Exceeded Above Threshold for Last Hour",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "3600s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "0s",
+    "evaluationInterval": "60s",
+    "query": "(avg by (project_id, zone, instance_id) (\n  avg_over_time(\n    {\"agent.googleapis.com/cpu/utilization\", monitored_resource=\"gce_instance\"}[1m]\n  )\n  and\n  on(instance_id, project_id, zone)\n    ({\"workload.googleapis.com/mongodb.memory.usage\", monitored_resource=\"gce_instance\"})  \n  )\n) > 90"
+   },
+   "displayName": "MongoDB - High CPU Utilization"
+  }
+ ],
+ "displayName": "MongoDB - High CPU Utilization",
+ "documentation": {
+  "content": "If CPU utilization is above 90%, then the MongoDB instance is probably due to be scaled up or needs further investigation.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

@@ -1,0 +1,659 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "endpoint_id",
+   "stringValue": "",
+   "templateVariable": "endpoint_id",
+   "valueType": "STRING"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "location",
+   "stringValue": "",
+   "templateVariable": "location",
+   "valueType": "STRING"
+  }
+ ],
+ "displayName": "Vertex AI Endpoints Overview",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "Accelerator Duty Cycle",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_MEAN",
+           "groupByFields": [
+            "resource.label.\"endpoint_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/accelerator/duty_cycle\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 89
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Accelerator Memory Usage",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"endpoint_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/accelerator/memory/bytes_used\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 89
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "CPU utilization",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_MEAN",
+           "groupByFields": [
+            "resource.label.\"endpoint_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/cpu/utilization\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 69
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Memory Usage ",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"endpoint_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/memory/bytes_used\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 69
+   },
+   {
+    "height": 15,
+    "widget": {
+     "title": "Network Bytes Received by replica_id",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"endpoint_id\"",
+            "metric.label.\"replica_id\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/network/received_bytes_count\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 125
+   },
+   {
+    "height": 15,
+    "widget": {
+     "title": "Network Bytes Sent by replica_id",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "",
+        "minAlignmentPeriod": "60s",
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"endpoint_id\"",
+            "metric.label.\"replica_id\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/network/sent_bytes_count\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 125
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Prediction Count",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"endpoint_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/prediction_count\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 4
+   },
+   {
+    "height": 16,
+    "widget": {
+     "singleViewGroup": {
+      "displayType": "DROPDOWN"
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 4
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "p50 Prediction Latency by endpoint_id",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_PERCENTILE_50",
+           "groupByFields": [
+            "resource.label.\"endpoint_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_DELTA"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/prediction_latencies\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 4
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "p95 Prediction Latency by endpoint_id",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_PERCENTILE_95",
+           "groupByFields": [
+            "resource.label.\"endpoint_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_DELTA"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/prediction_latencies\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 4
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "p99 Prediction Latency by endpoint_id",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_PERCENTILE_99",
+           "groupByFields": [
+            "resource.label.\"endpoint_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_DELTA"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/prediction_latencies\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 4
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Replica Count vs Target",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "replica_count",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/replicas\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       },
+       {
+        "legendTemplate": "target_replica",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/target_replicas\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 48,
+    "yPos": 109
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "Accelerators including GPUs and TPUs can be attached to processors to achieve performance improvements and reduce power needed for inference on AI/ML workloads.",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#E7EFFE",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "PL_BOTTOM",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": ""
+    },
+    "width": 48,
+    "yPos": 85
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "High resource utilization may suggest that additional hardware is needed to manage existing workloads, while low utilization may suggest opportunities for cost savings by downsizing hardware without compromising performance.",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#E7EFFE",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": ""
+    },
+    "width": 48,
+    "yPos": 65
+   },
+   {
+    "height": 21,
+    "widget": {
+     "logsPanel": {
+      "filter": "resource.type=\"aiplatform.googleapis.com/Endpoint\"\n${endpoint_id} ${location}"
+     },
+     "title": "Vertex AI Endpoint logs"
+    },
+    "width": 24,
+    "yPos": 40
+   },
+   {
+    "height": 21,
+    "widget": {
+     "incidentList": {
+      "groupBy": "GROUP_BY_TYPE_UNSPECIFIED",
+      "monitoredResources": [
+       {
+        "labels": {},
+        "type": "aiplatform.googleapis.com/Endpoint"
+       }
+      ],
+      "policyNames": [],
+      "userLabels": {}
+     },
+     "title": "Endpoint Incidents"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 40
+   },
+   {
+    "height": 4,
+    "widget": {
+     "sectionHeader": {
+      "dividerBelow": false,
+      "subtitle": "Inspect application metrics (throughput, latency, error rate) for your Vertex AI endpoint."
+     },
+     "title": "Application metrics"
+    },
+    "width": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Error Count by endpoint_id",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"endpoint_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"aiplatform.googleapis.com/prediction/online/error_count\" resource.type=\"aiplatform.googleapis.com/Endpoint\" ${endpoint_id} ${location}"
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 20
+   },
+   {
+    "height": 4,
+    "widget": {
+     "sectionHeader": {
+      "dividerBelow": false,
+      "subtitle": "Inspect the CPU, memory and accelerator usage of your deployed Vertex AI endpoints."
+     },
+     "title": "Infrastructure utilization"
+    },
+    "width": 48,
+    "yPos": 61
+   },
+   {
+    "height": 4,
+    "widget": {
+     "sectionHeader": {
+      "dividerBelow": false,
+      "subtitle": "First drill down to a single endpoint_id, then inspect how network requests are being split among replicas of that endpoint."
+     },
+     "title": "Model replicas"
+    },
+    "width": 48,
+    "yPos": 105
+   },
+   {
+    "height": 4,
+    "widget": {
+     "sectionHeader": {
+      "dividerBelow": false,
+      "subtitle": "Inspect application metrics (throughput, latency, error rate) for your AI/ML workloads."
+     },
+     "title": "Logs and incidents"
+    },
+    "width": 48,
+    "yPos": 36
+   }
+  ]
+ }
+}

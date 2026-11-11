@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "300s",
+    "evaluationInterval": "60s",
+    "query": "(\n  {\"kube_poddisruptionbudget_status_current_healthy\"}\n  -\n {\"kube_poddisruptionbudget_status_desired_healthy\"}\n) < 0"
+   },
+   "displayName": "Allowed Pod Disruptions Remaining"
+  }
+ ],
+ "displayName": "Kube State - Prometheus - Pod Disruption Budget Exceeded",
+ "documentation": {
+  "content": "When the pod disruption budget is exceeded, the configured minimum availability is not being respected, typically due to an application failure.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

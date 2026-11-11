@@ -1,0 +1,17 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "300s",
+    "evaluationInterval": "60s",
+    "query": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) > 1"
+   },
+   "displayName": "PromQL p99"
+  }
+ ],
+ "displayName": "PromQL p99",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

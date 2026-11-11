@@ -1,0 +1,8 @@
+{
+ "combiner": "OR",
+ "conditions": [],
+ "displayName": "Empty policy",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

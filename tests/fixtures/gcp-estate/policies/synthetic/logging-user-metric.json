@@ -1,0 +1,28 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_DELTA"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"global\" AND metric.type = \"logging.googleapis.com/user/checkout_errors\"",
+    "thresholdValue": 5,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "User metric"
+  }
+ ],
+ "displayName": "Log-based error metric",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

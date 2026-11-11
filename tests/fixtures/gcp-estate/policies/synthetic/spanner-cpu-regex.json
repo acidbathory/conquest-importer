@@ -1,0 +1,28 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"spanner_instance\" AND metric.type = \"spanner.googleapis.com/instance/cpu/utilization\" AND resource.label.instance_id = monitoring.regex.full_match(\"prod-.*\")",
+    "thresholdValue": 0.65,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Spanner CPU"
+  }
+ ],
+ "displayName": "Spanner CPU, regex instance filter",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

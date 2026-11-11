@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "300s",
+    "evaluationInterval": "60s",
+    "query": "(\n  {\"workload.googleapis.com/jvm.memory.heap.used\", monitored_resource=\"gce_instance\"}\n  /\n  {\"workload.googleapis.com/jvm.memory.heap.max\", monitored_resource=\"gce_instance\"}\n) > 0.9"
+   },
+   "displayName": "VM Instance - workload/jvm.memory.heap.used"
+  }
+ ],
+ "displayName": "Elasticsearch - high jvm memory usage",
+ "documentation": {
+  "content": "When the JVM heap ratio of heap used over max heap exceeds a threshold, then application's performance may start to degrade.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

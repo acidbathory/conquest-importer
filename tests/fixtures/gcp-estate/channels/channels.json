@@ -1,0 +1,247 @@
+[
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Platform on-call email",
+  "enabled": true,
+  "labels": {
+   "email_address": "EMAIL_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1001",
+  "type": "email",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "#platform-alerts",
+  "enabled": true,
+  "labels": {
+   "channel_name": "#platform-alerts",
+   "team": "TEAM_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1002",
+  "type": "slack",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "#checkout-alerts",
+  "enabled": true,
+  "labels": {
+   "channel_name": "#checkout-alerts",
+   "team": "TEAM_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1003",
+  "type": "slack",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Alert bus",
+  "enabled": true,
+  "labels": {
+   "topic": "projects/example-project/topics/alerts"
+  },
+  "name": "projects/example-project/notificationChannels/1004",
+  "type": "pubsub",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "On-call phone",
+  "enabled": true,
+  "labels": {
+   "number": "PHONE_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1005",
+  "type": "sms",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Ticketing webhook",
+  "enabled": true,
+  "labels": {
+   "url": "https://example.com/hook"
+  },
+  "name": "projects/example-project/notificationChannels/1006",
+  "type": "webhook_tokenauth",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Legacy ITSM webhook",
+  "enabled": true,
+  "labels": {
+   "url": "https://example.com/itsm",
+   "username": "USER_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1007",
+  "type": "webhook_basicauth",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Pager app (phone)",
+  "enabled": true,
+  "labels": {
+   "device_token": "TOKEN_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1008",
+  "type": "mobile",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Finance email",
+  "enabled": false,
+  "labels": {
+   "email_address": "EMAIL_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1009",
+  "type": "email",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "PagerDuty platform",
+  "enabled": true,
+  "labels": {
+   "service_key": "KEY_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1010",
+  "type": "pagerduty",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "PagerDuty data",
+  "enabled": true,
+  "labels": {
+   "service_key": "KEY_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1011",
+  "type": "pagerduty",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Old chat room",
+  "enabled": true,
+  "labels": {
+   "room_id": "1",
+   "subdomain": "SUBDOMAIN_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1012",
+  "type": "campfire",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Retired chat",
+  "enabled": true,
+  "labels": {
+   "room_name": "ops"
+  },
+  "name": "projects/example-project/notificationChannels/1013",
+  "type": "hipchat",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Second phone",
+  "enabled": true,
+  "labels": {
+   "number": "PHONE_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1014",
+  "type": "sms",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Pager app (tablet)",
+  "enabled": true,
+  "labels": {
+   "device_token": "TOKEN_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1015",
+  "type": "mobile",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Security team email",
+  "enabled": true,
+  "labels": {
+   "email_address": "EMAIL_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1016",
+  "type": "email",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Chat bridge webhook",
+  "enabled": true,
+  "labels": {
+   "url": "https://example.com/bridge"
+  },
+  "name": "projects/example-project/notificationChannels/1017",
+  "type": "webhook_tokenauth",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Remediation bus",
+  "enabled": true,
+  "labels": {
+   "topic": "projects/example-project/topics/remediate"
+  },
+  "name": "projects/example-project/notificationChannels/1018",
+  "type": "pubsub",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "#security",
+  "enabled": true,
+  "labels": {
+   "channel_name": "#security",
+   "team": "TEAM_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1019",
+  "type": "slack",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ },
+ {
+  "description": "SYNTHETIC channel",
+  "displayName": "Unused phone",
+  "enabled": true,
+  "labels": {
+   "number": "PHONE_PLACEHOLDER"
+  },
+  "name": "projects/example-project/notificationChannels/1020",
+  "type": "sms",
+  "userLabels": {},
+  "verificationStatus": "VERIFIED"
+ }
+]

@@ -1,0 +1,24 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "300s",
+    "evaluationInterval": "60s",
+    "labels": {
+     "severity": "page"
+    },
+    "query": "sum(rate(http_requests_total{code=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m])) > 0.05"
+   },
+   "displayName": "PromQL err"
+  }
+ ],
+ "displayName": "PromQL error ratio",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1002",
+  "projects/example-project/notificationChannels/1010"
+ ],
+ "severity": "CRITICAL",
+ "userLabels": {}
+}

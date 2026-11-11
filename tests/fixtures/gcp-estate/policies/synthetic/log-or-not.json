@@ -1,0 +1,20 @@
+{
+ "alertStrategy": {
+  "notificationRateLimit": {
+   "period": "300s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMatchedLog": {
+    "filter": "(severity=ERROR OR severity=CRITICAL) AND NOT textPayload:\"healthcheck\""
+   },
+   "displayName": "OrNot"
+  }
+ ],
+ "displayName": "OR and NOT log match",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

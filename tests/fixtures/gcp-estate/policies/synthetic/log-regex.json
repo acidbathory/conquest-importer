@@ -1,0 +1,20 @@
+{
+ "alertStrategy": {
+  "notificationRateLimit": {
+   "period": "300s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMatchedLog": {
+    "filter": "textPayload=~\"timeout after [0-9]+ms\""
+   },
+   "displayName": "Regex"
+  }
+ ],
+ "displayName": "Regex log match",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

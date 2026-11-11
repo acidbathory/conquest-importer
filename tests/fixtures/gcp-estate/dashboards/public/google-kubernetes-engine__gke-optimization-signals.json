@@ -1,0 +1,277 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "project_id",
+   "templateVariable": "project_id",
+   "valueType": "STRING"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "cluster_name",
+   "templateVariable": "cluster_name",
+   "valueType": "STRING"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "location",
+   "templateVariable": "location",
+   "valueType": "STRING"
+  }
+ ],
+ "displayName": "GKE Cost Optimization Signals",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": false,
+       "prometheusQuery": "avg (\n  kubernetes_io:node_cpu_allocatable_utilization{monitored_resource=\"k8s_node\", ${project_id}, ${location}, ${cluster_name}}\n) * 100\n",
+       "unitOverride": "%"
+      }
+     },
+     "title": "Demand based downscaling"
+    },
+    "width": 8
+   },
+   {
+    "height": 16,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": false,
+       "prometheusQuery": "100 * (\n  sum (\n    kubernetes_io:container_cpu_request_cores{\n      monitored_resource=\"k8s_container\",\n      ${project_id},\n      ${location},\n      ${cluster_name},\n      namespace_name!~\"(kube|istio|gatekeeper|gke|gmp|gke-gmp)-system|gke-managed-filestorecsi|gke-mcs\"\n    }\n  )\n  /\n  sum (\n    kubernetes_io:node_cpu_allocatable_cores{\n      monitored_resource=\"k8s_node\",\n      ${project_id},\n      ${location},\n      ${cluster_name}\n    }\n  ) > 0\n)",
+       "unitOverride": "%"
+      }
+     },
+     "title": "Cluster bin packing CPU"
+    },
+    "width": 8,
+    "xPos": 8
+   },
+   {
+    "height": 16,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": false,
+       "prometheusQuery": "100 * sum (\n  kubernetes_io:container_memory_request_bytes{\n    monitored_resource=\"k8s_container\",\n    ${project_id},\n    ${location},\n    ${cluster_name},\n    namespace_name!~\"(kube|istio|gatekeeper|gke|gmp|gke-gmp)-system|gke-managed-filestorecsi|gke-mcs\"\n  }\n)\n/\nsum (\n  kubernetes_io:node_memory_allocatable_bytes{\n    monitored_resource=\"k8s_node\",\n    ${project_id},\n    ${location},\n    ${cluster_name}\n  }\n) > 0\n",
+       "unitOverride": "%"
+      }
+     },
+     "title": "Cluster bin packing Memory"
+    },
+    "width": 8,
+    "xPos": 16
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": false,
+       "timeSeriesFilter": {
+        "aggregation": {
+         "alignmentPeriod": "60s",
+         "crossSeriesReducer": "REDUCE_SUM",
+         "groupByFields": [],
+         "perSeriesAligner": "ALIGN_RATE"
+        },
+        "filter": "metric.type=\"kubernetes.io/node/cpu/core_usage_time\" resource.type=\"k8s_node\" metadata.user_labels.\"cloud.google.com/gke-spot\"=\"true\""
+       }
+      }
+     },
+     "title": "Spot Discount Node CPU Usage Time"
+    },
+    "width": 8,
+    "xPos": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": false,
+       "prometheusQuery": "(\n  sum  (\n    kubernetes_io:autoscaler_container_cpu_per_replica_recommended_request_cores{\n      monitored_resource=\"k8s_scale\",\n      namespace_name!~\"(kube|istio|gatekeeper|gke|gmp|gke-gmp)-system|gke-managed-filestorecsi|gke-mcs\",\n      ${project_id},\n      ${location},\n      ${cluster_name}\n    }\n  )\n)\n/\n(\n  sum (\n    kubernetes_io:container_cpu_request_cores{\n      monitored_resource=\"k8s_container\",\n      namespace_name!~\"(kube|istio|gatekeeper|gke|gmp|gke-gmp)-system|gke-managed-filestorecsi|gke-mcs\",\n      ${project_id},\n      ${location},\n      ${cluster_name}\n    }\n  ) > 0\n)\n* 100\n",
+       "unitOverride": "%"
+      }
+     },
+     "title": "Workload rightsizing CPU [Deployments]"
+    },
+    "width": 8,
+    "xPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": false,
+       "prometheusQuery": "(\n  sum(\n    kubernetes_io:autoscaler_container_memory_per_replica_recommended_request_bytes{\n      monitored_resource=\"k8s_scale\",\n      namespace_name!~\"(kube|istio|gatekeeper|gke|gmp|gke-gmp)-system|gke-managed-filestorecsi|gke-mcs\",\n      ${project_id},\n      ${location},\n      ${cluster_name}\n    }\n  )\n)\n/\n(\n  sum(\n    kubernetes_io:container_memory_request_bytes{\n      monitored_resource=\"k8s_container\",\n      namespace_name!~\"(kube|istio|gatekeeper|gke|gmp|gke-gmp)-system|gke-managed-filestorecsi|gke-mcs\",\n      ${project_id},\n      ${location},\n      ${cluster_name}\n    }\n  ) > 0\n)\n* 100\n",
+       "unitOverride": "%"
+      }
+     },
+     "title": "Workload rightsizing MEM [Deployments]"
+    },
+    "width": 8,
+    "xPos": 40
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": false,
+       "timeSeriesFilter": {
+        "aggregation": {
+         "alignmentPeriod": "60s",
+         "crossSeriesReducer": "REDUCE_SUM",
+         "groupByFields": [],
+         "perSeriesAligner": "ALIGN_RATE"
+        },
+        "filter": "metric.type=\"kubernetes.io/node/cpu/core_usage_time\" resource.type=\"k8s_node\""
+       }
+      }
+     },
+     "title": "All Node CPU Usage Time"
+    },
+    "width": 8,
+    "xPos": 24,
+    "yPos": 8
+   },
+   {
+    "height": 20,
+    "widget": {
+     "title": "AVG CPU Request vs AVG CPU Allocatable",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum by (project_id, location, cluster_name) (\n  kubernetes_io:container_cpu_request_cores{\n    monitored_resource=\"k8s_container\",\n    ${project_id},\n    ${location},\n    ${cluster_name}\n  }\n)\n/\n(\n  sum by (project_id, location, cluster_name) (\n    kubernetes_io:node_cpu_allocatable_cores{\n      monitored_resource=\"k8s_node\",\n      ${project_id},\n      ${location},\n      ${cluster_name}\n    }\n  ) > 0\n)\n"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 12,
+    "yPos": 16
+   },
+   {
+    "height": 20,
+    "widget": {
+     "title": "AVG MEM Request vs AVG MEM Allocatable",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum by (project_id, location, cluster_name) (\n  kubernetes_io:container_memory_request_bytes{\n    monitored_resource=\"k8s_container\",\n    ${project_id},\n    ${location},\n    ${cluster_name}\n  }\n)\n/ \n(\n  sum by (project_id, location, cluster_name) (\n    kubernetes_io:node_memory_allocatable_bytes{\n      monitored_resource=\"k8s_node\",\n      ${project_id},\n      ${location},\n      ${cluster_name}\n    }\n  ) > 0\n)\n"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 12,
+    "xPos": 12,
+    "yPos": 16
+   },
+   {
+    "height": 20,
+    "widget": {
+     "title": "AVG Recommended CPU vs AVG CPU Request [Deployments]",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum by (cluster_name) (\n  kubernetes_io:autoscaler_container_cpu_per_replica_recommended_request_cores{\n    monitored_resource=\"k8s_scale\",\n    namespace_name!~\"(kube|istio|gatekeeper|gke|gmp|gke-gmp)-system|gke-managed-filestorecsi|gke-mcs\",\n    ${project_id},\n    ${location},\n    ${cluster_name}\n  }\n)\n/\n(\n  sum by (cluster_name) (\n    kubernetes_io:container_cpu_request_cores{\n      monitored_resource=\"k8s_container\",\n      namespace_name!~\"(kube|istio|gatekeeper|gke|gmp|gke-gmp)-system|gke-managed-filestorecsi|gke-mcs\",\n      ${project_id},\n      ${location},\n      ${cluster_name}\n    }\n  ) > 0\n)\n"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 12,
+    "xPos": 24,
+    "yPos": 16
+   },
+   {
+    "height": 20,
+    "widget": {
+     "title": "AVG Recommended MEM vs AVG MEM Request [Deployments]",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum by (cluster_name) (\n  kubernetes_io:autoscaler_container_memory_per_replica_recommended_request_bytes{\n    monitored_resource=\"k8s_scale\",\n    namespace_name!~\"(kube|istio|gatekeeper|gke|gmp|gke-gmp)-system|gke-managed-filestorecsi|gke-mcs\",\n    ${project_id},\n    ${location},\n    ${cluster_name}\n  }\n)\n/\n(\n  sum by (cluster_name) (\n    kubernetes_io:container_memory_request_bytes{\n      monitored_resource=\"k8s_container\",\n      namespace_name!~\"(kube|istio|gatekeeper|gke|gmp|gke-gmp)-system|gke-managed-filestorecsi|gke-mcs\",\n      ${project_id},\n      ${location},\n      ${cluster_name}\n    }\n  ) > 0\n)\n"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 12,
+    "xPos": 36,
+    "yPos": 16
+   }
+  ]
+ }
+}

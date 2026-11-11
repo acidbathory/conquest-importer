@@ -1,0 +1,36 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_SUM",
+      "groupByFields": [
+       "resource.label.url_map_name"
+      ],
+      "perSeriesAligner": "ALIGN_RATE"
+     },
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_MAX",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"https_lb_rule\" AND metric.type = \"loadbalancing.googleapis.com/https/request_count\"",
+    "thresholdValue": 1000,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Two stage"
+  }
+ ],
+ "displayName": "Request rate, two stage",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

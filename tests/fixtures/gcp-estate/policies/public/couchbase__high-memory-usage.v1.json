@@ -1,0 +1,35 @@
+{
+ "alertStrategy": {
+  "autoClose": "3600s"
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "0s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"workload.googleapis.com/couchbase.bucket.memory.usage\"",
+    "thresholdValue": 5000000000,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "VM Instance - workload/couchbase.bucket.item.ejection.count"
+  }
+ ],
+ "displayName": "Couchbase - High Bucket Memory Usage",
+ "documentation": {
+  "content": "If `bucket.memory.usage` bytes is higher than what is anticipated it could show that the bucket needs to be allocated more. Subjective to environment and this alert can be customized for your environment.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}
