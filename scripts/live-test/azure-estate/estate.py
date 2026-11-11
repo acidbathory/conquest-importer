@@ -344,14 +344,14 @@ def _metric_alerts(scope: str, ag: Callable[[str], str]) -> list[tuple[str, dict
             ),
         ),
         (
-            "ckg-ma-count",
+            "ckg-ma-min-latency",
             {
                 **rule(
                     2,
                     "PT5M",
                     "PT5M",
                     SINGLE,
-                    [_crit("cnt", "Transactions", "Count", "GreaterThanOrEqual", 5)],
+                    [_crit("minlat", "SuccessServerLatency", "Minimum", "GreaterThanOrEqual", 5)],
                     True,
                 ),
                 "actions": [hook],
@@ -452,6 +452,7 @@ def _sqr(ws: str, ag: Callable[[str], str]) -> list[tuple[str, dict[str, Any]]]:
                 ),
                 "email2",
                 muteActionsDuration="PT30M",
+                autoMitigate=False,
             ),
         ),
         (
@@ -787,6 +788,7 @@ def run(
             print(f"STOP {it.kind} {it.name}: {err}")
             raise
         print(f"created {it.kind} {it.name}")
+    _write(manifest, data)
     return data
 
 
