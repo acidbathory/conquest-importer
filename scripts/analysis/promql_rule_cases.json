@@ -1,0 +1,812 @@
+{
+ "version": 1,
+ "comment": "Cases of docs/research/promql-engine-rules.md. expected.nrql was computed by hand from the rule; the live harness compares values, see differential_test_pending.",
+ "cases": [
+  {
+   "id": "ARITH-01",
+   "rule": "ARITH",
+   "surface": "alert",
+   "promql": "sum(rate(r_total{code=\"500\"}[5m])) / sum(rate(r_total[5m])) > 0.05",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT filter(sum(r_total), WHERE code = '500') / 300 / (sum(r_total) / 300) FROM Metric",
+    "window_seconds": 300,
+    "slide_by_seconds": null,
+    "shape": {
+     "facet": [],
+     "value": "ratio of two rates",
+     "per": "window"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "ARITH-02",
+   "rule": "ARITH",
+   "surface": "alert",
+   "promql": "(1 - sum(rate(ok_total[5m])) / sum(rate(req_total[5m]))) * 100 > 1",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT (1 - sum(ok_total) / 300 / (sum(req_total) / 300)) * 100 FROM Metric",
+    "window_seconds": 300,
+    "slide_by_seconds": null,
+    "shape": {
+     "facet": [],
+     "value": "error percentage",
+     "per": "window"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "ARITH-03",
+   "rule": "ARITH",
+   "surface": "alert",
+   "promql": "sum by (svc) (rate(a_total[5m])) - sum by (svc) (rate(b_total[5m])) > 0",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT sum(a_total) / 300 - sum(b_total) / 300 FROM Metric FACET svc",
+    "window_seconds": 300,
+    "slide_by_seconds": null,
+    "shape": {
+     "facet": [
+      "svc"
+     ],
+     "value": "difference of two rates",
+     "per": "window"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "ARITH-04",
+   "rule": "ARITH",
+   "surface": "alert",
+   "promql": "-avg(delta_v) > 5",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT 0 - average(delta_v) FROM Metric",
+    "window_seconds": 60,
+    "slide_by_seconds": null,
+    "shape": {
+     "facet": [],
+     "value": "negated average",
+     "per": "window"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "ARITH-05",
+   "rule": "ARITH-BARE",
+   "surface": "alert",
+   "promql": "used_bytes / limit_bytes > 0.9",
+   "args": {
+    "hints": {
+     "series": {
+      "used_bytes": [
+       "instance"
+      ],
+      "limit_bytes": [
+       "instance"
+      ]
+     }
+    }
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT average(used_bytes) / average(limit_bytes) FROM Metric FACET instance",
+    "window_seconds": 60,
+    "slide_by_seconds": null,
+    "shape": {
+     "facet": [
+      "instance"
+     ],
+     "value": "per-series ratio of newest values",
+     "per": "window"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "ARITH-06",
+   "rule": "ARITH-BARE",
+   "surface": "alert",
+   "promql": "used_bytes / limit_bytes > 0.9",
+   "args": {},
+   "expected": {
+    "converted": false,
+    "reason_contains": "ratio",
+    "shape": {
+     "refused": "no series labels: one query would combine every series first"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "ARITH-BARE-02",
+   "rule": "ARITH-BARE",
+   "surface": "alert",
+   "promql": "rate(a_total[5m]) - rate(b_total[5m]) > 0",
+   "args": {
+    "hints": {
+     "series": {
+      "a_total": [
+       "instance"
+      ],
+      "b_total": [
+       "instance"
+      ]
+     }
+    }
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT sum(a_total) / 300 - sum(b_total) / 300 FROM Metric FACET instance",
+    "window_seconds": 300,
+    "slide_by_seconds": null,
+    "shape": {
+     "facet": [
+      "instance"
+     ],
+     "value": "per-series difference of rates",
+     "per": "window"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "ARITH-BARE-03",
+   "rule": "ARITH-BARE",
+   "surface": "alert",
+   "promql": "rate(a_total[5m]) - rate(b_total[5m]) > 0",
+   "args": {},
+   "expected": {
+    "converted": false,
+    "reason_contains": "rate",
+    "shape": {
+     "refused": "per-series rates need the series labels"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "OVER-TIME-07",
+   "rule": "OVER-TIME",
+   "surface": "alert",
+   "promql": "sum(sum_over_time(events_total[10m])) > 100",
+   "args": {},
+   "expected": {
+    "converted": false,
+    "reason_contains": "_over_time",
+    "shape": {
+     "refused": "a counter-named metric is a delta count in New Relic; sum_over_time of it is not the Prometheus value"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "ARITH-07",
+   "rule": "ARITH",
+   "surface": "alert",
+   "promql": "avg(a) / 0 > 1",
+   "args": {},
+   "expected": {
+    "converted": false,
+    "reason_contains": "binary operator",
+    "shape": {
+     "refused": "division by a literal zero"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "GAUGE-SUM-01",
+   "rule": "GAUGE-SUM",
+   "surface": "alert",
+   "promql": "sum by (instance_id) (conn_used) / sum by (instance_id) (conn_max) > 0.9",
+   "args": {
+    "hints": {
+     "series": {
+      "conn_used": [
+       "instance_id"
+      ],
+      "conn_max": [
+       "instance_id"
+      ]
+     }
+    }
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT average(conn_used) / average(conn_max) FROM Metric FACET instance_id",
+    "window_seconds": 60,
+    "slide_by_seconds": null,
+    "shape": {
+     "facet": [
+      "instance_id"
+     ],
+     "value": "ratio of per-series gauges",
+     "per": "window"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "GAUGE-SUM-02",
+   "rule": "GAUGE-SUM",
+   "surface": "alert",
+   "promql": "sum by (instance_id) (conn_used) / sum by (instance_id) (conn_max) > 0.9",
+   "args": {},
+   "expected": {
+    "converted": false,
+    "reason_contains": "aggregation",
+    "shape": {
+     "refused": "sum of a gauge without the series labels"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "OVER-TIME-01",
+   "rule": "OVER-TIME",
+   "surface": "alert",
+   "promql": "avg by (host) (avg_over_time(cpu[5m])) > 0.8",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT average(cpu) FROM Metric FACET host",
+    "window_seconds": 300,
+    "slide_by_seconds": 60,
+    "shape": {
+     "facet": [
+      "host"
+     ],
+     "value": "average of samples in a sliding 5m window",
+     "per": "slide"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "OVER-TIME-02",
+   "rule": "OVER-TIME",
+   "surface": "alert",
+   "promql": "max_over_time(g[5m]) > 5",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT max(g) FROM Metric",
+    "window_seconds": 300,
+    "slide_by_seconds": 60,
+    "shape": {
+     "facet": [],
+     "value": "maximum over all series in a sliding window",
+     "per": "slide"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "OVER-TIME-03",
+   "rule": "OVER-TIME",
+   "surface": "alert",
+   "promql": "max_over_time(g[5m]) < 5",
+   "args": {},
+   "expected": {
+    "converted": false,
+    "reason_contains": "_over_time",
+    "shape": {
+     "refused": "max against a below threshold would need each series"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "OVER-TIME-04",
+   "rule": "OVER-TIME",
+   "surface": "alert",
+   "promql": "avg_over_time(g[5m]) > 5",
+   "args": {},
+   "expected": {
+    "converted": false,
+    "reason_contains": "_over_time",
+    "shape": {
+     "refused": "bare average: one query would average every series"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "OVER-TIME-05",
+   "rule": "OVER-TIME",
+   "surface": "alert",
+   "promql": "sum(sum_over_time(events[10m])) > 100",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT sum(events) FROM Metric",
+    "window_seconds": 600,
+    "slide_by_seconds": 60,
+    "shape": {
+     "facet": [],
+     "value": "sum of samples in a sliding 10m window",
+     "per": "slide"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "OVER-TIME-06",
+   "rule": "OVER-TIME",
+   "surface": "alert",
+   "promql": "avg_over_time(a_bytes[5m]) / avg_over_time(b_bytes[5m]) > 0.9",
+   "args": {
+    "hints": {
+     "series": {
+      "a_bytes": [
+       "instance"
+      ],
+      "b_bytes": [
+       "instance"
+      ]
+     }
+    }
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT average(a_bytes) / average(b_bytes) FROM Metric FACET instance",
+    "window_seconds": 300,
+    "slide_by_seconds": 60,
+    "shape": {
+     "facet": [
+      "instance"
+     ],
+     "value": "ratio of window averages",
+     "per": "slide"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "TOPK-01",
+   "rule": "TOPK",
+   "surface": "alert",
+   "promql": "topk(3, avg by (pod) (cpu)) > 0.9",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT average(cpu) FROM Metric FACET pod",
+    "window_seconds": 60,
+    "slide_by_seconds": null,
+    "shape": {
+     "facet": [
+      "pod"
+     ],
+     "value": "average per pod; fires for every pod above the bound",
+     "per": "window"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "TOPK-02",
+   "rule": "TOPK",
+   "surface": "alert",
+   "promql": "topk(3, avg by (pod) (cpu)) < 0.9",
+   "args": {},
+   "expected": {
+    "converted": false,
+    "reason_contains": "topk",
+    "shape": {
+     "refused": "topk with a below threshold keeps the other end of the ranking"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "TOPK-03",
+   "rule": "TOPK",
+   "surface": "alert",
+   "promql": "bottomk(2, avg by (pod) (free)) < 10",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT average(free) FROM Metric FACET pod",
+    "window_seconds": 60,
+    "slide_by_seconds": null,
+    "shape": {
+     "facet": [
+      "pod"
+     ],
+     "value": "average per pod; fires for every pod below the bound",
+     "per": "window"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "WITHOUT-01",
+   "rule": "WITHOUT",
+   "surface": "alert",
+   "promql": "sum without (instance) (rate(r_total[5m])) / sum without (instance) (rate(q_total[5m])) > 0.1",
+   "args": {
+    "hints": {
+     "labels": {
+      "r_total": [
+       "job",
+       "instance",
+       "code"
+      ],
+      "q_total": [
+       "job",
+       "instance",
+       "code"
+      ]
+     }
+    }
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT sum(r_total) / 300 / (sum(q_total) / 300) FROM Metric FACET job, code",
+    "window_seconds": 300,
+    "slide_by_seconds": null,
+    "shape": {
+     "facet": [
+      "job",
+      "code"
+     ],
+     "value": "ratio per remaining label set",
+     "per": "window"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "WITHOUT-02",
+   "rule": "WITHOUT",
+   "surface": "alert",
+   "promql": "sum without (instance) (rate(r_total[5m])) / sum without (instance) (rate(q_total[5m])) > 0.1",
+   "args": {},
+   "expected": {
+    "converted": false,
+    "reason_contains": "promql",
+    "shape": {
+     "refused": "no label list for the metric"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "PLACEHOLDER-01",
+   "rule": "PLACEHOLDER",
+   "surface": "gcp-alert",
+   "promql": "sum(rate(req_total{cluster=\"${CLUSTER}\"}[5m])) > 10",
+   "args": {
+    "hints": {
+     "variables": {
+      "CLUSTER": "prod-1"
+     }
+    }
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT sum(req_total) / 300 FROM Metric WHERE cluster = 'prod-1'",
+    "window_seconds": 300,
+    "slide_by_seconds": null,
+    "shape": {
+     "facet": [],
+     "value": "rate for the default cluster",
+     "per": "window"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "PLACEHOLDER-02",
+   "rule": "PLACEHOLDER",
+   "surface": "gcp-alert",
+   "promql": "sum(rate(req_total{cluster=\"${CLUSTER}\"}[5m])) > 10",
+   "args": {},
+   "expected": {
+    "converted": false,
+    "reason_contains": "placeholder",
+    "shape": {
+     "refused": "no default for the placeholder"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "CMP-FILTER-01",
+   "rule": "CMP-FILTER",
+   "surface": "dashboard",
+   "promql": "kube_node_status_condition{condition=\"Ready\"} == 1",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT latest(kube_node_status_condition) FROM Metric WHERE condition = 'Ready' AND kube_node_status_condition >= 1 AND kube_node_status_condition <= 1",
+    "shape": {
+     "facet": [],
+     "value": "newest sample among those equal to 1",
+     "per": "range"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "CMP-FILTER-02",
+   "rule": "CMP-FILTER",
+   "surface": "dashboard",
+   "promql": "kube_deployment_status_replicas_unavailable > 0",
+   "args": {
+    "timeseries": true
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT average(kube_deployment_status_replicas_unavailable) FROM Metric WHERE kube_deployment_status_replicas_unavailable > 0 TIMESERIES AUTO",
+    "shape": {
+     "facet": [],
+     "value": "samples above 0, averaged per bucket",
+     "per": "bucket"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "CMP-FILTER-03",
+   "rule": "CMP-FILTER",
+   "surface": "dashboard",
+   "promql": "kube_dep > 0",
+   "args": {
+    "hints": {
+     "series": {
+      "kube_dep": [
+       "cluster",
+       "deployment"
+      ]
+     }
+    }
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT * FROM (SELECT latest(kube_dep) AS v FROM Metric FACET cluster, deployment LIMIT MAX) WHERE v > 0",
+    "shape": {
+     "facet": [
+      "cluster",
+      "deployment"
+     ],
+     "value": "series whose newest value is above 0",
+     "per": "range"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "CMP-FILTER-04",
+   "rule": "CMP-FILTER",
+   "surface": "dashboard",
+   "promql": "sum by (ns) (rate(http_requests_total[5m])) > 0",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT * FROM (SELECT rate(sum(http_requests_total), 1 second) AS v FROM Metric FACET ns LIMIT MAX) WHERE v > 0",
+    "shape": {
+     "facet": [
+      "ns"
+     ],
+     "value": "groups whose rate over the range is above 0",
+     "per": "range"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "CMP-FILTER-05",
+   "rule": "CMP-FILTER",
+   "surface": "dashboard",
+   "promql": "sum by (ns) (rate(http_requests_total[5m])) > 0",
+   "args": {
+    "timeseries": true
+   },
+   "expected": {
+    "converted": false,
+    "shape": {
+     "refused": "a chart of a filtered aggregate has no NRQL form"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "CMP-FILTER-06",
+   "rule": "CMP-FILTER",
+   "surface": "dashboard",
+   "promql": "up{job=~\"$job\"} > 0",
+   "args": {
+    "timeseries": true,
+    "variables": {
+     "job": null
+    }
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT average(up) FROM Metric WHERE job IN ({{job}}) AND up > 0 TIMESERIES AUTO",
+    "shape": {
+     "facet": [],
+     "value": "samples above 0 for the chosen jobs",
+     "per": "bucket"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "CMP-BOOL-01",
+   "rule": "CMP-BOOL",
+   "surface": "dashboard",
+   "promql": "avg(g) > bool 4",
+   "args": {
+    "timeseries": true
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT if(average(g) > 4, 1, 0) FROM Metric TIMESERIES AUTO",
+    "shape": {
+     "facet": [],
+     "value": "1 when the bucket average is above 4",
+     "per": "bucket"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "CMP-COUNT-01",
+   "rule": "CMP-COUNT",
+   "surface": "dashboard",
+   "promql": "count by (cluster) (kube_dep == 0)",
+   "args": {
+    "hints": {
+     "series": {
+      "kube_dep": [
+       "cluster",
+       "deployment"
+      ]
+     }
+    }
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT count(*) FROM (SELECT latest(kube_dep) AS v FROM Metric FACET cluster, deployment LIMIT MAX) WHERE v >= 0 AND v <= 0 FACET cluster LIMIT MAX",
+    "shape": {
+     "facet": [
+      "cluster"
+     ],
+     "value": "series at 0 per cluster",
+     "per": "range"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "OVER-TIME-D01",
+   "rule": "OVER-TIME",
+   "surface": "dashboard",
+   "promql": "avg_over_time(g[15m])",
+   "args": {
+    "timeseries": true
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT average(g) FROM Metric TIMESERIES 15 minutes SLIDE BY 1 minute",
+    "shape": {
+     "facet": [],
+     "value": "average of samples in a sliding 15m window",
+     "per": "slide"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "OVER-TIME-D02",
+   "rule": "OVER-TIME",
+   "surface": "dashboard",
+   "promql": "max by (job) (max_over_time(up{job=\"a\"}[5m]))",
+   "args": {
+    "timeseries": true
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT max(up) FROM Metric WHERE job = 'a' FACET job LIMIT MAX TIMESERIES 5 minutes SLIDE BY 1 minute",
+    "shape": {
+     "facet": [
+      "job"
+     ],
+     "value": "max in a sliding 5m window",
+     "per": "slide"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "OVER-TIME-D03",
+   "rule": "OVER-TIME",
+   "surface": "dashboard",
+   "promql": "sum_over_time(g[1h])",
+   "args": {},
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT sum(g) FROM Metric",
+    "shape": {
+     "facet": [],
+     "value": "sum over the dashboard range (not 1h)",
+     "per": "range"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "OVER-TIME-D04",
+   "rule": "OVER-TIME",
+   "surface": "dashboard",
+   "promql": "avg_over_time(up[$__rate_interval])",
+   "args": {
+    "timeseries": true
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT average(up) FROM Metric TIMESERIES AUTO",
+    "shape": {
+     "facet": [],
+     "value": "average per bucket",
+     "per": "bucket"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "GAUGE-SUM-D01",
+   "rule": "GAUGE-SUM",
+   "surface": "dashboard",
+   "promql": "sum by (cluster) (kube_dep)",
+   "args": {
+    "hints": {
+     "series": {
+      "kube_dep": [
+       "cluster",
+       "deployment"
+      ]
+     }
+    }
+   },
+   "expected": {
+    "converted": true,
+    "nrql": "SELECT sum(v) FROM (SELECT latest(kube_dep) AS v FROM Metric FACET cluster, deployment LIMIT MAX) FACET cluster LIMIT MAX",
+    "shape": {
+     "facet": [
+      "cluster"
+     ],
+     "value": "sum of newest values of each series",
+     "per": "range"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  },
+  {
+   "id": "GAUGE-SUM-D02",
+   "rule": "GAUGE-SUM",
+   "surface": "dashboard",
+   "promql": "sum by (cluster) (kube_dep)",
+   "args": {},
+   "expected": {
+    "converted": false,
+    "shape": {
+     "refused": "sum of a gauge without the series labels"
+    }
+   },
+   "differential_test_pending": "values vs Prometheus"
+  }
+ ]
+}
