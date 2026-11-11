@@ -39,18 +39,18 @@ and stops without writing if any non-Google output would change. It never touche
 ## Dashboard output (pinned group `gcp` in `dashboard-output-hashes.json`, 4 files)
 
 All four files belong to the one dashboard "Ops overview" (`58944063589550`): its saved IR, the New
-Relic JSON, `dashboards.tf` and `report.md`. Widgets converted in this fixture go from 11 to 14 of
+Relic JSON, `dashboards.tf` and `report.md`. Widgets converted in this fixture go from 11 to 13 of
 18 (the dashboards read include some that are not emitted), and "not converted" in "Ops overview"
-from 6 to 3.
+from 6 to 4.
 
 | Widget | Old output said | New output says | Why the new one is more correct |
 |---|---|---|---|
 | "Errors" (logs panel) | "Not migrated: widget type not supported" | A table over the Log data: `SELECT timestamp, message FROM Log WHERE severity IN ('ERROR', ...) LIMIT 200`, with a note that logs must be forwarded and the project/resource choice is not migrated. | The panel is a list of log lines; New Relic can show that. A note replaces a gap. |
 | "MQL chart" | "MQL not converted" | Still not converted; the text now adds that Google has ended MQL for new charts and the query must be rewritten. | Only the explanation is better; the outcome did not change. |
-| "Error ratio" | "ratio queries are not converted" | A line chart: `filter(average(gcp.run.request_count), WHERE metric.response_code_class = '5xx') / average(gcp.run.request_count)`, with notes. | A ratio can be written as one query. See the warning below about "average" versus "sum". |
+| "Error ratio" | "ratio queries are not converted" | Still not converted, with the precise reason: this widget divides one metric by itself without saying how to add it up, and a ratio of averages overstates the share; set a summing aligner (rate or delta) in Google and it converts to `filter(sum(...), WHERE ...) / sum(...)`. | A wrong number on a dashboard is worse than a gap. |
 | "Open alerts" | "widget type not supported" | Still not converted, with the clearer reason that New Relic has no widget that charts a Google alert policy and a hint to chart the metric the policy watches. | Only the explanation changed. |
 | "Custom metric" | "not one of the Google Cloud service metrics, the query would return no data" | A line chart `SELECT average(orders) FROM Metric`, labelled "needs custom ingest". The note says the person must send that metric to New Relic under that name. | The query is right once the customer sends the data; the label says so. The name is marked unverified. |
-| Report page | "converted 11" and no data path section | "converted 14" and a Data path table (5 native, 1 needs custom ingest). | Consistent with the widgets above. |
+| Report page | "converted 11" and no data path section | "converted 13" and a Data path table (5 native, 1 needs custom ingest). | Consistent with the widgets above. |
 
 ## Saved-IR check for the other sources (`ir-before-grafana.json`, 4 Google files)
 
@@ -73,17 +73,15 @@ No existing sentence changed its category.
 
 ## What looks wrong or could not be explained
 
-1. **Ratio widget uses averages, not sums.** The new "Error ratio" query divides the average of the
-   5xx requests by the average of all requests, while its own note says "sum(numerator) /
-   sum(denominator)". The fixture gives no aggregation, so the code falls back to "mean". For a
-   count of requests a ratio of averages is not the share of errors (it is inflated by how many
-   series each side has). Treat this one chart as unreliable until the default is changed to a sum
-   for counters. The alert-side ratio (not in these fixtures) uses sums, as intended. I did not
-   change the code because it is a behaviour decision for the owner.
-2. **The CPU-high saved IR says "notify: yes, 10 minutes" for missing data while the emitted
-   setting is "do not open a problem, close open ones".** The New Relic files (JSON and Terraform)
-   are right, they follow the second; the first field in the saved IR is only a leftover and does
-   not reach New Relic. Low risk, but it reads as a contradiction.
+1. **Fixed since the first draft: ratios of one metric.** The "Error ratio" widget first came out
+   as average over average, which overstates a share. A ratio of one metric to itself now needs a
+   summing aligner (the alert-side ratio already used ALIGN_RATE sums) and is otherwise manual with
+   the reason shown above. The sum form `filter(sum(...), WHERE ...) / sum(...)` was checked as
+   accepted by New Relic's read-only query parser.
+2. **Fixed since the first draft: the missing-data field.** The CPU-high condition's saved IR said
+   `no_data.notify: true` although nothing is opened on missing data. It now says `false`; the
+   emitters still write the "close open violations after 10 minutes" block, so the New Relic JSON
+   and Terraform are unchanged (that is why the saved-IR hash changes, in the same file as above).
 3. **Logs panel is now counted as a converted chart.** It is a real query, but it is a list of log
    lines and depends on the customer forwarding logs, and the attribute names of forwarded logs are
    unconfirmed. The report says so. If you want such tiles counted separately, say so.
