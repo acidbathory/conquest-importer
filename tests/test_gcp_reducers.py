@@ -273,3 +273,12 @@ def test_a_percentile_of_a_delta_stays_manual_because_it_may_be_a_distribution()
     with pytest.raises(Fail) as err:
         query(DISK, "ALIGN_DELTA", "REDUCE_PERCENTILE_99", 300)
     assert "distribution" in err.value.reason
+
+
+def test_a_percentile_aligner_new_relic_does_not_publish_says_which_ones_it_does() -> None:
+    body = threshold(
+        aggregations=[{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_PERCENTILE_90"}]
+    )
+    (monitor,) = translate_policy(policy(body))
+    assert monitor.confidence is Confidence.MANUAL
+    assert "90th percentile" in monitor.reasons[0] and "50th, 95th and 99th" in monitor.reasons[0]

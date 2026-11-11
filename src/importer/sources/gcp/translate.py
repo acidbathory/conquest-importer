@@ -421,10 +421,15 @@ def check_aligner(agg: dict[str, object]) -> tuple[dict[str, object], str]:
     """The aggregation stage and its aligner; manual when the aligner is not mapped."""
     aligner = str(agg.get("perSeriesAligner", ""))
     if aligner not in ALIGNERS:
-        raise Fail(
-            Confidence.MANUAL,
-            UNSUPPORTED_ALIGNERS.get(aligner, f"aligner {aligner!r} is not supported"),
-        )
+        other = re.fullmatch(r"ALIGN_PERCENTILE_(\d\d)", aligner)
+        reason = UNSUPPORTED_ALIGNERS.get(aligner, f"aligner {aligner!r} is not supported")
+        if other and aligner not in UNSUPPORTED_ALIGNERS:
+            reason = (
+                f"the aligner {aligner} is the {int(other[1])}th percentile; New Relic publishes "
+                "only the 50th, 95th and 99th percentile series of a distribution metric, so "
+                "use one of those or chart the metric's distribution by hand"
+            )
+        raise Fail(Confidence.MANUAL, reason)
     return agg, aligner
 
 
