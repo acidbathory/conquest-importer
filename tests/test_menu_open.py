@@ -48,11 +48,13 @@ def test_before_opens_after_convert_and_before_the_question_then_after_create(
 ) -> None:
     events, console, _ = _run(tmp_path, ["3", "yes", "0"])
     opens = [e for e in events if e.startswith("open")]
-    assert opens == ["open:report.html", "open:report-created.html"]
+    assert opens == ["open:report.html", "open:report-created.html", "open:cookbook.html"]
     assert events.index("open:report.html") < events.index("question")
     assert events.index("question") < events.index("create")
     assert events.index("create") < events.index("open:report-created.html")
+    assert events.index("open:report-created.html") < events.index("open:cookbook.html")
     assert console.text.count("HTML report: file://") == 2
+    assert "Remediation cookbook: file://" in console.text
 
 
 def test_decline_opens_only_the_plan(tmp_path: Path) -> None:
@@ -60,17 +62,30 @@ def test_decline_opens_only_the_plan(tmp_path: Path) -> None:
     assert [e for e in events if e.startswith("open")] == ["open:report.html"]
     assert "Nothing was created." in console.text
     assert "report-created.html" not in console.text
+    assert not list(Path(tmp_path).rglob("cookbook.html"))
 
 
 def test_failed_create_does_not_open_the_after_report(tmp_path: Path) -> None:
     events, _, _ = _run(tmp_path, ["3", "yes", "0", "0"], runner=HybridRunner(fail={"apply"}))
     assert [e for e in events if e.startswith("open")] == ["open:report.html"]
+    assert not list(Path(tmp_path).rglob("cookbook.html"))
 
 
 def test_no_terminal_means_no_opening_but_the_path_is_printed(tmp_path: Path) -> None:
     events, console, _ = _run(tmp_path, ["3", "yes", "0"], terminal=False)
     assert not [e for e in events if e.startswith("open")]
     assert console.text.count("HTML report: file://") == 2
+    assert "Remediation cookbook: file://" in console.text
+    assert list(Path(tmp_path).rglob("cookbook.html"))
+
+
+def test_cookbook_is_inside_the_run_folder_and_lists_what_the_run_hit(tmp_path: Path) -> None:
+    _run(tmp_path, ["3", "yes", "0"])
+    page = next(Path(tmp_path).rglob("cookbook.html"))
+    assert page.parent == next(Path(tmp_path).rglob("report-created.html")).parent
+    text = page.read_text()
+    assert "Found in your migration" in text and "<script" not in text
+    assert 'href="remediation/remediation-plan.md"' in text
 
 
 def test_env_and_flag_turn_opening_off(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -79,6 +94,7 @@ def test_env_and_flag_turn_opening_off(tmp_path: Path, monkeypatch: pytest.Monke
     events, console, _ = _run(tmp_path / "a", ["3", "yes", "0"])
     assert not [e for e in events if e.startswith("open")]
     assert "HTML report: file://" in console.text
+    assert "Remediation cookbook: file://" in console.text
     monkeypatch.delenv("IMPORTER_NO_BROWSER")
     (tmp_path / "b").mkdir()
     runner = HybridRunner()

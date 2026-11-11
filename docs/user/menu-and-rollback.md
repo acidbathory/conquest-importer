@@ -62,7 +62,7 @@ are disabled; dashboards are private.
 
 ## The HTML report
 
-The menu writes two pages into the run's own folder (`out/guided/<source>-<time>/`) and opens each
+The menu writes up to three pages into the run's own folder (`out/guided/<source>-<time>/`) and opens each
 in your default browser, once per run:
 
 - `report.html` opens after the conversion and before the `yes` question. It is a forecast.
@@ -74,11 +74,18 @@ in your default browser, once per run:
   be skipped" when earlier run records show them. If you answered
   anything but `yes`, or the create failed, nothing is opened after that and the menu says nothing
   was created.
+- `cookbook.html` opens right after `report-created.html`, in the same look (masthead, source to
+  New Relic header, dark theme, prints on white). It holds only the remediation cookbook sections
+  your run needs: the blockers that occurred (counted from the remediation plan), fully
+  expanded, largest first, with the items affected linking to `remediation/remediation-plan.md`,
+  a short decision guide, and the status legend. If nothing needed a cookbook method it says so in
+  one sentence. It follows the same rules as `report-created.html`: never after a decline or a
+  failed create. The Done screen prints its path. The full cookbook is `importer cookbook --all`.
 
 The `file://` path is always printed as well. Nothing opens when input or output is not a
 terminal, when the environment variable `IMPORTER_NO_BROWSER=1` is set, or when you start the menu
 with `importer menu --no-open`. If the browser cannot be started the menu says so and carries on.
-Only these two local files are ever opened, never an address taken from your monitoring data.
+Only these local files are ever opened, never an address taken from your monitoring data.
 
 ## What did I just do? (item 8)
 
