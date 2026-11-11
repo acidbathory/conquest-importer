@@ -36,6 +36,7 @@ from importer.core.ir import (
 )
 from importer.sources.gcp.filter import FilterError, Term, parse_filter
 from importer.sources.gcp.models import GcpAlertPolicy, GcpCondition
+from importer.sources.gcp.promql import PROMQL_KIND, translate_condition
 
 OPERATORS = {
     "COMPARISON_GT": Operator.ABOVE,
@@ -520,6 +521,9 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
             reasons=[reason, *reasons],
         )
 
+    if cond.kind == PROMQL_KIND:
+        severity = Severity.WARNING if policy.severity == "WARNING" else Severity.CRITICAL
+        return translate_condition(base, cond.body, severity=severity, prior=reasons)
     if cond.kind in MANUAL_KINDS:
         return failed(Confidence.MANUAL, MANUAL_KINDS[cond.kind])
     if not cond.kind:
