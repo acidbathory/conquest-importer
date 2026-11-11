@@ -66,6 +66,13 @@ def test_the_same_function_over_several_polls_is_still_exact() -> None:
     assert query(DISK, "ALIGN_DELTA", "REDUCE_SUM", 900)[0].startswith("SELECT sum(")
 
 
+def test_a_metric_you_send_yourself_is_assumed_to_have_one_point_per_period() -> None:
+    # Ops Agent memory, mean per series then sum over two series (0.2 and 0.5) = 0.7
+    text, _, notes = query("agent.googleapis.com/memory/bytes_used", "ALIGN_MEAN", "REDUCE_SUM", 60)
+    assert text.startswith("SELECT sum(")
+    assert any("one point per series" in n for n in notes)
+
+
 def test_a_condition_with_a_sum_across_instances_sums() -> None:
     body = threshold(
         aggregations=[

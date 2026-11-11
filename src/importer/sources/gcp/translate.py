@@ -251,8 +251,10 @@ def _reducer(
         target = REDUCERS[reducer]
         if target != aggregation:
             # Google takes the aligned value of each series first, then reduces across series.
-            # With one polled row per series in the window that is the reducer over the rows.
-            if not (polled and period <= POLL_SECONDS):
+            # With one row per series in the window that is the reducer over the rows. New
+            # Relic's own poll gives exactly one row per 300s; a metric you send yourself is
+            # assumed to give one row per alignment period.
+            if polled and period > POLL_SECONDS:
                 raise Fail(
                     Confidence.MANUAL,
                     f"{reducer} after {aligner or 'no aligner'} over {period}s: each series has "
@@ -262,10 +264,18 @@ def _reducer(
                     f"{POLL_SECONDS}s, or in a chart a nested query (not allowed in alert "
                     "conditions)",
                 )
-            notes.append(
-                f"{reducer} after {aligner or 'no aligner'} runs over the one point each series "
-                f"has in the window, so it is {target.value} of those points"
-            )
+            if polled:
+                notes.append(
+                    f"{reducer} after {aligner or 'no aligner'} runs over the one point each "
+                    f"series has in the window, so it is {target.value} of those points"
+                )
+            else:
+                notes.append(
+                    f"{reducer} after {aligner or 'no aligner'} is written as {target.value} of "
+                    "the points in the window, which is exact when your collector sends one "
+                    "point per series for each alignment period; if it sends more points, the "
+                    "value differs (a sum is multiplied by the number of points)"
+                )
             aggregation = target
         return group_by, notes, aggregation, None
     if reducer in UNSUPPORTED_REDUCERS:
