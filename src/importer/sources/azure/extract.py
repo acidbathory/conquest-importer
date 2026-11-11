@@ -35,6 +35,7 @@ import httpx
 
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.safe_http import ReadBudget, decode_json, is_plain_token, scrub
+from importer.sources.azure.dashboard_sanitize import sanitize_workbook
 from importer.sources.azure.sanitize import sanitize_resource
 
 ARM_HOST = "management.azure.com"
@@ -57,6 +58,22 @@ READS: dict[str, tuple[str, str]] = {
         "2021-04-01",
     ),
 }
+# Workbooks and portal dashboards are read only with dashboards=True, so the alert export is
+# unchanged. Versions from docs/research/azure-monitor-alerting.md section 2 (the 2023-06-01
+# workbooks swagger; portal dashboards have preview versions only).
+DASHBOARD_READS: dict[str, tuple[str, str]] = {
+    "workbooks": ("Microsoft.Insights/workbooks", "2023-06-01"),
+    "portalDashboards": ("Microsoft.Portal/dashboards", "2025-04-01-preview"),
+}
+# `category` is required by the workbooks list; `canFetchContent` makes it return serializedData.
+DASHBOARD_QUERY: dict[str, dict[str, str]] = {
+    "workbooks": {"category": "workbook", "canFetchContent": "true"},
+}
+NOT_AVAILABLE = (
+    "not available: Azure answered {error} for this subscription (the Microsoft.Portal/dashboards "
+    "API is preview only). Download the dashboards from the portal (Dashboard > Download) into "
+    "the export folder and run convert-dashboards --source azure on it"
+)
 MAX_PAGES = 100
 MAX_TOTAL_PAGES = 400  # across every list in one run
 MAX_ITEMS = 20000
@@ -224,9 +241,10 @@ def _check_next_link(link: str, path: str) -> None:
 
 
 def _list_all(get: Getter, sub: str, key: str, budget: PageBudget) -> list[dict[str, Any]]:
-    provider, version = READS[key]
+    provider, version = {**READS, **DASHBOARD_READS}[key]
     path = f"/subscriptions/{sub}/providers/{provider}"
-    url, params = f"https://{ARM_HOST}{path}", {"api-version": version}
+    url = f"https://{ARM_HOST}{path}"
+    params = {"api-version": version, **DASHBOARD_QUERY.get(key, {})}
     items: list[dict[str, Any]] = []
     for _ in range(MAX_PAGES):
         budget.spend()
@@ -275,8 +293,22 @@ def _publish(files: dict[str, str], out: Path) -> None:
         raise
 
 
-def extract(get: Getter, subscription: str, out: Path) -> ExtractResult:
-    """Write one `<type>.json` per resource type under a new or empty `out`."""
+def _clean(item: dict[str, Any], key: str) -> tuple[dict[str, Any], int]:
+    if key == "workbooks":
+        return sanitize_workbook(item)
+    return sanitize_resource(item, key)
+
+
+def _unavailable(error: AzureError) -> bool:
+    return bool(re.search(r"returned 5\d\d\b", str(error)))
+
+
+def extract(get: Getter, subscription: str, out: Path, dashboards: bool = False) -> ExtractResult:
+    """Write one `<type>.json` per resource type under a new or empty `out`.
+
+    With `dashboards`, workbooks and portal dashboards are read as well. A 5xx answer for a
+    dashboard type is reported as "not available" and the rest of the export still succeeds.
+    """
     if not UUID.fullmatch(subscription):
         raise ValueError(
             "the subscription must be a UUID such as 00000000-0000-0000-0000-000000000000"
@@ -287,15 +319,18 @@ def extract(get: Getter, subscription: str, out: Path) -> ExtractResult:
     result = ExtractResult(sub)
     budget = PageBudget(MAX_TOTAL_PAGES)
     files: dict[str, str] = {}
-    for key in READS:
+    for key in [*READS, *(DASHBOARD_READS if dashboards else ())]:
         try:
             items = _list_all(get, sub, key, budget)
         except AzureError as exc:
-            result.warnings.append(f"{key}: {exc}")
+            if key in DASHBOARD_READS and _unavailable(exc):
+                result.warnings.append(f"{key}: " + NOT_AVAILABLE.format(error=exc))
+            else:
+                result.warnings.append(f"{key}: {exc}")
             continue
         clean: list[dict[str, Any]] = []
         for item in items:
-            safe, dropped = sanitize_resource(item, key)
+            safe, dropped = _clean(item, key)
             clean.append(safe)
             result.secrets_dropped += dropped
         result.counts[key] = len(clean)
@@ -307,7 +342,7 @@ def extract(get: Getter, subscription: str, out: Path) -> ExtractResult:
         "subscription": sub,
         "readAt": datetime.now(UTC).isoformat(timespec="seconds"),
         "counts": result.counts,
-        "apiVersions": {k: READS[k][1] for k in result.counts},
+        "apiVersions": {k: {**READS, **DASHBOARD_READS}[k][1] for k in result.counts},
         "warnings": result.warnings,
         "secretsDropped": result.secrets_dropped,
     }
