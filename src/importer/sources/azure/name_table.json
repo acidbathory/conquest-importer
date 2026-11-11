@@ -1,0 +1,6141 @@
+{
+ "schema": 1,
+ "checked": "2026-11-11",
+ "default_scale": 1.0,
+ "note": "Rows are metric names printed in the New Relic documentation table (basis nr-docs-table) joined to Microsoft Learn metric definitions. Nothing here was seen arriving in an account.",
+ "sources": {
+  "NR_MET": "https://raw.githubusercontent.com/newrelic/docs-website/develop/src/content/docs/infrastructure/microsoft-azure-integrations/get-started/azure-integration-metrics.mdx",
+  "LEARN": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/supported-metrics/<provider-type>-metrics",
+  "NR_FWD": "https://raw.githubusercontent.com/newrelic/newrelic-azure-functions/master/LogForwarder/index.js",
+  "LEARN_RESOURCE_LOG": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+  "LEARN_ACTIVITY": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+  "OTEL_SCRAPER": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/receiver/azuremonitorreceiver/scraper.go",
+  "OTEL_BUILDER": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector-contrib/main/receiver/azuremonitorreceiver/internal/metadata/metrics.go",
+  "LEARN_AZUREACTIVITY": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/azureactivity",
+  "LEARN_AZUREDIAGNOSTICS": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/azurediagnostics",
+  "NR_LOGAPI": "https://raw.githubusercontent.com/newrelic/docs-website/develop/src/content/docs/logs/log-api/introduction-log-api.mdx"
+ },
+ "metrics": {
+  "microsoft.apimanagement/service|capacity": {
+   "name": "azure.apimanagement.service.Capacity",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum"
+   ],
+   "dimensions": [
+    "Location"
+   ],
+   "metric": "Capacity",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "capacityPercent",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|duration": {
+   "name": "azure.apimanagement.service.Duration",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [
+    "Location",
+    "Hostname",
+    "ApiId"
+   ],
+   "metric": "Duration",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "durationMilliseconds",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|eventhubdroppedevents": {
+   "name": "azure.apimanagement.service.EventHubDroppedEvents",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location"
+   ],
+   "metric": "EventHubDroppedEvents",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "eventHubDroppedEvents",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|eventhubrejectedevents": {
+   "name": "azure.apimanagement.service.EventHubRejectedEvents",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location"
+   ],
+   "metric": "EventHubRejectedEvents",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "eventHubRejectedEvents",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|eventhubsuccessfulevents": {
+   "name": "azure.apimanagement.service.EventHubSuccessfulEvents",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location"
+   ],
+   "metric": "EventHubSuccessfulEvents",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "eventHubSuccessfulEvents",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|eventhubthrottledevents": {
+   "name": "azure.apimanagement.service.EventHubThrottledEvents",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location"
+   ],
+   "metric": "EventHubThrottledEvents",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "eventHubThrottledEvents",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|eventhubtimedoutevents": {
+   "name": "azure.apimanagement.service.EventHubTimedoutEvents",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location"
+   ],
+   "metric": "EventHubTimedoutEvents",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "eventHubTimedoutEvents",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|eventhubtotalbytessent": {
+   "name": "azure.apimanagement.service.EventHubTotalBytesSent",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location"
+   ],
+   "metric": "EventHubTotalBytesSent",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "eventHubTotalBytesSentBytes",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|eventhubtotalevents": {
+   "name": "azure.apimanagement.service.EventHubTotalEvents",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location"
+   ],
+   "metric": "EventHubTotalEvents",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "eventHubTotalEvents",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|eventhubtotalfailedevents": {
+   "name": "azure.apimanagement.service.EventHubTotalFailedEvents",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location"
+   ],
+   "metric": "EventHubTotalFailedEvents",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "eventHubTotalFailedEvents",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|failedrequests": {
+   "name": "azure.apimanagement.service.FailedRequests",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location",
+    "Hostname"
+   ],
+   "metric": "FailedRequests",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "failedRequests",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|otherrequests": {
+   "name": "azure.apimanagement.service.OtherRequests",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location",
+    "Hostname"
+   ],
+   "metric": "OtherRequests",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "otherRequests",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|successfulrequests": {
+   "name": "azure.apimanagement.service.SuccessfulRequests",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location",
+    "Hostname"
+   ],
+   "metric": "SuccessfulRequests",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "successfulRequests",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|totalrequests": {
+   "name": "azure.apimanagement.service.TotalRequests",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location",
+    "Hostname"
+   ],
+   "metric": "TotalRequests",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "totalRequests",
+   "integration": "Azure API Management"
+  },
+  "microsoft.apimanagement/service|unauthorizedrequests": {
+   "name": "azure.apimanagement.service.UnauthorizedRequests",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Location",
+    "Hostname"
+   ],
+   "metric": "UnauthorizedRequests",
+   "type": "Microsoft.ApiManagement/service",
+   "polling": "unauthorizedRequests",
+   "integration": "Azure API Management"
+  },
+  "microsoft.cache/redis|cachehits": {
+   "name": "azure.cache.redis.cachehits",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "cachehits",
+   "type": "Microsoft.Cache/redis",
+   "polling": "cacheHits",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|cachehits0": {
+   "name": "azure.cache.redis.cachehits0",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "cachehits0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "cacheHits",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|cachemisses": {
+   "name": "azure.cache.redis.cachemisses",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "cachemisses",
+   "type": "Microsoft.Cache/redis",
+   "polling": "cacheMisses",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|cachemisses0": {
+   "name": "azure.cache.redis.cachemisses0",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "cachemisses0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "cacheMisses",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|cacheread": {
+   "name": "azure.cache.redis.cacheRead",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "cacheRead",
+   "type": "Microsoft.Cache/redis",
+   "polling": "cacheReadBytesPerSecond",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|cacheread0": {
+   "name": "azure.cache.redis.cacheRead0",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "cacheRead0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "cacheReadBytesPerSecond",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|cachewrite": {
+   "name": "azure.cache.redis.cacheWrite",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "cacheWrite",
+   "type": "Microsoft.Cache/redis",
+   "polling": "cacheWriteBytesPerSecond",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|cachewrite0": {
+   "name": "azure.cache.redis.cacheWrite0",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "cacheWrite0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "cacheWriteBytesPerSecond",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|connectedclients": {
+   "name": "azure.cache.redis.connectedclients",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "connectedclients",
+   "type": "Microsoft.Cache/redis",
+   "polling": "connectedClients",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|connectedclients0": {
+   "name": "azure.cache.redis.connectedclients0",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "connectedclients0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "connectedClients",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|evictedkeys": {
+   "name": "azure.cache.redis.evictedkeys",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "evictedkeys",
+   "type": "Microsoft.Cache/redis",
+   "polling": "evictedKeys",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|evictedkeys0": {
+   "name": "azure.cache.redis.evictedkeys0",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "evictedkeys0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "evictedKeys",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|expiredkeys": {
+   "name": "azure.cache.redis.expiredkeys",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "expiredkeys",
+   "type": "Microsoft.Cache/redis",
+   "polling": "expiredKeys",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|expiredkeys0": {
+   "name": "azure.cache.redis.expiredkeys0",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "expiredkeys0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "expiredKeys",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|getcommands": {
+   "name": "azure.cache.redis.getcommands",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "getcommands",
+   "type": "Microsoft.Cache/redis",
+   "polling": "getCommands",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|getcommands0": {
+   "name": "azure.cache.redis.getcommands0",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "getcommands0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "getCommands",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|operationspersecond": {
+   "name": "azure.cache.redis.operationsPerSecond",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "operationsPerSecond",
+   "type": "Microsoft.Cache/redis",
+   "polling": "operationsPerSecond",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|operationspersecond0": {
+   "name": "azure.cache.redis.operationsPerSecond0",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "operationsPerSecond0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "operationsPerSecond",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|percentprocessortime": {
+   "name": "azure.cache.redis.percentProcessorTime",
+   "unit": "Percent",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "percentProcessorTime",
+   "type": "Microsoft.Cache/redis",
+   "polling": "processorTimePercent",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|percentprocessortime0": {
+   "name": "azure.cache.redis.percentProcessorTime0",
+   "unit": "Percent",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "percentProcessorTime0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "processorTimePercent",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|serverload": {
+   "name": "azure.cache.redis.serverLoad",
+   "unit": "Percent",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "serverLoad",
+   "type": "Microsoft.Cache/redis",
+   "polling": "serverLoadPercent",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|serverload0": {
+   "name": "azure.cache.redis.serverLoad0",
+   "unit": "Percent",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "serverLoad0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "serverLoadPercent",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|setcommands": {
+   "name": "azure.cache.redis.setcommands",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "setcommands",
+   "type": "Microsoft.Cache/redis",
+   "polling": "setCommands",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|setcommands0": {
+   "name": "azure.cache.redis.setcommands0",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "setcommands0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "setCommands",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|totalcommandsprocessed": {
+   "name": "azure.cache.redis.totalcommandsprocessed",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "totalcommandsprocessed",
+   "type": "Microsoft.Cache/redis",
+   "polling": "totalCommandsProcessed",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|totalcommandsprocessed0": {
+   "name": "azure.cache.redis.totalcommandsprocessed0",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "totalcommandsprocessed0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "totalCommandsProcessed",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|totalkeys": {
+   "name": "azure.cache.redis.totalkeys",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "totalkeys",
+   "type": "Microsoft.Cache/redis",
+   "polling": "totalKeys",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|totalkeys0": {
+   "name": "azure.cache.redis.totalkeys0",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "totalkeys0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "totalKeys",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|usedmemory": {
+   "name": "azure.cache.redis.usedmemory",
+   "unit": "Bytes",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "usedmemory",
+   "type": "Microsoft.Cache/redis",
+   "polling": "usedMemoryBytes",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|usedmemory0": {
+   "name": "azure.cache.redis.usedmemory0",
+   "unit": "Bytes",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "usedmemory0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "usedMemoryBytes",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|usedmemoryrss": {
+   "name": "azure.cache.redis.usedmemoryRss",
+   "unit": "Bytes",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [
+    "ShardId"
+   ],
+   "metric": "usedmemoryRss",
+   "type": "Microsoft.Cache/redis",
+   "polling": "usedMemoryRssBytes",
+   "integration": "Azure Redis"
+  },
+  "microsoft.cache/redis|usedmemoryrss0": {
+   "name": "azure.cache.redis.usedmemoryRss0",
+   "unit": "Bytes",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "usedmemoryRss0",
+   "type": "Microsoft.Cache/redis",
+   "polling": "usedMemoryRssBytes",
+   "integration": "Azure Redis"
+  },
+  "microsoft.compute/virtualmachinescalesets|cpu credits consumed": {
+   "name": "azure.compute.virtualmachinescalesets.CPUCreditsConsumed",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "CPU Credits Consumed",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "cpuCreditsConsumed",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|cpu credits remaining": {
+   "name": "azure.compute.virtualmachinescalesets.CPUCreditsRemaining",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "CPU Credits Remaining",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "cpuCreditsRemaining",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|data disk queue depth": {
+   "name": "azure.compute.virtualmachinescalesets.DataDiskQueueDepth",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "LUN",
+    "VMName"
+   ],
+   "metric": "Data Disk Queue Depth",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "dataDiskQueueDepth",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|data disk read bytes/sec": {
+   "name": "azure.compute.virtualmachinescalesets.DataDiskReadBytessec",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "LUN",
+    "VMName"
+   ],
+   "metric": "Data Disk Read Bytes/sec",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "dataDiskReadBytesCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|data disk read operations/sec": {
+   "name": "azure.compute.virtualmachinescalesets.DataDiskReadOperationsSec",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "LUN",
+    "VMName"
+   ],
+   "metric": "Data Disk Read Operations/Sec",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "dataDiskReadOperationsCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|data disk write bytes/sec": {
+   "name": "azure.compute.virtualmachinescalesets.DataDiskWriteBytessec",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "LUN",
+    "VMName"
+   ],
+   "metric": "Data Disk Write Bytes/sec",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "dataDiskWriteBytesCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|data disk write operations/sec": {
+   "name": "azure.compute.virtualmachinescalesets.DataDiskWriteOperationsSec",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "LUN",
+    "VMName"
+   ],
+   "metric": "Data Disk Write Operations/Sec",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "dataDiskWriteOperationsCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|disk read bytes": {
+   "name": "azure.compute.virtualmachinescalesets.DiskReadBytes",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Disk Read Bytes",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "diskReadBytes",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|disk read operations/sec": {
+   "name": "azure.compute.virtualmachinescalesets.DiskReadOperationsSec",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Disk Read Operations/Sec",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "diskReadOperationsCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|disk write bytes": {
+   "name": "azure.compute.virtualmachinescalesets.DiskWriteBytes",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Disk Write Bytes",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "diskWriteBytes",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|disk write operations/sec": {
+   "name": "azure.compute.virtualmachinescalesets.DiskWriteOperationsSec",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Disk Write Operations/Sec",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "diskWriteOperationsCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|inbound flows": {
+   "name": "azure.compute.virtualmachinescalesets.InboundFlows",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Inbound Flows",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "inboundFlows",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|inbound flows maximum creation rate": {
+   "name": "azure.compute.virtualmachinescalesets.InboundFlowsMaximumCreationRate",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Inbound Flows Maximum Creation Rate",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "inboundFlowsMaximumCreationRateCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|network in total": {
+   "name": "azure.compute.virtualmachinescalesets.NetworkInTotal",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Network In Total",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "networkInTotalBytes",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|network out total": {
+   "name": "azure.compute.virtualmachinescalesets.NetworkOutTotal",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Network Out Total",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "networkOutTotalBytes",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|os disk queue depth": {
+   "name": "azure.compute.virtualmachinescalesets.OSDiskQueueDepth",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "OS Disk Queue Depth",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "osDiskQueueDepth",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|os disk read bytes/sec": {
+   "name": "azure.compute.virtualmachinescalesets.OSDiskReadBytessec",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "OS Disk Read Bytes/sec",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "osDiskReadBytesCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|os disk read operations/sec": {
+   "name": "azure.compute.virtualmachinescalesets.OSDiskReadOperationsSec",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "OS Disk Read Operations/Sec",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "osDiskReadOperationsCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|os disk write bytes/sec": {
+   "name": "azure.compute.virtualmachinescalesets.OSDiskWriteBytessec",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "OS Disk Write Bytes/sec",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "osDiskWriteBytesCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|os disk write operations/sec": {
+   "name": "azure.compute.virtualmachinescalesets.OSDiskWriteOperationsSec",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "OS Disk Write Operations/Sec",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "osDiskWriteOperationsCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|outbound flows": {
+   "name": "azure.compute.virtualmachinescalesets.OutboundFlows",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Outbound Flows",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "outboundFlows",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|outbound flows maximum creation rate": {
+   "name": "azure.compute.virtualmachinescalesets.OutboundFlowsMaximumCreationRate",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Outbound Flows Maximum Creation Rate",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "outboundFlowsMaximumCreationRateCountPerSecond",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|percentage cpu": {
+   "name": "azure.compute.virtualmachinescalesets.PercentageCPU",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Percentage CPU",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "cpuPercent",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|premium data disk cache read hit": {
+   "name": "azure.compute.virtualmachinescalesets.PremiumDataDiskCacheReadHit",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "LUN",
+    "VMName"
+   ],
+   "metric": "Premium Data Disk Cache Read Hit",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "premiumDataDiskCacheReadHitPercent",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|premium data disk cache read miss": {
+   "name": "azure.compute.virtualmachinescalesets.PremiumDataDiskCacheReadMiss",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "LUN",
+    "VMName"
+   ],
+   "metric": "Premium Data Disk Cache Read Miss",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "premiumDataDiskCacheReadMissPercent",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|premium os disk cache read hit": {
+   "name": "azure.compute.virtualmachinescalesets.PremiumOSDiskCacheReadHit",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Premium OS Disk Cache Read Hit",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "premiumOsDiskCacheReadHitPercent",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachinescalesets|premium os disk cache read miss": {
+   "name": "azure.compute.virtualmachinescalesets.PremiumOSDiskCacheReadMiss",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "VMName"
+   ],
+   "metric": "Premium OS Disk Cache Read Miss",
+   "type": "Microsoft.Compute/virtualmachineScaleSets",
+   "polling": "premiumOsDiskCacheReadMissPercent",
+   "integration": "Azure VMs Scale Sets"
+  },
+  "microsoft.compute/virtualmachines|disk read bytes": {
+   "name": "azure.compute.virtualmachines.DiskReadBytes",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "Disk Read Bytes",
+   "type": "Microsoft.Compute/virtualMachines",
+   "polling": "diskReadBytes",
+   "integration": "Azure VMs"
+  },
+  "microsoft.compute/virtualmachines|disk read operations/sec": {
+   "name": "azure.compute.virtualmachines.DiskReadOperations.Sec",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "Disk Read Operations/Sec",
+   "type": "Microsoft.Compute/virtualMachines",
+   "polling": "diskReadOpsPerSecond",
+   "integration": "Azure VMs"
+  },
+  "microsoft.compute/virtualmachines|disk write bytes": {
+   "name": "azure.compute.virtualmachines.DiskWriteBytes",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "Disk Write Bytes",
+   "type": "Microsoft.Compute/virtualMachines",
+   "polling": "diskWriteBytes",
+   "integration": "Azure VMs"
+  },
+  "microsoft.compute/virtualmachines|disk write operations/sec": {
+   "name": "azure.compute.virtualmachines.DiskWriteOperations.Sec",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "Disk Write Operations/Sec",
+   "type": "Microsoft.Compute/virtualMachines",
+   "polling": "diskWriteOpsPerSecond",
+   "integration": "Azure VMs"
+  },
+  "microsoft.compute/virtualmachines|network in": {
+   "name": "azure.compute.virtualmachines.NetworkIn",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "Network In",
+   "type": "Microsoft.Compute/virtualMachines",
+   "polling": "networkInBytes",
+   "integration": "Azure VMs"
+  },
+  "microsoft.compute/virtualmachines|network out": {
+   "name": "azure.compute.virtualmachines.NetworkOut",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "Network Out",
+   "type": "Microsoft.Compute/virtualMachines",
+   "polling": "networkOutBytes",
+   "integration": "Azure VMs"
+  },
+  "microsoft.compute/virtualmachines|percentage cpu": {
+   "name": "azure.compute.virtualmachines.PercentageCPU",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "Percentage CPU",
+   "type": "Microsoft.Compute/virtualMachines",
+   "polling": "cpuUsagePercent",
+   "integration": "Azure VMs"
+  },
+  "microsoft.containerinstance/containergroups|cpuusage": {
+   "name": "azure.containerinstance.containergroups.CpuUsage",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum",
+    "Minimum",
+    "Average"
+   ],
+   "dimensions": [
+    "containerName"
+   ],
+   "metric": "CpuUsage",
+   "type": "Microsoft.ContainerInstance/containerGroups",
+   "polling": "cpuUsage",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerinstance/containergroups|memoryusage": {
+   "name": "azure.containerinstance.containergroups.MemoryUsage",
+   "unit": "Bytes",
+   "aggregations": [
+    "Maximum",
+    "Minimum",
+    "Average"
+   ],
+   "dimensions": [
+    "containerName"
+   ],
+   "metric": "MemoryUsage",
+   "type": "Microsoft.ContainerInstance/containerGroups",
+   "polling": "memoryUsageBytes",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerinstance/containergroups|networkbytesreceivedpersecond": {
+   "name": "azure.containerinstance.containergroups.NetworkBytesReceivedPerSecond",
+   "unit": "Bytes",
+   "aggregations": [
+    "Maximum",
+    "Minimum",
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "NetworkBytesReceivedPerSecond",
+   "type": "Microsoft.ContainerInstance/containerGroups",
+   "polling": "networkReceivedBytesPerSecond",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerinstance/containergroups|networkbytestransmittedpersecond": {
+   "name": "azure.containerinstance.containergroups.NetworkBytesTransmittedPerSecond",
+   "unit": "Bytes",
+   "aggregations": [
+    "Maximum",
+    "Minimum",
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "NetworkBytesTransmittedPerSecond",
+   "type": "Microsoft.ContainerInstance/containerGroups",
+   "polling": "networkTransmittedBytesPerSecond",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerregistry/registries|runduration": {
+   "name": "azure.containerregistry.registries.RunDuration",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "RunDuration",
+   "type": "Microsoft.ContainerRegistry/registries",
+   "polling": "runDurationMilliseconds",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerregistry/registries|successfulpullcount": {
+   "name": "azure.containerregistry.registries.SuccessfulPullCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "SuccessfulPullCount",
+   "type": "Microsoft.ContainerRegistry/registries",
+   "polling": "successfulPullCount",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerregistry/registries|successfulpushcount": {
+   "name": "azure.containerregistry.registries.SuccessfulPushCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "SuccessfulPushCount",
+   "type": "Microsoft.ContainerRegistry/registries",
+   "polling": "successfulPushCount",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerregistry/registries|totalpullcount": {
+   "name": "azure.containerregistry.registries.TotalPullCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "TotalPullCount",
+   "type": "Microsoft.ContainerRegistry/registries",
+   "polling": "totalPullCount",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerregistry/registries|totalpushcount": {
+   "name": "azure.containerregistry.registries.TotalPushCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "TotalPushCount",
+   "type": "Microsoft.ContainerRegistry/registries",
+   "polling": "totalPushCount",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerservice/managedclusters|kube_node_status_allocatable_cpu_cores": {
+   "name": "azure.containerservice.managedclusters.kube_node_status_allocatable_cpu_cores",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "kube_node_status_allocatable_cpu_cores",
+   "type": "Microsoft.ContainerService/managedClusters",
+   "polling": "kubeNodeStatusAllocatableCpuCores",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerservice/managedclusters|kube_node_status_allocatable_memory_bytes": {
+   "name": "azure.containerservice.managedclusters.kube_node_status_allocatable_memory_bytes",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total",
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "kube_node_status_allocatable_memory_bytes",
+   "type": "Microsoft.ContainerService/managedClusters",
+   "polling": "kubeNodeStatusAllocatableMemoryBytes",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerservice/managedclusters|kube_node_status_condition": {
+   "name": "azure.containerservice.managedclusters.kube_node_status_condition",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Average"
+   ],
+   "dimensions": [
+    "condition",
+    "status",
+    "status2",
+    "node"
+   ],
+   "metric": "kube_node_status_condition",
+   "type": "Microsoft.ContainerService/managedClusters",
+   "polling": "kubeNodeStatusCondition",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerservice/managedclusters|kube_pod_status_phase": {
+   "name": "azure.containerservice.managedclusters.kube_pod_status_phase",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Average"
+   ],
+   "dimensions": [
+    "phase",
+    "namespace",
+    "pod"
+   ],
+   "metric": "kube_pod_status_phase",
+   "type": "Microsoft.ContainerService/managedClusters",
+   "polling": "kubePodStatusPhase",
+   "integration": "Azure Containers"
+  },
+  "microsoft.containerservice/managedclusters|kube_pod_status_ready": {
+   "name": "azure.containerservice.managedclusters.kube_pod_status_ready",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Average"
+   ],
+   "dimensions": [
+    "namespace",
+    "pod",
+    "condition"
+   ],
+   "metric": "kube_pod_status_ready",
+   "type": "Microsoft.ContainerService/managedClusters",
+   "polling": "kubePodStatusReady",
+   "integration": "Azure Containers"
+  },
+  "microsoft.datafactory/factories|activitycancelledruns": {
+   "name": "azure.datafactory.factories.ActivityCancelledRuns",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ActivityType",
+    "PipelineName",
+    "FailureType",
+    "Name"
+   ],
+   "metric": "ActivityCancelledRuns",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "activityCancelledRuns",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|activityfailedruns": {
+   "name": "azure.datafactory.factories.ActivityFailedRuns",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ActivityType",
+    "PipelineName",
+    "FailureType",
+    "Name"
+   ],
+   "metric": "ActivityFailedRuns",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "activityFailedRuns",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|activitysucceededruns": {
+   "name": "azure.datafactory.factories.ActivitySucceededRuns",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ActivityType",
+    "PipelineName",
+    "FailureType",
+    "Name"
+   ],
+   "metric": "ActivitySucceededRuns",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "activitySucceededRuns",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|factorysizeingbunits": {
+   "name": "azure.datafactory.factories.FactorySizeInGbUnits",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "FactorySizeInGbUnits",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "factorySizeInGbUnits",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|integrationruntimeavailablememory": {
+   "name": "azure.datafactory.factories.IntegrationRuntimeAvailableMemory",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "IntegrationRuntimeName",
+    "NodeName"
+   ],
+   "metric": "IntegrationRuntimeAvailableMemory",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "integrationRuntimeAvailableMemoryBytes",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|integrationruntimeavailablenodenumber": {
+   "name": "azure.datafactory.factories.IntegrationRuntimeAvailableNodeNumber",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "IntegrationRuntimeName"
+   ],
+   "metric": "IntegrationRuntimeAvailableNodeNumber",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "integrationRuntimeAvailableNodeNumber",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|integrationruntimeaveragetaskpickupdelay": {
+   "name": "azure.datafactory.factories.IntegrationRuntimeAverageTaskPickupDelay",
+   "unit": "Seconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "IntegrationRuntimeName"
+   ],
+   "metric": "IntegrationRuntimeAverageTaskPickupDelay",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "integrationRuntimeAverageTaskPickupDelaySeconds",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|integrationruntimecpupercentage": {
+   "name": "azure.datafactory.factories.IntegrationRuntimeCpuPercentage",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "IntegrationRuntimeName",
+    "NodeName"
+   ],
+   "metric": "IntegrationRuntimeCpuPercentage",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "integrationRuntimeCpuPercentagePercent",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|integrationruntimequeuelength": {
+   "name": "azure.datafactory.factories.IntegrationRuntimeQueueLength",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "IntegrationRuntimeName"
+   ],
+   "metric": "IntegrationRuntimeQueueLength",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "integrationRuntimeQueueLength",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|maxallowedfactorysizeingbunits": {
+   "name": "azure.datafactory.factories.MaxAllowedFactorySizeInGbUnits",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "MaxAllowedFactorySizeInGbUnits",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "maxAllowedFactorySizeInGbUnits",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|maxallowedresourcecount": {
+   "name": "azure.datafactory.factories.MaxAllowedResourceCount",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "MaxAllowedResourceCount",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "maxAllowedResourceCount",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|pipelinecancelledruns": {
+   "name": "azure.datafactory.factories.PipelineCancelledRuns",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "FailureType",
+    "CancelledBy",
+    "Name"
+   ],
+   "metric": "PipelineCancelledRuns",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "pipelineCancelledRuns",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|pipelinefailedruns": {
+   "name": "azure.datafactory.factories.PipelineFailedRuns",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "FailureType",
+    "Name"
+   ],
+   "metric": "PipelineFailedRuns",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "pipelineFailedRuns",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|pipelinesucceededruns": {
+   "name": "azure.datafactory.factories.PipelineSucceededRuns",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "FailureType",
+    "Name"
+   ],
+   "metric": "PipelineSucceededRuns",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "pipelineSucceededRuns",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|resourcecount": {
+   "name": "azure.datafactory.factories.ResourceCount",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "ResourceCount",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "resourceCount",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|triggercancelledruns": {
+   "name": "azure.datafactory.factories.TriggerCancelledRuns",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Name",
+    "FailureType"
+   ],
+   "metric": "TriggerCancelledRuns",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "triggerCancelledRuns",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|triggerfailedruns": {
+   "name": "azure.datafactory.factories.TriggerFailedRuns",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Name",
+    "FailureType"
+   ],
+   "metric": "TriggerFailedRuns",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "triggerFailedRuns",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.datafactory/factories|triggersucceededruns": {
+   "name": "azure.datafactory.factories.TriggerSucceededRuns",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Name",
+    "FailureType"
+   ],
+   "metric": "TriggerSucceededRuns",
+   "type": "Microsoft.DataFactory/factories",
+   "polling": "triggerSucceededRuns",
+   "integration": "Azure Data Factory"
+  },
+  "microsoft.eventhub/namespaces|activeconnections": {
+   "name": "azure.eventhub.namespaces.ActiveConnections",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum",
+    "Minimum",
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "ActiveConnections",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "activeConnections",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|capturebacklog": {
+   "name": "azure.eventhub.namespaces.CaptureBacklog",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "EntityName"
+   ],
+   "metric": "CaptureBacklog",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "captureBacklog",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|capturedbytes": {
+   "name": "azure.eventhub.namespaces.CapturedBytes",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName"
+   ],
+   "metric": "CapturedBytes",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "capturedBytes",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|capturedmessages": {
+   "name": "azure.eventhub.namespaces.CapturedMessages",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName"
+   ],
+   "metric": "CapturedMessages",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "capturedMessages",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|connectionsclosed": {
+   "name": "azure.eventhub.namespaces.ConnectionsClosed",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "EntityName"
+   ],
+   "metric": "ConnectionsClosed",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "connectionsClosed",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|connectionsopened": {
+   "name": "azure.eventhub.namespaces.ConnectionsOpened",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "EntityName"
+   ],
+   "metric": "ConnectionsOpened",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "connectionsOpened",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|incomingbytes": {
+   "name": "azure.eventhub.namespaces.IncomingBytes",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName"
+   ],
+   "metric": "IncomingBytes",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "incomingBytes",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|incomingmessages": {
+   "name": "azure.eventhub.namespaces.IncomingMessages",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName"
+   ],
+   "metric": "IncomingMessages",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "incomingMessages",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|incomingrequests": {
+   "name": "azure.eventhub.namespaces.IncomingRequests",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName"
+   ],
+   "metric": "IncomingRequests",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "incomingRequests",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|outgoingbytes": {
+   "name": "azure.eventhub.namespaces.OutgoingBytes",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName"
+   ],
+   "metric": "OutgoingBytes",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "outgoingBytes",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|outgoingmessages": {
+   "name": "azure.eventhub.namespaces.OutgoingMessages",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName"
+   ],
+   "metric": "OutgoingMessages",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "outgoingMessages",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|quotaexceedederrors": {
+   "name": "azure.eventhub.namespaces.QuotaExceededErrors",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName",
+    "OperationResult"
+   ],
+   "metric": "QuotaExceededErrors",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "quotaExceededErrors",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|servererrors": {
+   "name": "azure.eventhub.namespaces.ServerErrors",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName",
+    "OperationResult"
+   ],
+   "metric": "ServerErrors",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "serverErrors",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|size": {
+   "name": "azure.eventhub.namespaces.Size",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "EntityName"
+   ],
+   "metric": "Size",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "sizeBytes",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|successfulrequests": {
+   "name": "azure.eventhub.namespaces.SuccessfulRequests",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName",
+    "OperationResult"
+   ],
+   "metric": "SuccessfulRequests",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "successfulRequests",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|throttledrequests": {
+   "name": "azure.eventhub.namespaces.ThrottledRequests",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName",
+    "OperationResult"
+   ],
+   "metric": "ThrottledRequests",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "throttledRequests",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.eventhub/namespaces|usererrors": {
+   "name": "azure.eventhub.namespaces.UserErrors",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "EntityName",
+    "OperationResult"
+   ],
+   "metric": "UserErrors",
+   "type": "Microsoft.EventHub/Namespaces",
+   "polling": "userErrors",
+   "integration": "Azure Event Hub"
+  },
+  "microsoft.keyvault/vaults|availability": {
+   "name": "azure.keyvault.vaults.Availability",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "ActivityType",
+    "ActivityName",
+    "StatusCode",
+    "StatusCodeClass"
+   ],
+   "metric": "Availability",
+   "type": "Microsoft.KeyVault/vaults",
+   "polling": "availabilityPercent",
+   "integration": "Azure Key Vault"
+  },
+  "microsoft.keyvault/vaults|saturationshoebox": {
+   "name": "azure.keyvault.vaults.SaturationShoebox",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "ActivityType",
+    "ActivityName",
+    "TransactionType"
+   ],
+   "metric": "SaturationShoebox",
+   "type": "Microsoft.KeyVault/vaults",
+   "polling": "saturationShoeboxPercent",
+   "integration": "Azure Key Vault"
+  },
+  "microsoft.keyvault/vaults|serviceapihit": {
+   "name": "azure.keyvault.vaults.ServiceApiHit",
+   "unit": "Count",
+   "aggregations": [
+    "Count"
+   ],
+   "dimensions": [
+    "ActivityType",
+    "ActivityName"
+   ],
+   "metric": "ServiceApiHit",
+   "type": "Microsoft.KeyVault/vaults",
+   "polling": "serviceApiHit",
+   "integration": "Azure Key Vault"
+  },
+  "microsoft.keyvault/vaults|serviceapilatency": {
+   "name": "azure.keyvault.vaults.ServiceApiLatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "ActivityType",
+    "ActivityName",
+    "StatusCode",
+    "StatusCodeClass"
+   ],
+   "metric": "ServiceApiLatency",
+   "type": "Microsoft.KeyVault/vaults",
+   "polling": "serviceApiLatencyMilliseconds",
+   "integration": "Azure Key Vault"
+  },
+  "microsoft.keyvault/vaults|serviceapiresult": {
+   "name": "azure.keyvault.vaults.ServiceApiResult",
+   "unit": "Count",
+   "aggregations": [
+    "Count"
+   ],
+   "dimensions": [
+    "ActivityType",
+    "ActivityName",
+    "StatusCode",
+    "StatusCodeClass"
+   ],
+   "metric": "ServiceApiResult",
+   "type": "Microsoft.KeyVault/vaults",
+   "polling": "serviceApiResult",
+   "integration": "Azure Key Vault"
+  },
+  "microsoft.logic/workflows|actionlatency": {
+   "name": "azure.logic.workflows.ActionLatency",
+   "unit": "Seconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "ActionLatency",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "actionLatencySeconds",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|actionscompleted": {
+   "name": "azure.logic.workflows.ActionsCompleted",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "ActionsCompleted",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "actionsCompleted",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|actionsfailed": {
+   "name": "azure.logic.workflows.ActionsFailed",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "ActionsFailed",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "actionsFailed",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|actionsskipped": {
+   "name": "azure.logic.workflows.ActionsSkipped",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "ActionsSkipped",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "actionsSkipped",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|actionsstarted": {
+   "name": "azure.logic.workflows.ActionsStarted",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "ActionsStarted",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "actionsStarted",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|actionssucceeded": {
+   "name": "azure.logic.workflows.ActionsSucceeded",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "ActionsSucceeded",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "actionsSucceeded",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|actionsuccesslatency": {
+   "name": "azure.logic.workflows.ActionSuccessLatency",
+   "unit": "Seconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "ActionSuccessLatency",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "actionSuccessLatencySeconds",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|actionthrottledevents": {
+   "name": "azure.logic.workflows.ActionThrottledEvents",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "ActionThrottledEvents",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "actionThrottledEvents",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|billableactionexecutions": {
+   "name": "azure.logic.workflows.BillableActionExecutions",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "BillableActionExecutions",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "billableActionExecutions",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|billabletriggerexecutions": {
+   "name": "azure.logic.workflows.BillableTriggerExecutions",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "BillableTriggerExecutions",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "billableTriggerExecutions",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|billingusagenativeoperation": {
+   "name": "azure.logic.workflows.BillingUsageNativeOperation",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "BillingUsageNativeOperation",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "billingUsageNativeOperation",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|billingusagestandardconnector": {
+   "name": "azure.logic.workflows.BillingUsageStandardConnector",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "BillingUsageStandardConnector",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "billingUsageStandardConnector",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|billingusagestorageconsumption": {
+   "name": "azure.logic.workflows.BillingUsageStorageConsumption",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "BillingUsageStorageConsumption",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "billingUsageStorageConsumption",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|runfailurepercentage": {
+   "name": "azure.logic.workflows.RunFailurePercentage",
+   "unit": "Percent",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "RunFailurePercentage",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "runFailurePercent",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|runlatency": {
+   "name": "azure.logic.workflows.RunLatency",
+   "unit": "Seconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "RunLatency",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "runLatencySeconds",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|runscancelled": {
+   "name": "azure.logic.workflows.RunsCancelled",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "RunsCancelled",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "runsCancelled",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|runscompleted": {
+   "name": "azure.logic.workflows.RunsCompleted",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "RunsCompleted",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "runsCompleted",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|runsfailed": {
+   "name": "azure.logic.workflows.RunsFailed",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "RunsFailed",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "runsFailed",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|runsstarted": {
+   "name": "azure.logic.workflows.RunsStarted",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "RunsStarted",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "runsStarted",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|runssucceeded": {
+   "name": "azure.logic.workflows.RunsSucceeded",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "RunsSucceeded",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "runsSucceeded",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|runstartthrottledevents": {
+   "name": "azure.logic.workflows.RunStartThrottledEvents",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "RunStartThrottledEvents",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "runStartThrottledEvents",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|runsuccesslatency": {
+   "name": "azure.logic.workflows.RunSuccessLatency",
+   "unit": "Seconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "RunSuccessLatency",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "runSuccessLatencySeconds",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|runthrottledevents": {
+   "name": "azure.logic.workflows.RunThrottledEvents",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "RunThrottledEvents",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "runThrottledEvents",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|totalbillableexecutions": {
+   "name": "azure.logic.workflows.TotalBillableExecutions",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "TotalBillableExecutions",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "totalBillableExecutions",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|triggerfirelatency": {
+   "name": "azure.logic.workflows.TriggerFireLatency",
+   "unit": "Seconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "TriggerFireLatency",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "triggerFireLatencySeconds",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|triggerlatency": {
+   "name": "azure.logic.workflows.TriggerLatency",
+   "unit": "Seconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "TriggerLatency",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "triggerLatencySeconds",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|triggerscompleted": {
+   "name": "azure.logic.workflows.TriggersCompleted",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "TriggersCompleted",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "triggersCompleted",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|triggersfailed": {
+   "name": "azure.logic.workflows.TriggersFailed",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "TriggersFailed",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "triggersFailed",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|triggersfired": {
+   "name": "azure.logic.workflows.TriggersFired",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "TriggersFired",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "triggersFired",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|triggersskipped": {
+   "name": "azure.logic.workflows.TriggersSkipped",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "TriggersSkipped",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "triggersSkipped",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|triggersstarted": {
+   "name": "azure.logic.workflows.TriggersStarted",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "TriggersStarted",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "triggersStarted",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|triggerssucceeded": {
+   "name": "azure.logic.workflows.TriggersSucceeded",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "TriggersSucceeded",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "triggersSucceeded",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|triggersuccesslatency": {
+   "name": "azure.logic.workflows.TriggerSuccessLatency",
+   "unit": "Seconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "TriggerSuccessLatency",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "triggerSuccessLatencySeconds",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.logic/workflows|triggerthrottledevents": {
+   "name": "azure.logic.workflows.TriggerThrottledEvents",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "TriggerThrottledEvents",
+   "type": "Microsoft.Logic/Workflows",
+   "polling": "triggerThrottledEvents",
+   "integration": "Azure Logic Apps"
+  },
+  "microsoft.network/applicationgateways|applicationgatewaytotaltime": {
+   "name": "azure.network.applicationgateways.ApplicationGatewayTotalTime",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Maximum"
+   ],
+   "dimensions": [
+    "Listener"
+   ],
+   "metric": "ApplicationGatewayTotalTime",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "applicationGatewayTotalTimeMilliseconds",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|avgrequestcountperhealthyhost": {
+   "name": "azure.network.applicationgateways.AvgRequestCountPerHealthyHost",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "BackendSettingsPool"
+   ],
+   "metric": "AvgRequestCountPerHealthyHost",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "avgRequestCountPerHealthyHost",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|backendconnecttime": {
+   "name": "azure.network.applicationgateways.BackendConnectTime",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Maximum"
+   ],
+   "dimensions": [
+    "Listener",
+    "BackendServer",
+    "BackendPool",
+    "BackendHttpSetting"
+   ],
+   "metric": "BackendConnectTime",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "backendConnectTimeMilliseconds",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|backendfirstbyteresponsetime": {
+   "name": "azure.network.applicationgateways.BackendFirstByteResponseTime",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Maximum"
+   ],
+   "dimensions": [
+    "Listener",
+    "BackendServer",
+    "BackendPool",
+    "BackendHttpSetting"
+   ],
+   "metric": "BackendFirstByteResponseTime",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "backendFirstByteResponseTimeMilliseconds",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|backendlastbyteresponsetime": {
+   "name": "azure.network.applicationgateways.BackendLastByteResponseTime",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Maximum"
+   ],
+   "dimensions": [
+    "Listener",
+    "BackendServer",
+    "BackendPool",
+    "BackendHttpSetting"
+   ],
+   "metric": "BackendLastByteResponseTime",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "backendLastByteResponseTimeMilliseconds",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|backendresponsestatus": {
+   "name": "azure.network.applicationgateways.BackendResponseStatus",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "BackendServer",
+    "BackendPool",
+    "BackendHttpSetting",
+    "HttpStatusGroup"
+   ],
+   "metric": "BackendResponseStatus",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "backendResponseStatus",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|blockedcount": {
+   "name": "azure.network.applicationgateways.BlockedCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "RuleGroup",
+    "RuleId"
+   ],
+   "metric": "BlockedCount",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "blockedCount",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|bytesreceived": {
+   "name": "azure.network.applicationgateways.BytesReceived",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Listener"
+   ],
+   "metric": "BytesReceived",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "bytesReceivedBytes",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|bytessent": {
+   "name": "azure.network.applicationgateways.BytesSent",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Listener"
+   ],
+   "metric": "BytesSent",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "bytesSentBytes",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|capacityunits": {
+   "name": "azure.network.applicationgateways.CapacityUnits",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "CapacityUnits",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "capacityUnits",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|clientrtt": {
+   "name": "azure.network.applicationgateways.ClientRtt",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Maximum"
+   ],
+   "dimensions": [
+    "Listener"
+   ],
+   "metric": "ClientRtt",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "clientRttMilliseconds",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|computeunits": {
+   "name": "azure.network.applicationgateways.ComputeUnits",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "ComputeUnits",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "computeUnits",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|cpuutilization": {
+   "name": "azure.network.applicationgateways.CpuUtilization",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "CpuUtilization",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "cpuUtilizationPercent",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|currentconnections": {
+   "name": "azure.network.applicationgateways.CurrentConnections",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "CurrentConnections",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "currentConnections",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|estimatedbilledcapacityunits": {
+   "name": "azure.network.applicationgateways.EstimatedBilledCapacityUnits",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "EstimatedBilledCapacityUnits",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "estimatedBilledCapacityUnits",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|failedrequests": {
+   "name": "azure.network.applicationgateways.FailedRequests",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "BackendSettingsPool"
+   ],
+   "metric": "FailedRequests",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "failedRequests",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|fixedbillablecapacityunits": {
+   "name": "azure.network.applicationgateways.FixedBillableCapacityUnits",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "FixedBillableCapacityUnits",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "fixedBillableCapacityUnits",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|healthyhostcount": {
+   "name": "azure.network.applicationgateways.HealthyHostCount",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "BackendSettingsPool"
+   ],
+   "metric": "HealthyHostCount",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "healthyHostCount",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|matchedcount": {
+   "name": "azure.network.applicationgateways.MatchedCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "RuleGroup",
+    "RuleId"
+   ],
+   "metric": "MatchedCount",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "matchedCount",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|newconnectionspersecond": {
+   "name": "azure.network.applicationgateways.NewConnectionsPerSecond",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "NewConnectionsPerSecond",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "newConnectionsPerSecondCountPerSecond",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|responsestatus": {
+   "name": "azure.network.applicationgateways.ResponseStatus",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "HttpStatusGroup"
+   ],
+   "metric": "ResponseStatus",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "responseStatus",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|throughput": {
+   "name": "azure.network.applicationgateways.Throughput",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "Throughput",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "throughputBytesPerSecond",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|tlsprotocol": {
+   "name": "azure.network.applicationgateways.TlsProtocol",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Listener",
+    "TlsProtocol"
+   ],
+   "metric": "TlsProtocol",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "tlsProtocol",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|totalrequests": {
+   "name": "azure.network.applicationgateways.TotalRequests",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "BackendSettingsPool"
+   ],
+   "metric": "TotalRequests",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "totalRequests",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/applicationgateways|unhealthyhostcount": {
+   "name": "azure.network.applicationgateways.UnhealthyHostCount",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "BackendSettingsPool"
+   ],
+   "metric": "UnhealthyHostCount",
+   "type": "Microsoft.Network/applicationgateways",
+   "polling": "unhealthyHostCount",
+   "integration": "Azure App Gateway"
+  },
+  "microsoft.network/azurefirewalls|applicationrulehit": {
+   "name": "azure.network.azurefirewalls.ApplicationRuleHit",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Status",
+    "Reason",
+    "Protocol"
+   ],
+   "metric": "ApplicationRuleHit",
+   "type": "Microsoft.Network/azureFirewalls",
+   "polling": "applicationRuleHit",
+   "integration": "Azure Firewalls"
+  },
+  "microsoft.network/azurefirewalls|dataprocessed": {
+   "name": "azure.network.azurefirewalls.DataProcessed",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "DataProcessed",
+   "type": "Microsoft.Network/azureFirewalls",
+   "polling": "dataProcessedBytes",
+   "integration": "Azure Firewalls"
+  },
+  "microsoft.network/azurefirewalls|firewallhealth": {
+   "name": "azure.network.azurefirewalls.FirewallHealth",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Status",
+    "Reason"
+   ],
+   "metric": "FirewallHealth",
+   "type": "Microsoft.Network/azureFirewalls",
+   "polling": "firewallHealthPercent",
+   "integration": "Azure Firewalls"
+  },
+  "microsoft.network/azurefirewalls|networkrulehit": {
+   "name": "azure.network.azurefirewalls.NetworkRuleHit",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Status",
+    "Reason"
+   ],
+   "metric": "NetworkRuleHit",
+   "type": "Microsoft.Network/azureFirewalls",
+   "polling": "networkRuleHit",
+   "integration": "Azure Firewalls"
+  },
+  "microsoft.network/azurefirewalls|snatportutilization": {
+   "name": "azure.network.azurefirewalls.SNATPortUtilization",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum"
+   ],
+   "dimensions": [
+    "Protocol"
+   ],
+   "metric": "SNATPortUtilization",
+   "type": "Microsoft.Network/azureFirewalls",
+   "polling": "sNATPortUtilizationPercent",
+   "integration": "Azure Firewalls"
+  },
+  "microsoft.network/azurefirewalls|throughput": {
+   "name": "azure.network.azurefirewalls.Throughput",
+   "unit": "BitsPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "Throughput",
+   "type": "Microsoft.Network/azureFirewalls",
+   "polling": "throughputBitsPerSecond",
+   "integration": "Azure Firewalls"
+  },
+  "microsoft.network/expressroutecircuits|arpavailability": {
+   "name": "azure.network.expressroutecircuits.ArpAvailability",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "PeeringType",
+    "Peer"
+   ],
+   "metric": "ArpAvailability",
+   "type": "Microsoft.Network/expressRouteCircuits",
+   "polling": "arpAvailabilityPercent",
+   "integration": "Azure Express Route"
+  },
+  "microsoft.network/expressroutecircuits|bgpavailability": {
+   "name": "azure.network.expressroutecircuits.BgpAvailability",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "PeeringType",
+    "Peer"
+   ],
+   "metric": "BgpAvailability",
+   "type": "Microsoft.Network/expressRouteCircuits",
+   "polling": "bgpAvailabilityPercent",
+   "integration": "Azure Express Route"
+  },
+  "microsoft.network/expressroutecircuits|bitsinpersecond": {
+   "name": "azure.network.expressroutecircuits.BitsInPerSecond",
+   "unit": "BitsPerSecond",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "PeeringType",
+    "DeviceRole"
+   ],
+   "metric": "BitsInPerSecond",
+   "type": "Microsoft.Network/expressRouteCircuits",
+   "polling": "bitsInPerSecondCountPerSecond",
+   "integration": "Azure Express Route"
+  },
+  "microsoft.network/expressroutecircuits|bitsoutpersecond": {
+   "name": "azure.network.expressroutecircuits.BitsOutPerSecond",
+   "unit": "BitsPerSecond",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "PeeringType",
+    "DeviceRole"
+   ],
+   "metric": "BitsOutPerSecond",
+   "type": "Microsoft.Network/expressRouteCircuits",
+   "polling": "bitsOutPerSecondCountPerSecond",
+   "integration": "Azure Express Route"
+  },
+  "microsoft.network/expressroutecircuits|globalreachbitsinpersecond": {
+   "name": "azure.network.expressroutecircuits.GlobalReachBitsInPerSecond",
+   "unit": "BitsPerSecond",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "PeeredCircuitSKey"
+   ],
+   "metric": "GlobalReachBitsInPerSecond",
+   "type": "Microsoft.Network/expressRouteCircuits",
+   "polling": "globalReachBitsInPerSecondCountPerSecond",
+   "integration": "Azure Express Route"
+  },
+  "microsoft.network/expressroutecircuits|globalreachbitsoutpersecond": {
+   "name": "azure.network.expressroutecircuits.GlobalReachBitsOutPerSecond",
+   "unit": "BitsPerSecond",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "PeeredCircuitSKey"
+   ],
+   "metric": "GlobalReachBitsOutPerSecond",
+   "type": "Microsoft.Network/expressRouteCircuits",
+   "polling": "globalReachBitsOutPerSecondCountPerSecond",
+   "integration": "Azure Express Route"
+  },
+  "microsoft.network/expressroutecircuits|qosdropbitsinpersecond": {
+   "name": "azure.network.expressroutecircuits.QosDropBitsInPerSecond",
+   "unit": "BitsPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "QosDropBitsInPerSecond",
+   "type": "Microsoft.Network/expressRouteCircuits",
+   "polling": "qosDropBitsInPerSecondCountPerSecond",
+   "integration": "Azure Express Route"
+  },
+  "microsoft.network/expressroutecircuits|qosdropbitsoutpersecond": {
+   "name": "azure.network.expressroutecircuits.QosDropBitsOutPerSecond",
+   "unit": "BitsPerSecond",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "QosDropBitsOutPerSecond",
+   "type": "Microsoft.Network/expressRouteCircuits",
+   "polling": "qosDropBitsOutPerSecondCountPerSecond",
+   "integration": "Azure Express Route"
+  },
+  "microsoft.network/frontdoors|backendhealthpercentage": {
+   "name": "azure.network.frontdoors.BackendHealthPercentage",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Backend",
+    "BackendPool"
+   ],
+   "metric": "BackendHealthPercentage",
+   "type": "Microsoft.Network/frontdoors",
+   "polling": "backendHealthPercent",
+   "integration": "Azure Front Door"
+  },
+  "microsoft.network/frontdoors|backendrequestcount": {
+   "name": "azure.network.frontdoors.BackendRequestCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "HttpStatus",
+    "HttpStatusGroup",
+    "Backend"
+   ],
+   "metric": "BackendRequestCount",
+   "type": "Microsoft.Network/frontdoors",
+   "polling": "backendRequestCount",
+   "integration": "Azure Front Door"
+  },
+  "microsoft.network/frontdoors|backendrequestlatency": {
+   "name": "azure.network.frontdoors.BackendRequestLatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Backend"
+   ],
+   "metric": "BackendRequestLatency",
+   "type": "Microsoft.Network/frontdoors",
+   "polling": "backendRequestLatencyMilliseconds",
+   "integration": "Azure Front Door"
+  },
+  "microsoft.network/frontdoors|billableresponsesize": {
+   "name": "azure.network.frontdoors.BillableResponseSize",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "HttpStatus",
+    "HttpStatusGroup",
+    "ClientRegion",
+    "ClientCountry"
+   ],
+   "metric": "BillableResponseSize",
+   "type": "Microsoft.Network/frontdoors",
+   "polling": "billableResponseSizeBytes",
+   "integration": "Azure Front Door"
+  },
+  "microsoft.network/frontdoors|requestcount": {
+   "name": "azure.network.frontdoors.RequestCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "HttpStatus",
+    "HttpStatusGroup",
+    "ClientRegion",
+    "ClientCountry"
+   ],
+   "metric": "RequestCount",
+   "type": "Microsoft.Network/frontdoors",
+   "polling": "requestCount",
+   "integration": "Azure Front Door"
+  },
+  "microsoft.network/frontdoors|requestsize": {
+   "name": "azure.network.frontdoors.RequestSize",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "HttpStatus",
+    "HttpStatusGroup",
+    "ClientRegion",
+    "ClientCountry"
+   ],
+   "metric": "RequestSize",
+   "type": "Microsoft.Network/frontdoors",
+   "polling": "requestSizeBytes",
+   "integration": "Azure Front Door"
+  },
+  "microsoft.network/frontdoors|responsesize": {
+   "name": "azure.network.frontdoors.ResponseSize",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "HttpStatus",
+    "HttpStatusGroup",
+    "ClientRegion",
+    "ClientCountry"
+   ],
+   "metric": "ResponseSize",
+   "type": "Microsoft.Network/frontdoors",
+   "polling": "responseSizeBytes",
+   "integration": "Azure Front Door"
+  },
+  "microsoft.network/frontdoors|totallatency": {
+   "name": "azure.network.frontdoors.TotalLatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "HttpStatus",
+    "HttpStatusGroup",
+    "ClientRegion",
+    "ClientCountry"
+   ],
+   "metric": "TotalLatency",
+   "type": "Microsoft.Network/frontdoors",
+   "polling": "totalLatencyMilliseconds",
+   "integration": "Azure Front Door"
+  },
+  "microsoft.network/frontdoors|webapplicationfirewallrequestcount": {
+   "name": "azure.network.frontdoors.WebApplicationFirewallRequestCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "PolicyName",
+    "RuleName",
+    "Action"
+   ],
+   "metric": "WebApplicationFirewallRequestCount",
+   "type": "Microsoft.Network/frontdoors",
+   "polling": "webApplicationFirewallRequestCount",
+   "integration": "Azure Front Door"
+  },
+  "microsoft.network/loadbalancers|allocatedsnatports": {
+   "name": "azure.network.loadbalancers.AllocatedSnatPorts",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "FrontendIPAddress",
+    "BackendIPAddress",
+    "ProtocolType",
+    "IsAwaitingRemoval"
+   ],
+   "metric": "AllocatedSnatPorts",
+   "type": "Microsoft.Network/loadBalancers",
+   "polling": "allocatedSnatPorts",
+   "integration": "Azure Load Balancer"
+  },
+  "microsoft.network/loadbalancers|bytecount": {
+   "name": "azure.network.loadbalancers.ByteCount",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "FrontendIPAddress",
+    "FrontendPort",
+    "Direction",
+    "Protocol"
+   ],
+   "metric": "ByteCount",
+   "type": "Microsoft.Network/loadBalancers",
+   "polling": "byteCountBytes",
+   "integration": "Azure Load Balancer"
+  },
+  "microsoft.network/loadbalancers|dipavailability": {
+   "name": "azure.network.loadbalancers.DipAvailability",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "ProtocolType",
+    "BackendPort",
+    "FrontendIPAddress",
+    "FrontendPort",
+    "BackendIPAddress"
+   ],
+   "metric": "DipAvailability",
+   "type": "Microsoft.Network/loadBalancers",
+   "polling": "dipAvailability",
+   "integration": "Azure Load Balancer"
+  },
+  "microsoft.network/loadbalancers|packetcount": {
+   "name": "azure.network.loadbalancers.PacketCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "FrontendIPAddress",
+    "FrontendPort",
+    "Direction",
+    "Protocol"
+   ],
+   "metric": "PacketCount",
+   "type": "Microsoft.Network/loadBalancers",
+   "polling": "packetCount",
+   "integration": "Azure Load Balancer"
+  },
+  "microsoft.network/loadbalancers|snatconnectioncount": {
+   "name": "azure.network.loadbalancers.SnatConnectionCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "FrontendIPAddress",
+    "BackendIPAddress",
+    "ConnectionState"
+   ],
+   "metric": "SnatConnectionCount",
+   "type": "Microsoft.Network/loadBalancers",
+   "polling": "snatConnectionCount",
+   "integration": "Azure Load Balancer"
+  },
+  "microsoft.network/loadbalancers|syncount": {
+   "name": "azure.network.loadbalancers.SYNCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "FrontendIPAddress",
+    "FrontendPort",
+    "Direction",
+    "Protocol"
+   ],
+   "metric": "SYNCount",
+   "type": "Microsoft.Network/loadBalancers",
+   "polling": "synCount",
+   "integration": "Azure Load Balancer"
+  },
+  "microsoft.network/loadbalancers|usedsnatports": {
+   "name": "azure.network.loadbalancers.UsedSnatPorts",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "FrontendIPAddress",
+    "BackendIPAddress",
+    "ProtocolType",
+    "IsAwaitingRemoval"
+   ],
+   "metric": "UsedSnatPorts",
+   "type": "Microsoft.Network/loadBalancers",
+   "polling": "usedSnatPorts",
+   "integration": "Azure Load Balancer"
+  },
+  "microsoft.network/loadbalancers|vipavailability": {
+   "name": "azure.network.loadbalancers.VipAvailability",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "FrontendIPAddress",
+    "FrontendPort"
+   ],
+   "metric": "VipAvailability",
+   "type": "Microsoft.Network/loadBalancers",
+   "polling": "vipAvailability",
+   "integration": "Azure Load Balancer"
+  },
+  "microsoft.network/publicipaddresses|bytesdroppedddos": {
+   "name": "azure.network.publicipaddresses.BytesDroppedDDoS",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "BytesDroppedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "droppedDdosBytesPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|bytesforwardedddos": {
+   "name": "azure.network.publicipaddresses.BytesForwardedDDoS",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "BytesForwardedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "forwardedDdosBytesPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|bytesinddos": {
+   "name": "azure.network.publicipaddresses.BytesInDDoS",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "BytesInDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "inDdosBytesPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|ddostriggertcppackets": {
+   "name": "azure.network.publicipaddresses.DDoSTriggerTCPPackets",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "DDoSTriggerTCPPackets",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "ddosTriggerTcpPacketsPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|ddostriggerudppackets": {
+   "name": "azure.network.publicipaddresses.DDoSTriggerUDPPackets",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "DDoSTriggerUDPPackets",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "ddosTriggerUdpPacketsPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|ifunderddosattack": {
+   "name": "azure.network.publicipaddresses.IfUnderDDoSAttack",
+   "unit": "Count",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "IfUnderDDoSAttack",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "ifUnderDdosAttack",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|packetsdroppedddos": {
+   "name": "azure.network.publicipaddresses.PacketsDroppedDDoS",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "PacketsDroppedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "packetsDroppedDdosPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|packetsforwardedddos": {
+   "name": "azure.network.publicipaddresses.PacketsForwardedDDoS",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "PacketsForwardedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "packetsForwardedDdosPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|packetsinddos": {
+   "name": "azure.network.publicipaddresses.PacketsInDDoS",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "PacketsInDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "packetsInDdosPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|tcpbytesdroppedddos": {
+   "name": "azure.network.publicipaddresses.TCPBytesDroppedDDoS",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "TCPBytesDroppedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "tcpDroppedDdosPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|tcpbytesforwardedddos": {
+   "name": "azure.network.publicipaddresses.TCPBytesForwardedDDoS",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "TCPBytesForwardedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "tcpForwardedDdosBytesPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|tcpbytesinddos": {
+   "name": "azure.network.publicipaddresses.TCPBytesInDDoS",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "TCPBytesInDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "tcpInDdosBytesPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|tcppacketsdroppedddos": {
+   "name": "azure.network.publicipaddresses.TCPPacketsDroppedDDoS",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "TCPPacketsDroppedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "tcpPacketsDroppedDdosPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|tcppacketsforwardedddos": {
+   "name": "azure.network.publicipaddresses.TCPPacketsForwardedDDoS",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "TCPPacketsForwardedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "tcpPacketsForwardedDdosPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|tcppacketsinddos": {
+   "name": "azure.network.publicipaddresses.TCPPacketsInDDoS",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "TCPPacketsInDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "tcpPacketsInDdosPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|udpbytesdroppedddos": {
+   "name": "azure.network.publicipaddresses.UDPBytesDroppedDDoS",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "UDPBytesDroppedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "udpDroppedDdosBytesPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|udpbytesforwardedddos": {
+   "name": "azure.network.publicipaddresses.UDPBytesForwardedDDoS",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "UDPBytesForwardedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "udpForwardedDdosBytesPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|udpbytesinddos": {
+   "name": "azure.network.publicipaddresses.UDPBytesInDDoS",
+   "unit": "BytesPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "UDPBytesInDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "udpInDdosBytesPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|udppacketsdroppedddos": {
+   "name": "azure.network.publicipaddresses.UDPPacketsDroppedDDoS",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "UDPPacketsDroppedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "udpPacketsDroppedDdosPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|udppacketsforwardedddos": {
+   "name": "azure.network.publicipaddresses.UDPPacketsForwardedDDoS",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "UDPPacketsForwardedDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "udpPacketsForwardedDdosPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/publicipaddresses|udppacketsinddos": {
+   "name": "azure.network.publicipaddresses.UDPPacketsInDDoS",
+   "unit": "CountPerSecond",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [],
+   "metric": "UDPPacketsInDDoS",
+   "type": "Microsoft.Network/publicIPAddresses",
+   "polling": "udpPacketsInDdosPerSecond",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/virtualnetworks|pingmeshaverageroundtripms": {
+   "name": "azure.network.virtualnetworks.PingMeshAverageRoundtripMs",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "SourceCustomerAddress",
+    "DestinationCustomerAddress"
+   ],
+   "metric": "PingMeshAverageRoundtripMs",
+   "type": "Microsoft.Network/virtualNetworks",
+   "polling": "pingMeshAverageRoundtripMs",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.network/virtualnetworks|pingmeshprobesfailedpercent": {
+   "name": "azure.network.virtualnetworks.PingMeshProbesFailedPercent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "SourceCustomerAddress",
+    "DestinationCustomerAddress"
+   ],
+   "metric": "PingMeshProbesFailedPercent",
+   "type": "Microsoft.Network/virtualNetworks",
+   "polling": "pingMeshProbesFailedPercent",
+   "integration": "Azure Virtual Network"
+  },
+  "microsoft.servicebus/namespaces|activeconnections": {
+   "name": "azure.servicebus.namespaces.ActiveConnections",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [],
+   "metric": "ActiveConnections",
+   "type": "Microsoft.ServiceBus/Namespaces",
+   "polling": "activeConnections",
+   "integration": "Azure Service Bus"
+  },
+  "microsoft.servicebus/namespaces|cpuxns": {
+   "name": "azure.servicebus.namespaces.CPUXNS",
+   "unit": "Percent",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [
+    "Replica"
+   ],
+   "metric": "CPUXNS",
+   "type": "Microsoft.ServiceBus/Namespaces",
+   "polling": "cpuUsagePercent",
+   "integration": "Azure Service Bus"
+  },
+  "microsoft.servicebus/namespaces|wsxns": {
+   "name": "azure.servicebus.namespaces.WSXNS",
+   "unit": "Percent",
+   "aggregations": [
+    "Maximum"
+   ],
+   "dimensions": [
+    "Replica"
+   ],
+   "metric": "WSXNS",
+   "type": "Microsoft.ServiceBus/Namespaces",
+   "polling": "memoryUsagePercent",
+   "integration": "Azure Service Bus"
+  },
+  "microsoft.sql/managedinstances|avg_cpu_percent": {
+   "name": "azure.sql.managedinstances.avg_cpu_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "avg_cpu_percent",
+   "type": "Microsoft.Sql/managedInstances",
+   "polling": "avgCpuPercent",
+   "integration": "Azure SQL Managed Instance"
+  },
+  "microsoft.sql/managedinstances|io_bytes_read": {
+   "name": "azure.sql.managedinstances.io_bytes_read",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "io_bytes_read",
+   "type": "Microsoft.Sql/managedInstances",
+   "polling": "ioReadBytes",
+   "integration": "Azure SQL Managed Instance"
+  },
+  "microsoft.sql/managedinstances|io_bytes_written": {
+   "name": "azure.sql.managedinstances.io_bytes_written",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "io_bytes_written",
+   "type": "Microsoft.Sql/managedInstances",
+   "polling": "ioWrittenBytes",
+   "integration": "Azure SQL Managed Instance"
+  },
+  "microsoft.sql/managedinstances|io_requests": {
+   "name": "azure.sql.managedinstances.io_requests",
+   "unit": "Count",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "io_requests",
+   "type": "Microsoft.Sql/managedInstances",
+   "polling": "ioRequests",
+   "integration": "Azure SQL Managed Instance"
+  },
+  "microsoft.sql/managedinstances|reserved_storage_mb": {
+   "name": "azure.sql.managedinstances.reserved_storage_mb",
+   "unit": "Count",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "reserved_storage_mb",
+   "type": "Microsoft.Sql/managedInstances",
+   "polling": "reservedStorage",
+   "integration": "Azure SQL Managed Instance"
+  },
+  "microsoft.sql/managedinstances|storage_space_used_mb": {
+   "name": "azure.sql.managedinstances.storage_space_used_mb",
+   "unit": "Count",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "storage_space_used_mb",
+   "type": "Microsoft.Sql/managedInstances",
+   "polling": "storageSpaceUsed",
+   "integration": "Azure SQL Managed Instance"
+  },
+  "microsoft.sql/managedinstances|virtual_core_count": {
+   "name": "azure.sql.managedinstances.virtual_core_count",
+   "unit": "Count",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "virtual_core_count",
+   "type": "Microsoft.Sql/managedInstances",
+   "polling": "virtualCore",
+   "integration": "Azure SQL Managed Instance"
+  },
+  "microsoft.sql/servers/databases|blocked_by_firewall": {
+   "name": "azure.sql.servers.databases.blocked_by_firewall",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Count"
+   ],
+   "dimensions": [],
+   "metric": "blocked_by_firewall",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "blockedByFirewall",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|connection_failed": {
+   "name": "azure.sql.servers.databases.connection_failed",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Count"
+   ],
+   "dimensions": [
+    "Error",
+    "ValidatedDriverNameAndVersion"
+   ],
+   "metric": "connection_failed",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "connectionFailed",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|connection_successful": {
+   "name": "azure.sql.servers.databases.connection_successful",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Count"
+   ],
+   "dimensions": [
+    "SslProtocol",
+    "ValidatedDriverNameAndVersion"
+   ],
+   "metric": "connection_successful",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "connectionSuccessful",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|cpu_percent": {
+   "name": "azure.sql.servers.databases.cpu_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "cpu_percent",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "cpuPercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|deadlock": {
+   "name": "azure.sql.servers.databases.deadlock",
+   "unit": "Count",
+   "aggregations": [
+    "Total",
+    "Count"
+   ],
+   "dimensions": [],
+   "metric": "deadlock",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "deadlock",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|dtu_consumption_percent": {
+   "name": "azure.sql.servers.databases.dtu_consumption_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "dtu_consumption_percent",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "dtuConsumptionPercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|dtu_limit": {
+   "name": "azure.sql.servers.databases.dtu_limit",
+   "unit": "Count",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "dtu_limit",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "dtuLimit",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|dtu_used": {
+   "name": "azure.sql.servers.databases.dtu_used",
+   "unit": "Count",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "dtu_used",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "dtuUsed",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|dwu_consumption_percent": {
+   "name": "azure.sql.servers.databases.dwu_consumption_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "dwu_consumption_percent",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "dwuConsumptionPercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|dwu_limit": {
+   "name": "azure.sql.servers.databases.dwu_limit",
+   "unit": "Count",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "dwu_limit",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "dwuLimit",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|dwu_used": {
+   "name": "azure.sql.servers.databases.dwu_used",
+   "unit": "Count",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "dwu_used",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "dwuUsed",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|log_write_percent": {
+   "name": "azure.sql.servers.databases.log_write_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "log_write_percent",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "logWritePercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|physical_data_read_percent": {
+   "name": "azure.sql.servers.databases.physical_data_read_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "physical_data_read_percent",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "physicalDataReadPercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|sessions_percent": {
+   "name": "azure.sql.servers.databases.sessions_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "sessions_percent",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "sessionsPercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|storage": {
+   "name": "azure.sql.servers.databases.storage",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "storage",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "storageBytes",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|storage_percent": {
+   "name": "azure.sql.servers.databases.storage_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "storage_percent",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "storagePercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|workers_percent": {
+   "name": "azure.sql.servers.databases.workers_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "workers_percent",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "workersPercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/databases|xtp_storage_percent": {
+   "name": "azure.sql.servers.databases.xtp_storage_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "xtp_storage_percent",
+   "type": "Microsoft.Sql/servers/databases",
+   "polling": "xtpStoragePercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|cpu_percent": {
+   "name": "azure.sql.servers.elasticpools.cpu_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "cpu_percent",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "cpuPercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|dtu_consumption_percent": {
+   "name": "azure.sql.servers.elasticpools.dtu_consumption_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "dtu_consumption_percent",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "dtuConsumptionPercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|edtu_limit": {
+   "name": "azure.sql.servers.elasticpools.eDTU_limit",
+   "unit": "Count",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "eDTU_limit",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "eDTULimit",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|edtu_used": {
+   "name": "azure.sql.servers.elasticpools.eDTU_used",
+   "unit": "Count",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "eDTU_used",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "eDTUUsed",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|log_write_percent": {
+   "name": "azure.sql.servers.elasticpools.log_write_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "log_write_percent",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "logWritePercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|physical_data_read_percent": {
+   "name": "azure.sql.servers.elasticpools.physical_data_read_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "physical_data_read_percent",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "physicalDataReadPercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|sessions_percent": {
+   "name": "azure.sql.servers.elasticpools.sessions_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "sessions_percent",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "sessionsPercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|storage_limit": {
+   "name": "azure.sql.servers.elasticpools.storage_limit",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "storage_limit",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "storageLimitBytes",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|storage_percent": {
+   "name": "azure.sql.servers.elasticpools.storage_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "storage_percent",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "storagePercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|storage_used": {
+   "name": "azure.sql.servers.elasticpools.storage_used",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "storage_used",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "storageUsedBytes",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|workers_percent": {
+   "name": "azure.sql.servers.elasticpools.workers_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "workers_percent",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "workersPercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.sql/servers/elasticpools|xtp_storage_percent": {
+   "name": "azure.sql.servers.elasticpools.xtp_storage_percent",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [],
+   "metric": "xtp_storage_percent",
+   "type": "Microsoft.Sql/servers/elasticpools",
+   "polling": "xtpStoragePercent",
+   "integration": "Azure SQL"
+  },
+  "microsoft.storage/storageaccounts/blobservices|availability": {
+   "name": "azure.storage.storageaccounts.blobservices.Availability",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "Tier"
+   ],
+   "metric": "Availability",
+   "type": "Microsoft.Storage/storageAccounts/blobServices",
+   "polling": "blobs.availabilityPercent",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/blobservices|blobcapacity": {
+   "name": "azure.storage.storageaccounts.blobservices.BlobCapacity",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "BlobType",
+    "Tier"
+   ],
+   "metric": "BlobCapacity",
+   "type": "Microsoft.Storage/storageAccounts/blobServices",
+   "polling": "blobs.blobCapacityBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/blobservices|blobcount": {
+   "name": "azure.storage.storageaccounts.blobservices.BlobCount",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "BlobType",
+    "Tier"
+   ],
+   "metric": "BlobCount",
+   "type": "Microsoft.Storage/storageAccounts/blobServices",
+   "polling": "blobs.blobCount",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/blobservices|containercount": {
+   "name": "azure.storage.storageaccounts.blobservices.ContainerCount",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "AccessLevel"
+   ],
+   "metric": "ContainerCount",
+   "type": "Microsoft.Storage/storageAccounts/blobServices",
+   "polling": "blobs.containerCount",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/blobservices|egress": {
+   "name": "azure.storage.storageaccounts.blobservices.Egress",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "Tier"
+   ],
+   "metric": "Egress",
+   "type": "Microsoft.Storage/storageAccounts/blobServices",
+   "polling": "blobs.egressBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/blobservices|ingress": {
+   "name": "azure.storage.storageaccounts.blobservices.Ingress",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "Tier"
+   ],
+   "metric": "Ingress",
+   "type": "Microsoft.Storage/storageAccounts/blobServices",
+   "polling": "blobs.ingressBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/blobservices|successe2elatency": {
+   "name": "azure.storage.storageaccounts.blobservices.SuccessE2ELatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "Tier"
+   ],
+   "metric": "SuccessE2ELatency",
+   "type": "Microsoft.Storage/storageAccounts/blobServices",
+   "polling": "blobs.successE2ELatencyMilliseconds",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/blobservices|successserverlatency": {
+   "name": "azure.storage.storageaccounts.blobservices.SuccessServerLatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "Tier"
+   ],
+   "metric": "SuccessServerLatency",
+   "type": "Microsoft.Storage/storageAccounts/blobServices",
+   "polling": "blobs.successServerLatencyMilliseconds",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/blobservices|transactions": {
+   "name": "azure.storage.storageaccounts.blobservices.Transactions",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ResponseType",
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "TransactionType",
+    "Tier"
+   ],
+   "metric": "Transactions",
+   "type": "Microsoft.Storage/storageAccounts/blobServices",
+   "polling": "blobs.transactions",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/fileservices|availability": {
+   "name": "azure.storage.storageaccounts.fileservices.Availability",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "FileShare"
+   ],
+   "metric": "Availability",
+   "type": "Microsoft.Storage/storageAccounts/fileServices",
+   "polling": "files.availabilityPercent",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/fileservices|egress": {
+   "name": "azure.storage.storageaccounts.fileservices.Egress",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "FileShare",
+    "SizeBucket"
+   ],
+   "metric": "Egress",
+   "type": "Microsoft.Storage/storageAccounts/fileServices",
+   "polling": "files.egressBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/fileservices|filecapacity": {
+   "name": "azure.storage.storageaccounts.fileservices.FileCapacity",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "FileShare",
+    "Tier"
+   ],
+   "metric": "FileCapacity",
+   "type": "Microsoft.Storage/storageAccounts/fileServices",
+   "polling": "files.fileCapacityBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/fileservices|filecount": {
+   "name": "azure.storage.storageaccounts.fileservices.FileCount",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "FileShare",
+    "Tier"
+   ],
+   "metric": "FileCount",
+   "type": "Microsoft.Storage/storageAccounts/fileServices",
+   "polling": "files.fileCount",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/fileservices|filesharecount": {
+   "name": "azure.storage.storageaccounts.fileservices.FileShareCount",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "FileShareCount",
+   "type": "Microsoft.Storage/storageAccounts/fileServices",
+   "polling": "files.fileShareCount",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/fileservices|ingress": {
+   "name": "azure.storage.storageaccounts.fileservices.Ingress",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "FileShare",
+    "SizeBucket"
+   ],
+   "metric": "Ingress",
+   "type": "Microsoft.Storage/storageAccounts/fileServices",
+   "polling": "files.ingressBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/fileservices|successe2elatency": {
+   "name": "azure.storage.storageaccounts.fileservices.SuccessE2ELatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "FileShare"
+   ],
+   "metric": "SuccessE2ELatency",
+   "type": "Microsoft.Storage/storageAccounts/fileServices",
+   "polling": "files.successE2ELatencyMilliseconds",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/fileservices|successserverlatency": {
+   "name": "azure.storage.storageaccounts.fileservices.SuccessServerLatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "FileShare"
+   ],
+   "metric": "SuccessServerLatency",
+   "type": "Microsoft.Storage/storageAccounts/fileServices",
+   "polling": "files.successServerLatencyMilliseconds",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/fileservices|transactions": {
+   "name": "azure.storage.storageaccounts.fileservices.Transactions",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ResponseType",
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "FileShare",
+    "TransactionType"
+   ],
+   "metric": "Transactions",
+   "type": "Microsoft.Storage/storageAccounts/fileServices",
+   "polling": "files.transactions",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/queueservices|availability": {
+   "name": "azure.storage.storageaccounts.queueservices.Availability",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "Availability",
+   "type": "Microsoft.Storage/storageAccounts/queueServices",
+   "polling": "queues.availabilityPercent",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/queueservices|egress": {
+   "name": "azure.storage.storageaccounts.queueservices.Egress",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "Egress",
+   "type": "Microsoft.Storage/storageAccounts/queueServices",
+   "polling": "queues.egressBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/queueservices|ingress": {
+   "name": "azure.storage.storageaccounts.queueservices.Ingress",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "Ingress",
+   "type": "Microsoft.Storage/storageAccounts/queueServices",
+   "polling": "queues.ingressBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/queueservices|queuecapacity": {
+   "name": "azure.storage.storageaccounts.queueservices.QueueCapacity",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "QueueCapacity",
+   "type": "Microsoft.Storage/storageAccounts/queueServices",
+   "polling": "queues.queueCapacityBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/queueservices|queuecount": {
+   "name": "azure.storage.storageaccounts.queueservices.QueueCount",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "QueueCount",
+   "type": "Microsoft.Storage/storageAccounts/queueServices",
+   "polling": "queues.queueCount",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/queueservices|queuemessagecount": {
+   "name": "azure.storage.storageaccounts.queueservices.QueueMessageCount",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "QueueMessageCount",
+   "type": "Microsoft.Storage/storageAccounts/queueServices",
+   "polling": "queues.queueMessagesCount",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/queueservices|successe2elatency": {
+   "name": "azure.storage.storageaccounts.queueservices.SuccessE2ELatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "SuccessE2ELatency",
+   "type": "Microsoft.Storage/storageAccounts/queueServices",
+   "polling": "queues.successE2ELatencyMilliseconds",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/queueservices|successserverlatency": {
+   "name": "azure.storage.storageaccounts.queueservices.SuccessServerLatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "SuccessServerLatency",
+   "type": "Microsoft.Storage/storageAccounts/queueServices",
+   "polling": "queues.successServerLatencyMilliseconds",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/queueservices|transactions": {
+   "name": "azure.storage.storageaccounts.queueservices.Transactions",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ResponseType",
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "TransactionType"
+   ],
+   "metric": "Transactions",
+   "type": "Microsoft.Storage/storageAccounts/queueServices",
+   "polling": "queues.transactions",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/tableservices|availability": {
+   "name": "azure.storage.storageaccounts.tableservices.Availability",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "Availability",
+   "type": "Microsoft.Storage/storageAccounts/tableServices",
+   "polling": "tables.availabilityPercent",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/tableservices|egress": {
+   "name": "azure.storage.storageaccounts.tableservices.Egress",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "Egress",
+   "type": "Microsoft.Storage/storageAccounts/tableServices",
+   "polling": "tables.egressBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/tableservices|ingress": {
+   "name": "azure.storage.storageaccounts.tableservices.Ingress",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "Ingress",
+   "type": "Microsoft.Storage/storageAccounts/tableServices",
+   "polling": "tables.ingressBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/tableservices|successe2elatency": {
+   "name": "azure.storage.storageaccounts.tableservices.SuccessE2ELatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "SuccessE2ELatency",
+   "type": "Microsoft.Storage/storageAccounts/tableServices",
+   "polling": "tables.successE2ELatencyMilliseconds",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/tableservices|successserverlatency": {
+   "name": "azure.storage.storageaccounts.tableservices.SuccessServerLatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "SuccessServerLatency",
+   "type": "Microsoft.Storage/storageAccounts/tableServices",
+   "polling": "tables.successServerLatencyMilliseconds",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/tableservices|tablecapacity": {
+   "name": "azure.storage.storageaccounts.tableservices.TableCapacity",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "TableCapacity",
+   "type": "Microsoft.Storage/storageAccounts/tableServices",
+   "polling": "tables.tableCapacityBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/tableservices|tablecount": {
+   "name": "azure.storage.storageaccounts.tableservices.TableCount",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "TableCount",
+   "type": "Microsoft.Storage/storageAccounts/tableServices",
+   "polling": "tables.tableCount",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/tableservices|tableentitycount": {
+   "name": "azure.storage.storageaccounts.tableservices.TableEntityCount",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "TableEntityCount",
+   "type": "Microsoft.Storage/storageAccounts/tableServices",
+   "polling": "tables.tableEntityCount",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts/tableservices|transactions": {
+   "name": "azure.storage.storageaccounts.tableservices.Transactions",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ResponseType",
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "TransactionType"
+   ],
+   "metric": "Transactions",
+   "type": "Microsoft.Storage/storageAccounts/tableServices",
+   "polling": "tables.transactions",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts|availability": {
+   "name": "azure.storage.storageaccounts.Availability",
+   "unit": "Percent",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "Availability",
+   "type": "Microsoft.Storage/storageAccounts",
+   "polling": "availabilityPercent",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts|egress": {
+   "name": "azure.storage.storageaccounts.Egress",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "Egress",
+   "type": "Microsoft.Storage/storageAccounts",
+   "polling": "egressBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts|ingress": {
+   "name": "azure.storage.storageaccounts.Ingress",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total",
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "Ingress",
+   "type": "Microsoft.Storage/storageAccounts",
+   "polling": "ingressBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts|successe2elatency": {
+   "name": "azure.storage.storageaccounts.SuccessE2ELatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "SuccessE2ELatency",
+   "type": "Microsoft.Storage/storageAccounts",
+   "polling": "successE2ELatencyMilliseconds",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts|successserverlatency": {
+   "name": "azure.storage.storageaccounts.SuccessServerLatency",
+   "unit": "MilliSeconds",
+   "aggregations": [
+    "Average",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "GeoType",
+    "ApiName",
+    "Authentication"
+   ],
+   "metric": "SuccessServerLatency",
+   "type": "Microsoft.Storage/storageAccounts",
+   "polling": "successServerLatencyMilliseconds",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts|transactions": {
+   "name": "azure.storage.storageaccounts.Transactions",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "ResponseType",
+    "GeoType",
+    "ApiName",
+    "Authentication",
+    "TransactionType"
+   ],
+   "metric": "Transactions",
+   "type": "Microsoft.Storage/storageAccounts",
+   "polling": "transactions",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.storage/storageaccounts|usedcapacity": {
+   "name": "azure.storage.storageaccounts.UsedCapacity",
+   "unit": "Bytes",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [],
+   "metric": "UsedCapacity",
+   "type": "Microsoft.Storage/storageAccounts",
+   "polling": "usedCapacityBytes",
+   "integration": "Azure Storage Account"
+  },
+  "microsoft.web/serverfarms|bytesreceived": {
+   "name": "azure.web.serverfarms.BytesReceived",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "BytesReceived",
+   "type": "Microsoft.Web/serverfarms",
+   "polling": "bytesReceivedBytes",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/serverfarms|bytessent": {
+   "name": "azure.web.serverfarms.BytesSent",
+   "unit": "Bytes",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "BytesSent",
+   "type": "Microsoft.Web/serverfarms",
+   "polling": "bytesSentBytes",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/serverfarms|cpupercentage": {
+   "name": "azure.web.serverfarms.CpuPercentage",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "CpuPercentage",
+   "type": "Microsoft.Web/serverfarms",
+   "polling": "cpuPercent",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/serverfarms|diskqueuelength": {
+   "name": "azure.web.serverfarms.DiskQueueLength",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "DiskQueueLength",
+   "type": "Microsoft.Web/serverfarms",
+   "polling": "diskQueueLength",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/serverfarms|httpqueuelength": {
+   "name": "azure.web.serverfarms.HttpQueueLength",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "HttpQueueLength",
+   "type": "Microsoft.Web/serverfarms",
+   "polling": "httpQueueLength",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/serverfarms|memorypercentage": {
+   "name": "azure.web.serverfarms.MemoryPercentage",
+   "unit": "Percent",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "MemoryPercentage",
+   "type": "Microsoft.Web/serverfarms",
+   "polling": "memoryPercent",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|appconnections": {
+   "name": "azure.web.sites.AppConnections",
+   "unit": "Count",
+   "aggregations": [
+    "Average",
+    "Count",
+    "Maximum",
+    "Minimum"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "AppConnections",
+   "type": "Microsoft.Web/sites",
+   "polling": "appConnections",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|averageresponsetime": {
+   "name": "azure.web.sites.AverageResponseTime",
+   "unit": "Seconds",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "AverageResponseTime",
+   "type": "Microsoft.Web/sites",
+   "polling": "averageResponseTimeSeconds",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|cputime": {
+   "name": "azure.web.sites.CpuTime",
+   "unit": "Seconds",
+   "aggregations": [
+    "Count",
+    "Total",
+    "Minimum",
+    "Maximum"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "CpuTime",
+   "type": "Microsoft.Web/sites",
+   "polling": "cpuTimeSeconds",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|currentassemblies": {
+   "name": "azure.web.sites.CurrentAssemblies",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "CurrentAssemblies",
+   "type": "Microsoft.Web/sites",
+   "polling": "currentAssemblies",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|functionexecutioncount": {
+   "name": "azure.web.sites.FunctionExecutionCount",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "FunctionExecutionCount",
+   "type": "Microsoft.Web/sites",
+   "polling": "functionExecutionCount",
+   "integration": "Azure Functions"
+  },
+  "microsoft.web/sites|functionexecutionunits": {
+   "name": "azure.web.sites.FunctionExecutionUnits",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "FunctionExecutionUnits",
+   "type": "Microsoft.Web/sites",
+   "polling": "functionExecutionUnits",
+   "integration": "Azure Functions"
+  },
+  "microsoft.web/sites|gen0collections": {
+   "name": "azure.web.sites.Gen0Collections",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Gen0Collections",
+   "type": "Microsoft.Web/sites",
+   "polling": "gen0Collections",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|gen1collections": {
+   "name": "azure.web.sites.Gen1Collections",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Gen1Collections",
+   "type": "Microsoft.Web/sites",
+   "polling": "gen1Collections",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|gen2collections": {
+   "name": "azure.web.sites.Gen2Collections",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Gen2Collections",
+   "type": "Microsoft.Web/sites",
+   "polling": "gen2Collections",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|handles": {
+   "name": "azure.web.sites.Handles",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Handles",
+   "type": "Microsoft.Web/sites",
+   "polling": "handles",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|http101": {
+   "name": "azure.web.sites.Http101",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Http101",
+   "type": "Microsoft.Web/sites",
+   "polling": "http101",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|http2xx": {
+   "name": "azure.web.sites.Http2xx",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Http2xx",
+   "type": "Microsoft.Web/sites",
+   "polling": "http2xx",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|http3xx": {
+   "name": "azure.web.sites.Http3xx",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Http3xx",
+   "type": "Microsoft.Web/sites",
+   "polling": "http3xx",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|http401": {
+   "name": "azure.web.sites.Http401",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Http401",
+   "type": "Microsoft.Web/sites",
+   "polling": "http401",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|http403": {
+   "name": "azure.web.sites.Http403",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Http403",
+   "type": "Microsoft.Web/sites",
+   "polling": "http403",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|http404": {
+   "name": "azure.web.sites.Http404",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Http404",
+   "type": "Microsoft.Web/sites",
+   "polling": "http404",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|http406": {
+   "name": "azure.web.sites.Http406",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Http406",
+   "type": "Microsoft.Web/sites",
+   "polling": "http406",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|http4xx": {
+   "name": "azure.web.sites.Http4xx",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Http4xx",
+   "type": "Microsoft.Web/sites",
+   "polling": "http4xx",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|requests": {
+   "name": "azure.web.sites.Requests",
+   "unit": "Count",
+   "aggregations": [
+    "Total"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Requests",
+   "type": "Microsoft.Web/sites",
+   "polling": "requests",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|threads": {
+   "name": "azure.web.sites.Threads",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "Threads",
+   "type": "Microsoft.Web/sites",
+   "polling": "threads",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|totalappdomains": {
+   "name": "azure.web.sites.TotalAppDomains",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "TotalAppDomains",
+   "type": "Microsoft.Web/sites",
+   "polling": "totalAppDomains",
+   "integration": "Azure App Service"
+  },
+  "microsoft.web/sites|totalappdomainsunloaded": {
+   "name": "azure.web.sites.TotalAppDomainsUnloaded",
+   "unit": "Count",
+   "aggregations": [
+    "Average"
+   ],
+   "dimensions": [
+    "Instance"
+   ],
+   "metric": "TotalAppDomainsUnloaded",
+   "type": "Microsoft.Web/sites",
+   "polling": "totalAppDomainsUnloaded",
+   "integration": "Azure App Service"
+  }
+ },
+ "documented_names": [
+  "azure.apimanagement.service.Capacity",
+  "azure.apimanagement.service.Duration",
+  "azure.apimanagement.service.EventHubDroppedEvents",
+  "azure.apimanagement.service.EventHubRejectedEvents",
+  "azure.apimanagement.service.EventHubSuccessfulEvents",
+  "azure.apimanagement.service.EventHubThrottledEvents",
+  "azure.apimanagement.service.EventHubTimedoutEvents",
+  "azure.apimanagement.service.EventHubTotalBytesSent",
+  "azure.apimanagement.service.EventHubTotalEvents",
+  "azure.apimanagement.service.EventHubTotalFailedEvents",
+  "azure.apimanagement.service.FailedRequests",
+  "azure.apimanagement.service.OtherRequests",
+  "azure.apimanagement.service.SuccessfulRequests",
+  "azure.apimanagement.service.TotalRequests",
+  "azure.apimanagement.service.UnauthorizedRequests",
+  "azure.cache.redis.cacheRead",
+  "azure.cache.redis.cacheRead0",
+  "azure.cache.redis.cacheWrite",
+  "azure.cache.redis.cacheWrite0",
+  "azure.cache.redis.cachehits",
+  "azure.cache.redis.cachehits0",
+  "azure.cache.redis.cachemisses",
+  "azure.cache.redis.cachemisses0",
+  "azure.cache.redis.connectedclients",
+  "azure.cache.redis.connectedclients0",
+  "azure.cache.redis.evictedkeys",
+  "azure.cache.redis.evictedkeys0",
+  "azure.cache.redis.expiredkeys",
+  "azure.cache.redis.expiredkeys0",
+  "azure.cache.redis.getcommands",
+  "azure.cache.redis.getcommands0",
+  "azure.cache.redis.operationsPerSecond",
+  "azure.cache.redis.operationsPerSecond0",
+  "azure.cache.redis.percentProcessorTime",
+  "azure.cache.redis.percentProcessorTime0",
+  "azure.cache.redis.serverLoad",
+  "azure.cache.redis.serverLoad0",
+  "azure.cache.redis.setcommands",
+  "azure.cache.redis.setcommands0",
+  "azure.cache.redis.totalcommandsprocessed",
+  "azure.cache.redis.totalcommandsprocessed0",
+  "azure.cache.redis.totalkeys",
+  "azure.cache.redis.totalkeys0",
+  "azure.cache.redis.usedmemory",
+  "azure.cache.redis.usedmemory0",
+  "azure.cache.redis.usedmemoryRss",
+  "azure.cache.redis.usedmemoryRss0",
+  "azure.compute.virtualmachines.DiskReadBytes",
+  "azure.compute.virtualmachines.DiskReadOperations.Sec",
+  "azure.compute.virtualmachines.DiskWriteBytes",
+  "azure.compute.virtualmachines.DiskWriteOperations.Sec",
+  "azure.compute.virtualmachines.NetworkIn",
+  "azure.compute.virtualmachines.NetworkOut",
+  "azure.compute.virtualmachines.PercentageCPU",
+  "azure.compute.virtualmachinescalesets.CPUCreditsConsumed",
+  "azure.compute.virtualmachinescalesets.CPUCreditsRemaining",
+  "azure.compute.virtualmachinescalesets.DataDiskQueueDepth",
+  "azure.compute.virtualmachinescalesets.DataDiskReadBytessec",
+  "azure.compute.virtualmachinescalesets.DataDiskReadOperationsSec",
+  "azure.compute.virtualmachinescalesets.DataDiskWriteBytessec",
+  "azure.compute.virtualmachinescalesets.DataDiskWriteOperationsSec",
+  "azure.compute.virtualmachinescalesets.DiskReadBytes",
+  "azure.compute.virtualmachinescalesets.DiskReadOperationsSec",
+  "azure.compute.virtualmachinescalesets.DiskWriteBytes",
+  "azure.compute.virtualmachinescalesets.DiskWriteOperationsSec",
+  "azure.compute.virtualmachinescalesets.InboundFlows",
+  "azure.compute.virtualmachinescalesets.InboundFlowsMaximumCreationRate",
+  "azure.compute.virtualmachinescalesets.NetworkInTotal",
+  "azure.compute.virtualmachinescalesets.NetworkOutTotal",
+  "azure.compute.virtualmachinescalesets.OSDiskQueueDepth",
+  "azure.compute.virtualmachinescalesets.OSDiskReadBytessec",
+  "azure.compute.virtualmachinescalesets.OSDiskReadOperationsSec",
+  "azure.compute.virtualmachinescalesets.OSDiskWriteBytessec",
+  "azure.compute.virtualmachinescalesets.OSDiskWriteOperationsSec",
+  "azure.compute.virtualmachinescalesets.OutboundFlows",
+  "azure.compute.virtualmachinescalesets.OutboundFlowsMaximumCreationRate",
+  "azure.compute.virtualmachinescalesets.PercentageCPU",
+  "azure.compute.virtualmachinescalesets.PremiumDataDiskCacheReadHit",
+  "azure.compute.virtualmachinescalesets.PremiumDataDiskCacheReadMiss",
+  "azure.compute.virtualmachinescalesets.PremiumOSDiskCacheReadHit",
+  "azure.compute.virtualmachinescalesets.PremiumOSDiskCacheReadMiss",
+  "azure.containerinstance.containergroups.CpuUsage",
+  "azure.containerinstance.containergroups.MemoryUsage",
+  "azure.containerinstance.containergroups.NetworkBytesReceivedPerSecond",
+  "azure.containerinstance.containergroups.NetworkBytesTransmittedPerSecond",
+  "azure.containerregistry.registries.RunDuration",
+  "azure.containerregistry.registries.SuccessfulPullCount",
+  "azure.containerregistry.registries.SuccessfulPushCount",
+  "azure.containerregistry.registries.TotalPullCount",
+  "azure.containerregistry.registries.TotalPushCount",
+  "azure.containerservice.managedclusters.kube_node_status_allocatable_cpu_cores",
+  "azure.containerservice.managedclusters.kube_node_status_allocatable_memory_bytes",
+  "azure.containerservice.managedclusters.kube_node_status_condition",
+  "azure.containerservice.managedclusters.kube_pod_status_phase",
+  "azure.containerservice.managedclusters.kube_pod_status_ready",
+  "azure.costmanagement.cost.byLocation",
+  "azure.costmanagement.cost.byResourceGroup",
+  "azure.costmanagement.cost.byService",
+  "azure.costmanagement.cost.byTag",
+  "azure.datafactory.datafactories.FailedRuns",
+  "azure.datafactory.datafactories.SuccessfulRuns",
+  "azure.datafactory.factories.ActivityCancelledRuns",
+  "azure.datafactory.factories.ActivityFailedRuns",
+  "azure.datafactory.factories.ActivitySucceededRuns",
+  "azure.datafactory.factories.FactorySizeInGbUnits",
+  "azure.datafactory.factories.IntegrationRuntimeAvailableMemory",
+  "azure.datafactory.factories.IntegrationRuntimeAvailableNodeNumber",
+  "azure.datafactory.factories.IntegrationRuntimeAverageTaskPickupDelay",
+  "azure.datafactory.factories.IntegrationRuntimeCpuPercentage",
+  "azure.datafactory.factories.IntegrationRuntimeQueueLength",
+  "azure.datafactory.factories.MaxAllowedFactorySizeInGbUnits",
+  "azure.datafactory.factories.MaxAllowedResourceCount",
+  "azure.datafactory.factories.PipelineCancelledRuns",
+  "azure.datafactory.factories.PipelineFailedRuns",
+  "azure.datafactory.factories.PipelineSucceededRuns",
+  "azure.datafactory.factories.ResourceCount",
+  "azure.datafactory.factories.TriggerCancelledRuns",
+  "azure.datafactory.factories.TriggerFailedRuns",
+  "azure.datafactory.factories.TriggerSucceededRuns",
+  "azure.dbformariadb.servers.active_connections",
+  "azure.dbformariadb.servers.backup_storage_used",
+  "azure.dbformariadb.servers.connections_failed",
+  "azure.dbformariadb.servers.cpu_percent",
+  "azure.dbformariadb.servers.io_consumption_percent",
+  "azure.dbformariadb.servers.memory_percent",
+  "azure.dbformariadb.servers.network_bytes_egress",
+  "azure.dbformariadb.servers.network_bytes_ingress",
+  "azure.dbformariadb.servers.serverlog_storage_limit",
+  "azure.dbformariadb.servers.serverlog_storage_percent",
+  "azure.dbformariadb.servers.serverlog_storage_usage",
+  "azure.dbformariadb.servers.storage_limit",
+  "azure.dbformariadb.servers.storage_percent",
+  "azure.dbformariadb.servers.storage_used",
+  "azure.dbformysql.servers.active_connections",
+  "azure.dbformysql.servers.backup_storage_used",
+  "azure.dbformysql.servers.connections_failed",
+  "azure.dbformysql.servers.cpu_percent",
+  "azure.dbformysql.servers.io_consumption_percent",
+  "azure.dbformysql.servers.memory_percent",
+  "azure.dbformysql.servers.network_bytes_egress",
+  "azure.dbformysql.servers.network_bytes_ingress",
+  "azure.dbformysql.servers.seconds_behind_master",
+  "azure.dbformysql.servers.serverlog_storage_limit",
+  "azure.dbformysql.servers.serverlog_storage_percent",
+  "azure.dbformysql.servers.serverlog_storage_usage",
+  "azure.dbformysql.servers.storage_limit",
+  "azure.dbformysql.servers.storage_percent",
+  "azure.dbformysql.servers.storage_used",
+  "azure.dbforpostgresql.servers.active_connections",
+  "azure.dbforpostgresql.servers.backup_storage_used",
+  "azure.dbforpostgresql.servers.connections_failed",
+  "azure.dbforpostgresql.servers.cpu_percent",
+  "azure.dbforpostgresql.servers.io_consumption_percent",
+  "azure.dbforpostgresql.servers.memory_percent",
+  "azure.dbforpostgresql.servers.network_bytes_egress",
+  "azure.dbforpostgresql.servers.network_bytes_ingress",
+  "azure.dbforpostgresql.servers.pg_replica_log_delay_in_bytes",
+  "azure.dbforpostgresql.servers.pg_replica_log_delay_in_seconds",
+  "azure.dbforpostgresql.servers.serverlog_storage_limit",
+  "azure.dbforpostgresql.servers.serverlog_storage_percent",
+  "azure.dbforpostgresql.servers.serverlog_storage_usage",
+  "azure.dbforpostgresql.servers.storage_limit",
+  "azure.dbforpostgresql.servers.storage_percent",
+  "azure.dbforpostgresql.servers.storage_used",
+  "azure.documentdb.databaseaccounts.AvailableStorage.byAccount",
+  "azure.documentdb.databaseaccounts.AvailableStorage.byCollection",
+  "azure.documentdb.databaseaccounts.AvailableStorage.byDatabase",
+  "azure.documentdb.databaseaccounts.CassandraConnectionClosures.byAccount",
+  "azure.documentdb.databaseaccounts.CassandraConnectionClosures.byCollection",
+  "azure.documentdb.databaseaccounts.CassandraConnectionClosures.byDatabase",
+  "azure.documentdb.databaseaccounts.CassandraRequestCharges.byAccount",
+  "azure.documentdb.databaseaccounts.CassandraRequestCharges.byCollection",
+  "azure.documentdb.databaseaccounts.CassandraRequestCharges.byDatabase",
+  "azure.documentdb.databaseaccounts.CassandraRequests.byAccount",
+  "azure.documentdb.databaseaccounts.CassandraRequests.byCollection",
+  "azure.documentdb.databaseaccounts.CassandraRequests.byDatabase",
+  "azure.documentdb.databaseaccounts.DataUsage.byAccount",
+  "azure.documentdb.databaseaccounts.DataUsage.byCollection",
+  "azure.documentdb.databaseaccounts.DataUsage.byDatabase",
+  "azure.documentdb.databaseaccounts.DocumentCount.byAccount",
+  "azure.documentdb.databaseaccounts.DocumentCount.byCollection",
+  "azure.documentdb.databaseaccounts.DocumentCount.byDatabase",
+  "azure.documentdb.databaseaccounts.DocumentQuota.byAccount",
+  "azure.documentdb.databaseaccounts.DocumentQuota.byCollection",
+  "azure.documentdb.databaseaccounts.DocumentQuota.byDatabase",
+  "azure.documentdb.databaseaccounts.IndexUsage.byAccount",
+  "azure.documentdb.databaseaccounts.IndexUsage.byCollection",
+  "azure.documentdb.databaseaccounts.IndexUsage.byDatabase",
+  "azure.documentdb.databaseaccounts.MetadataRequests.byAccount",
+  "azure.documentdb.databaseaccounts.MetadataRequests.byCollection",
+  "azure.documentdb.databaseaccounts.MetadataRequests.byDatabase",
+  "azure.documentdb.databaseaccounts.MongoRequestCharge.byAccount",
+  "azure.documentdb.databaseaccounts.MongoRequestCharge.byCollection",
+  "azure.documentdb.databaseaccounts.MongoRequestCharge.byDatabase",
+  "azure.documentdb.databaseaccounts.MongoRequests.byAccount",
+  "azure.documentdb.databaseaccounts.MongoRequests.byCollection",
+  "azure.documentdb.databaseaccounts.MongoRequests.byDatabase",
+  "azure.documentdb.databaseaccounts.ProvisionedThroughput.byAccount",
+  "azure.documentdb.databaseaccounts.ProvisionedThroughput.byCollection",
+  "azure.documentdb.databaseaccounts.ProvisionedThroughput.byDatabase",
+  "azure.documentdb.databaseaccounts.ReplicationLatency.byAccount",
+  "azure.documentdb.databaseaccounts.ReplicationLatency.byCollection",
+  "azure.documentdb.databaseaccounts.ReplicationLatency.byDatabase",
+  "azure.documentdb.databaseaccounts.ServiceAvailability.byAccount",
+  "azure.documentdb.databaseaccounts.ServiceAvailability.byCollection",
+  "azure.documentdb.databaseaccounts.ServiceAvailability.byDatabase",
+  "azure.documentdb.databaseaccounts.TotalRequestUnits.byAccount",
+  "azure.documentdb.databaseaccounts.TotalRequestUnits.byCollection",
+  "azure.documentdb.databaseaccounts.TotalRequestUnits.byDatabase",
+  "azure.documentdb.databaseaccounts.TotalRequests.byAccount",
+  "azure.documentdb.databaseaccounts.TotalRequests.byCollection",
+  "azure.documentdb.databaseaccounts.TotalRequests.byDatabase",
+  "azure.eventhub.clusters.ActiveConnections",
+  "azure.eventhub.clusters.AvailableMemory",
+  "azure.eventhub.clusters.CPU",
+  "azure.eventhub.clusters.CaptureBacklog",
+  "azure.eventhub.clusters.CapturedBytes",
+  "azure.eventhub.clusters.CapturedMessages",
+  "azure.eventhub.clusters.ConnectionsClosed",
+  "azure.eventhub.clusters.ConnectionsOpened",
+  "azure.eventhub.clusters.IncomingBytes",
+  "azure.eventhub.clusters.IncomingMessages",
+  "azure.eventhub.clusters.IncomingRequests",
+  "azure.eventhub.clusters.OutgoingBytes",
+  "azure.eventhub.clusters.OutgoingMessages",
+  "azure.eventhub.clusters.QuotaExceededErrors",
+  "azure.eventhub.clusters.ServerErrors",
+  "azure.eventhub.clusters.Size",
+  "azure.eventhub.clusters.SuccessfulRequests",
+  "azure.eventhub.clusters.ThrottledRequests",
+  "azure.eventhub.clusters.UserErrors",
+  "azure.eventhub.namespaces.ActiveConnections",
+  "azure.eventhub.namespaces.CaptureBacklog",
+  "azure.eventhub.namespaces.CapturedBytes",
+  "azure.eventhub.namespaces.CapturedMessages",
+  "azure.eventhub.namespaces.ConnectionsClosed",
+  "azure.eventhub.namespaces.ConnectionsOpened",
+  "azure.eventhub.namespaces.IncomingBytes",
+  "azure.eventhub.namespaces.IncomingMessages",
+  "azure.eventhub.namespaces.IncomingRequests",
+  "azure.eventhub.namespaces.OutgoingBytes",
+  "azure.eventhub.namespaces.OutgoingMessages",
+  "azure.eventhub.namespaces.QuotaExceededErrors",
+  "azure.eventhub.namespaces.ServerErrors",
+  "azure.eventhub.namespaces.Size",
+  "azure.eventhub.namespaces.SuccessfulRequests",
+  "azure.eventhub.namespaces.ThrottledRequests",
+  "azure.eventhub.namespaces.UserErrors",
+  "azure.keyvault.vaults.Availability",
+  "azure.keyvault.vaults.SaturationShoebox",
+  "azure.keyvault.vaults.ServiceApiHit",
+  "azure.keyvault.vaults.ServiceApiLatency",
+  "azure.keyvault.vaults.ServiceApiResult",
+  "azure.logic.integrationserviceenvironments.ActionLatency",
+  "azure.logic.integrationserviceenvironments.ActionSuccessLatency",
+  "azure.logic.integrationserviceenvironments.ActionThrottledEvents",
+  "azure.logic.integrationserviceenvironments.ActionsCompleted",
+  "azure.logic.integrationserviceenvironments.ActionsFailed",
+  "azure.logic.integrationserviceenvironments.ActionsSkipped",
+  "azure.logic.integrationserviceenvironments.ActionsStarted",
+  "azure.logic.integrationserviceenvironments.ActionsSucceeded",
+  "azure.logic.integrationserviceenvironments.IntegrationServiceEnvironmentConnectorMemoryUsage",
+  "azure.logic.integrationserviceenvironments.IntegrationServiceEnvironmentConnectorProcessorUsage",
+  "azure.logic.integrationserviceenvironments.IntegrationServiceEnvironmentWorkflowMemoryUsage",
+  "azure.logic.integrationserviceenvironments.IntegrationServiceEnvironmentWorkflowProcessorUsage",
+  "azure.logic.integrationserviceenvironments.RunFailurePercentage",
+  "azure.logic.integrationserviceenvironments.RunLatency",
+  "azure.logic.integrationserviceenvironments.RunStartThrottledEvents",
+  "azure.logic.integrationserviceenvironments.RunSuccessLatency",
+  "azure.logic.integrationserviceenvironments.RunThrottledEvents",
+  "azure.logic.integrationserviceenvironments.RunsCancelled",
+  "azure.logic.integrationserviceenvironments.RunsCompleted",
+  "azure.logic.integrationserviceenvironments.RunsFailed",
+  "azure.logic.integrationserviceenvironments.RunsStarted",
+  "azure.logic.integrationserviceenvironments.RunsSucceeded",
+  "azure.logic.integrationserviceenvironments.TriggerFireLatency",
+  "azure.logic.integrationserviceenvironments.TriggerLatency",
+  "azure.logic.integrationserviceenvironments.TriggerSuccessLatency",
+  "azure.logic.integrationserviceenvironments.TriggerThrottledEvents",
+  "azure.logic.integrationserviceenvironments.TriggersCompleted",
+  "azure.logic.integrationserviceenvironments.TriggersFailed",
+  "azure.logic.integrationserviceenvironments.TriggersFired",
+  "azure.logic.integrationserviceenvironments.TriggersSkipped",
+  "azure.logic.integrationserviceenvironments.TriggersStarted",
+  "azure.logic.integrationserviceenvironments.TriggersSucceeded",
+  "azure.logic.workflows.ActionLatency",
+  "azure.logic.workflows.ActionSuccessLatency",
+  "azure.logic.workflows.ActionThrottledEvents",
+  "azure.logic.workflows.ActionsCompleted",
+  "azure.logic.workflows.ActionsFailed",
+  "azure.logic.workflows.ActionsSkipped",
+  "azure.logic.workflows.ActionsStarted",
+  "azure.logic.workflows.ActionsSucceeded",
+  "azure.logic.workflows.BillableActionExecutions",
+  "azure.logic.workflows.BillableTriggerExecutions",
+  "azure.logic.workflows.BillingUsageNativeOperation",
+  "azure.logic.workflows.BillingUsageStandardConnector",
+  "azure.logic.workflows.BillingUsageStorageConsumption",
+  "azure.logic.workflows.RunFailurePercentage",
+  "azure.logic.workflows.RunLatency",
+  "azure.logic.workflows.RunStartThrottledEvents",
+  "azure.logic.workflows.RunSuccessLatency",
+  "azure.logic.workflows.RunThrottledEvents",
+  "azure.logic.workflows.RunsCancelled",
+  "azure.logic.workflows.RunsCompleted",
+  "azure.logic.workflows.RunsFailed",
+  "azure.logic.workflows.RunsStarted",
+  "azure.logic.workflows.RunsSucceeded",
+  "azure.logic.workflows.TotalBillableExecutions",
+  "azure.logic.workflows.TriggerFireLatency",
+  "azure.logic.workflows.TriggerLatency",
+  "azure.logic.workflows.TriggerSuccessLatency",
+  "azure.logic.workflows.TriggerThrottledEvents",
+  "azure.logic.workflows.TriggersCompleted",
+  "azure.logic.workflows.TriggersFailed",
+  "azure.logic.workflows.TriggersFired",
+  "azure.logic.workflows.TriggersSkipped",
+  "azure.logic.workflows.TriggersStarted",
+  "azure.logic.workflows.TriggersSucceeded",
+  "azure.machinelearningservices.workspaces.ActiveCores",
+  "azure.machinelearningservices.workspaces.ActiveNodes",
+  "azure.machinelearningservices.workspaces.CompletedRuns",
+  "azure.machinelearningservices.workspaces.CpuUtilization",
+  "azure.machinelearningservices.workspaces.FailedRuns",
+  "azure.machinelearningservices.workspaces.GpuUtilization",
+  "azure.machinelearningservices.workspaces.IdleCores",
+  "azure.machinelearningservices.workspaces.IdleNodes",
+  "azure.machinelearningservices.workspaces.LeavingCores",
+  "azure.machinelearningservices.workspaces.LeavingNodes",
+  "azure.machinelearningservices.workspaces.ModelDeployFailed",
+  "azure.machinelearningservices.workspaces.ModelDeployStarted",
+  "azure.machinelearningservices.workspaces.ModelDeploySucceeded",
+  "azure.machinelearningservices.workspaces.ModelRegisterFailed",
+  "azure.machinelearningservices.workspaces.ModelRegisterSucceeded",
+  "azure.machinelearningservices.workspaces.PreemptedCores",
+  "azure.machinelearningservices.workspaces.PreemptedNodes",
+  "azure.machinelearningservices.workspaces.QuotaUtilizationPercentage",
+  "azure.machinelearningservices.workspaces.StartedRuns",
+  "azure.machinelearningservices.workspaces.TotalCores",
+  "azure.machinelearningservices.workspaces.TotalNodes",
+  "azure.machinelearningservices.workspaces.UnusableCores",
+  "azure.machinelearningservices.workspaces.UnusableNodes",
+  "azure.network.applicationgateways.ApplicationGatewayTotalTime",
+  "azure.network.applicationgateways.AvgRequestCountPerHealthyHost",
+  "azure.network.applicationgateways.BackendConnectTime",
+  "azure.network.applicationgateways.BackendFirstByteResponseTime",
+  "azure.network.applicationgateways.BackendLastByteResponseTime",
+  "azure.network.applicationgateways.BackendResponseStatus",
+  "azure.network.applicationgateways.BlockedCount",
+  "azure.network.applicationgateways.BlockedReqCount",
+  "azure.network.applicationgateways.BytesReceived",
+  "azure.network.applicationgateways.BytesSent",
+  "azure.network.applicationgateways.CapacityUnits",
+  "azure.network.applicationgateways.ClientRtt",
+  "azure.network.applicationgateways.ComputeUnits",
+  "azure.network.applicationgateways.CpuUtilization",
+  "azure.network.applicationgateways.CurrentConnections",
+  "azure.network.applicationgateways.EstimatedBilledCapacityUnits",
+  "azure.network.applicationgateways.FailedRequests",
+  "azure.network.applicationgateways.FixedBillableCapacityUnits",
+  "azure.network.applicationgateways.HealthyHostCount",
+  "azure.network.applicationgateways.MatchedCount",
+  "azure.network.applicationgateways.NewConnectionsPerSecond",
+  "azure.network.applicationgateways.ResponseStatus",
+  "azure.network.applicationgateways.Throughput",
+  "azure.network.applicationgateways.TlsProtocol",
+  "azure.network.applicationgateways.TotalRequests",
+  "azure.network.applicationgateways.UnhealthyHostCount",
+  "azure.network.azurefirewalls.ApplicationRuleHit",
+  "azure.network.azurefirewalls.DataProcessed",
+  "azure.network.azurefirewalls.FirewallHealth",
+  "azure.network.azurefirewalls.NetworkRuleHit",
+  "azure.network.azurefirewalls.SNATPortUtilization",
+  "azure.network.azurefirewalls.Throughput",
+  "azure.network.connections.BitsInPerSecond",
+  "azure.network.connections.BitsOutPerSecond",
+  "azure.network.expressroutecircuits.ArpAvailability",
+  "azure.network.expressroutecircuits.BgpAvailability",
+  "azure.network.expressroutecircuits.BitsInPerSecond",
+  "azure.network.expressroutecircuits.BitsOutPerSecond",
+  "azure.network.expressroutecircuits.GlobalReachBitsInPerSecond",
+  "azure.network.expressroutecircuits.GlobalReachBitsOutPerSecond",
+  "azure.network.expressroutecircuits.QosDropBitsInPerSecond",
+  "azure.network.expressroutecircuits.QosDropBitsOutPerSecond",
+  "azure.network.expressroutecircuits.peerings.BitsInPerSecond",
+  "azure.network.expressroutecircuits.peerings.BitsOutPerSecond",
+  "azure.network.expressroutegateways.ErGatewayConnectionBitsInPerSecond",
+  "azure.network.expressroutegateways.ErGatewayConnectionBitsOutPerSecond",
+  "azure.network.expressrouteports.AdminState",
+  "azure.network.expressrouteports.LineProtocol",
+  "azure.network.expressrouteports.PortBitsInPerSecond",
+  "azure.network.expressrouteports.PortBitsOutPerSecond",
+  "azure.network.expressrouteports.RxLightLevel",
+  "azure.network.expressrouteports.TxLightLevel",
+  "azure.network.frontdoors.BackendHealthPercentage",
+  "azure.network.frontdoors.BackendRequestCount",
+  "azure.network.frontdoors.BackendRequestLatency",
+  "azure.network.frontdoors.BillableResponseSize",
+  "azure.network.frontdoors.RequestCount",
+  "azure.network.frontdoors.RequestSize",
+  "azure.network.frontdoors.ResponseSize",
+  "azure.network.frontdoors.TotalLatency",
+  "azure.network.frontdoors.WebApplicationFirewallRequestCount",
+  "azure.network.loadbalancers.AllocatedSnatPorts",
+  "azure.network.loadbalancers.ByteCount",
+  "azure.network.loadbalancers.DipAvailability",
+  "azure.network.loadbalancers.PacketCount",
+  "azure.network.loadbalancers.SYNCount",
+  "azure.network.loadbalancers.SnatConnectionCount",
+  "azure.network.loadbalancers.UsedSnatPorts",
+  "azure.network.loadbalancers.VipAvailability",
+  "azure.network.publicipaddresses.BytesDroppedDDoS",
+  "azure.network.publicipaddresses.BytesForwardedDDoS",
+  "azure.network.publicipaddresses.BytesInDDoS",
+  "azure.network.publicipaddresses.DDoSTriggerTCPPackets",
+  "azure.network.publicipaddresses.DDoSTriggerUDPPackets",
+  "azure.network.publicipaddresses.IfUnderDDoSAttack",
+  "azure.network.publicipaddresses.PacketsDroppedDDoS",
+  "azure.network.publicipaddresses.PacketsForwardedDDoS",
+  "azure.network.publicipaddresses.PacketsInDDoS",
+  "azure.network.publicipaddresses.TCPBytesDroppedDDoS",
+  "azure.network.publicipaddresses.TCPBytesForwardedDDoS",
+  "azure.network.publicipaddresses.TCPBytesInDDoS",
+  "azure.network.publicipaddresses.TCPPacketsDroppedDDoS",
+  "azure.network.publicipaddresses.TCPPacketsForwardedDDoS",
+  "azure.network.publicipaddresses.TCPPacketsInDDoS",
+  "azure.network.publicipaddresses.UDPBytesDroppedDDoS",
+  "azure.network.publicipaddresses.UDPBytesForwardedDDoS",
+  "azure.network.publicipaddresses.UDPBytesInDDoS",
+  "azure.network.publicipaddresses.UDPPacketsDroppedDDoS",
+  "azure.network.publicipaddresses.UDPPacketsForwardedDDoS",
+  "azure.network.publicipaddresses.UDPPacketsInDDoS",
+  "azure.network.virtualnetworkgateways.AverageBandwidth",
+  "azure.network.virtualnetworkgateways.P2SBandwidth",
+  "azure.network.virtualnetworkgateways.P2SConnectionCount",
+  "azure.network.virtualnetworkgateways.TunnelAverageBandwidth",
+  "azure.network.virtualnetworkgateways.TunnelEgressBytes",
+  "azure.network.virtualnetworkgateways.TunnelEgressPacketDropTSMismatch",
+  "azure.network.virtualnetworkgateways.TunnelEgressPackets",
+  "azure.network.virtualnetworkgateways.TunnelIngressBytes",
+  "azure.network.virtualnetworkgateways.TunnelIngressPacketDropTSMismatch",
+  "azure.network.virtualnetworkgateways.TunnelIngressPackets",
+  "azure.network.virtualnetworks.PingMeshAverageRoundtripMs",
+  "azure.network.virtualnetworks.PingMeshProbesFailedPercent",
+  "azure.network.virtualnetworks.availableAddresses",
+  "azure.powerbidedicated.capacities.QueryDuration",
+  "azure.powerbidedicated.capacities.QueryPoolJobQueueLength",
+  "azure.powerbidedicated.capacities.memory_metric",
+  "azure.powerbidedicated.capacities.memory_thrashing_metric",
+  "azure.powerbidedicated.capacities.qpu_high_utilization_metric",
+  "azure.servicebus.namespaces.ActiveConnections",
+  "azure.servicebus.namespaces.ActiveMessages.byNamespace",
+  "azure.servicebus.namespaces.ActiveMessages.byQueue",
+  "azure.servicebus.namespaces.ActiveMessages.byTopic",
+  "azure.servicebus.namespaces.CPUXNS",
+  "azure.servicebus.namespaces.ConnectionsClosed.byNamespace",
+  "azure.servicebus.namespaces.ConnectionsClosed.byQueue",
+  "azure.servicebus.namespaces.ConnectionsClosed.byTopic",
+  "azure.servicebus.namespaces.ConnectionsOpened.byNamespace",
+  "azure.servicebus.namespaces.ConnectionsOpened.byQueue",
+  "azure.servicebus.namespaces.ConnectionsOpened.byTopic",
+  "azure.servicebus.namespaces.DeadletteredMessages.byNamespace",
+  "azure.servicebus.namespaces.DeadletteredMessages.byQueue",
+  "azure.servicebus.namespaces.DeadletteredMessages.byTopic",
+  "azure.servicebus.namespaces.IncomingMessages.byNamespace",
+  "azure.servicebus.namespaces.IncomingMessages.byQueue",
+  "azure.servicebus.namespaces.IncomingMessages.byTopic",
+  "azure.servicebus.namespaces.IncomingRequests.byNamespace",
+  "azure.servicebus.namespaces.IncomingRequests.byQueue",
+  "azure.servicebus.namespaces.IncomingRequests.byTopic",
+  "azure.servicebus.namespaces.Messages.byNamespace",
+  "azure.servicebus.namespaces.Messages.byQueue",
+  "azure.servicebus.namespaces.Messages.byTopic",
+  "azure.servicebus.namespaces.OutgoingMessages.byNamespace",
+  "azure.servicebus.namespaces.OutgoingMessages.byQueue",
+  "azure.servicebus.namespaces.OutgoingMessages.byTopic",
+  "azure.servicebus.namespaces.ScheduledMessages.byNamespace",
+  "azure.servicebus.namespaces.ScheduledMessages.byQueue",
+  "azure.servicebus.namespaces.ScheduledMessages.byTopic",
+  "azure.servicebus.namespaces.ServerErrors.byNamespace",
+  "azure.servicebus.namespaces.ServerErrors.byQueue",
+  "azure.servicebus.namespaces.ServerErrors.byTopic",
+  "azure.servicebus.namespaces.Size.byNamespace",
+  "azure.servicebus.namespaces.Size.byQueue",
+  "azure.servicebus.namespaces.Size.byTopic",
+  "azure.servicebus.namespaces.SuccessfulRequests.byNamespace",
+  "azure.servicebus.namespaces.SuccessfulRequests.byQueue",
+  "azure.servicebus.namespaces.SuccessfulRequests.byTopic",
+  "azure.servicebus.namespaces.ThrottledRequests.byNamespace",
+  "azure.servicebus.namespaces.ThrottledRequests.byQueue",
+  "azure.servicebus.namespaces.ThrottledRequests.byTopic",
+  "azure.servicebus.namespaces.UserErrors.byNamespace",
+  "azure.servicebus.namespaces.UserErrors.byQueue",
+  "azure.servicebus.namespaces.UserErrors.byTopic",
+  "azure.servicebus.namespaces.WSXNS",
+  "azure.servicebus.namespaces.activeMessageCount",
+  "azure.servicebus.namespaces.currentSizeInBytes.byQueue",
+  "azure.servicebus.namespaces.currentSizeInBytes.byTopic",
+  "azure.servicebus.namespaces.deadLetterMessageCount.byQueue",
+  "azure.servicebus.namespaces.deadLetterMessageCount.bySubscription",
+  "azure.servicebus.namespaces.deadLetterMessageCount.byTopic",
+  "azure.servicebus.namespaces.messageCount",
+  "azure.servicebus.namespaces.scheduledMessageCount",
+  "azure.servicebus.namespaces.subscriptionCount",
+  "azure.servicebus.namespaces.transferDeadLetterMessageCount.byQueue",
+  "azure.servicebus.namespaces.transferDeadLetterMessageCount.bySubscription",
+  "azure.servicebus.namespaces.transferDeadLetterMessageCount.byTopic",
+  "azure.servicebus.namespaces.transferMessageCount.byQueue",
+  "azure.servicebus.namespaces.transferMessageCount.bySubscription",
+  "azure.servicebus.namespaces.transferMessageCount.byTopic",
+  "azure.sql.elasticPool.database_physical_data_read_percent",
+  "azure.sql.elasticPool.database_storage_used",
+  "azure.sql.managedinstances.avg_cpu_percent",
+  "azure.sql.managedinstances.io_bytes_read",
+  "azure.sql.managedinstances.io_bytes_written",
+  "azure.sql.managedinstances.io_requests",
+  "azure.sql.managedinstances.reserved_storage_mb",
+  "azure.sql.managedinstances.storage_space_used_mb",
+  "azure.sql.managedinstances.virtual_core_count",
+  "azure.sql.server.dtuLimit",
+  "azure.sql.servers.database.currentSize",
+  "azure.sql.servers.database.limitSize",
+  "azure.sql.servers.databases.blocked_by_firewall",
+  "azure.sql.servers.databases.connection_failed",
+  "azure.sql.servers.databases.connection_successful",
+  "azure.sql.servers.databases.cpu_percent",
+  "azure.sql.servers.databases.deadlock",
+  "azure.sql.servers.databases.dtu_consumption_percent",
+  "azure.sql.servers.databases.dtu_limit",
+  "azure.sql.servers.databases.dtu_used",
+  "azure.sql.servers.databases.dw_cpu_percent",
+  "azure.sql.servers.databases.dw_physical_data_read_percent",
+  "azure.sql.servers.databases.dwu_consumption_percent",
+  "azure.sql.servers.databases.dwu_limit",
+  "azure.sql.servers.databases.dwu_used",
+  "azure.sql.servers.databases.log_write_percent",
+  "azure.sql.servers.databases.physical_data_read_percent",
+  "azure.sql.servers.databases.sessions_percent",
+  "azure.sql.servers.databases.storage",
+  "azure.sql.servers.databases.storage_percent",
+  "azure.sql.servers.databases.workers_percent",
+  "azure.sql.servers.databases.xtp_storage_percent",
+  "azure.sql.servers.dtuCurrent",
+  "azure.sql.servers.elasticpools.cpu_percent",
+  "azure.sql.servers.elasticpools.database_cpu_percent",
+  "azure.sql.servers.elasticpools.database_dtu_consumption_percent",
+  "azure.sql.servers.elasticpools.database_log_write_percent",
+  "azure.sql.servers.elasticpools.database_sessions_percent",
+  "azure.sql.servers.elasticpools.database_workers_percent",
+  "azure.sql.servers.elasticpools.dtu_consumption_percent",
+  "azure.sql.servers.elasticpools.eDTU_limit",
+  "azure.sql.servers.elasticpools.eDTU_used",
+  "azure.sql.servers.elasticpools.log_write_percent",
+  "azure.sql.servers.elasticpools.physical_data_read_percent",
+  "azure.sql.servers.elasticpools.sessions_percent",
+  "azure.sql.servers.elasticpools.storage_limit",
+  "azure.sql.servers.elasticpools.storage_percent",
+  "azure.sql.servers.elasticpools.storage_used",
+  "azure.sql.servers.elasticpools.workers_percent",
+  "azure.sql.servers.elasticpools.xtp_storage_percent",
+  "azure.storage.storageaccounts.Availability",
+  "azure.storage.storageaccounts.Egress",
+  "azure.storage.storageaccounts.Ingress",
+  "azure.storage.storageaccounts.SuccessE2ELatency",
+  "azure.storage.storageaccounts.SuccessServerLatency",
+  "azure.storage.storageaccounts.Transactions",
+  "azure.storage.storageaccounts.UsedCapacity",
+  "azure.storage.storageaccounts.blobservices.Availability",
+  "azure.storage.storageaccounts.blobservices.BlobCapacity",
+  "azure.storage.storageaccounts.blobservices.BlobCount",
+  "azure.storage.storageaccounts.blobservices.ContainerCount",
+  "azure.storage.storageaccounts.blobservices.Egress",
+  "azure.storage.storageaccounts.blobservices.Ingress",
+  "azure.storage.storageaccounts.blobservices.SuccessE2ELatency",
+  "azure.storage.storageaccounts.blobservices.SuccessServerLatency",
+  "azure.storage.storageaccounts.blobservices.Transactions",
+  "azure.storage.storageaccounts.fileservices.Availability",
+  "azure.storage.storageaccounts.fileservices.Egress",
+  "azure.storage.storageaccounts.fileservices.FileCapacity",
+  "azure.storage.storageaccounts.fileservices.FileCount",
+  "azure.storage.storageaccounts.fileservices.FileShareCount",
+  "azure.storage.storageaccounts.fileservices.Ingress",
+  "azure.storage.storageaccounts.fileservices.SuccessE2ELatency",
+  "azure.storage.storageaccounts.fileservices.SuccessServerLatency",
+  "azure.storage.storageaccounts.fileservices.Transactions",
+  "azure.storage.storageaccounts.queueservices.Availability",
+  "azure.storage.storageaccounts.queueservices.Egress",
+  "azure.storage.storageaccounts.queueservices.Ingress",
+  "azure.storage.storageaccounts.queueservices.QueueCapacity",
+  "azure.storage.storageaccounts.queueservices.QueueCount",
+  "azure.storage.storageaccounts.queueservices.QueueMessageCount",
+  "azure.storage.storageaccounts.queueservices.SuccessE2ELatency",
+  "azure.storage.storageaccounts.queueservices.SuccessServerLatency",
+  "azure.storage.storageaccounts.queueservices.Transactions",
+  "azure.storage.storageaccounts.tableservices.Availability",
+  "azure.storage.storageaccounts.tableservices.Egress",
+  "azure.storage.storageaccounts.tableservices.Ingress",
+  "azure.storage.storageaccounts.tableservices.SuccessE2ELatency",
+  "azure.storage.storageaccounts.tableservices.SuccessServerLatency",
+  "azure.storage.storageaccounts.tableservices.TableCapacity",
+  "azure.storage.storageaccounts.tableservices.TableCount",
+  "azure.storage.storageaccounts.tableservices.TableEntityCount",
+  "azure.storage.storageaccounts.tableservices.Transactions",
+  "azure.web.serverfarms.BytesReceived",
+  "azure.web.serverfarms.BytesSent",
+  "azure.web.serverfarms.CpuPercentage",
+  "azure.web.serverfarms.DiskQueueLength",
+  "azure.web.serverfarms.HttpQueueLength",
+  "azure.web.serverfarms.MemoryPercentage",
+  "azure.web.sites.AppConnections",
+  "azure.web.sites.AverageMemoryWorkingSet.byFunctionsApp",
+  "azure.web.sites.AverageMemoryWorkingSet.byWebApp",
+  "azure.web.sites.AverageResponseTime",
+  "azure.web.sites.BytesReceived.byFunctionsApp",
+  "azure.web.sites.BytesReceived.byWebApp",
+  "azure.web.sites.BytesSent.byFunctionsApp",
+  "azure.web.sites.BytesSent.byWebApp",
+  "azure.web.sites.CpuTime",
+  "azure.web.sites.CurrentAssemblies",
+  "azure.web.sites.FunctionExecutionCount",
+  "azure.web.sites.FunctionExecutionUnits",
+  "azure.web.sites.Gen0Collections",
+  "azure.web.sites.Gen1Collections",
+  "azure.web.sites.Gen2Collections",
+  "azure.web.sites.Handles",
+  "azure.web.sites.Http101",
+  "azure.web.sites.Http2xx",
+  "azure.web.sites.Http3xx",
+  "azure.web.sites.Http401",
+  "azure.web.sites.Http403",
+  "azure.web.sites.Http404",
+  "azure.web.sites.Http406",
+  "azure.web.sites.Http4xx",
+  "azure.web.sites.Http5xx.byFunctionsApp",
+  "azure.web.sites.Http5xx.byWebApp",
+  "azure.web.sites.MemoryWorkingSet.byFunctionsApp",
+  "azure.web.sites.MemoryWorkingSet.byWebApp",
+  "azure.web.sites.Requests",
+  "azure.web.sites.Threads",
+  "azure.web.sites.TotalAppDomains",
+  "azure.web.sites.TotalAppDomainsUnloaded"
+ ],
+ "otel_route": {
+  "status": "VERIFIED from source code (not seen arriving)",
+  "metric_name": "azure_ + lower(metric with spaces replaced by _) + _ + lower(aggregation); one gauge per aggregation (Average, Count, Maximum, Minimum, Total); the namespace is NOT part of the name",
+  "unit": "the Azure unit string unchanged (Percent, Bytes, Count, MilliSeconds ...), no scaling",
+  "attributes": {
+   "resource_id": "azuremonitor.resource_id (the id exactly as the Azure Resources List API returned it)",
+   "fixed": [
+    "name",
+    "resource_group",
+    "type",
+    "location",
+    "timegrain"
+   ],
+   "dimension_prefix": "metadata_",
+   "tag_prefix": "tags_",
+   "resource_attributes_off_by_default": [
+    "azuremonitor.subscription",
+    "azuremonitor.subscription_id",
+    "azuremonitor.tenant_id"
+   ]
+  },
+  "sources": [
+   "OTEL_SCRAPER",
+   "OTEL_BUILDER"
+  ]
+ },
+ "logs": {
+  "route": "Azure Function (newrelic-azure-functions LogForwarder) posts each element of the Event Hub message 'records' array to the New Relic Logs API as one Log event",
+  "added_by_forwarder": {
+   "common": [
+    "plugin.type=azure",
+    "plugin.version",
+    "azure.forwardername",
+    "azure.invocationid",
+    "tags.<key> from NR_TAGS"
+   ],
+   "per_record": [
+    "timestamp (epoch ms parsed from time or timeStamp)",
+    "metadata.subscriptionId, metadata.resourceGroup, metadata.source (all LOWER-CASED from resourceId; source is the provider with microsoft. replaced by azure., e.g. azure.storage)"
+   ],
+   "status": "VERIFIED from source code",
+   "source": "NR_FWD"
+  },
+  "flattening": "Nested JSON objects are stored as dotted attribute names (properties.statusCode, identity.authorization.action). Status VERIFIED (NR_LOGAPI); that the forwarder's top-level record keys become attributes is UNVERIFIED",
+  "resource_log_columns": [
+   {
+    "column": "TimeGenerated",
+    "json_path": "time",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "ResourceId",
+    "json_path": "resourceId",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": "upper-case in the Learn event hub samples (/SUBSCRIPTIONS/.../PROVIDERS/MICROSOFT.WEB/SITES/X); the Activity Log sample is mixed case; compare case-insensitively"
+   },
+   {
+    "column": "OperationName",
+    "json_path": "operationName",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "Category",
+    "json_path": "category",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "ResultType",
+    "json_path": "resultType",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "ResultSignature",
+    "json_path": "resultSignature",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "ResultDescription",
+    "json_path": "resultDescription",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "DurationMs",
+    "json_path": "durationMs",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "CallerIPAddress",
+    "json_path": "callerIpAddress",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "CorrelationId",
+    "json_path": "correlationId",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "Level",
+    "json_path": "level",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": "Informational, Warning, Error, Critical"
+   },
+   {
+    "column": "Location",
+    "json_path": "location",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "<field>_s / _d",
+    "json_path": "properties.<field>",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/resource-logs-schema",
+    "status": "UNVERIFIED",
+    "note": "AzureDiagnostics adds one column per properties field with a type suffix (httpStatus_d, requestUri_s are the Learn examples); in the event hub record the field is under properties with its own name"
+   }
+  ],
+  "activity_columns": [
+   {
+    "column": "TimeGenerated / EventSubmissionTimestamp",
+    "json_path": "time",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": "eventTimestamp in the REST schema"
+   },
+   {
+    "column": "ResourceId",
+    "json_path": "resourceId",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": "SubscriptionId, ResourceGroup, resource type are inferred from it; NR adds metadata.subscriptionId, metadata.resourceGroup, metadata.source"
+   },
+   {
+    "column": "OperationNameValue",
+    "json_path": "operationName",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": "operationName.value in REST"
+   },
+   {
+    "column": "OperationName",
+    "json_path": "operationName",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "UNVERIFIED",
+    "note": "the localized name has no event hub field"
+   },
+   {
+    "column": "CategoryValue",
+    "json_path": "properties.eventCategory",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": "category is 'Administrative' when properties.eventCategory is absent; the Learn page is inconsistent (its own sample has category=Write), so test both"
+   },
+   {
+    "column": "ActivityStatusValue",
+    "json_path": "resultType",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": "status.value in REST (Started, Succeeded, Failed)"
+   },
+   {
+    "column": "ActivitySubstatusValue",
+    "json_path": "resultSignature",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": "substatus.value in REST"
+   },
+   {
+    "column": "Description",
+    "json_path": "resultDescription",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "CallerIpAddress",
+    "json_path": "callerIpAddress",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": "httpRequest.clientIpAddress in REST"
+   },
+   {
+    "column": "CorrelationId",
+    "json_path": "correlationId",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "Level",
+    "json_path": "level",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "Caller",
+    "json_path": "identity.claims.<upn claim url>",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "UNVERIFIED",
+    "note": "there is no caller field in the event hub schema; the caller is a claim, for a user http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn; the dotted claim URL needs backticks in NRQL; a service principal has identity.authorization.evidence.principalId"
+   },
+   {
+    "column": "Authorization",
+    "json_path": "identity.authorization.action / .scope / .evidence.*",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "Claims",
+    "json_path": "identity.claims.*",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "OperationId",
+    "json_path": "properties.operationId",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": ""
+   },
+   {
+    "column": "EventDataId",
+    "json_path": "properties.eventName",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "UNVERIFIED",
+    "note": "the mapping table lists eventName; EventDataId itself is not mapped"
+   },
+   {
+    "column": "Properties",
+    "json_path": "properties.*",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "VERIFIED",
+    "note": "properties.statusCode, properties.serviceRequestId in the sample"
+   },
+   {
+    "column": "HTTPRequest",
+    "json_path": "(none)",
+    "source": "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log-schema",
+    "status": "UNVERIFIED",
+    "note": "only clientIpAddress survives, as callerIpAddress"
+   }
+  ],
+  "agent_tables": {
+   "note": "Perf, Heartbeat, Syslog and Event are written by the Azure Monitor agent to a Log Analytics workspace only. No fetched source shows the agent or a diagnostic setting sending them to an event hub or to New Relic, so these are UNVERIFIED as a route; the equivalents below are the New Relic or OTel signals that carry the same facts.",
+   "Perf": {
+    "columns": [
+     "Computer",
+     "ObjectName",
+     "CounterName",
+     "InstanceName",
+     "CounterValue",
+     "TimeGenerated",
+     "CounterPath",
+     "Min",
+     "Max",
+     "SampleCount"
+    ],
+    "equivalent": "OTel hostmetrics receiver or the New Relic infrastructure agent: SystemSample (cpuPercent, memoryUsedPercent, diskUsedPercent); counter names do not carry over, map per counter",
+    "source": "LEARN perf table page; equivalents UNVERIFIED"
+   },
+   "Heartbeat": {
+    "columns": [
+     "Computer",
+     "TimeGenerated",
+     "OSType",
+     "Version",
+     "ComputerIP",
+     "ResourceId",
+     "SubscriptionId",
+     "ResourceGroup",
+     "Category"
+    ],
+    "equivalent": "no table; a missing-heartbeat alert is a loss-of-signal condition on SystemSample or on the OTel host metric, faceted by host",
+    "source": "LEARN heartbeat table page; equivalent UNVERIFIED"
+   },
+   "Syslog": {
+    "columns": [
+     "Computer",
+     "Facility",
+     "SeverityLevel",
+     "SyslogMessage",
+     "ProcessName",
+     "ProcessID",
+     "HostName",
+     "HostIP",
+     "EventTime",
+     "TimeGenerated"
+    ],
+    "equivalent": "Log events from the infrastructure agent syslog source or the OTel syslog receiver; attribute names depend on the parser",
+    "source": "LEARN syslog table page; equivalent UNVERIFIED"
+   },
+   "Event": {
+    "columns": [
+     "Computer",
+     "EventLog",
+     "EventID",
+     "EventLevel",
+     "EventLevelName",
+     "Source",
+     "RenderedDescription",
+     "EventData",
+     "UserName",
+     "TimeGenerated"
+    ],
+    "equivalent": "Log events from the infrastructure agent winlog source (collect-eventids / exclude-eventids) or the OTel windowseventlog receiver; attribute names UNVERIFIED",
+    "source": "LEARN event table page; NR infra agent doc forward-your-logs-using-infrastructure-agent"
+   }
+  },
+  "metrics_to_event_hub": {
+   "schema": [
+    "count",
+    "total",
+    "minimum",
+    "maximum",
+    "average",
+    "resourceId",
+    "time",
+    "metricName",
+    "timeGrain"
+   ],
+   "status": "VERIFIED schema (Learn stream-monitoring-data-event-hubs); that the forwarder turns them into Log events (not Metric) follows from the code, so a metric alert cannot read them as Metric: UNVERIFIED in an account"
+  }
+ }
+}

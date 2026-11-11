@@ -22,7 +22,7 @@ def reasons(monitor: Any) -> str:
     return " | ".join(monitor.reasons)
 
 
-def test_static_single_resource_metric_alert_converts_with_an_unverified_name() -> None:
+def test_static_single_resource_metric_alert_converts_with_a_documented_name() -> None:
     m = one(metric_alert())
     assert m.confidence is Confidence.APPROXIMATE
     expected = (
@@ -30,7 +30,8 @@ def test_static_single_resource_metric_alert_converts_with_an_unverified_name() 
         f"WHERE collector.name = 'azure-monitor' AND azure.resourceId = '{VM}'"
     )
     assert nrql_for(m) == expected
-    assert "UNVERIFIED" in reasons(m)
+    assert "is listed in the New Relic Azure Monitor integration documentation" in reasons(m)
+    assert "UNVERIFIED" in reasons(m)  # the resource id attribute is still unconfirmed
     assert m.signal.window_seconds == m.signal.aggregation_window_seconds == 300
     assert m.emit is not None and m.emit.aggregation_method == "EVENT_TIMER"
     assert m.thresholds[0].operator is Operator.ABOVE and m.thresholds[0].value == 80

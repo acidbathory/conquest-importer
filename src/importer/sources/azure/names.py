@@ -6,13 +6,16 @@ lower-cased, `/` becomes `.`, `Microsoft.` becomes `azure.`, and the metric name
 with white space removed. `Microsoft.Compute/virtualMachines` + `Percentage CPU` is
 `azure.compute.virtualmachines.PercentageCPU`.
 
-Nothing here has been seen arriving in a New Relic account, so a derived name is always reported
-as UNVERIFIED. A name from `name-map.json` replaces it and is reported as coming from the map.
+Nothing here has been seen arriving in a New Relic account. A name printed in the New Relic
+documentation (`name_table.json`, docs/research/azure-names-verified.md) is reported as sourced
+from the table; any other derived name is reported as UNVERIFIED. A name from `name-map.json`
+replaces both and is reported as coming from the map.
 """
 
 import re
 from dataclasses import dataclass
 
+from importer.sources.azure import name_table
 from importer.sources.azure.models import NameMap
 
 PLATFORM_TYPE = re.compile(r"microsoft\.[a-z0-9]+(?:/[a-z0-9]+)+")
@@ -26,7 +29,12 @@ RESOURCE_SEGMENTS = re.compile(r"/providers/([^/]+)/([^/]+)/[^/]+((?:/[^/]+/[^/]
 class MetricName:
     attribute: str
     prefix: str  # the resource type prefix, which dimension attributes also start with
-    from_map: bool
+    basis: str  # "map" (name-map.json), "table" (name_table.json) or "derived"
+    scale: float = 1.0  # multiply an Azure threshold by this for New Relic's unit
+
+    @property
+    def from_map(self) -> bool:
+        return self.basis == "map"
 
 
 def type_prefix(resource_type: str) -> str | None:
@@ -55,24 +63,38 @@ def _lookup(table: dict[str, str], *keys: str) -> str | None:
 
 
 def metric_name(names: NameMap, namespace: str, metric: str) -> MetricName | None:
-    """The New Relic metric for an Azure metric: the name map first, then the documented rule."""
+    """The New Relic metric for an Azure metric: name map, then the sourced table, then the rule."""
     mapped = _lookup(names.metrics, f"{namespace}/{metric}", metric)
     prefix = type_prefix(namespace)
     if mapped is not None:
-        return MetricName(mapped, prefix or mapped.rsplit(".", 1)[0], True)
+        return MetricName(mapped, prefix or mapped.rsplit(".", 1)[0], "map")
+    row = name_table.lookup(namespace, metric)
+    if row is not None and prefix is not None:
+        return MetricName(row.name, prefix, "table", row.scale)
     squeezed = re.sub(r"\s+", "", metric)
     if prefix is None or not _METRIC.fullmatch(squeezed):
         return None
-    return MetricName(f"{prefix}.{squeezed}", prefix, False)
+    derived = f"{prefix}.{squeezed}"
+    return MetricName(derived, prefix, "table" if name_table.is_documented(derived) else "derived")
 
 
-def dimension_attribute(names: NameMap, prefix: str, dimension: str) -> str | None:
-    """The attribute a metric dimension arrives as (`azure.cache.redis.ShardId`), or None."""
+def dimension_attribute(
+    names: NameMap, prefix: str, dimension: str, metric: str = ""
+) -> str | None:
+    """The attribute a metric dimension arrives as (`azure.cache.redis.ShardId`), or None.
+
+    A dimension with the same name as its metric is lower-cased so the two differ (the New Relic
+    documentation example is `azure.network.applicationgateways.tlsprotocol`).
+    """
     mapped = _lookup(names.attributes, dimension)
     if mapped is not None:
         return mapped
     squeezed = re.sub(r"\s+", "", dimension)
-    return f"{prefix}.{squeezed}" if _DIMENSION.fullmatch(squeezed) else None
+    if not _DIMENSION.fullmatch(squeezed):
+        return None
+    if metric and squeezed == re.sub(r"\s+", "", metric):
+        squeezed = squeezed.lower()
+    return f"{prefix}.{squeezed}"
 
 
 def log_attribute(names: NameMap, table: str, column: str) -> tuple[str, bool] | None:
