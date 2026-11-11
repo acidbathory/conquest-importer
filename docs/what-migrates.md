@@ -854,7 +854,7 @@ blocked on the project's network). Details and the measured share: [runbook-data
 `importer convert-dashboards --source datadog --in <folder of dashboard JSON> --out <folder>`. Offline;
 reads the body `GET /api/v1/dashboard/{id}` returns (or a list of them) and the same `name-map.json` as
 the monitors. Measured on the 30 public integration dashboards in the repository: 454 data widgets
-(notes excluded), 123 converted, 331 placeholders; 62 notes. Every converted chart is approximate and the
+(notes excluded), 259 converted (57%), 195 placeholders; 62 notes. Every converted chart is approximate and the
 data path is `datadog-same-names` (or `name-map`): data arrives only if the metric reaches New Relic under
 that name. The plan is in the feasibility note `docs/research/datadog-dashboard-feasibility.md` (branch `research/dd-dash-measure`).
 
@@ -867,7 +867,11 @@ that name. The plan is in the feasibility note `docs/research/datadog-dashboard-
 | `group` | A page per top-level group (two or more groups), else a heading; nested groups are headings | Layout taken from Datadog's 12-column grid; overlaps are moved down |
 | Template variable with a tag prefix, as `{$host}` or `{host:$host}` | NRQL dashboard variable (`uniques`, multi-select, default all) and `host IN ({{host}})` | Approximate; only in a filter, not in `by {}`, OR, NOT, IN or a wildcard |
 | Template variable with no prefix (`$scope`) | Its default value is applied and the widget says so | Approximate; it cannot be switched in New Relic |
-| `top`, `rollup`, `as_rate`, `timeshift`, `fill`, any function, formulas, several queries | None yet | Placeholder with a reason and manual steps (step 3 of the plan) |
+| `top(...)` | `FACET ... ORDER BY ... LIMIT n` | Approximate |
+| `as_count()`, `as_rate()`, `per_second()` | `sum(x)`, or `rate(sum(x), 1 second)`; a gauge is refused for the rate forms | Approximate; not yet checked against a live account |
+| `rollup(avg, min, max)`, `rollup(sum, daily)`; `fill()` | `TIMESERIES AUTO` (or `1 day`); `fill()` is dropped and gaps stay gaps | Approximate, noted on the widget |
+| Formula over queries with `+ - * /` and parentheses; several requests or queries in a timeseries | One `SELECT` with arithmetic (`filter()` where the scopes differ); several series | Approximate; a ratio is a window aggregate, not Datadog's point-by-point division (noted). Different group-by or events, or a function inside the formula, stay placeholders |
+| `weighted()`, `derivative()`, `timeshift()`, `autosmooth()`, `ewma`, `default_zero`, `abs` | None | Placeholder with a reason and manual steps |
 | Logs, RUM, cost, network, process data; check status, list, flame graph, heatmap and other widget types | None yet | Placeholder |
 | Widget time range, conditional formats, markers, number formats | None | Noted on the widget as not carried over |
 
