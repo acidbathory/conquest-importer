@@ -246,10 +246,10 @@ the corpus has 1,265 widgets written instead of 1,299 read).
 | | Baseline | After |
 |---|---:|---:|
 | Whole corpus, alert conditions converted | 60 of 350 (17.1%) | **191 of 350 (54.6%)** |
-| Whole corpus, data widgets converted | 65 of 1,148 (5.7%) | **787 of 1,148 (68.6%)** |
-| Scoreboard widgets: charts / placeholders | 65 / 1,194 | 787 / 429 (of which 68 are empty text boxes) |
+| Whole corpus, data widgets converted | 65 of 1,148 (5.7%) | **786 of 1,148 (68.5%)** |
+| Scoreboard widgets: charts / placeholders | 65 / 1,194 | 786 / 430 (of which 68 are empty text boxes) |
 | Native slice, conditions (Google service metrics + log filters + SLO + uptime: 121) | 60 of 121 (49.6%) | **85 of 121 (70.2%)** |
-| Native slice, widgets on Google service metrics (305) | 64 of 305 (21.0%) | **258 of 305 (84.6%)** |
+| Native slice, widgets on Google service metrics (305) | 64 of 305 (21.0%) | **257 of 305 (84.3%)** |
 
 "Native slice" is the definition of section 3 (conditions) and section 4 (widgets). Conditions: Google service metrics
 57 of 83 (was 47), log filters 28 of 31 (was 13), SLO 0 of 4, uptime 0 of 3.
@@ -257,17 +257,17 @@ the corpus has 1,265 widgets written instead of 1,299 read).
 Converted, by the data path the customer must set up first (this is the honest reading of "converted": a query that
 returns data only after the data is sent is not the same as one that works today):
 
-| Data path | Conditions (191) | Data widgets (787) |
+| Data path | Conditions (191) | Data widgets (786) |
 |---|---:|---:|
-| native (New Relic polls it) | 57 | 527 |
+| native (New Relic polls it) | 57 | 526 |
 | needs Ops Agent or OpenTelemetry | 63 | 165 |
 | needs Prometheus remote write | 35 | 8 |
 | needs log forwarding | 28 | 0 (15 logs panels count under native) |
 | needs custom ingest | 4 | 87 |
 | not classified (converted PromQL, no data path set) | 4 | 0 |
-| **Manual (not converted)** | **159** | **361 placeholders** |
+| **Manual (not converted)** | **159** | **362 placeholders** |
 
-Only the native rows return data without extra work: **57 of 350 conditions (16.3%)** and **527 of 1,148 data widgets (45.9%)**.
+Only the native rows return data without extra work: **57 of 350 conditions (16.3%)** and **526 of 1,148 data widgets (45.8%)**.
 The 13 of the old "16 with a confirmed metric name" that were log-match conditions are now classed as needing log forwarding, so
 "confirmed names" fell from 16 to 3 (all native): that is a re-classification, not a loss.
 
@@ -277,7 +277,7 @@ log match 28 of 31, PromQL 4 of 89, MQL 0 of 12, SQL 0 of 2, SLO 0 of 4, uptime 
 `_over_time` 9, binary operators 8), MQL 12, metrics with no known route 7, metadata labels 6, quoted label names 5.
 
 Caveats. "Converted" means the converter wrote a query, not that it returns data; names on the non-native paths are
-unverified. A logs panel is counted as a converted chart (a table over `Log`); 15 of the 787 widgets are of that kind.
-The ratio widgets use the default aggregation when the source gives none, which is an average, not a sum (see
-`docs/improvement/proposals/2026-11-11-gcp-combined-output-diff.md`). Numbers: `uv run python
+unverified. A logs panel is counted as a converted chart (a table over `Log`); 15 of the 786 widgets are of that kind.
+A ratio of one metric to itself converts only with a summing aligner; without one it stays manual (an average of
+parts over an average of totals overstates a share), which is why one widget fewer converts than in a first run. Numbers: `uv run python
 scripts/analysis/gcp_estate_measure.py --json out.json` on tag `integrate/gcp-all`.
