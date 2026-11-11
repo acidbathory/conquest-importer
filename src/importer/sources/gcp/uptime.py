@@ -128,5 +128,17 @@ def write_outputs(checks: list[dict[str, Any]], out: Path) -> list[UptimePlan]:
     lines += ["", "## Steps", ""]
     for kind in kinds:
         lines += [f"- {kind}: {md_cell(step, 400)}" for step in steps_for([REASONS[kind]])]
+    from importer.sources.gcp.uptime_monitors import plan_all  # imports this module
+
+    monitors = plan_all(checks)
+    if monitors:
+        (out / "synthetic-monitor-plan.json").write_text(
+            json.dumps([m.model_dump() for m in monitors], indent=2) + "\n"
+        )
+        lines += [
+            "",
+            f"synthetic-monitor-plan.json holds the monitor to create for {len(monitors)} checks "
+            "(URL, frequency, locations, secret names). Nothing is created.",
+        ]
     (out / "report.md").write_text("\n".join(lines) + "\n")
     return plans

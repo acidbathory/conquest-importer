@@ -64,14 +64,17 @@ def _paged(get: Getter, url: str, key: str, budget: PageBudget) -> list[dict[str
     raise GcpError(f"more than {MAX_PAGES} pages of {key}; stopped")
 
 
+def _dict(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
 def _text(value: object, limit: int = MAX_FILTER) -> str:
     return printable(value, limit) if isinstance(value, str) else ""
 
 
 def log_metric_summary(metric: dict[str, Any]) -> dict[str, Any]:
     """The definition that decides what a log-based metric counts; descriptions are dropped."""
-    raw = metric.get("metricDescriptor")
-    descriptor = raw if isinstance(raw, dict) else {}
+    descriptor = _dict(metric.get("metricDescriptor"))
     labels = descriptor.get("labels")
     extractors = metric.get("labelExtractors")
     buckets = metric.get("bucketOptions")
@@ -114,12 +117,10 @@ def uptime_details(check: dict[str, Any]) -> dict[str, Any]:
     values, the request body and the user name are not kept: `auth` says that a credential
     existed, so the plan can ask for a secret reference.
     """
-    http = check.get("httpCheck") if isinstance(check.get("httpCheck"), dict) else {}
-    tcp = check.get("tcpCheck") if isinstance(check.get("tcpCheck"), dict) else {}
-    resource = (
-        check.get("monitoredResource") if isinstance(check.get("monitoredResource"), dict) else {}
-    )
-    labels = resource.get("labels") if isinstance(resource.get("labels"), dict) else {}
+    http = _dict(check.get("httpCheck"))
+    tcp = _dict(check.get("tcpCheck"))
+    resource = _dict(check.get("monitoredResource"))
+    labels = _dict(resource.get("labels"))
     host = str(labels.get("host", ""))
     headers = http.get("headers")
     auth = http.get("authInfo")

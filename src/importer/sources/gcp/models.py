@@ -7,9 +7,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, PrivateAttr
 
 from importer.core.ids import MAX_INPUT_BYTES
+from importer.sources.gcp.extras import GcpExtras, load_extras
 
 CONDITION_KINDS = (
     "conditionThreshold",
@@ -51,6 +52,12 @@ class GcpAlertPolicy(BaseModel):
     documentation: dict[str, Any] = {}
     alertStrategy: dict[str, Any] = {}
     userLabels: dict[str, Any] = {}
+    # definitions read beside the policies (log-based metrics, SLOs, uptime checks); not exported
+    _extras: GcpExtras | None = PrivateAttr(default=None)
+
+    @property
+    def extras(self) -> GcpExtras | None:
+        return self._extras
 
 
 def _files(path: Path) -> list[Path]:
@@ -70,4 +77,7 @@ def load_policies(path: Path) -> list[GcpAlertPolicy]:
         else:
             items = data
         policies += [GcpAlertPolicy.model_validate(i) for i in items]
+    extras = load_extras(path.parent) if path.is_dir() else None
+    for policy in policies:
+        policy._extras = extras  # set once here, read through `extras`
     return policies

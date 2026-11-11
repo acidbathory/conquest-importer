@@ -4,9 +4,6 @@
       "checkerType": "STATIC_IP_CHECKERS",
       "displayName": "Site health",
       "httpCheck": {
-        "headers": {
-          "X-Probe": "1"
-        },
         "path": "/health",
         "port": 443,
         "requestMethod": "GET",
@@ -193,6 +190,29 @@
         "SOUTH_AMERICA"
       ],
       "timeout": "5s"
+    },
+    {
+      "displayName": "Header check",
+      "httpCheck": {
+        "headers": {
+          "X-Probe": "1"
+        },
+        "path": "/h",
+        "port": 443,
+        "useSsl": true
+      },
+      "monitoredResource": {
+        "labels": {
+          "host": "host.example.com"
+        },
+        "type": "uptime_url"
+      },
+      "name": "projects/example-project/uptimeCheckConfigs/with-header",
+      "period": "300s",
+      "selectedRegions": [
+        "USA"
+      ],
+      "timeout": "10s"
     }
   ]
 }
