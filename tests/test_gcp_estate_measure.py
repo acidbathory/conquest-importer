@@ -169,6 +169,10 @@ def test_primary_code_skips_the_channel_note_and_the_absence_prefix() -> None:
     ]
     assert measure.primary_code(reasons) == "aligner"
     assert measure.primary_code(["notification channels must be configured manually"]) == "none"
+    assert (
+        measure.primary_code(["height 16 clamped to 12", "dashboard widget type is not supported"])
+        == "widget type"
+    )
 
 
 @pytest.mark.parametrize(

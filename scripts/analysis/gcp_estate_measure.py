@@ -135,7 +135,7 @@ def reason_code(reason: str) -> str:
 def primary_code(reasons: list[str]) -> str:
     """The code of the first reason that is a blocker (notes about channels are skipped)."""
     for reason in reasons:
-        if not reason.startswith("notification channels must be"):
+        if not reason.startswith("notification channels must be") and "clamped to" not in reason:
             return reason_code(reason.removeprefix("a metric-absence condition could not be "))
     return "none"
 
@@ -296,7 +296,9 @@ def measure_widgets(corpus: Corpus) -> list[dict[str, Any]]:
                     "code": primary_code(result.reasons)
                     if verdict == "placeholder"
                     else "converted",
-                    "all_codes": sorted({reason_code(r) for r in result.reasons})
+                    "all_codes": sorted(
+                        {reason_code(r) for r in result.reasons if "clamped to" not in r}
+                    )
                     if verdict == "placeholder"
                     else [],
                     "partial": verdict == "converted"
@@ -320,8 +322,11 @@ def blocker_detail(rows: list[dict[str, Any]], *, drop_structural: bool = False)
             drop_structural and row.get("structural")
         ):
             continue
-        entry = detail.setdefault(row["code"], {"count": 0, "families": Counter(), "examples": []})
+        entry = detail.setdefault(
+            row["code"], {"count": 0, "alone": 0, "families": Counter(), "examples": []}
+        )
         entry["count"] += 1
+        entry["alone"] += row.get("all_codes", [row["code"]]) in ([row["code"]], [])
         entry["families"][row["family"]] += 1
         if row["file"] not in entry["examples"] and len(entry["examples"]) < 3:
             entry["examples"].append(row["file"])
