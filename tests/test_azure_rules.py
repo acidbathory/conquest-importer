@@ -53,7 +53,7 @@ def test_every_reason_has_a_category() -> None:
 
 def test_every_manual_monitor_has_a_remediation_rule() -> None:
     for m in everything():
-        if m.confidence is Confidence.MANUAL:
+        if m.confidence in (Confidence.MANUAL, Confidence.UNSUPPORTED):
             assert remedies_for(m.reasons) or m.remediation, m.reasons
 
 

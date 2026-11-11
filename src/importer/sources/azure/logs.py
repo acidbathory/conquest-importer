@@ -311,7 +311,7 @@ def translate_scheduled_query_rule(alert: AzureAlert) -> IRMonitor:
     notes = common_notes(props, level)
     kind = alert.kind or "LogAlert"
     if kind == "LogToMetric":
-        return manual(base, [R.M_LOG_TO_METRIC], unmapped=extra)
+        return manual(base, [R.M_LOG_TO_METRIC], unmapped=extra, confidence=Confidence.UNSUPPORTED)
     if kind not in ("LogAlert", "SimpleLogAlert"):
         return manual(base, [f"{R.M_LOG_KIND}: {R.shown(kind, 40)}"], unmapped=extra)
     criteria = props.get("criteria")
@@ -372,4 +372,9 @@ def translate_smart_detector(alert: AzureAlert) -> IRMonitor:
     detector = props.get("detector")
     detector_id = detector.get("id") if isinstance(detector, dict) else None
     reason = f"{R.M_SMART}: detector {R.shown(detector_id, 60)}"
-    return manual(base, [reason], unmapped={"azure_severity": R.shown(props.get("severity"), 10)})
+    return manual(
+        base,
+        [reason],
+        unmapped={"azure_severity": R.shown(props.get("severity"), 10)},
+        confidence=Confidence.UNSUPPORTED,
+    )

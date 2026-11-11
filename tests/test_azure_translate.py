@@ -449,6 +449,7 @@ def test_smart_detector_rules_are_manual_and_name_the_detector() -> None:
         make("smartDetectorAlertRules", {"detector": {"id": "VMMemoryLeak"}, "severity": "Sev3"})
     )
     assert "smart detector" in m.reasons[0] and "VMMemoryLeak" in m.reasons[0]
+    assert m.confidence is Confidence.UNSUPPORTED
 
 
 def prom_group(*rules: dict[str, Any]) -> Any:
