@@ -148,3 +148,25 @@ def test_dimension_operator_starts_with_becomes_a_like() -> None:
     m = one(metric_alert(criterion(dimensions=one_dim)))
     assert m.confidence is Confidence.APPROXIMATE
     assert "azure.compute.virtualmachines.ApiName LIKE 'Get%'" in nrql_for(m)
+
+
+def test_the_data_path_names_what_must_be_in_place() -> None:
+    assert one(metric_alert()).data_path == "native"
+    prom = make_promql_alert()
+    assert one(prom).data_path == "needs-prometheus-remote-write"
+
+
+def make_promql_alert() -> Any:
+    from azure_helpers import make
+
+    props = {
+        "severity": 2,
+        "scopes": [VM],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT5M",
+        "criteria": {
+            "odata.type": "Microsoft.Azure.Monitor.PromQLCriteria",
+            "allOf": [{"query": "up > 0", "criterionType": "StaticThresholdCriterion"}],
+        },
+    }
+    return make("metricAlerts", props)
