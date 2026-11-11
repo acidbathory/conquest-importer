@@ -1,0 +1,17 @@
+{
+  "services": [
+    {
+      "custom": {},
+      "displayName": "Checkout",
+      "name": "projects/example-project/services/checkout"
+    },
+    {
+      "cloudRun": {
+        "location": "us-central1",
+        "serviceName": "gateway"
+      },
+      "displayName": "Gateway",
+      "name": "projects/example-project/services/gateway"
+    }
+  ]
+}

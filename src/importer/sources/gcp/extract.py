@@ -150,8 +150,11 @@ def _channel_summary(channel: dict[str, Any]) -> dict[str, Any]:
 
 
 def _uptime_summary(check: dict[str, Any]) -> dict[str, Any]:
+    from importer.sources.gcp.extract_plus import uptime_details  # circular at import time
+
     http = check.get("httpCheck") if isinstance(check.get("httpCheck"), dict) else {}
     return {
+        "details": uptime_details(check),
         "name": check.get("name", ""),
         "displayName": _shown(check),
         "period": check.get("period", ""),
@@ -171,6 +174,8 @@ class ExtractResult:
     channels: int = 0
     uptime_checks: int = 0
     dashboards: int = 0
+    log_metrics: int = 0
+    slos: int = 0
     warnings: list[str] = field(default_factory=list)
 
 
@@ -199,7 +204,11 @@ def extract(get: Getter, project: str, out: Path) -> ExtractResult:
     result.channels = len(optional["notificationChannels"])
     result.uptime_checks = len(optional["uptimeCheckConfigs"])
     result.dashboards = len(optional["dashboards"])
+    from importer.sources.gcp.extract_plus import read_plus  # circular at import time
+
+    plus = read_plus(get, project, budget, result)
     for folder, name, data in (
+        *plus,
         ("policies", "policies.json", policies),
         ("channels", "channels.json", optional["notificationChannels"]),
         ("uptime-checks", "uptime-checks.json", optional["uptimeCheckConfigs"]),
