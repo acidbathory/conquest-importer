@@ -295,8 +295,8 @@ Same corpus and script as section 9 (`scripts/analysis/gcp_estate_measure.py`, o
 | Scoreboard placeholders | 430 | 325 (68 empty titled text boxes are now headings) |
 
 What closed: second-stage aggregation merged into one stage when the numbers are the same (same period or no
-re-alignment, composable reducers: 3 conditions, 16 widgets); `ALIGN_NEXT_OLDER` and `ALIGN_INTERPOLATE`
-(polled value, or `latest()` over a longer window; 8 widgets and a synthetic condition); percentile across series
+re-alignment, composable reducers: 3 conditions, 17 widgets); `ALIGN_NEXT_OLDER` and `ALIGN_INTERPOLATE`
+(polled value, or `latest()` over a longer window; 5 widgets and 1 condition); percentile across series
 after `ALIGN_RATE` (2 widgets); incident lists as a table over `NrAiIssue` (13); titled empty text boxes as headings (68
 placeholders); thresholds and units kept on scorecards and line charts; logs panel regular expressions as `RLIKE`.
 
