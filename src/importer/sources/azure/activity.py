@@ -111,8 +111,9 @@ def _any_of(alert: AzureAlert, parts: list[Any]) -> CountFilter:
 
 def _scope(scopes: object) -> tuple[CountFilter, bool]:
     """The resourceId filter and whether the rule covers more than one resource."""
-    ids = [s for s in scopes if isinstance(s, str) and s] if isinstance(scopes, list) else []
-    if not ids or len(ids) != len(scopes or []):
+    listed = scopes if isinstance(scopes, list) else []
+    ids = [s for s in listed if isinstance(s, str) and s]
+    if not ids or len(ids) != len(listed):
         raise Fail(f"{R.M_ACTIVITY_COND}: scope is not a list of resource ids")
     plain = [i for i in ids if RESOURCE_SEGMENTS.search(i)]
     key = "resourceId"
