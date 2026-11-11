@@ -1,9 +1,24 @@
 """Azure Monitor source: alert rules to New Relic."""
 
-from importer.sources.azure import playbooks, remediation_rules, taxonomy  # noqa: F401
+from importer.sources.azure import (  # noqa: F401
+    dashboard_playbooks,
+    dashboard_rules,
+    playbooks,
+    remediation_rules,
+    taxonomy,
+)
+from importer.sources.azure.dashboard_models import load_dashboards
+from importer.sources.azure.dashboards import translate_dashboards
 from importer.sources.azure.models import AzureAlert, load_alerts
 from importer.sources.azure.translate import translate
-from importer.sources.base import Source, import_subpackages, register, register_fixtures
+from importer.sources.base import (
+    DashboardSource,
+    Source,
+    import_subpackages,
+    register,
+    register_dashboards,
+    register_fixtures,
+)
 
 SOURCE: Source[AzureAlert] = Source(
     name="azure",
@@ -14,6 +29,17 @@ SOURCE: Source[AzureAlert] = Source(
     translate=translate,
 )
 register(SOURCE)
+
+DASHBOARDS = DashboardSource(
+    name="azure",
+    input_help=(
+        "file or folder with workbooks and portal dashboards (`extract-azure --dashboards` writes "
+        "them; downloaded dashboards and .workbook templates work too)"
+    ),
+    load=load_dashboards,
+    translate=translate_dashboards,
+)
+register_dashboards(DASHBOARDS)
 # official examples and hostile cases; real captured responses go in tests/fixtures/azure-live/
 register_fixtures("azure", "tests/fixtures/azure", "tests/fixtures/azure-live")
 

@@ -776,4 +776,35 @@ the measured share: [runbook-azure](user/runbook-azure.md), [baseline](research/
 | Severity 0 to 4 | Critical (0, 1) and warning (2 to 4); the Azure severity is kept in the description | Approximate |
 | Action groups, alert processing rules | Destinations, workflows, muting rules | Separate step, not covered here |
 
+## Azure Monitor (workbooks and portal dashboards)
+
+Built offline from the official Azure examples and 30 public workbook templates; never run against
+a live subscription. `extract-azure --dashboards` reads them (read-only), `convert-dashboards
+--source azure` converts, `plan-azure-dashboards` counts. Evidence and measured numbers:
+[azure-dashboards](research/azure-dashboards.md). A placeholder ("Not migrated" with the reason) is
+never counted as converted.
+
+| Azure | New Relic | Status |
+|---|---|---|
+| Workbook text item | Markdown widget | Exact (approximate when it names `{parameters}`) |
+| Workbook metrics item, platform metric | Chart over `Metric` (`azure.<type>.<Metric>`), line, area or table | Approximate; metric name UNVERIFIED; native data path |
+| Resource picker parameter | NRQL variable `uniques(azure.resourceId)` used as `IN ({{name}})` | Approximate |
+| Resource picker filled by a Resource Graph query | The chart covers every resource of the type, with a note | Approximate |
+| Static dropdown parameter | Enum variable, when a converted widget uses it | Approximate |
+| Tabs (link tabs, option groups) | One dashboard page per tab | Approximate |
+| Group | Heading followed by its items | Approximate |
+| Links item | Markdown list; link actions are text | Approximate |
+| KQL query item | NRQL through the KQL translator, chart from `visualization` (timechart/linechart to line, areachart to area, barchart to bar, piechart to pie, table or none to table, tiles or stat to billboard, graph and map to table); needs log forwarding | Placeholder until the KQL translator is connected |
+| Resource Graph, ARM endpoint, merge, JSON, Data Explorer query | None | Placeholder |
+| Conditional visibility other than a tab | None: a widget is always shown | Placeholder |
+| Dependent parameter, unknown item type, linked template | None | Placeholder |
+| Portal markdown part | Markdown widget | Exact |
+| Portal metrics chart part (`MetricsChartPart`, `MonitorChartPart`) | Chart over `Metric` | Approximate |
+| Portal logs part | NRQL through the KQL translator | Placeholder until connected |
+| Resource cards, health, maps, video, buttons | None | Placeholder |
+
+The live `Microsoft.Portal/dashboards` API answered 502 for every version on the owner's
+subscription. `extract-azure --dashboards` then reports it as "not available" and still writes the
+workbooks; portal dashboards downloaded from the portal convert as files.
+
 Other platforms are planned; see the [roadmap](../README.md#roadmap).

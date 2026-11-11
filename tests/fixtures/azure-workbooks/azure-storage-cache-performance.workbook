@@ -1,0 +1,1048 @@
+{
+ "version": "Notebook/1.0",
+ "items": [
+  {
+   "type": 9,
+   "content": {
+    "version": "KqlParameterItem/1.0",
+    "parameters": [
+     {
+      "version": "KqlParameterItem/1.0",
+      "name": "Resource",
+      "label": "HPC Cache",
+      "type": 5,
+      "isRequired": true,
+      "value": "value::1",
+      "isHiddenWhenLocked": true,
+      "typeSettings": {
+       "resourceTypeFilter": {
+        "microsoft.storagecache/caches": true
+       },
+       "additionalResourceOptions": [
+        "value::1"
+       ],
+       "showDefault": false
+      }
+     },
+     {
+      "version": "KqlParameterItem/1.0",
+      "name": "TimeRange",
+      "type": 4,
+      "isRequired": true,
+      "value": {
+       "durationMs": 14400000
+      },
+      "typeSettings": {
+       "selectableValues": [
+        {
+         "durationMs": 300000
+        },
+        {
+         "durationMs": 900000
+        },
+        {
+         "durationMs": 1800000
+        },
+        {
+         "durationMs": 3600000
+        },
+        {
+         "durationMs": 14400000
+        },
+        {
+         "durationMs": 43200000
+        },
+        {
+         "durationMs": 86400000
+        },
+        {
+         "durationMs": 172800000
+        },
+        {
+         "durationMs": 259200000
+        },
+        {
+         "durationMs": 604800000
+        },
+        {
+         "durationMs": 1209600000
+        }
+       ],
+       "allowCustom": true
+      },
+      "label": "Time Range"
+     }
+    ],
+    "style": "pills",
+    "queryType": 0,
+    "resourceType": "microsoft.storagecache/caches"
+   },
+   "name": "resource param"
+  },
+  {
+   "type": 11,
+   "content": {
+    "version": "LinkItem/1.0",
+    "style": "tabs",
+    "links": [
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Performance: IOPS",
+      "subTarget": "Performance: IOPS",
+      "preText": "",
+      "style": "primary",
+      "workbookContext": {
+       "componentIdSource": "workbook",
+       "resourceIdsSource": "workbook",
+       "templateIdSource": "static",
+       "templateId": "Community-Workbooks/Azure Storage Cache/Performance",
+       "typeSource": "workbook",
+       "gallerySource": "workbook"
+      }
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Performance: Latency",
+      "subTarget": "Performance: Latency",
+      "style": "link"
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Performance: Throughput",
+      "subTarget": "Performance: Throughput",
+      "style": "link"
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Capacity: Read",
+      "subTarget": "Capacity: Read",
+      "style": "secondary",
+      "workbookContext": {
+       "componentIdSource": "workbook",
+       "resourceIdsSource": "workbook",
+       "templateIdSource": "static",
+       "templateId": "Community-Workbooks/Azure Storage Cache/Capacity",
+       "typeSource": "workbook",
+       "gallerySource": "workbook"
+      }
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Capacity: Write",
+      "subTarget": "Capacity: Write",
+      "style": "link"
+     },
+     {
+      "cellValue": "tab",
+      "linkTarget": "parameter",
+      "linkLabel": "Capacity: Recycle",
+      "subTarget": "Capacity: Recycle",
+      "style": "link"
+     }
+    ]
+   },
+   "name": "Navigation menu - Copy",
+   "styleSettings": {
+    "margin": "0 0 20px 0"
+   }
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--ClientMetadataReadIOPS",
+         "aggregation": 4,
+         "splitBy": null
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--ClientMetadataWriteIOPS",
+         "aggregation": 4
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--ClientReadIOPS",
+         "aggregation": 4
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--ClientWriteIOPS",
+         "aggregation": 4
+        }
+       ],
+       "title": "Frontend Ops",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "100",
+      "name": "metric - 1"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetReadIOPS",
+         "aggregation": 4,
+         "splitBy": "StorageTarget"
+        }
+       ],
+       "title": "Storage Target Read Ops",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 0",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetWriteIOPS",
+         "aggregation": 4,
+         "splitBy": "StorageTarget"
+        }
+       ],
+       "title": "Storage Target Write Ops",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 0 - Copy",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetMetadataReadIOPS",
+         "aggregation": 4,
+         "splitBy": "StorageTarget"
+        }
+       ],
+       "title": "Storage Target Metadata Read Ops",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 0 - Copy - Copy",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetMetadataWriteIOPS",
+         "aggregation": 4,
+         "splitBy": "StorageTarget"
+        }
+       ],
+       "title": "Storage Target Metadata Write Ops",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 0 - Copy - Copy - Copy",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "Performance: IOPS"
+   },
+   "name": "Performance: IOPS group"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--ClientReadThroughput",
+         "aggregation": 4,
+         "splitBy": null
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--ClientWriteThroughput",
+         "aggregation": 4
+        }
+       ],
+       "title": "Frontend Throughput",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "100",
+      "name": "metric - 2",
+      "styleSettings": {
+       "maxWidth": "100"
+      }
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetReadAheadThroughput",
+         "aggregation": 4,
+         "splitBy": "StorageTarget",
+         "columnName": "Read Ahead Throughput"
+        }
+       ],
+       "title": "Storage Target Read Ahead Throughput",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 4",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetFillThroughput",
+         "aggregation": 4,
+         "splitBy": "StorageTarget",
+         "columnName": "Fill Throughput"
+        }
+       ],
+       "title": "Storage Target Fill Throughput",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 4 - Copy",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetSyncWriteThroughput",
+         "aggregation": 4,
+         "splitBy": "StorageTarget",
+         "columnName": ""
+        }
+       ],
+       "title": "Storage Target Sync Write Throughput",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 4 - Copy - Copy",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetAsyncWriteThroughput",
+         "aggregation": 4,
+         "splitBy": "StorageTarget",
+         "columnName": ""
+        }
+       ],
+       "title": "Storage Target Async Write Throughput",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 4 - Copy - Copy - Copy",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "Performance: Throughput"
+   },
+   "name": "Performance: Throughput group"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--ClientLatency",
+         "aggregation": 4,
+         "splitBy": null
+        }
+       ],
+       "title": "Client Latency",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "100",
+      "name": "metric - 3"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetLatency",
+         "aggregation": 4,
+         "splitBy": "StorageTarget"
+        }
+       ],
+       "title": "Storage Target Latency",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "100",
+      "name": "metric - 3 - Copy"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "Performance: Latency"
+   },
+   "customWidth": "100",
+   "name": "Performance: Latency group"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 3,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetUsedReadSpace",
+         "aggregation": 4,
+         "splitBy": "StorageTarget"
+        }
+       ],
+       "title": "Storage Target Used Read Space",
+       "gridSettings": {
+        "formatters": [
+         {
+          "columnMatch": "Subscription",
+          "formatter": 5
+         },
+         {
+          "columnMatch": "Name",
+          "formatter": 13,
+          "formatOptions": {
+           "linkTarget": "Resource"
+          }
+         },
+         {
+          "columnMatch": ".*\\/Storage Target Used Read Space$",
+          "formatter": 1
+         }
+        ],
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 2",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 3,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetFreeReadSpace",
+         "aggregation": 4,
+         "splitBy": "StorageTarget"
+        }
+       ],
+       "title": "Storage Target Free Read Space",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 2 - Copy",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 3,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalFreeReadSpace",
+         "aggregation": 4,
+         "splitBy": null
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalFreeWriteSpace",
+         "aggregation": 4
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalUsedReadSpace",
+         "aggregation": 4
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalUsedWriteSpace",
+         "aggregation": 4
+        }
+       ],
+       "title": "Total Free and Used Space",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "100",
+      "name": "metric - 1"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "Capacity: Read"
+   },
+   "name": "Capacity: Read group"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 1,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetRecycleRate",
+         "aggregation": 4,
+         "splitBy": "StorageTarget"
+        }
+       ],
+       "title": "Storage Target Recycle Rate",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "100",
+      "name": "metric - 3"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 3,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalFreeReadSpace",
+         "aggregation": 4,
+         "splitBy": null
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalFreeWriteSpace",
+         "aggregation": 4
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalUsedReadSpace",
+         "aggregation": 4
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalUsedWriteSpace",
+         "aggregation": 4
+        }
+       ],
+       "title": "Total Free and Used Space",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 1"
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 2,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetBlocksRecycled",
+         "aggregation": 4,
+         "splitBy": "StorageTarget"
+        }
+       ],
+       "title": "Storage Target Blocks Recycled",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 2",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "Capacity: Recycle"
+   },
+   "name": "Capacity: Recycle group"
+  },
+  {
+   "type": 12,
+   "content": {
+    "version": "NotebookGroup/1.0",
+    "groupType": "editable",
+    "items": [
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 3,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetUsedWriteSpace",
+         "aggregation": 4,
+         "splitBy": "StorageTarget"
+        }
+       ],
+       "title": "Storage Target Used Write Space",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 2 - Copy - Copy",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 3,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--StorageTargetFreeWriteSpace",
+         "aggregation": 4,
+         "splitBy": "StorageTarget",
+         "columnName": "Free Write {StorageTarget}"
+        }
+       ],
+       "title": "Storage Target Free Write Space",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "50",
+      "name": "metric - 2 - Copy - Copy - Copy",
+      "styleSettings": {
+       "maxWidth": "50%"
+      }
+     },
+     {
+      "type": 10,
+      "content": {
+       "version": "MetricsItem/2.0",
+       "size": 0,
+       "chartType": 3,
+       "resourceType": "microsoft.storagecache/caches",
+       "metricScope": 0,
+       "resourceParameter": "Resource",
+       "resourceIds": [
+        "{Resource}"
+       ],
+       "timeContextFromParameter": "TimeRange",
+       "timeContext": {
+        "durationMs": 3600000
+       },
+       "metrics": [
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalFreeReadSpace",
+         "aggregation": 4,
+         "splitBy": null
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalFreeWriteSpace",
+         "aggregation": 4
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalUsedReadSpace",
+         "aggregation": 4
+        },
+        {
+         "namespace": "microsoft.storagecache/caches",
+         "metric": "microsoft.storagecache/caches--TotalUsedWriteSpace",
+         "aggregation": 4
+        }
+       ],
+       "title": "Total Free and Used Space",
+       "gridSettings": {
+        "rowLimit": 10000
+       }
+      },
+      "customWidth": "100",
+      "name": "metric - 1"
+     }
+    ]
+   },
+   "conditionalVisibility": {
+    "parameterName": "tab",
+    "comparison": "isEqualTo",
+    "value": "Capacity: Write"
+   },
+   "name": "Capacity: Write group"
+  }
+ ],
+ "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

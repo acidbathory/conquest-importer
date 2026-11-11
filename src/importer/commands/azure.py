@@ -46,6 +46,14 @@ def _extract(
         typer.Option(help="Subscription id (a UUID); default: AZURE_SUBSCRIPTION_ID"),
     ] = None,
     out: Annotated[Path, typer.Option(help="New folder for the export")] = Path("out/azure"),
+    dashboards: Annotated[
+        bool,
+        typer.Option(
+            "--dashboards",
+            help="Also read workbooks and portal dashboards (the alert export is "
+            "the same without it)",
+        ),
+    ] = False,
 ) -> None:
     """Read Azure Monitor alert rules, action groups and processing rules from a subscription.
 
@@ -54,11 +62,18 @@ def _extract(
     never stored. Webhook URLs, callback URLs, secure webhook ids and passwords are dropped as the
     data is read and replaced by a reference name. The export still holds subscription ids,
     resource names and email addresses: review it before sharing.
+
+    With --dashboards it also reads workbooks (api-version 2023-06-01, category workbook, with
+    their content) and portal dashboards (preview API; if Azure answers 5xx they are reported
+    as not available and the rest still succeeds). Workbook identity, user and storage URI are
+    dropped.
     """
     try:
         sub = subscription_id(subscription)
         with _session() as get:
-            result = extract(get, sub, out)
+            result = (
+                extract(get, sub, out, dashboards=True) if dashboards else extract(get, sub, out)
+            )
     except (AzureError, ValueError, OSError) as exc:
         typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
         raise typer.Exit(code=1) from None
@@ -69,6 +84,11 @@ def _extract(
         typer.echo(f"  Could not read {printable(warning, 200)}", err=True)
     typer.echo("Next:")
     typer.echo(f"  importer convert --source azure --in {out} --out out/azure-alerts")
+    if dashboards:
+        typer.echo(
+            f"  importer convert-dashboards --source azure --in {out} --out out/azure-dashboards"
+            f"   (or plan-azure-dashboards --in {out})"
+        )
     typer.echo(
         "  importer check-azure-data --alerts out/azure-alerts --nr-account-id <id>"
         "   (are the metric names right? put corrections in name-map.json)"

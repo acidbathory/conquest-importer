@@ -34,7 +34,7 @@ from importer.core.report import md_cell
 from importer.core.text import printable
 
 ACCOUNT_PLACEHOLDER = "ACCOUNT_ID_PLACEHOLDER"
-RESOURCE_PREFIXES = {"cloudwatch": "cw_dashboard", "gcp": "gcp_dashboard"}
+RESOURCE_PREFIXES = {"cloudwatch": "cw_dashboard", "gcp": "gcp_dashboard", "azure": "az_dashboard"}
 
 MUTATION = (
     "mutation CreateDashboard($accountId: Int!, $dashboard: DashboardInput!) {\n"
