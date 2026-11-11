@@ -45,6 +45,12 @@ MULTI_METRIC = (
 )
 
 
+SYSTEM_LABEL = (
+    "filter term on {field!r} is not supported: a system label has no confirmed New Relic "
+    "attribute, so the importer cannot say which attribute to filter on"
+)
+
+
 class ScopeFail(Exception):
     """The filter cannot be converted; the message is the reason shown to the person."""
 
@@ -238,7 +244,7 @@ def _or_group(group: Group, notes: list[str]) -> list[TagFilter]:
         return []
     attribute = label_attribute(name)
     if attribute is None:
-        raise ScopeFail(f"filter term on {name!r} is not supported")
+        raise ScopeFail(_unsupported_field(name))
     if any(t.negate or t.op not in ("=", "in") for t in terms):
         raise ScopeFail(
             f"filter not supported: an OR over {name!r} that is not a list of equal values, "
@@ -298,8 +304,15 @@ def _term(term: Term, notes: list[str]) -> TagFilter | str | None:
         raise ScopeFail(f"filter term on 'resource.type' ({_describe(term)}) is not supported")
     attribute = label_attribute(term.field)
     if attribute is None:
-        raise ScopeFail(f"filter term on {term.field!r} is not supported")
+        raise ScopeFail(_unsupported_field(term.field))
     return term_filter(term, attribute)
+
+
+def _unsupported_field(name: str) -> str:
+    """The reason for a field that is no resource, metric or user label."""
+    if name.startswith("metadata.system_labels."):
+        return SYSTEM_LABEL.format(field=name)
+    return f"filter term on {name!r} is not supported"
 
 
 def _describe(term: Term) -> str:

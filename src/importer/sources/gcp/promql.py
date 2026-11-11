@@ -47,6 +47,11 @@ R_PLACEHOLDER = (
     "promql query contains a template placeholder such as ${NAME}; fill it in with the real "
     "value before the condition can be converted"
 )
+R_PLACEHOLDER_NAMES = (
+    "promql query contains a template placeholder ({names}) with no value in the name map "
+    "(variables); the policy does not say what it stands for, so give it a value before the "
+    "condition can be converted"
+)
 R_DURATION = "promql condition has a duration or evaluation interval that is not like 5m or 300s"
 R_QUERY = "promql condition has no query"
 N_NAMES = (
@@ -92,9 +97,15 @@ RULES: list[Rule] = [
         "PromQL query with a template placeholder",
         [
             "The sample policies from Google use ${CLUSTER_NAME}-style placeholders for a person "
-            "to replace. Put the real project, cluster or resource value in the query in "
-            "Google, export the policy again and convert it, or write the NRQL by hand with "
-            "a WHERE clause on the matching attribute.",
+            "to replace; nothing in the policy says what they stand for, so the importer does "
+            "not guess. The reason lists the names that have no value.",
+            "If you know the values, add them to the name map (the file named by "
+            'IMPORTER_GRAFANA_NAME_MAP) under "variables", one entry per name, for example '
+            '{"variables": {"CLUSTER_NAME": "prod-1"}}, and convert again: each value is '
+            "written into the query and noted for you to check.",
+            "Otherwise put the real project, cluster or resource value in the query in Google "
+            "and export the policy again, or write the NRQL by hand with a WHERE clause on the "
+            "matching attribute.",
         ],
     ),
 ]
@@ -291,7 +302,11 @@ def _pieces_with_offsets(text: str) -> list[tuple[int, tuple[str, bool]]]:
 def _clean_query(raw: str, notes: list[str]) -> str:
     query, filled, missing = fill_placeholders(_strip_comments(raw))
     if missing or "${" in query:
-        raise Fail(R_PLACEHOLDER)
+        raise Fail(
+            R_PLACEHOLDER_NAMES.format(names=", ".join("${" + n + "}" for n in missing))
+            if missing
+            else R_PLACEHOLDER
+        )
     notes += filled
     query = _colon_names(_rewrite_selectors(query, notes), notes)
     return _outer_parens(" ".join(query.split()))
