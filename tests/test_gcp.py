@@ -119,11 +119,10 @@ def test_label_filters_become_scope_and_counters_keep_google_name() -> None:
 @pytest.mark.parametrize(
     ("overrides", "needle"),
     [
-        ({"denominatorFilter": 'metric.type="x.googleapis.com/y"'}, "ratio"),
+        ({"denominatorFilter": 'metric.type="x.googleapis.com/y" OR a="b"'}, "ratio"),
         ({"forecastOptions": {"forecastHorizon": "60s"}}, "forecast"),
         ({"trigger": {"percent": 50}}, "several time series"),
         ({"comparison": "COMPARISON_UNSPECIFIED"}, "comparison"),
-        ({"aggregations": [{"alignmentPeriod": "30s"}]}, "alignment period"),
         (
             {
                 "aggregations": [
@@ -451,7 +450,6 @@ def test_absence_of_a_metric_that_never_arrives_says_so() -> None:
             {"aggregations": [{"alignmentPeriod": "300s", "crossSeriesReducer": "REDUCE_BOGUS"}]},
             "reducer",
         ),
-        ({"aggregations": [{"alignmentPeriod": "30s"}]}, "alignment period"),
         ({"duration": "0s"}, "duration"),
     ],
 )

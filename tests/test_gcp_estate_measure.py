@@ -237,13 +237,13 @@ def test_subset_numbers_are_reproduced_by_the_commands_and_the_library(subset: P
     assert conditions["total"] == 9  # the AND policy has two conditions
     shapes = conditions["by_shape"]
     assert shapes["conditionThreshold: metric"]["converted"] >= 2
-    assert shapes["conditionThreshold: ratio"] == {"manual": 1}
+    assert shapes["conditionThreshold: ratio"] == {"converted": 1}
     assert shapes["conditionMonitoringQueryLanguage"] == {"manual": 1}
     assert shapes["conditionPrometheusQueryLanguage"] == {"converted": 1}  # PromQL now converts
     assert shapes["conditionAbsent"] == {"converted": 1}
     assert shapes["conditionMatchedLog"] == {"converted": 1}
     codes = dict(conditions["blockers"])
-    assert codes["ratio"] == 1 and codes["mql"] == 1 and "promql" not in codes  # PromQL converts
+    assert "ratio" not in codes and codes["mql"] == 1 and "promql" not in codes  # both convert
     widgets = summary["widgets"]
     assert widgets["scoreboard_converted"] >= 4
     assert widgets["by_kind"]["logsPanel"] == {"placeholder": 1}

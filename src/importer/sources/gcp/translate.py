@@ -12,12 +12,12 @@ import re
 from pathlib import Path
 
 from importer.core.emit.common import MAX_AGGREGATION_WINDOW_SECONDS, MAX_DURATION_SECONDS
-from importer.core.emit.nrql import field_identifier, identifier
+from importer.core.emit.nrql import identifier
 from importer.core.ids import source_id
 from importer.core.ir import (
     Aggregation,
+    BinOp,
     Confidence,
-    CountFilter,
     CountSignal,
     HeartbeatSignal,
     IRMonitor,
@@ -28,16 +28,17 @@ from importer.core.ir import (
     NrTarget,
     Occurrences,
     Operator,
+    Ref,
     Signal,
     SignalKind,
     TagFilter,
     Threshold,
 )
-from importer.core.text import printable
 from importer.sources.gcp import alert_fields, datapath
-from importer.sources.gcp.filter import FilterError, Term, parse_filter
+from importer.sources.gcp.log_scope import log_filters
 from importer.sources.gcp.models import GcpAlertPolicy, GcpCondition
 from importer.sources.gcp.promql import PROMQL_KIND, translate_condition
+from importer.sources.gcp.scope import ScopeFail, label_name, metric_filter
 
 OPERATORS = {
     "COMPARISON_GT": Operator.ABOVE,
@@ -129,27 +130,12 @@ MANUAL_KINDS = {
 ABSENCE_KIND = "conditionAbsent"
 ABSENCE_PREFIX = "a metric-absence condition could not be converted: "
 SERVICE_SEGMENT = re.compile(r"^(?P<service>[a-z0-9_.]+?)(?:\.googleapis\.com)?/(?P<path>.+)$")
-PLAIN_ATTRIBUTE = re.compile(r"[A-Za-z0-9_.]+")
-_PLAIN_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_.]*")
 SAFE_PATH = re.compile(r"^[a-z0-9_/]+$")
 NAMING_NOTE = (
     "this metric did not appear in our live test, so its New Relic name follows the documented "
     "rule (a gcp. prefix, then the service and metric path) and is not confirmed; check it with "
     "`importer validate` once data flows"
 )
-# Cloud Logging severity levels, lowest to highest
-SEVERITIES = [
-    "DEFAULT",
-    "DEBUG",
-    "INFO",
-    "NOTICE",
-    "WARNING",
-    "ERROR",
-    "CRITICAL",
-    "ALERT",
-    "EMERGENCY",
-]
-SEVERITY_OPS = {">=", ">", "<=", "<"}
 LOG_NOTE = (
     "converts to a count of Log events, so the project's logs must be forwarded to New Relic; "
     "attribute names for forwarded Google Cloud logs are not yet confirmed"
@@ -210,60 +196,6 @@ def nr_metric_name(metric_type: str) -> str:
     if match is None or not SAFE_PATH.match(match["path"]):
         raise Fail(Confidence.MANUAL, f"metric type {metric_type!r} is not a recognised name")
     return f"gcp.{match['service']}.{match['path'].replace('/', '.')}"
-
-
-PROJECT_LABELS = {"project_id": "gcp.projectId"}
-
-
-def _label_name(field: str) -> str | None:
-    """New Relic's attribute for a Cloud Monitoring label (confirmed on live data).
-
-    Resource labels become `gcp.<label>` (`gcp.zone`, `gcp.instance_id`, `gcp.topic_id`); the
-    project is `gcp.projectId`; metric labels become `metric.<label>`.
-    """
-    for prefix in ("resource.labels.", "resource.label."):
-        if field.startswith(prefix):
-            label = field[len(prefix) :]
-            return _valid_attribute(PROJECT_LABELS.get(label, f"gcp.{label}"), field)
-    for prefix in ("metric.labels.", "metric.label."):
-        if field.startswith(prefix):
-            return _valid_attribute(f"metric.{field[len(prefix) :]}", field)
-    return None
-
-
-def _valid_attribute(attribute: str, field: str) -> str:
-    """The attribute when NRQL accepts it as a name; otherwise the condition stays manual."""
-    try:
-        identifier(attribute)
-        if not PLAIN_ATTRIBUTE.fullmatch(attribute):
-            raise ValueError(attribute)  # a metric label never needs a quoted name
-    except ValueError:
-        raise Fail(
-            Confidence.MANUAL, f"label {field!r} does not make a valid New Relic attribute name"
-        ) from None
-    return attribute
-
-
-def _scope(terms: list[Term]) -> tuple[str, list[TagFilter], list[str]]:
-    metric_type = ""
-    scope: list[TagFilter] = []
-    notes: list[str] = []
-    for term in terms:
-        plain = term.op == "=" and not term.negate and not term.values
-        if term.field == "metric.type" and plain:
-            metric_type = term.value
-        elif term.field == "resource.type" and plain:
-            notes.append(f"resource type {term.value!r} is not part of the query")
-        elif (label := _label_name(term.field)) and term.op in ("=", "!="):
-            negate = term.negate != (term.op == "!=")
-            scope.append(
-                TagFilter(key=label, value=term.value, negate=negate, values=list(term.values))
-            )
-        else:
-            raise Fail(Confidence.MANUAL, f"filter term on {term.field!r} is not supported")
-    if not metric_type:
-        raise Fail(Confidence.MANUAL, "the filter has no metric.type")
-    return metric_type, scope, notes
 
 
 def seconds(value: object) -> int:
@@ -356,6 +288,32 @@ def _whole_windows(duration: int, period: int) -> tuple[int, str]:
     )
 
 
+def period_of(agg: dict[str, object]) -> int:
+    """The alignment period in seconds; 0 when none is set, manual when it is not readable."""
+    raw = agg.get("alignmentPeriod")
+    period = seconds(raw)
+    if raw and not period:
+        raise Fail(Confidence.MANUAL, f"alignment period {str(raw)[:20]!r} is not supported")
+    return period
+
+
+def whole_minutes(period: int) -> tuple[int, str]:
+    """The alignment period as a whole number of minutes (at least one), and a note if it moved.
+
+    New Relic aggregates over whole-minute windows, and Google Cloud data arrives every five
+    minutes, so a finer period (30s, 45s) gives the same values in a 60s window.
+    """
+    if period >= 60 and not period % 60:
+        return period, ""
+    rounded = max(60, -(-period // 60) * 60)
+    if period <= 0:
+        return rounded, "no alignment period is set; New Relic aggregates over 60s windows"
+    return rounded, (
+        f"the alignment period of {period}s is rounded up to {rounded}s: New Relic aggregates "
+        "over whole minutes and Google Cloud data arrives every 5 minutes"
+    )
+
+
 def _check_limits(period: int, window: int) -> None:
     """Manual when New Relic would refuse the window at emit time."""
     if period > MAX_AGGREGATION_WINDOW_SECONDS:
@@ -374,9 +332,10 @@ def _check_limits(period: int, window: int) -> None:
 def metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[str]]:
     """Metric type, label scope and notes from a condition's filter; manual when not collected."""
     try:
-        metric_type, scope, notes = _scope(parse_filter(str(body.get("filter", ""))))
-    except FilterError as err:
-        raise Fail(Confidence.MANUAL, f"filter not supported: {err}") from err
+        found = metric_filter(str(body.get("filter", "")))
+    except ScopeFail as err:
+        raise Fail(Confidence.MANUAL, str(err)) from err
+    metric_type, scope, notes = found.metric_type, found.filters, found.notes
     if metric_type.startswith("monitoring.googleapis.com/uptime_check/"):
         raise Fail(
             Confidence.MANUAL,
@@ -388,9 +347,11 @@ def metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[st
     return metric_type, datapath.relabel(metric_type, scope), notes
 
 
-def _first_aggregation(body: dict[str, object]) -> tuple[dict[str, object], str]:
-    """The single aggregation stage of a condition and its aligner."""
-    aggregations = body.get("aggregations")
+def _first_aggregation(
+    body: dict[str, object], key: str = "aggregations"
+) -> tuple[dict[str, object], str]:
+    """The single aggregation stage of a condition (or of its denominator) and its aligner."""
+    aggregations = body.get(key)
     if isinstance(aggregations, list) and len(aggregations) > 1:
         raise Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
     first = aggregations[0] if isinstance(aggregations, list) and aggregations else {}
@@ -408,6 +369,13 @@ def check_aligner(agg: dict[str, object]) -> tuple[dict[str, object], str]:
     return agg, aligner
 
 
+def _group_label(field: str) -> str | None:
+    try:
+        return label_name(field)
+    except ScopeFail as err:
+        raise Fail(Confidence.MANUAL, str(err)) from err
+
+
 def _group_labels(agg: dict[str, object]) -> tuple[list[str], list[str]]:
     """Mapped group-by attributes without repeats, and a note for each field that was dropped."""
     raw = agg.get("groupByFields")
@@ -415,7 +383,7 @@ def _group_labels(agg: dict[str, object]) -> tuple[list[str], list[str]]:
     labels: list[str] = []
     notes: list[str] = []
     for field in map(str, fields):
-        label = _label_name(field)
+        label = _group_label(field)
         if label is None:
             notes.append(f"group-by field {field!r} is not mapped and was dropped")
         elif label not in labels:
@@ -437,8 +405,7 @@ def metric_series(
     Shared by alert conditions and dashboard charts (`chart` words the counter note for a chart).
     """
     aggregation, counter = ALIGNERS[aligner]
-    if period < 60 or period % 60:
-        raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
+    period, period_note = whole_minutes(period)
     if aligner == "ALIGN_STDDEV" and period < STDDEV_MIN_PERIOD_SECONDS:
         raise Fail(
             Confidence.MANUAL,
@@ -447,6 +414,8 @@ def metric_series(
             f"{STDDEV_MIN_PERIOD_SECONDS}s or more",
         )
     group_by, notes, aggregation, percentile = _reducer(agg, aggregation, aligner, period)
+    if period_note:
+        notes.append(period_note)
     if not datapath.is_polled(metric_type):
         if aligner.startswith("ALIGN_PERCENTILE_"):
             raise Fail(
@@ -531,17 +500,79 @@ def _absence_trigger(body: dict[str, object], agg: dict[str, object]) -> list[st
     ]
 
 
+def ratio_series(
+    body: dict[str, object], numerator: MetricSignal, aligner: str, period: int, notes: list[str]
+) -> tuple[MetricSignal, float, list[str]]:
+    """A ratio condition: the numerator signal divided by the series of the denominator filter.
+
+    Both sides must aggregate the same way (same aligner, window and group-by), so one NRQL query
+    expresses it; each side keeps its own label filters (`filter()`), the ones both share stay in
+    the WHERE. A counter ratio needs no rescaling: the window cancels.
+    """
+    try:
+        denominator = metric_scope({**body, "filter": body.get("denominatorFilter")})
+        key = "denominatorAggregations" if body.get("denominatorAggregations") else "aggregations"
+        agg, den_aligner = _first_aggregation(body, key)
+        den_period = period_of(agg)
+        den, *_ = metric_series(denominator[0], denominator[1], agg, den_aligner, den_period)
+    except Fail as fail:
+        raise Fail(Confidence.MANUAL, f"ratio denominator: {fail.reason}") from fail
+    (num_term,) = numerator.terms.values()
+    (den_term,) = den.terms.values()
+    window = numerator_window(period, aligner)
+    if (
+        ALIGNERS[aligner][0] != ALIGNERS[den_aligner][0]
+        or ALIGNERS[aligner][1] != ALIGNERS[den_aligner][1]
+        or window != numerator_window(den_period, den_aligner)
+        or numerator.group_by != den.group_by
+    ):
+        raise Fail(
+            Confidence.MANUAL,
+            "ratio conditions are not supported when the numerator and denominator differ in "
+            "aligner, alignment period or group-by (one New Relic query aggregates both alike)",
+        )
+    shared = [f for f in numerator.scope if f in den.scope]
+    num_term = num_term.model_copy(
+        update={"scope": [f for f in numerator.scope if f not in shared]}
+    )
+    den_term = den_term.model_copy(update={"scope": [f for f in den.scope if f not in shared]})
+    signal = MetricSignal(
+        terms={"a": num_term, "b": den_term},
+        expression=BinOp(op="/", left=Ref(name="a"), right=Ref(name="b")),
+        aggregation=numerator.aggregation,
+        scope=shared,
+        group_by=numerator.group_by,
+    )
+    kept = [n for n in notes if not n.startswith("a counter metric:")]
+    if ALIGNERS[aligner][1]:
+        kept.append(
+            f"a ratio of counters: New Relic adds up the changes in each window of {window}s for "
+            "both sides and divides, which is the ratio Google computes per alignment period, so "
+            "the threshold is not rescaled"
+        )
+    kept.append(
+        "the ratio is one query, sum(numerator) / sum(denominator); a window in which the "
+        "denominator is zero gives no value instead of failing"
+    )
+    return signal, 1.0, kept
+
+
+def numerator_window(period: int, aligner: str) -> int:
+    """The window a series is aggregated over in New Relic (counters use at least a poll)."""
+    return max(period, POLL_SECONDS) if ALIGNERS[aligner][1] else period
+
+
 def _metric_condition(
     body: dict[str, object],
 ) -> tuple[MetricSignal, int, int, float, list[str]]:
-    if body.get("denominatorFilter"):
-        raise Fail(Confidence.MANUAL, "ratio conditions (denominator filter) are not supported")
     metric_type, scope, scope_notes = metric_scope(body)
     agg, aligner = _first_aggregation(body)
     trigger_notes = _threshold_trigger(body, agg)
-    period = seconds(agg.get("alignmentPeriod"))
+    period = period_of(agg)
     duration = seconds(body.get("duration"))
     signal, period, scale, notes = metric_series(metric_type, scope, agg, aligner, period)
+    if body.get("denominatorFilter"):
+        signal, scale, notes = ratio_series(body, signal, aligner, period, notes)
     notes = [*trigger_notes, *notes]
     window, note = _whole_windows(duration, period)
     _check_limits(period, window)
@@ -596,9 +627,14 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
     """A loss-of-signal check: heartbeat signal, aggregation window, duration and notes."""
     metric_type, scope, scope_notes = metric_scope(body)
     agg, aligner = _absence_aggregation(body)
-    period = seconds(agg.get("alignmentPeriod"))
-    if period < 60 or period % 60:
-        raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
+    period = period_of(agg)
+    if period:
+        period, period_note = whole_minutes(period)
+    else:
+        period, period_note = (
+            POLL_SECONDS,
+            "no alignment period is set; the polling interval is used",
+        )
     duration = seconds(body.get("duration"))
     if duration < 60:
         raise Fail(Confidence.MANUAL, f"duration {duration}s is not supported")
@@ -614,6 +650,8 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
             f"the aligner {aligner or 'none'} and reducer {reducer} do not change what an "
             "absence check sees: it only asks whether any data point arrived"
         )
+    if period_note:
+        notes.append(period_note)
     if period < POLL_SECONDS:
         notes.append(
             f"the alignment period of {period}s is raised to {POLL_SECONDS}s, the polling interval"
@@ -646,60 +684,12 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
     return signal, window, duration, [*scope_notes, *notes]
 
 
-def _log_count(body: dict[str, object]) -> CountSignal:
+def _log_count(body: dict[str, object]) -> tuple[CountSignal, list[str]]:
     try:
-        terms = parse_filter(str(body.get("filter", "")))
-    except FilterError as err:
-        raise Fail(Confidence.MANUAL, f"log filter not supported: {err}") from err
-    filters: list[CountFilter] = []
-    for term in terms:
-        if term.field == "log_id" and term.op == "()":
-            # the log name ends in the URL-encoded id; the encoded slash cannot be written in a
-            # LIKE pattern, so the slashes in the id match anything
-            pattern = "*/logs/" + term.value.replace("/", "*")
-            filters.append(CountFilter(key="logName", value=pattern, wildcard=True))
-        elif term.values and term.op in ("=", "!="):
-            negate = term.negate != (term.op == "!=")
-            filters.append(
-                CountFilter(key=term.field, value="", values=list(term.values), negate=negate)
-            )
-        elif (
-            term.field == "severity"
-            and term.op in SEVERITY_OPS
-            and term.value.upper() in SEVERITIES
-        ):
-            first = SEVERITIES.index(term.value.upper())
-            levels = SEVERITIES[first:] if term.op in (">=", ">") else SEVERITIES[: first + 1]
-            if term.op == ">":
-                levels = SEVERITIES[first + 1 :]
-            elif term.op == "<":
-                levels = SEVERITIES[:first]
-            filters.append(CountFilter(key="severity", value="", values=levels, negate=term.negate))
-        elif term.op == ":":
-            filters.append(
-                CountFilter(
-                    key=term.field, value=f"*{term.value}*", negate=term.negate, wildcard=True
-                )
-            )
-        elif term.op in ("=", "!="):
-            filters.append(
-                CountFilter(
-                    key=term.field, value=term.value, negate=term.negate != (term.op == "!=")
-                )
-            )
-        else:
-            raise Fail(
-                Confidence.MANUAL, f"log filter comparison on {term.field!r} is not supported"
-            )
-    for f in filters:
-        try:
-            f.key = field_identifier(f.key if _PLAIN_NAME.fullmatch(f.key) else f"`{f.key}`")
-        except ValueError:
-            raise Fail(
-                Confidence.MANUAL,
-                f"log field {printable(f.key, 60)!r} is not a valid New Relic attribute name",
-            ) from None
-    return CountSignal(filters=filters)
+        filters, notes = log_filters(str(body.get("filter", "")))
+    except ScopeFail as err:
+        raise Fail(Confidence.MANUAL, str(err)) from err
+    return CountSignal(filters=filters), notes
 
 
 def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor:
@@ -756,8 +746,8 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
             thresholds = [Threshold(severity=severity, operator=Operator.BELOW, value=1)]
             no_data = NoData(notify=True, timeout_minutes=max(1, duration // 60))
         elif cond.kind == "conditionMatchedLog":
-            count = _log_count(body)
-            reasons.append(LOG_NOTE)
+            count, log_notes = _log_count(body)
+            reasons += [LOG_NOTE, *dict.fromkeys(log_notes)]
             signal = Signal(
                 kind=SignalKind.LOG,
                 raw_query=name,

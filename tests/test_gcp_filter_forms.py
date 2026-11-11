@@ -22,7 +22,6 @@ def test_a_group_of_and_terms_is_flattened() -> None:
         '(a = "1" AND b = "2"',
         'a = "1") AND b = "2"',
         'a = "1" AND (b = "2" OR c = "3")',
-        'NOT (a = "1")',
     ],
 )
 def test_unbalanced_or_negated_groups_are_refused(text: str) -> None:
@@ -32,7 +31,7 @@ def test_unbalanced_or_negated_groups_are_refused(text: str) -> None:
 
 def test_one_of_gives_a_list_of_values() -> None:
     (term,) = parse_filter('resource.labels.log_type != one_of("A", "B")')
-    assert term.values == ("A", "B") and term.op == "!="
+    assert term.values == ("A", "B") and term.op == "in" and term.negate
 
 
 def test_a_quoted_label_key_is_joined_to_its_parent() -> None:
@@ -42,11 +41,16 @@ def test_a_quoted_label_key_is_joined_to_its_parent() -> None:
 
 def test_log_id_is_its_own_term() -> None:
     (term,) = parse_filter('log_id("cloudaudit.googleapis.com/system_event")')
-    assert (term.field, term.op, term.value) == (
+    assert (term.field, term.op, term.values) == (
         "log_id",
-        "()",
-        "cloudaudit.googleapis.com/system_event",
+        "func",
+        ("cloudaudit.googleapis.com/system_event",),
     )
+
+
+def test_a_negated_group_is_pushed_down_to_its_terms() -> None:
+    (term,) = parse_filter('NOT (a = "1")')
+    assert term.field == "a" and term.negate
 
 
 def test_metric_labels_with_one_of_become_in_lists() -> None:
