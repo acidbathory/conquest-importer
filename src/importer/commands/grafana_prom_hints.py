@@ -77,7 +77,12 @@ def register(app: typer.Typer) -> None:
                 base = validate_host(grafana_url(), allow_host)
                 with hint_getter(token, base, allow_host=allow_host) as get:
                     hints = read_hints(get, find_datasource(get, str(datasource)), wanted)
-            out.write_text(json.dumps(hints_document(hints), indent=2) + "\n")
+            out.write_text(
+                json.dumps(
+                    hints_document(hints, prometheus_url or f"data source {datasource}"), indent=2
+                )
+                + "\n"
+            )
         except (GrafanaError, ValueError, OSError) as exc:
             typer.echo(f"Error: {printable(str(exc), 400)}", err=True)
             raise typer.Exit(code=1) from None

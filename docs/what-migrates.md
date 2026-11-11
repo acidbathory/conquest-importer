@@ -272,10 +272,11 @@ fields) are unverified until one dashboard is read back in a sandbox.
   point; the rate window becomes the bucket; `topk` ranks over the whole range; a gauge sum adds
   every sample in a bucket. Every widget is marked approximate.
 - **Gauge sums and the guided flow.** `sum()` or `count()` of a gauge converts only when the series
-  are known to be one. In the guided Grafana flow, give a Prometheus URL (loopback, or https with
-  `--allow-host` on the command) and the flow runs `grafana-prom-hints` read-only and hands the
+  are known to be one. In the guided Grafana flow, give a Prometheus URL that runs on this machine (loopback only; the
+  command alone also takes https with `--allow-host`) and the flow runs `grafana-prom-hints` read-only and hands the
   result to the dashboard conversion; without a URL the step is skipped and those panels stay
-  manual. Run on its own: `grafana-prom-hints --prometheus-url ... --metrics-from ...`.
+  manual. A series key means "one series seen in the last 7 days on that URL"; widgets stay
+  approximate and say so. Run on its own: `grafana-prom-hints --prometheus-url ... --metrics-from ...`.
 
 ## Not handled at all
 

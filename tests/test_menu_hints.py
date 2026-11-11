@@ -54,3 +54,37 @@ def test_a_failed_hints_read_does_not_stop_the_flow(tmp_path: Path) -> None:
     (convert,) = _calls(runner, "convert-grafana-dashboards")
     assert "--hints" not in convert
     assert "without hints" in console.text
+
+
+@pytest.mark.parametrize(
+    "bad", ["http://prom.example.com:9090", "https://prom.example.com", "nope"]
+)
+def test_a_url_that_cannot_work_is_asked_again_and_enter_skips(tmp_path: Path, bad: str) -> None:
+    runner = HybridRunner()
+    answers = ["3", bad, "http://127.0.0.1:9090", "no", "0"]
+    menu, console, *_ = make(tmp_path, answers, runner)  # type: ignore[arg-type]
+    menu.run()
+    (hint,) = _calls(runner, "grafana-prom-hints")
+    assert hint[hint.index("--prometheus-url") + 1] == "http://127.0.0.1:9090"
+    assert "this machine" in console.text
+
+
+def test_three_bad_urls_skip_the_step(tmp_path: Path) -> None:
+    runner = HybridRunner()
+    answers = [
+        "3",
+        "http://a.example.com",
+        "http://b.example.com",
+        "http://c.example.com",
+        "no",
+        "0",
+    ]
+    menu, console, *_ = make(tmp_path, answers, runner)  # type: ignore[arg-type]
+    menu.run()
+    assert not _calls(runner, "grafana-prom-hints") and "stay manual" in console.text
+
+
+def test_the_prompt_states_the_claim_and_the_loopback_limit(tmp_path: Path) -> None:
+    menu, console, *_ = make(tmp_path, ["3", "", "no", "0"], HybridRunner())  # type: ignore[arg-type]
+    menu.run()
+    assert "7 days" in console.text and "on this machine" in console.text

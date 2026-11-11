@@ -56,6 +56,7 @@ from importer.core.run_rollback import (
     rollback_run,
 )
 from importer.core.runs import RunRecord, RunStore
+from importer.parity.source import SourceError, check_direct
 
 Runner = Callable[[list[str]], int]
 OBJECT_OF = {"alerts": "condition", "notifications": "workflow", "dashboards": "dashboard"}
@@ -186,6 +187,9 @@ def open_in_browser(uri: str) -> bool:
             return False
         return done.returncode == 0
     return bool(webbrowser.open(uri))
+
+
+MAX_URL_TRIES = 3
 
 
 class Menu:
@@ -353,20 +357,29 @@ class Menu:
         self._create_all(spec, lay, summary, account, name)
 
     def _ask_prometheus(self, spec: Spec) -> str:
-        """Grafana only: a Prometheus URL for exact metric types; Enter skips and says the cost."""
+        """Grafana only: a Prometheus URL on this machine; Enter or three bad tries skip."""
         if spec.key != "3":
             return ""
-        url = self.c.ask(
-            "Prometheus URL for exact metric types, such as http://127.0.0.1:9090 "
-            "(optional, Enter to skip):"
-        )
-        if not url:
-            self.c.say(
-                "Skipping the Prometheus step. Without it the importer cannot tell which "
-                "dashboard panels that sum() or count() a gauge show one series, so those panels "
-                "stay manual (they are listed in the report). Give a URL next time to convert them."
+        for _ in range(MAX_URL_TRIES):
+            url = self.c.ask(
+                "Prometheus URL for exact metric types (optional, Enter to skip). It must run "
+                "on this machine, such as http://127.0.0.1:9090. Series are looked for over the "
+                "last 7 days:"
             )
-        return url
+            if not url:
+                break
+            try:
+                check_direct(url, None)
+            except SourceError as exc:
+                self.c.say(f"{exc}. Try again, or press Enter to skip.")
+                continue
+            return url
+        self.c.say(
+            "Skipping the Prometheus step. Without it the importer cannot tell which "
+            "dashboard panels that sum() or count() a gauge show one series, so those panels "
+            "stay manual (they are listed in the report). Give a URL next time to convert them."
+        )
+        return ""
 
     def _hints(self, kinds: list[KindPlan], lay: Layout, url: str) -> list[KindPlan]:
         """Read hints (read-only) for the dashboard conversion; a failure only costs the hints."""

@@ -52,7 +52,7 @@ N_RATE_BUCKET = (
 N_INCREASE = f"{NOTE} increase over a variable window is the sum per bucket"
 N_SUM_GAUGE = (
     f"{NOTE} sum() of a gauge became latest() or average() because the name map says the "
-    "group holds one series"
+    "group holds one series (hints: seen in 7 days)"
 )
 
 

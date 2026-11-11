@@ -49,7 +49,8 @@ MAX_RUN_BYTES = 64 * 1024 * 1024
 MAX_METADATA = 100_000
 MAX_KEY_LABELS = 4
 MAX_KEY_FALLBACK = 8
-WINDOW_SECONDS = 3600
+WINDOW_DAYS = 7  # pods churn; a shorter look would call a changing group one series
+WINDOW_SECONDS = WINDOW_DAYS * 24 * 3600
 MAX_WARNINGS = 20
 # labels that usually name a scrape target, tried first when several sets identify the series
 PRIORITY = (
@@ -156,10 +157,11 @@ def metric_names(path: Path) -> set[str]:
 # --- the read-only client ---
 
 
-def _allowed(path: str, params: dict[str, str]) -> bool:
-    if DS_PATH.fullmatch(path):
+def _allowed(path: str, params: dict[str, str], shape: re.Pattern[str]) -> bool:
+    """`shape` is PROXY for a Grafana getter and DIRECT for a Prometheus URL; never both."""
+    if shape is PROXY and DS_PATH.fullmatch(path):
         return not params
-    found = PROXY.fullmatch(path) or DIRECT.fullmatch(path)
+    found = shape.fullmatch(path)
     if found is None:
         return False
     if found["kind"] == "label/__name__/values":
@@ -196,7 +198,7 @@ def hint_getter(
 
         def get(path: str, params: dict[str, str]) -> Any:
             nonlocal requests
-            if not _allowed(path, params):
+            if not _allowed(path, params, PROXY):
                 raise HintsError("this path is not on the allow-list of read-only calls")
             requests += 1
             if requests > max_requests:
@@ -220,12 +222,12 @@ def direct_hint_getter(
     requests = 0
     with httpx.Client(
         timeout=60, headers={"Accept": "application/json"}, transport=transport,
-        follow_redirects=False,
+        follow_redirects=False, trust_env=False,
     ) as client:  # fmt: skip
 
         def get(path: str, params: dict[str, str]) -> Any:
             nonlocal requests
-            if not DIRECT.fullmatch(path) or not _allowed(path, params):
+            if not _allowed(path, params, DIRECT):
                 raise HintsError("this path is not on the allow-list of read-only calls")
             requests += 1
             if requests > MAX_REQUESTS:
@@ -398,10 +400,11 @@ def read_hints(get: Getter, uid: str | None, wanted: set[str], now: float | None
     return hints
 
 
-def hints_document(hints: Hints) -> dict[str, Any]:
-    """The hints in the name map format, ready to write as JSON."""
+def hints_document(hints: Hints, source: str) -> dict[str, Any]:
+    """The hints in the name map format, ready to write as JSON. `source` names what was read."""
     return {
         "_comment": "Written by grafana-prom-hints from Prometheus metadata and observed series. "
+        f"A series key means: one series seen in the last {WINDOW_DAYS} days on {source}. "
         "Use with convert-grafana-dashboards --hints.",
         "types": dict(sorted(hints.types.items())),
         "series": dict(sorted(hints.series.items())),

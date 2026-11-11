@@ -26,3 +26,12 @@ Baseline unchanged (fixtures carry no hints). No pinned output changes; no froze
   purist layering is wanted, move `check_direct` to `core/` (integrator).
 - Existing Grafana menu tests gained one scripted Enter (the new prompt).
 - Gap: no live Prometheus was read; MockTransport only.
+
+## Review follow-up
+- Series are looked for over 7 days (was 1 hour); the hints file, menu prompt and widget note say
+  "one series seen in the last 7 days on <that Prometheus>". Hinted widgets are approximate.
+- The guided flow validates the URL (loopback only, 3 tries, Enter skips).
+- The proxy and direct getters each accept only their own path shape; the direct client ignores proxy
+  environment variables.
+- Finding: with a multi-series hint, `sum(gauge)` already converts through the engine to a sum of the
+  newest value per series (FACET subquery), which is correct; the test checks it never becomes a flat average.

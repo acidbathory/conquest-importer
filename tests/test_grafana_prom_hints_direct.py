@@ -114,3 +114,89 @@ def test_command_needs_exactly_one_of_datasource_and_url(tmp_path: Path) -> None
             ],
         )
         assert result.exit_code == 1
+
+
+def test_the_proxy_getter_rejects_the_direct_shape_and_the_reverse() -> None:
+    transport = httpx.MockTransport(handle)
+    proxy = "/api/datasources/proxy/uid/u1/api/v1/metadata"
+    with ph.direct_hint_getter(BASE, transport) as get, pytest.raises(ph.HintsError):
+        get(proxy, {})
+    with ph.hint_getter("tok", "https://stack.grafana.net", transport) as get:
+        with pytest.raises(ph.HintsError):
+            get("/api/v1/metadata", {})
+        with pytest.raises(ph.HintsError):
+            get("/api/v1/label/__name__/values", {})
+
+
+def test_the_direct_client_ignores_proxy_environment_variables(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict[str, Any] = {}
+    real = httpx.Client
+
+    def client(*args: Any, **kwargs: Any) -> httpx.Client:
+        seen.update(kwargs)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "Client", client)
+    with ph.direct_hint_getter(BASE, httpx.MockTransport(handle)):
+        pass
+    assert seen["trust_env"] is False
+
+
+def test_the_series_window_is_a_week_and_the_claim_says_so() -> None:
+    assert ph.WINDOW_SECONDS >= 7 * 24 * 3600
+    seen: list[httpx.Request] = []
+
+    def spy(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return handle(request)
+
+    with ph.direct_hint_getter(BASE, httpx.MockTransport(spy)) as get:
+        found = ph.read_hints(get, None, {"node_load1"}, now=1_800_000_000)
+    series = next(r for r in seen if r.url.path.endswith("/series"))
+    assert int(series.url.params["end"]) - int(series.url.params["start"]) == ph.WINDOW_SECONDS
+    note = ph.hints_document(found, BASE)["_comment"]
+    assert "7 days" in note and BASE in note and "one series" in note
+
+
+CONVERT = ["convert-grafana-dashboards"]
+
+
+def _widgets(out: Path) -> list[dict[str, Any]]:
+    return [
+        w
+        for f in sorted((out / "dashboard-ir").glob("*.json"))
+        for w in json.loads(f.read_text())["widgets"]
+    ]
+
+
+def _convert(tmp_path: Path, name: str, hints: dict[str, Any] | None) -> list[dict[str, Any]]:
+    extract, out = _extract(tmp_path), tmp_path / name
+    args = [*CONVERT, "--in", str(extract), "--out", str(out)]
+    if hints is not None:
+        path = tmp_path / f"{name}.json"
+        path.write_text(json.dumps(hints))
+        args += ["--hints", str(path)]
+    assert CliRunner().invoke(app, args).exit_code == 0
+    return _widgets(out)
+
+
+def test_without_hints_the_gauge_sum_stays_a_placeholder(tmp_path: Path) -> None:
+    (widget,) = [w for w in _convert(tmp_path, "none", None) if w["source_type"] != "row"]
+    assert widget["kind"] == "unsupported"
+
+
+def test_many_series_never_become_a_flat_average(tmp_path: Path) -> None:
+    """With several series the engine sums the newest value of each; it must not average."""
+    many = _convert(tmp_path, "many", {"series": {"node_load1": ["instance"]}})
+    (widget,) = [w for w in many if w["source_type"] != "row"]
+    text = json.dumps(widget)
+    assert "FACET instance" in text and "average(node_load1)" not in text
+
+
+def test_one_series_converts_as_approximate_with_the_window_in_the_note(tmp_path: Path) -> None:
+    one = _convert(tmp_path, "one", {"series": {"node_load1": []}})
+    (widget,) = [w for w in one if w["source_type"] != "row"]
+    assert widget["kind"] != "unsupported" and widget["confidence"] == "approximate"
+    assert any("7 days" in reason for reason in widget["reasons"])
