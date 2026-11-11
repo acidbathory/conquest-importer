@@ -101,7 +101,7 @@ REASON_CODES: list[tuple[str, str]] = [
     (r"not one of the Google Cloud service metrics", "uncollected metric family"),
     (r"uptime check alert", "uptime-check alert"),
     (r"a trigger on several time series", "multi-series trigger"),
-    (r"cannot read '.*select_slo", "slo selector filter"),
+    (r"select_slo_", "slo selector filter"),
     (r"log filter comparison on", "log filter comparison"),
     (r"log filter not supported", "log filter syntax"),
     (r"does not make a valid New Relic attribute name", "quoted label name"),

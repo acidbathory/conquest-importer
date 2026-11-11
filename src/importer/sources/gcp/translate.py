@@ -12,12 +12,10 @@ import re
 from pathlib import Path
 
 from importer.core.emit.common import MAX_AGGREGATION_WINDOW_SECONDS, MAX_DURATION_SECONDS
-from importer.core.emit.nrql import identifier
 from importer.core.ids import source_id
 from importer.core.ir import (
     Aggregation,
     Confidence,
-    CountFilter,
     CountSignal,
     HeartbeatSignal,
     IRMonitor,
@@ -34,8 +32,9 @@ from importer.core.ir import (
     TagFilter,
     Threshold,
 )
-from importer.sources.gcp.filter import FilterError, Term, parse_filter
+from importer.sources.gcp.log_scope import log_filters
 from importer.sources.gcp.models import GcpAlertPolicy, GcpCondition
+from importer.sources.gcp.scope import ScopeFail, label_name, metric_filter
 
 OPERATORS = {
     "COMPARISON_GT": Operator.ABOVE,
@@ -79,19 +78,6 @@ NAMING_NOTE = (
     "rule (a gcp. prefix, then the service and metric path) and is not confirmed; check it with "
     "`importer validate` once data flows"
 )
-# Cloud Logging severity levels, lowest to highest
-SEVERITIES = [
-    "DEFAULT",
-    "DEBUG",
-    "INFO",
-    "NOTICE",
-    "WARNING",
-    "ERROR",
-    "CRITICAL",
-    "ALERT",
-    "EMERGENCY",
-]
-SEVERITY_OPS = {">=", ">", "<=", "<"}
 LOG_NOTE = (
     "converts to a count of Log events, so the project's logs must be forwarded to New Relic; "
     "attribute names for forwarded Google Cloud logs are not yet confirmed"
@@ -149,9 +135,6 @@ def nr_metric_name(metric_type: str) -> str:
     return f"gcp.{match['service']}.{match['path'].replace('/', '.')}"
 
 
-PROJECT_LABELS = {"project_id": "gcp.projectId"}
-
-
 NOT_GOOGLE_SERVICE = (
     "custom.googleapis.com/",
     "external.googleapis.com/",
@@ -165,51 +148,6 @@ UNCOLLECTED = (
     "collecting (custom, Ops Agent, Prometheus and log-based metrics are not listed), so a "
     "converted query would return no data"
 )
-
-
-def _label_name(field: str) -> str | None:
-    """New Relic's attribute for a Cloud Monitoring label (confirmed on live data).
-
-    Resource labels become `gcp.<label>` (`gcp.zone`, `gcp.instance_id`, `gcp.topic_id`); the
-    project is `gcp.projectId`; metric labels become `metric.<label>`.
-    """
-    for prefix in ("resource.labels.", "resource.label."):
-        if field.startswith(prefix):
-            label = field[len(prefix) :]
-            return _valid_attribute(PROJECT_LABELS.get(label, f"gcp.{label}"), field)
-    for prefix in ("metric.labels.", "metric.label."):
-        if field.startswith(prefix):
-            return _valid_attribute(f"metric.{field[len(prefix) :]}", field)
-    return None
-
-
-def _valid_attribute(attribute: str, field: str) -> str:
-    """The attribute when NRQL accepts it as a name; otherwise the condition stays manual."""
-    try:
-        identifier(attribute)
-    except ValueError:
-        raise Fail(
-            Confidence.MANUAL, f"label {field!r} does not make a valid New Relic attribute name"
-        ) from None
-    return attribute
-
-
-def _scope(terms: list[Term]) -> tuple[str, list[TagFilter], list[str]]:
-    metric_type = ""
-    scope: list[TagFilter] = []
-    notes: list[str] = []
-    for term in terms:
-        if term.field == "metric.type" and term.op == "=" and not term.negate:
-            metric_type = term.value
-        elif term.field == "resource.type" and term.op == "=" and not term.negate:
-            notes.append(f"resource type {term.value!r} is not part of the query")
-        elif (label := _label_name(term.field)) and term.op == "=" and not term.negate:
-            scope.append(TagFilter(key=label, value=term.value))
-        else:
-            raise Fail(Confidence.MANUAL, f"filter term on {term.field!r} is not supported")
-    if not metric_type:
-        raise Fail(Confidence.MANUAL, "the filter has no metric.type")
-    return metric_type, scope, notes
 
 
 def seconds(value: object) -> int:
@@ -291,9 +229,10 @@ def _check_limits(period: int, window: int) -> None:
 def metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[str]]:
     """Metric type, label scope and notes from a condition's filter; manual when not collected."""
     try:
-        metric_type, scope, notes = _scope(parse_filter(str(body.get("filter", ""))))
-    except FilterError as err:
-        raise Fail(Confidence.MANUAL, f"filter not supported: {err}") from err
+        found = metric_filter(str(body.get("filter", "")))
+    except ScopeFail as err:
+        raise Fail(Confidence.MANUAL, str(err)) from err
+    metric_type, scope, notes = found.metric_type, found.filters, found.notes
     if metric_type.startswith("monitoring.googleapis.com/uptime_check/"):
         raise Fail(
             Confidence.MANUAL,
@@ -321,6 +260,13 @@ def check_aligner(agg: dict[str, object]) -> tuple[dict[str, object], str]:
     return agg, aligner
 
 
+def _group_label(field: str) -> str | None:
+    try:
+        return label_name(field)
+    except ScopeFail as err:
+        raise Fail(Confidence.MANUAL, str(err)) from err
+
+
 def _group_labels(agg: dict[str, object]) -> tuple[list[str], list[str]]:
     """Mapped group-by attributes without repeats, and a note for each field that was dropped."""
     raw = agg.get("groupByFields")
@@ -328,7 +274,7 @@ def _group_labels(agg: dict[str, object]) -> tuple[list[str], list[str]]:
     labels: list[str] = []
     notes: list[str] = []
     for field in map(str, fields):
-        label = _label_name(field)
+        label = _group_label(field)
         if label is None:
             notes.append(f"group-by field {field!r} is not mapped and was dropped")
         elif label not in labels:
@@ -457,42 +403,12 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
     return signal, window, duration, [*scope_notes, *notes]
 
 
-def _log_count(body: dict[str, object]) -> CountSignal:
+def _log_count(body: dict[str, object]) -> tuple[CountSignal, list[str]]:
     try:
-        terms = parse_filter(str(body.get("filter", "")))
-    except FilterError as err:
-        raise Fail(Confidence.MANUAL, f"log filter not supported: {err}") from err
-    filters: list[CountFilter] = []
-    for term in terms:
-        if (
-            term.field == "severity"
-            and term.op in SEVERITY_OPS
-            and term.value.upper() in SEVERITIES
-        ):
-            first = SEVERITIES.index(term.value.upper())
-            levels = SEVERITIES[first:] if term.op in (">=", ">") else SEVERITIES[: first + 1]
-            if term.op == ">":
-                levels = SEVERITIES[first + 1 :]
-            elif term.op == "<":
-                levels = SEVERITIES[:first]
-            filters.append(CountFilter(key="severity", value="", values=levels, negate=term.negate))
-        elif term.op == ":":
-            filters.append(
-                CountFilter(
-                    key=term.field, value=f"*{term.value}*", negate=term.negate, wildcard=True
-                )
-            )
-        elif term.op in ("=", "!="):
-            filters.append(
-                CountFilter(
-                    key=term.field, value=term.value, negate=term.negate != (term.op == "!=")
-                )
-            )
-        else:
-            raise Fail(
-                Confidence.MANUAL, f"log filter comparison on {term.field!r} is not supported"
-            )
-    return CountSignal(filters=filters)
+        filters, notes = log_filters(str(body.get("filter", "")))
+    except ScopeFail as err:
+        raise Fail(Confidence.MANUAL, str(err)) from err
+    return CountSignal(filters=filters), notes
 
 
 def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor:
@@ -543,8 +459,8 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
             thresholds = [Threshold(severity=severity, operator=Operator.BELOW, value=1)]
             no_data = NoData(notify=True, timeout_minutes=max(1, duration // 60))
         elif cond.kind == "conditionMatchedLog":
-            count = _log_count(body)
-            reasons.append(LOG_NOTE)
+            count, log_notes = _log_count(body)
+            reasons += [LOG_NOTE, *dict.fromkeys(log_notes)]
             signal = Signal(
                 kind=SignalKind.LOG,
                 raw_query=name,
