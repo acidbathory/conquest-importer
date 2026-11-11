@@ -117,3 +117,38 @@ def test_existing_query_in_the_url_is_kept() -> None:
     arm = load("arm").Arm(ENV, transport=httpx.MockTransport(handler))
     arm.delete("/x/ws?forceDelete=true", "2022-10-01")
     assert "forceDelete=true" in seen[0] and "api-version=2022-10-01" in seen[0]
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"error": {"code": "BadRequest", "message": "bad thing"}},
+        {"Code": "BadRequest", "Message": "bad thing"},
+        {"code": "BadRequest", "message": "bad thing"},
+        {"error": {"Code": "BadRequest", "Message": "bad thing"}},
+    ],
+)
+def test_error_shapes_all_yield_code_and_message(payload: dict[str, object]) -> None:
+    def handler(req: httpx.Request) -> httpx.Response:
+        if "login" in req.url.host:
+            return httpx.Response(200, json={"access_token": "t"})
+        return httpx.Response(400, json=payload)
+
+    mod = load("arm")
+    arm = mod.Arm(ENV, transport=httpx.MockTransport(handler))
+    with pytest.raises(mod.ArmError) as exc:
+        arm.put("/x", "1", {})
+    assert exc.value.code == "BadRequest" and "bad thing" in str(exc.value)
+
+
+def test_non_json_error_body_is_kept_as_text() -> None:
+    def handler(req: httpx.Request) -> httpx.Response:
+        if "login" in req.url.host:
+            return httpx.Response(200, json={"access_token": "t"})
+        return httpx.Response(400, text="plain failure")
+
+    mod = load("arm")
+    arm = mod.Arm(ENV, transport=httpx.MockTransport(handler))
+    with pytest.raises(mod.ArmError) as exc:
+        arm.put("/x", "1", {})
+    assert "plain failure" in str(exc.value)

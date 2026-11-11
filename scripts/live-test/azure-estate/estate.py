@@ -750,17 +750,20 @@ def run(
             "api": it.api,
             "at": datetime.now(UTC).isoformat(timespec="seconds"),
         }
-        data["resources"].append(
-            entry
-        )  # recorded before the PUT: a half-created object is cleaned up
-        _write(manifest, data)
+        known = next((r for r in data["resources"] if r["id"] == it.path), None)
+        if known is None:
+            # Recorded before the PUT: a half-created object is still cleaned up.
+            data["resources"].append(entry)
+            _write(manifest, data)
+        data["rejected"] = [r for r in data["rejected"] if r["id"] != it.path]
         try:
             arm.put(it.path, it.api, it.body)
             if it.wait:
                 _wait(arm, it, sleep)
         except ArmError as err:
             if err.status in (400, 409, 422) and "Policy" not in err.code:
-                data["resources"].remove(entry)
+                if known is None:
+                    data["resources"].remove(entry)
                 data["rejected"].append(
                     {**entry, "status": err.status, "code": err.code, "error": str(err)}
                 )

@@ -47,6 +47,21 @@ def load_env(dotenv: Path | None = None) -> dict[str, str]:
     return env
 
 
+def _error_parts(resp: httpx.Response) -> tuple[str, str]:
+    """Code and message from the several error shapes ARM resource providers return."""
+    try:
+        body = resp.json()
+    except ValueError:
+        return "", resp.text[:300]
+    if not isinstance(body, dict):
+        return "", str(body)[:300]
+    err = body.get("error", body)
+    if not isinstance(err, dict):
+        return "", str(err)[:300]
+    low = {str(k).lower(): v for k, v in err.items()}
+    return str(low.get("code", "")), str(low.get("message", ""))[:300]
+
+
 class Arm:
     def __init__(
         self, env: Mapping[str, str], transport: httpx.BaseTransport | None = None
@@ -93,17 +108,8 @@ class Arm:
             headers={"Authorization": f"Bearer {self._bearer()}"},
         )
         if resp.status_code >= 400:
-            try:
-                err = resp.json().get("error", {})
-            except ValueError:
-                err = {}
-            raise ArmError(
-                method,
-                path.split("?")[0],
-                resp.status_code,
-                str(err.get("code", "")),
-                str(err.get("message", ""))[:300],
-            )
+            code, message = _error_parts(resp)
+            raise ArmError(method, path.split("?")[0], resp.status_code, code, message)
         return resp.status_code, (resp.json() if resp.content else None)
 
     def get(self, path: str, api: str | None) -> Any:

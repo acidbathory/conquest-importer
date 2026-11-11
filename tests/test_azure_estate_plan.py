@@ -203,3 +203,13 @@ def test_cleanup_deletes_in_reverse_order(tmp_path: Path) -> None:
     log: list[tuple[str, str]] = []
     cl.cleanup(fake_arm(log), man, RG, yes=True)
     assert [p.rsplit("/", 1)[1] for _, p in log if _ == "DELETE"] == ["ckg-ma-b", "ckg-ag-a"]
+
+
+def test_rerun_resumes_without_duplicating_manifest_entries(tmp_path: Path) -> None:
+    est = load("estate")
+    man = tmp_path / "m.json"
+    items = plan()
+    est.run(fake_arm([]), items, man, sleep=lambda _s: None)
+    est.run(fake_arm([]), items, man, sleep=lambda _s: None)
+    names = [r["name"] for r in json.loads(man.read_text())["resources"]]
+    assert len(names) == len(set(names)) == len(items)
