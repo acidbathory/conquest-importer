@@ -18,6 +18,15 @@ and the series it observed. With a type the converter stops guessing from the na
 (`_total`, `_count`, `_sum`, `_bucket`): a gauge that happens to end in `_total` converts, and a
 counter without a suffix is refused when read without rate(). A metric with no type keeps the
 suffix guess. A hints file is an ordinary name map that has only "types" and "series".
+
+The optional "variables" key gives a default for each `${NAME}` placeholder in a PromQL query
+that has no value of its own (a Google sample policy, an Azure rule template):
+`{"variables": {"CLUSTER_NAME": "prod-1"}}`. The conversion writes the default into the query
+and says so in a note; a placeholder with no default stays a refusal. A value may hold letters,
+digits and `_ . : / * + | ( ) - ` and spaces only, so it can never close a string or a selector.
+
+The optional "labels" key lists every label of a metric (what `keyset()` returns), so that a
+`without(...)` grouping can be written as the labels that remain.
 """
 
 import json
@@ -34,6 +43,8 @@ from importer.core.ids import MAX_INPUT_BYTES
 MAP_ENV = "IMPORTER_GRAFANA_NAME_MAP"
 MAX_ENTRIES = 100_000
 METRIC_NAME = re.compile(r"[A-Za-z_:][A-Za-z0-9_:]{0,254}")
+VARIABLE_NAME = re.compile(r"\w{1,64}")
+VARIABLE_VALUE = re.compile(r"[A-Za-z0-9_.:/*+|() -]{0,200}")
 
 
 class NameMapError(ValueError):
@@ -62,6 +73,33 @@ class NameMap(BaseModel):
     series: dict[str, list[str]] = {}
     # metric -> its exact type; absent means the converter guesses from the name suffix
     types: dict[str, Literal["counter", "gauge", "histogram_bucket"]] = {}
+
+    # default text for `${NAME}` placeholders in PromQL queries
+    variables: dict[str, str] = {}
+    # metric -> every label it carries (from keyset()); lets without() become a by() list
+    labels: dict[str, list[str]] = {}
+
+    @field_validator("variables")
+    @classmethod
+    def _variables(cls, found: dict[str, str]) -> dict[str, str]:
+        if len(found) > MAX_ENTRIES:
+            raise ValueError(f"more than {MAX_ENTRIES} variables")
+        for key, value in found.items():
+            if not VARIABLE_NAME.fullmatch(key):
+                raise ValueError("a key is not a variable name")
+            if not VARIABLE_VALUE.fullmatch(value):
+                raise ValueError("a variable default holds a character that is not allowed")
+        return found
+
+    @field_validator("labels")
+    @classmethod
+    def _labels(cls, found: dict[str, list[str]]) -> dict[str, list[str]]:
+        for key, names in found.items():
+            if not METRIC_NAME.fullmatch(key):
+                raise ValueError("a key is not a Prometheus metric name")
+            for label in names:
+                identifier(label)
+        return found
 
     @field_validator("types")
     @classmethod
@@ -100,6 +138,7 @@ def merge_hints(base: NameMap, hints: NameMap) -> NameMap:
         update={
             "types": {**hints.types, **base.types},
             "series": {**hints.series, **base.series},
+            "labels": {**hints.labels, **base.labels},
         }
     )
 

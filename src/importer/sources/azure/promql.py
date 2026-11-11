@@ -11,7 +11,7 @@ What the adapter changes in the expression:
 - `#` comments are removed;
 - a quoted selector `{"metric.name", label="x"}` becomes `metric_name{label="x"}` (dots and
   slashes in the name become underscores, the way Prometheus remote write spells them).
-A `${NAME}` placeholder is refused: it expects a person to fill it in.
+A `${NAME}` placeholder is refused unless the name map gives a default for it (`variables`).
 """
 
 import re
@@ -22,6 +22,7 @@ from importer.sources.azure import reasons as R
 from importer.sources.azure.common import Level, manual
 from importer.sources.azure.models import AzureAlert, iso_seconds
 from importer.sources.grafana.models import GrafanaRule
+from importer.sources.grafana.placeholders import fill_placeholders
 from importer.sources.grafana.translate import (
     N_INFERRED,
     N_ROUTING,
@@ -62,9 +63,10 @@ def _prom_name(name: str) -> str:
 
 
 def clean(expression: str, notes: list[str]) -> str:
-    text = _strip_comments(expression)
-    if "${" in text:
+    text, filled, missing = fill_placeholders(_strip_comments(expression))
+    if missing or "${" in text:
         raise Fail(R_PLACEHOLDER)
+    notes += filled
 
     def rewrite(match: re.Match[str]) -> str:
         original = match[1]

@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from importer.core.ir import Confidence, IRMonitor, Operator, Severity, SignalKind
 from importer.sources.gcp.models import GcpAlertPolicy
 from importer.sources.gcp.translate import translate_policy
@@ -122,11 +124,13 @@ def real(m: IRMonitor) -> bool:
 
 
 def test_sample_policies_before_and_after() -> None:
-    """Before this adapter 0 of the 84 samples converted; the rest stay manual with a reason."""
+    """Before the adapter 0 of the 84 samples converted; with it 2; the engine adds 3 more (a
+    ratio of one metric under two filters, twice, and a ratio with its own grouping).
+    The rest stay manual with a reason; a placeholder never counts."""
     monitors = load_fixtures()
     assert len(monitors) == 84
     converted = [m for m in monitors if real(m)]
-    assert len(converted) == 2
+    assert len(converted) == 5
     for m in monitors:
         if not real(m):
             assert m.confidence is Confidence.MANUAL
@@ -142,3 +146,25 @@ def test_every_refusal_has_cookbook_steps() -> None:
     for m in load_fixtures():
         if not real(m):
             assert steps_for(m.reasons), m.reasons[0]
+
+
+def test_a_rolling_range_slides_the_condition_by_the_evaluation_interval() -> None:
+    m = promql("avg by (host) (avg_over_time(cpu[5m])) > 1")
+    assert m.confidence is Confidence.APPROXIMATE
+    assert m.emit is not None and m.emit.slide_by_seconds == 60
+    assert m.signal.aggregation_window_seconds == 300
+
+
+def test_a_placeholder_default_from_the_name_map_is_written_in_and_noted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    query = 'sum(rate(req_total{cluster="${CLUSTER}"}[5m])) > 10'
+    assert promql(query).confidence is Confidence.MANUAL
+    path = tmp_path / "map.json"
+    path.write_text(json.dumps({"variables": {"CLUSTER": "prod-1"}}))
+    monkeypatch.setenv("IMPORTER_GRAFANA_NAME_MAP", str(path))
+    m = promql(query)
+    assert m.confidence is Confidence.APPROXIMATE
+    assert m.signal.metric is not None
+    assert [(f.key, f.value) for f in m.signal.metric.scope] == [("cluster", "prod-1")]
+    assert any("${CLUSTER}" in r and "prod-1" in r for r in m.reasons)

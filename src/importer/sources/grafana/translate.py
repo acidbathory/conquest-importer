@@ -554,6 +554,7 @@ class Built:
     minimum_duration: int = 0  # seconds the query itself asks the condition to last
     silence_seconds: int = 0  # how long a heartbeat is silent before the pending period
     per_series: bool = False  # a bare selector: Prometheus tests each series on its own
+    slide_by: bool = False  # a range function: the window slides by the evaluation interval
 
 
 def looked_back(ctx: Ctx) -> str:
@@ -582,7 +583,32 @@ def time_window(ctx: Ctx, reducer: str) -> tuple[int | None, list[str]]:
     return ctx.range_seconds, [N_RANGE_USED]
 
 
+# Engine forms (promql_engine): tried only after every form above and the plain handlers have
+# refused an expression, so nothing that converted before can change. A fallback returns None
+# or raises `Fail` when the expression is not its shape; the refusal then keeps its old reason.
+PROM_FALLBACKS: list[PromForm] = []
+
+
+def register_prom_fallback(form: PromForm) -> None:
+    if form not in PROM_FALLBACKS:
+        PROM_FALLBACKS.append(form)
+
+
 def _prometheus(expr: str, ctx: Ctx) -> Built:
+    try:
+        return _prometheus_classic(expr, ctx)
+    except Fail as refusal:
+        for fallback in PROM_FALLBACKS:
+            try:
+                built = fallback(expr, ctx)
+            except Fail:
+                continue
+            if built is not None:
+                return built
+        raise refusal
+
+
+def _prometheus_classic(expr: str, ctx: Ctx) -> Built:
     if len(expr) > MAX_EXPRESSION:
         raise Fail(PROM_NOT_SIMPLE)
     for form in PROM_FORMS:
@@ -1007,6 +1033,28 @@ def _windows(rule: GrafanaRule, fixed: int | None, minimum: int = 0) -> tuple[in
     return window, duration, notes
 
 
+N_SLIDE = (
+    "the range slides in Prometheus at every evaluation; the condition slides its {window}s "
+    "window by {step}s, so it checks as often as Grafana did"
+)
+N_SLIDE_NONE = (
+    "the range slides in Prometheus at every evaluation, but the evaluation interval does not "
+    "divide the {window}s window (or is under 30s), so the condition uses separate windows and "
+    "may differ"
+)
+MIN_SLIDE_SECONDS = 30
+
+
+def _slide(rule: GrafanaRule, window: int) -> tuple[int | None, list[str]]:
+    """`slide_by` for a rolling range: the evaluation interval, when New Relic accepts it."""
+    step = rule.interval_seconds or MIN_WINDOW_SECONDS
+    if step == window:
+        return None, []  # the windows already start at every evaluation
+    if step < MIN_SLIDE_SECONDS or step > window or window % step:
+        return None, [N_SLIDE_NONE.format(window=window)]
+    return step, [N_SLIDE.format(window=window, step=step)]
+
+
 def _error_notes(rule: GrafanaRule) -> list[str]:
     return [N_ERROR_STATE] if rule.exec_err_state in ("Error", "Alerting", "KeepLast") else []
 
@@ -1108,6 +1156,8 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
         _any_series(built.metric, threshold)
         built.notes.append(N_ANY_SERIES)
     window, duration, window_notes = _windows(rule, built.window, built.minimum_duration)
+    slide, slide_notes = _slide(rule, window) if built.slide_by else (None, [])
+    window_notes += slide_notes
     no_data, state_notes = _states(rule, duration, built)
     notes = _rule_notes(rule, plan) + built.notes + plan.notes
     if built.kind is SignalKind.LOG and threshold.operator in EMPTY_SENSITIVE:
@@ -1138,8 +1188,8 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
     monitor.thresholds = [threshold]
     monitor.no_data = no_data
     monitor.notification = Notification(message_template=message)
-    if runbook:
-        monitor.emit = EmitOptions(runbook_url=runbook)
+    if runbook or slide:
+        monitor.emit = EmitOptions(runbook_url=runbook, slide_by_seconds=slide)
     return monitor
 
 

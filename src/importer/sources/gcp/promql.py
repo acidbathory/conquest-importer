@@ -15,7 +15,8 @@ What the adapter changes in the query, and says so in the notes:
   Google writes a colon after the domain, NRQL attribute names cannot hold one);
 - the `monitored_resource` matcher selects a Google resource type and is not a label on data that
   arrives through remote write, so it is dropped.
-A `${NAME}` placeholder is refused: the sample policies expect a person to fill it in.
+A `${NAME}` placeholder is refused unless the name map gives a default for it (`variables`); the
+default is written in and noted.
 """
 
 import re
@@ -32,6 +33,7 @@ from importer.core.ir import (
 from importer.core.remediation import Rule, register_rules
 from importer.sources.grafana.models import GrafanaRule, parse_duration
 from importer.sources.grafana.notifications.promrules import split_comparison
+from importer.sources.grafana.placeholders import fill_placeholders
 from importer.sources.grafana.translate import (
     N_INFERRED,
     N_ROUTING,
@@ -287,9 +289,10 @@ def _pieces_with_offsets(text: str) -> list[tuple[int, tuple[str, bool]]]:
 
 
 def _clean_query(raw: str, notes: list[str]) -> str:
-    query = _strip_comments(raw)
-    if "${" in query:
+    query, filled, missing = fill_placeholders(_strip_comments(raw))
+    if missing or "${" in query:
         raise Fail(R_PLACEHOLDER)
+    notes += filled
     query = _colon_names(_rewrite_selectors(query, notes), notes)
     return _outer_parens(" ".join(query.split()))
 
@@ -352,6 +355,7 @@ def translate_condition(
                 thresholds=found.thresholds,
                 no_data=found.no_data,
                 tags=found.tags,
+                emit=found.emit,
                 confidence=found.confidence,
                 reasons=[*prior, *found.reasons],
             )
