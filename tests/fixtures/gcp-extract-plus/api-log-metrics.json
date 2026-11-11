@@ -1,0 +1,152 @@
+{
+  "metrics": [
+    {
+      "description": "synthetic",
+      "filter": "resource.type=\"gce_instance\" AND logName:\"hbase\" AND textPayload:\"Stopping server\"",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "unit": "1",
+        "valueType": "INT64"
+      },
+      "name": "HBase-Server-Stopping"
+    },
+    {
+      "description": "synthetic",
+      "filter": "resource.type=\"gce_instance\" AND logName=\"projects/example-project/logs/apache-access\" AND severity>=ERROR",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "unit": "1",
+        "valueType": "INT64"
+      },
+      "name": "apache.server.error.count"
+    },
+    {
+      "description": "synthetic",
+      "filter": "resource.type=\"gce_instance\" AND logName=\"projects/example-project/logs/nginx-access\" AND severity>=ERROR",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "unit": "1",
+        "valueType": "INT64"
+      },
+      "name": "nginx.server.error.count"
+    },
+    {
+      "description": "synthetic",
+      "filter": "resource.type=\"gce_instance\" AND logName:\"jetty\" AND severity=ERROR",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "unit": "1",
+        "valueType": "INT64"
+      },
+      "name": "jetty.request.failed.count"
+    },
+    {
+      "description": "synthetic",
+      "filter": "resource.type=\"gce_instance\" AND logName:\"couchdb\" AND severity>=ERROR",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "unit": "1",
+        "valueType": "INT64"
+      },
+      "name": "couchdb.server.error.count"
+    },
+    {
+      "description": "synthetic",
+      "filter": "resource.type=\"gce_instance\" AND logName:\"tomcat\" AND severity>=ERROR",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "unit": "1",
+        "valueType": "INT64"
+      },
+      "name": "tomcat.server.error.count"
+    },
+    {
+      "description": "synthetic",
+      "filter": "resource.type=\"global\" AND jsonPayload.service=\"checkout\" AND severity>=ERROR",
+      "labelExtractors": {
+        "order_region": "EXTRACT(jsonPayload.region)"
+      },
+      "metricDescriptor": {
+        "labels": [
+          {
+            "key": "order_region",
+            "valueType": "STRING"
+          }
+        ],
+        "metricKind": "DELTA",
+        "unit": "1",
+        "valueType": "INT64"
+      },
+      "name": "checkout_errors"
+    },
+    {
+      "bucketOptions": {
+        "exponentialBuckets": {
+          "growthFactor": 2,
+          "numFiniteBuckets": 64,
+          "scale": 0.01
+        }
+      },
+      "description": "synthetic",
+      "filter": "resource.type=\"global\" AND jsonPayload.service=\"checkout\" AND jsonPayload.latency_ms:*",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "unit": "ms",
+        "valueType": "DISTRIBUTION"
+      },
+      "name": "checkout_latency_ms",
+      "valueExtractor": "EXTRACT(jsonPayload.latency_ms)"
+    },
+    {
+      "description": "synthetic",
+      "filter": "resource.type=\"gce_instance\" AND jsonPayload.bytes_sent:*",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "unit": "By",
+        "valueType": "INT64"
+      },
+      "name": "bytes_sent",
+      "valueExtractor": "EXTRACT(jsonPayload.bytes_sent)"
+    },
+    {
+      "description": "synthetic",
+      "filter": "resource.type=\"gce_instance\" AND severity>=ERROR",
+      "labelExtractors": {
+        "code": "REGEXP_EXTRACT(textPayload, \"code=(\\\\d+)\")"
+      },
+      "metricDescriptor": {
+        "labels": [
+          {
+            "key": "code",
+            "valueType": "STRING"
+          }
+        ],
+        "metricKind": "DELTA",
+        "unit": "1",
+        "valueType": "INT64"
+      },
+      "name": "regex_label_errors"
+    },
+    {
+      "description": "synthetic",
+      "disabled": true,
+      "filter": "severity>=ERROR",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "unit": "1",
+        "valueType": "INT64"
+      },
+      "name": "disabled_metric"
+    },
+    {
+      "description": "synthetic",
+      "filter": "severity>=ERROR AND (jsonPayload.a=\"x\" OR jsonPayload.b=\"y\")",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "unit": "1",
+        "valueType": "INT64"
+      },
+      "name": "or_filter_metric"
+    }
+  ]
+}

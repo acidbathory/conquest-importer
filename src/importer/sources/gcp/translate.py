@@ -34,7 +34,7 @@ from importer.core.ir import (
     TagFilter,
     Threshold,
 )
-from importer.sources.gcp import alert_fields, datapath
+from importer.sources.gcp import alert_fields, datapath, plus
 from importer.sources.gcp.log_scope import log_filters
 from importer.sources.gcp.models import GcpAlertPolicy, GcpCondition
 from importer.sources.gcp.promql import PROMQL_KIND, translate_condition
@@ -743,7 +743,17 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
     extra: dict[str, object] = {}
     log = cond.kind == "conditionMatchedLog"
     try:
-        if cond.kind == ABSENCE_KIND:
+        extra_def = plus.resolve(policy.extras, cond.kind, body)
+        if isinstance(extra_def, plus.Rewritten):
+            body = extra_def.body
+            reasons += extra_def.notes
+        if isinstance(extra_def, plus.Built):
+            reasons += extra_def.notes
+            signal = extra_def.signal
+            thresholds = [
+                Threshold(severity=severity, operator=extra_def.operator, value=extra_def.value)
+            ]
+        elif cond.kind == ABSENCE_KIND:
             heartbeat, period, duration, notes = _absence_condition(cond.body)
             reasons += notes
             signal = Signal(
@@ -823,6 +833,7 @@ def translate_policy(policy: GcpAlertPolicy) -> list[IRMonitor]:
         name = f"{policy.displayName} / {cond.displayName}" if many else policy.displayName
         monitor = _convert(policy, cond, name)
         datapath.tag_monitor(monitor, cond.body, cond.kind)
+        plus.finish(monitor, policy.extras, cond.kind, cond.body)
         if many and policy.combiner.startswith("AND") and monitor.confidence != Confidence.MANUAL:
             monitor.reasons.append(
                 f"the Google policy fires only when all {len(policy.conditions)} conditions "

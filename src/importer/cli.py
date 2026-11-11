@@ -537,7 +537,8 @@ def extract_gcp_command(
     Read-only: lists alertPolicies, notificationChannels, uptimeCheckConfigs and dashboards
     through the Cloud Monitoring API. Credentials come from GOOGLE_OAUTH_ACCESS_TOKEN or
     `gcloud auth login`; they are never stored. Channels are saved as type and name only. The
-    export can contain project ids and resource names: review it before sharing.
+    export can contain project ids and resource names: review it before sharing. It also reads
+    log-based metrics (Logging API) and SLOs, which convert reads when they sit beside policies/.
     """
     try:
         with http_getter(access_token()) as get:
@@ -548,7 +549,8 @@ def extract_gcp_command(
     typer.echo(
         f"Read project {result.project}: {result.policies} alert policies "
         f"({result.conditions} conditions), {result.channels} notification channels, "
-        f"{result.uptime_checks} uptime checks, {result.dashboards} dashboards."
+        f"{result.uptime_checks} uptime checks, {result.dashboards} dashboards, "
+        f"{result.log_metrics} log-based metrics, {result.slos} SLOs."
     )
     for warning in result.warnings:
         typer.echo(f"  Could not read {printable(warning, 200)}", err=True)

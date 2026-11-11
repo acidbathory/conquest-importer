@@ -62,7 +62,7 @@ def test_the_real_getter_reads_pages_and_sends_a_bearer_header(tmp_path: Path) -
     assert result.policies == 2
     assert all(r.method == "GET" for r in seen)
     assert seen[0].headers["authorization"] == f"Bearer {TOKEN}"
-    assert {r.url.host for r in seen} == {"monitoring.googleapis.com"}
+    assert {r.url.host for r in seen} == {"monitoring.googleapis.com", "logging.googleapis.com"}
 
 
 @pytest.mark.parametrize("body", [["a", "list"], "text", 5, None, {"error": ["x"]}])

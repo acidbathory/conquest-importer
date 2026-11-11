@@ -89,13 +89,23 @@ def test_only_the_allow_listed_endpoints_are_called(tmp_path: Path) -> None:
     fake = Fake()
     extract(fake, "my-project", tmp_path / "out")
     paths = {url.rsplit("/", 1)[1] for url, _ in fake.calls}
-    assert paths == set(gx.READ_PATHS.values())
+    # the extra reads (log-based metrics, services) are checked in test_gcp_extract_plus.py
+    assert paths == set(gx.READ_PATHS.values()) | {"metrics", "services"}
 
 
-def test_channel_addresses_and_check_hosts_are_not_exported(tmp_path: Path) -> None:
+def test_channel_addresses_are_not_exported_and_a_check_host_only_in_its_details(
+    tmp_path: Path,
+) -> None:
     extract(Fake(), "my-project", tmp_path / "out")
-    text = "".join(p.read_text() for p in (tmp_path / "out").rglob("*.json"))
-    assert "person@example.com" not in text and "secret.example" not in text
+    others = "".join(
+        p.read_text()
+        for p in (tmp_path / "out").rglob("*.json")
+        if p.parent.name != "uptime-checks"
+    )
+    assert "person@example.com" not in others and "secret.example" not in others
+    checks = json.loads((tmp_path / "out/uptime-checks/uptime-checks.json").read_text())
+    assert checks[0]["details"]["host"] == "secret.example"
+    assert "person@example.com" not in json.dumps(checks)
     assert json.loads((tmp_path / "out/channels/channels.json").read_text())[0]["type"] == "email"
 
 

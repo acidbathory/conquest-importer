@@ -1,0 +1,218 @@
+{
+  "uptimeCheckConfigs": [
+    {
+      "checkerType": "STATIC_IP_CHECKERS",
+      "displayName": "Site health",
+      "httpCheck": {
+        "path": "/health",
+        "port": 443,
+        "requestMethod": "GET",
+        "useSsl": true,
+        "validateSsl": true
+      },
+      "monitoredResource": {
+        "labels": {
+          "host": "host.example.com",
+          "project_id": "example-project"
+        },
+        "type": "uptime_url"
+      },
+      "name": "projects/example-project/uptimeCheckConfigs/site-health",
+      "period": "60s",
+      "selectedRegions": [
+        "USA",
+        "EUROPE",
+        "ASIA_PACIFIC"
+      ],
+      "timeout": "10s"
+    },
+    {
+      "checkerType": "STATIC_IP_CHECKERS",
+      "contentMatchers": [
+        {
+          "content": "Welcome",
+          "matcher": "CONTAINS_STRING"
+        }
+      ],
+      "displayName": "Home page",
+      "httpCheck": {
+        "path": "/",
+        "port": 443,
+        "requestMethod": "GET",
+        "useSsl": true,
+        "validateSsl": true
+      },
+      "monitoredResource": {
+        "labels": {
+          "host": "host.example.com",
+          "project_id": "example-project"
+        },
+        "type": "uptime_url"
+      },
+      "name": "projects/example-project/uptimeCheckConfigs/home",
+      "period": "300s",
+      "selectedRegions": [
+        "USA",
+        "EUROPE",
+        "ASIA_PACIFIC"
+      ],
+      "timeout": "10s"
+    },
+    {
+      "checkerType": "STATIC_IP_CHECKERS",
+      "displayName": "API with basic auth",
+      "httpCheck": {
+        "authInfo": {
+          "password": "PLANTED-SECRET-PASSWORD",
+          "username": "probe-user"
+        },
+        "headers": {
+          "Authorization": "Bearer PLANTED-HEADER-TOKEN"
+        },
+        "path": "/v1/ping",
+        "port": 443,
+        "requestMethod": "GET",
+        "useSsl": true
+      },
+      "monitoredResource": {
+        "labels": {
+          "host": "host.example.com",
+          "project_id": "example-project"
+        },
+        "type": "uptime_url"
+      },
+      "name": "projects/example-project/uptimeCheckConfigs/api-auth",
+      "period": "60s",
+      "selectedRegions": [
+        "USA",
+        "EUROPE",
+        "ASIA_PACIFIC"
+      ],
+      "timeout": "10s"
+    },
+    {
+      "checkerType": "STATIC_IP_CHECKERS",
+      "displayName": "POST check",
+      "httpCheck": {
+        "body": "eyJ0b2tlbiI6IlBMQU5URUQtQk9EWSJ9",
+        "contentType": "USER_PROVIDED",
+        "customContentType": "application/json",
+        "path": "/hook",
+        "port": 8443,
+        "requestMethod": "POST",
+        "useSsl": true
+      },
+      "monitoredResource": {
+        "labels": {
+          "host": "host.example.com",
+          "project_id": "example-project"
+        },
+        "type": "uptime_url"
+      },
+      "name": "projects/example-project/uptimeCheckConfigs/post-check",
+      "period": "60s",
+      "selectedRegions": [
+        "USA",
+        "EUROPE",
+        "ASIA_PACIFIC"
+      ],
+      "timeout": "10s"
+    },
+    {
+      "checkerType": "STATIC_IP_CHECKERS",
+      "displayName": "Database port",
+      "monitoredResource": {
+        "labels": {
+          "host": "host.example.com",
+          "project_id": "example-project"
+        },
+        "type": "uptime_url"
+      },
+      "name": "projects/example-project/uptimeCheckConfigs/tcp",
+      "period": "60s",
+      "selectedRegions": [
+        "USA",
+        "EUROPE",
+        "ASIA_PACIFIC"
+      ],
+      "tcpCheck": {
+        "port": 5432
+      },
+      "timeout": "10s"
+    },
+    {
+      "checkerType": "STATIC_IP_CHECKERS",
+      "displayName": "Internal check",
+      "httpCheck": {
+        "path": "/",
+        "port": 80
+      },
+      "internalCheckers": [
+        {
+          "gcpZone": "us-central1-a",
+          "network": "projects/example-project/global/networks/default",
+          "peerProjectId": "example-project"
+        }
+      ],
+      "monitoredResource": {
+        "labels": {
+          "host": "host.example.com",
+          "project_id": "example-project"
+        },
+        "type": "uptime_url"
+      },
+      "name": "projects/example-project/uptimeCheckConfigs/internal",
+      "period": "900s",
+      "selectedRegions": [
+        "USA",
+        "EUROPE",
+        "ASIA_PACIFIC"
+      ],
+      "timeout": "10s"
+    },
+    {
+      "checkerType": "STATIC_IP_CHECKERS",
+      "displayName": "Fast check",
+      "httpCheck": {
+        "path": "/up",
+        "port": 80
+      },
+      "monitoredResource": {
+        "labels": {
+          "host": "host.example.com",
+          "project_id": "example-project"
+        },
+        "type": "uptime_url"
+      },
+      "name": "projects/example-project/uptimeCheckConfigs/fast",
+      "period": "60s",
+      "selectedRegions": [
+        "SOUTH_AMERICA"
+      ],
+      "timeout": "5s"
+    },
+    {
+      "displayName": "Header check",
+      "httpCheck": {
+        "headers": {
+          "X-Probe": "1"
+        },
+        "path": "/h",
+        "port": 443,
+        "useSsl": true
+      },
+      "monitoredResource": {
+        "labels": {
+          "host": "host.example.com"
+        },
+        "type": "uptime_url"
+      },
+      "name": "projects/example-project/uptimeCheckConfigs/with-header",
+      "period": "300s",
+      "selectedRegions": [
+        "USA"
+      ],
+      "timeout": "10s"
+    }
+  ]
+}

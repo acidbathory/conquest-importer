@@ -1,0 +1,132 @@
+{
+  "serviceLevelObjectives": [
+    {
+      "displayName": "availability-99-9",
+      "goal": 0.999,
+      "name": "projects/example-project/services/checkout/serviceLevelObjectives/availability-99-9",
+      "rollingPeriod": "2419200s",
+      "serviceLevelIndicator": {
+        "requestBased": {
+          "goodTotalRatio": {
+            "goodServiceFilter": "metric.type=\"loadbalancing.googleapis.com/https/request_count\" resource.type=\"https_lb_rule\" metric.label.response_code_class=\"200\"",
+            "totalServiceFilter": "metric.type=\"loadbalancing.googleapis.com/https/request_count\" resource.type=\"https_lb_rule\""
+          }
+        }
+      }
+    },
+    {
+      "displayName": "availability-bad-total",
+      "goal": 0.995,
+      "name": "projects/example-project/services/checkout/serviceLevelObjectives/availability-bad-total",
+      "rollingPeriod": "604800s",
+      "serviceLevelIndicator": {
+        "requestBased": {
+          "goodTotalRatio": {
+            "badServiceFilter": "metric.type=\"loadbalancing.googleapis.com/https/request_count\" resource.type=\"https_lb_rule\" metric.label.response_code_class=\"500\"",
+            "totalServiceFilter": "metric.type=\"loadbalancing.googleapis.com/https/request_count\" resource.type=\"https_lb_rule\""
+          }
+        }
+      }
+    },
+    {
+      "calendarPeriod": "WEEK",
+      "displayName": "latency-cut",
+      "goal": 0.99,
+      "name": "projects/example-project/services/checkout/serviceLevelObjectives/latency-cut",
+      "serviceLevelIndicator": {
+        "requestBased": {
+          "distributionCut": {
+            "distributionFilter": "metric.type=\"loadbalancing.googleapis.com/https/total_latencies\" resource.type=\"https_lb_rule\"",
+            "range": {
+              "max": 500
+            }
+          }
+        }
+      }
+    },
+    {
+      "displayName": "windows-good-bad",
+      "goal": 0.98,
+      "name": "projects/example-project/services/checkout/serviceLevelObjectives/windows-good-bad",
+      "rollingPeriod": "86400s",
+      "serviceLevelIndicator": {
+        "windowsBased": {
+          "goodBadMetricFilter": "metric.type=\"custom.googleapis.com/checkout/healthy\" resource.type=\"global\"",
+          "windowPeriod": "60s"
+        }
+      }
+    },
+    {
+      "displayName": "windows-ratio-threshold",
+      "goal": 0.99,
+      "name": "projects/example-project/services/checkout/serviceLevelObjectives/windows-ratio-threshold",
+      "rollingPeriod": "2419200s",
+      "serviceLevelIndicator": {
+        "windowsBased": {
+          "goodTotalRatioThreshold": {
+            "performance": {
+              "goodTotalRatio": {
+                "goodServiceFilter": "metric.type=\"loadbalancing.googleapis.com/https/request_count\" resource.type=\"https_lb_rule\" metric.label.response_code_class=\"200\"",
+                "totalServiceFilter": "metric.type=\"loadbalancing.googleapis.com/https/request_count\" resource.type=\"https_lb_rule\""
+              }
+            },
+            "threshold": 0.95
+          },
+          "windowPeriod": "300s"
+        }
+      }
+    },
+    {
+      "calendarPeriod": "DAY",
+      "displayName": "windows-mean",
+      "goal": 0.95,
+      "name": "projects/example-project/services/checkout/serviceLevelObjectives/windows-mean",
+      "serviceLevelIndicator": {
+        "windowsBased": {
+          "metricMeanInRange": {
+            "range": {
+              "max": 0.8,
+              "min": 0
+            },
+            "timeSeries": "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" resource.type=\"gce_instance\""
+          },
+          "windowPeriod": "60s"
+        }
+      }
+    },
+    {
+      "displayName": "windows-sum",
+      "goal": 0.95,
+      "name": "projects/example-project/services/checkout/serviceLevelObjectives/windows-sum",
+      "rollingPeriod": "604800s",
+      "serviceLevelIndicator": {
+        "windowsBased": {
+          "metricSumInRange": {
+            "range": {
+              "max": 1000
+            },
+            "timeSeries": "metric.type=\"pubsub.googleapis.com/subscription/num_undelivered_messages\" resource.type=\"pubsub_subscription\""
+          },
+          "windowPeriod": "60s"
+        }
+      }
+    },
+    {
+      "displayName": "basic-availability",
+      "goal": 0.999,
+      "name": "projects/example-project/services/checkout/serviceLevelObjectives/basic-availability",
+      "rollingPeriod": "2419200s",
+      "serviceLevelIndicator": {
+        "basicSli": {
+          "availability": {},
+          "location": [
+            "us-central1"
+          ],
+          "method": [
+            "POST"
+          ]
+        }
+      }
+    }
+  ]
+}

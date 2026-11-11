@@ -145,4 +145,4 @@ def test_an_optional_list_with_that_answer_is_a_warning(tmp_path: Path) -> None:
         return httpx.Response(200, json=[])
 
     result = read(handler, tmp_path)
-    assert result.policies == 1 and len(result.warnings) == 3
+    assert result.policies == 1 and len(result.warnings) == 5
