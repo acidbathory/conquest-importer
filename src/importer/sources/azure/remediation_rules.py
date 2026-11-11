@@ -15,23 +15,24 @@ RULES: list[Rule] = [
         re.compile(r"^metric alert has several criteria"),
         "Azure metric alert with several criteria",
         [
-            "Azure fires this alert only when every criterion is true. New Relic has no "
-            "composite condition, so the AND cannot be kept. The steps above list each "
-            "criterion converted alone.",
-            "Decide which criterion should page. Create that one alone, and keep the others as "
-            "warning conditions or as dashboard charts, so nothing is lost silently.",
+            "Azure fires this alert only when every criterion is true. The importer joins "
+            "criteria into one query with if(test AND test, 1, 0) when they share the scope, "
+            "dimensions and window; this rule did not (the reason says why). The steps above "
+            "list each criterion converted alone.",
+            "Either rewrite the criteria by hand as one query (the cookbook method 'AND of two "
+            "tests with if()'), or decide which criterion should page and keep the others as "
+            "warning conditions or dashboard charts, so nothing is lost silently.",
         ],
     ),
     (
         re.compile(r"^dynamic threshold"),
         "Azure dynamic threshold",
         [
-            "Azure learns the normal range with its own model (it needs several days of history) "
-            "and offers High, Medium and Low sensitivity. New Relic baseline conditions use a "
-            "different model and are set in standard deviations; there is no published "
-            "equivalence, so the importer does not guess one.",
-            "Either create a baseline condition on the metric and tune the deviations against "
-            "a week of history, or read the recent range in Azure and set a static threshold.",
+            "A dynamic threshold becomes an approximate New Relic baseline condition when its "
+            "sensitivity (High, Medium, Low) and operator are readable. This one was not "
+            "readable (the reason says what). Create a baseline condition on the metric by "
+            "hand and tune the standard deviations against a week of history, or read the "
+            "recent range in Azure and set a static threshold.",
         ],
     ),
     (
@@ -86,10 +87,11 @@ RULES: list[Rule] = [
         re.compile(r"^window is (longer|shorter)"),
         "Azure window outside the supported range",
         [
-            "The importer accepts windows from one minute to one hour. For a longer window, "
-            "create the condition by hand once the longest window New Relic accepts has been "
-            "checked in your account (the documentation pages disagree). A shorter evaluation "
-            "of the same rule is not equivalent.",
+            "The importer accepts windows from one minute to six hours (the NerdGraph schema "
+            "limit). A longer window, such as one day, cannot be one aggregation window: "
+            "create the condition by hand with the longest window and a threshold duration, "
+            "or move the check to a dashboard. A shorter evaluation of the same rule is not "
+            "equivalent.",
         ],
     ),
     (
@@ -204,12 +206,17 @@ RULES: list[Rule] = [
         re.compile(r"^(activity log alert|service health or resource health)"),
         "Azure activity log alert",
         [
-            "Azure fires this rule for every matching activity event. New Relic has no source "
-            "for Azure activity events until they are forwarded as logs.",
+            "Azure fires this rule for every matching activity event. The importer converts a "
+            "condition of equals tests (one field may list several values) and a single "
+            "containsAny value into a count of forwarded activity log records; this rule has "
+            "something else (the reason says what): an OR across fields, several containsAny "
+            "values, several scope prefixes, a tenant scope, or a field the record does not "
+            "carry (resourceGroup, resourceType, caller).",
             "Option 1: deploy the Event Hub log forwarder with the matching "
             "`forward...AzureActivityLogs` flag, look at one forwarded record to learn its "
             "attribute names, then create `SELECT count(*) FROM Log WHERE plugin.type = "
-            "'azure' AND <attribute> = '<value>'` above 0 over a 60 second window.",
+            "'azure' AND <attribute> = '<value>'` at or above 1 over a 60 second window; use "
+            "one condition for each OR branch or scope prefix.",
             "Option 2: keep this rule in Azure Monitor and its action group; it needs no "
             "New Relic data. Service health and resource health events are Azure's own.",
         ],

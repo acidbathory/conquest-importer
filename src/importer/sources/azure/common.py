@@ -16,7 +16,8 @@ from importer.sources.azure import reasons as R
 from importer.sources.azure.models import AzureAlert, iso_seconds
 
 MIN_WINDOW = 60
-MAX_WINDOW = 3600
+MAX_WINDOW = 21600  # NerdGraph aggregationWindow limit (6 hours); see core/emit/common.py
+LONG_WINDOW = 3600  # above this, a violation waits for a full window
 MIN_SLIDE = 30
 LEVEL = {"critical": Severity.CRITICAL, "warning": Severity.WARNING}
 
@@ -110,6 +111,8 @@ def timing(props: dict[str, Any], *, logs: bool = False) -> Timing:
         notes.append(R.N_SLIDE.format(freq=freq, window=window))
     elif freq != window:
         notes.append(R.N_FREQ_MISMATCH.format(freq=freq, window=window))
+    if window > LONG_WINDOW:
+        notes.append(R.N_LONG_WINDOW.format(window=window))
     method = None if logs else "EVENT_TIMER"  # forwarded logs keep the default streaming
     options = EmitOptions(aggregation_method=method, slide_by_seconds=slide)
     return Timing(window, options, notes)

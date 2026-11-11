@@ -27,8 +27,9 @@ PATTERNS: list[tuple[Category, str]] = [
     (
         Category.UNVERIFIED_NAMES,
         r"^(metric name .* (is derived|is listed in|comes from name-map)"
-        r"|attribute names .* are derived"
-        r"|log attribute names|azure\.resourceid is matched|metric names are read as prometheus)",
+        r"|attribute names .* are (derived|unverified)"
+        r"|log attribute names|azure\.resourceid is matched|metric names are read as prometheus"
+        r"|resourceid is matched with)",
     ),
     (
         Category.APPROXIMATION,
@@ -38,12 +39,15 @@ PATTERNS: list[tuple[Category, str]] = [
         r"|muteactionsduration|kql (contains|bin|negated|has|dcount|any|comparison|time filter"
         r"|matches regex)|a count over an empty window|the count is wrapped"
         r"|\d+ failing periods|the azure metric name"
-        r"|the rule group has)",
+        r"|the rule group has|azure fires only when all|a baseline condition for the azure dynamic"
+        r"|ignoredatabefore|azure notifies for every|azure activity log alerts have"
+        r"|service health and resource health records|the \d+s window is longer than an hour)",
     ),
     (
         Category.MANUAL_FOLLOWUP,
         r"^(the table .* (has no counterpart|is filled by|is generated inside)"
-        r"|the logs must reach new relic|kql .* after the aggregation)",
+        r"|the logs must reach new relic|kql .* after the aggregation"
+        r"|the activity log must reach new relic)",
     ),
 ]
 

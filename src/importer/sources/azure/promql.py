@@ -144,6 +144,7 @@ def finish(
         confidence=found.confidence,
         reasons=list(dict.fromkeys([R.N_PROM_NAMES, *notes, *extra_notes, *kept])),
         unmapped=unmapped,
+        data_path="needs-prometheus-remote-write",
     )
 
 

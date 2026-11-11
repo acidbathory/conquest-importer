@@ -61,6 +61,12 @@ EMITTABLE_KINDS = (SignalKind.METRIC, SignalKind.LOG, SignalKind.APM, SignalKind
 MAX_NAME_LENGTH = 128
 MIN_AGGREGATION_WINDOW_SECONDS = 30
 MAX_AGGREGATION_WINDOW_SECONDS = 3600
+# The NerdGraph schema documents 30s to 21600s (6 hours) for AlertsNrqlConditionSignalInput
+# .aggregationWindow, while the NRQL conditions page says 30s to 120 minutes. A source that has
+# verified the longer limit is listed here; every other source keeps the one hour above, which the
+# pinned outputs record. docs/research/azure-monitor-alerting.md says which source checked what.
+LONG_AGGREGATION_WINDOW_SECONDS = 21600
+SOURCES_WITH_LONG_WINDOWS = frozenset({"azure"})
 SOURCE_LABELS = {
     "cloudwatch": "CloudWatch alarm",
     "gcp": "Google Cloud alert policy",
@@ -282,7 +288,10 @@ def emittable_window(monitor: IRMonitor) -> int:
     if not MIN_DURATION_SECONDS <= window <= MAX_DURATION_SECONDS:
         raise CannotEmit(f"evaluation window {window}s is outside 60s-24h")
     agg = aggregation_window(monitor)
-    if not MIN_AGGREGATION_WINDOW_SECONDS <= agg <= MAX_AGGREGATION_WINDOW_SECONDS:
+    if monitor.source_system in SOURCES_WITH_LONG_WINDOWS:
+        if not MIN_AGGREGATION_WINDOW_SECONDS <= agg <= LONG_AGGREGATION_WINDOW_SECONDS:
+            raise CannotEmit(f"aggregation window {agg}s is outside 30s-6h")
+    elif not MIN_AGGREGATION_WINDOW_SECONDS <= agg <= MAX_AGGREGATION_WINDOW_SECONDS:
         raise CannotEmit(f"aggregation window {agg}s is outside 30s-1h")
     if window % agg:
         raise CannotEmit(f"duration {window}s is not a multiple of the {agg}s aggregation window")

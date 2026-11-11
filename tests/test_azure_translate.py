@@ -101,8 +101,8 @@ def test_the_latency_note_is_always_present() -> None:
     assert "opens later than Azure" in reasons(one(metric_alert()))
 
 
-def test_windows_over_an_hour_or_under_a_minute_are_manual() -> None:
-    assert "longer than the one hour" in reasons(one(metric_alert(windowSize="PT2H")))
+def test_windows_over_six_hours_or_under_a_minute_are_manual() -> None:
+    assert "longer than the six hours" in reasons(one(metric_alert(windowSize="P1D")))
     assert "shorter than one minute" in reasons(one(metric_alert(windowSize="PT30S")))
     assert "missing or not an ISO" in reasons(
         one(metric_alert(windowSize="P1M", evaluationFrequency="bad"))
@@ -189,10 +189,12 @@ def test_namespace_falls_back_to_the_target_type_and_the_scope() -> None:
     )
 
 
-def test_two_criteria_are_manual_and_each_is_listed_alone() -> None:
+def test_criteria_with_different_dimensions_are_manual_and_each_is_listed_alone() -> None:
+    dims = [{"name": "Instance", "operator": "Include", "values": ["a"]}]
     m = one(
         metric_alert(
-            criterion(name="cpu"), criterion(name="mem", metricName="Available Memory Bytes")
+            criterion(name="cpu"),
+            criterion(name="mem", metricName="Available Memory Bytes", dimensions=dims),
         )
     )
     assert m.confidence is Confidence.MANUAL and "several criteria" in m.reasons[0]
@@ -404,36 +406,14 @@ def test_kql_literals_are_escaped_in_the_query() -> None:
 # --- activity log, smart detector, Prometheus ------------------------------------------------
 
 
-def test_activity_log_alerts_are_manual_with_the_condition_in_the_steps() -> None:
-    props = {
-        "scopes": [VM],
-        "condition": {
-            "allOf": [
-                {"field": "category", "equals": "Administrative"},
-                {
-                    "anyOf": [
-                        {"field": "level", "equals": "Error"},
-                        {"field": "level", "equals": "Critical"},
-                    ]
-                },
-            ]
-        },
-    }
-    m = one(make("activityLogAlerts", props))
-    assert m.confidence is Confidence.MANUAL and "activity log alert" in m.reasons[0]
-    assert (
-        "category = Administrative" in m.remediation[0]
-        and "level = Error or level = Critical" in m.remediation[0]
-    )
-
-
-def test_service_health_alerts_have_their_own_reason() -> None:
+def test_service_health_with_tenant_scope_stays_manual_and_says_so() -> None:
     props = {
         "condition": {"allOf": [{"field": "category", "equals": "ServiceHealth"}]},
         "tenantScope": "t",
     }
     m = one(make("activityLogAlerts", props))
-    assert "service health" in m.reasons[0] and "tenant" in m.reasons[0]
+    assert m.confidence is Confidence.MANUAL
+    assert "activity log alert" in m.reasons[0] and "tenant" in m.reasons[0]
 
 
 def test_smart_detector_rules_are_manual_and_name_the_detector() -> None:
@@ -577,3 +557,30 @@ def test_scoping_tags_for_processing_rules() -> None:
 def test_odd_action_group_ids_make_no_tag_but_never_fail() -> None:
     m = one(metric_alert(actions=[{"actionGroupId": "x\ny"}, {"actionGroupId": 5}, "z", None]))
     assert not [t for t in m.tags if t.startswith("azure.actionGroup")]
+
+
+def test_a_two_hour_window_converts_and_emits_with_the_honest_latency_note() -> None:
+    m = one(metric_alert(windowSize="PT2H", evaluationFrequency="PT1H"))
+    assert m.confidence is Confidence.APPROXIMATE
+    assert m.signal.aggregation_window_seconds == 7200
+    assert m.emit is not None and m.emit.slide_by_seconds == 3600
+    condition = nerdgraph_payload(m)["variables"]["condition"]
+    assert condition["signal"]["aggregationWindow"] == 7200
+    assert condition["signal"]["slideBy"] == 3600
+    assert "no violation can open until a full 7200s window" in reasons(m)
+
+
+def test_six_hours_is_the_longest_window_the_api_accepts() -> None:
+    m = one(metric_alert(windowSize="PT6H", evaluationFrequency="PT6H"))
+    assert m.confidence is Confidence.APPROXIMATE
+    assert nerdgraph_payload(m)["variables"]["condition"]["signal"]["aggregationWindow"] == 21600
+    assert one(metric_alert(windowSize="PT7H")).confidence is Confidence.MANUAL
+
+
+def test_other_sources_keep_the_one_hour_emit_limit() -> None:
+    from importer.core.emit.common import CannotEmit
+
+    m = one(metric_alert(windowSize="PT2H", evaluationFrequency="PT2H"))
+    other = m.model_copy(update={"source_system": "grafana"})
+    with pytest.raises(CannotEmit, match="30s-1h"):
+        nrql_for(other)

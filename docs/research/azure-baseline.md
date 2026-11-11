@@ -26,34 +26,62 @@ already read).
 
 | Alert type | Rules | Converted (approximate or better) | Manual | Unsupported |
 |---|---|---|---|---|
-| Metric alerts | 22 | 6 | 16 | 0 |
+| Metric alerts | 22 | 10 | 12 | 0 |
 | Scheduled query rules (KQL) | 15 | 7 | 8 | 0 |
-| Activity log alerts | 10 | 0 | 10 | 0 |
+| Activity log alerts | 10 | 8 | 2 | 0 |
 | Prometheus rule groups | 7 | 0 | 7 | 0 |
 | Smart detector rules | 7 | 0 | 0 | 7 |
-| All | 61 | 13 | 41 | 7 |
-The scheduled query rule row is measured with the KQL subset translator (docs/research/azure-kql.md;
-before it the row was 15 rules, 0 converted, 15 manual, and the distinct-rule counts below were taken
-at that time). Rules that differ only in fields the conversion ignores (descriptions, actions, tags) appear in
-several example files. Counting each distinct criteria, query, condition or detector once gives 38
-rules, of which 4 convert (metric alerts 4 of 16, scheduled query rules 0 of 7, activity log alerts
-0 of 8, Prometheus alert rules 0 of 2, smart detector rules 0 of 5). The share is similar either way:
-about one rule in ten converts.
+| All | 61 | 25 | 29 | 7 |
+
+Before the metric, activity and KQL work of 2026-11-11 the same table read: metric alerts 6 of 22,
+scheduled query rules 0 of 15, activity log alerts 0 of 10, all 6 of 61. The scheduled query rule
+row is measured with the KQL subset translator (docs/research/azure-kql.md); the 7 Perf rules
+convert with the data path `needs-agent` and UNVERIFIED names. The distinct-rule count below was taken before that work
+(38 rules, 4 convert) and has not been repeated.
+
+Live estate fixtures (`tests/fixtures/azure-live/`, the 11 metric alerts and 3 activity log alerts
+of the test subscription): metric alerts 4 of 11 before, 10 of 11 after; activity log alerts 0 of 3
+before, 3 of 3 after. The one live metric alert left is a one-day window.
+
+## Data path of the converted rules
+
+Shown the way the Google source shows it (`IRMonitor.data_path`): what must be in place for the
+converted query to return data. `native` is left out of saved IR.
+
+| Alert type | native | needs-log-forwarding | needs-prometheus-remote-write |
+|---|---|---|---|
+| Metric alerts (official examples) | 8 | 0 | 2 |
+| Activity log alerts (official examples) | 0 | 8 | 0 |
+| Metric alerts (live) | 10 | 0 | 0 |
+| Activity log alerts (live) | 0 | 3 | 0 |
+
+The 7 converted scheduled query rules (Perf table) carry the data path `needs-agent`.
 
 ## What converts
 
-Six metric alerts: four with a static threshold, one criterion and a platform metric (virtual
-machine CPU) on several resources or a subscription prefix, and two PromQL metric alerts. They become NRQL conditions on `Metric` with `collector.name = 'azure-monitor'`, the
-event timer, a sliding window when the evaluation frequency is shorter than the window, and the
-original Azure severity written into the description.
+Metric alerts: static thresholds on a platform metric for one resource, several resources or a
+resource group or subscription prefix; windows up to six hours (a note says no violation can open
+until a full window has passed); several criteria that share scope, dimensions and window, written
+as one `if(test AND test, 1, 0)` query above 0; dynamic thresholds as an APPROXIMATE baseline
+condition (High 2, Medium 3, Low 4 standard deviations, UNVERIFIED, never equivalent); dimension
+operators Include, Exclude and StartsWith with one prefix; and PromQL metric alerts. They become NRQL
+conditions on `Metric` with `collector.name = 'azure-monitor'`, the event timer, a sliding window
+when the evaluation frequency is shorter than the window, and the original Azure severity written
+into the description.
+
+Activity log alerts: conditions made of equals tests (several values of one field become IN),
+one `containsAny` value, and a resource, resource group or subscription scope become a count of
+forwarded activity log records at or above 1 over 60 seconds. This includes service health and
+resource health, because the Event Hub forwarder template lists both categories. All attribute
+names are UNVERIFIED.
 
 ## What stays manual or unsupported, by alert type, and why
 
 | Alert type | Main blockers (count) | Why |
 |---|---|---|
-| Metric alerts | dynamic threshold (5); metric name not writable as a New Relic name (4); several resource groups in one scope (2); availability test (2); window over one hour (1); PromQL form not supported (2) | Azure learns a range with its own model and New Relic has no matching sensitivity; guest metrics such as `\Processor(_Total)\% Processor Time` are custom metrics the Azure Monitor integration does not collect; one New Relic condition matches one resource id prefix; availability tests belong to Synthetics; the importer accepts windows up to one hour |
-| Scheduled query rules (KQL) | bare Heartbeat count with no filter (6); dynamic threshold (2) | A count of `Heartbeat` rows with no filter cannot be told apart from other logs once the table name is gone; the 7 Perf rules convert with the data path `needs-agent` and UNVERIFIED names |
-| Activity log alerts | activity event (7); service health or resource health (3) | There is no source of Azure activity events in New Relic until the Event Hub forwarder is deployed and its attribute names are known; the rule is manual with the workaround listed |
+| Metric alerts | metric name not writable as a New Relic name (4); several resource groups in one scope (2); availability test (2); PromQL form not supported (2); dynamic threshold that cannot be read (1); window over six hours (1) | guest metrics such as `\Processor(_Total)\% Processor Time` are custom metrics the Azure Monitor integration does not collect; one New Relic condition matches one resource id prefix (OR of LIKE is not expressible); availability tests belong to Synthetics; no aggregation window above six hours exists; multi-criteria rules with different dimensions or an unconvertible criterion stay manual (none in the official examples) |
+| Scheduled query rules (KQL) | table from an agent or service New Relic does not read (6: Heartbeat); dynamic threshold (2) | A count of `Heartbeat` rows with no filter cannot be told apart from other logs once the table name is gone; the 7 Perf rules convert with the data path `needs-agent` and UNVERIFIED names |
+| Activity log alerts | condition cannot be converted (2) | An OR across different fields, several containsAny values, a tenant scope or a field the record has no counterpart for (resourceGroup, resourceType, caller); the rule is manual with the condition written out |
 | Prometheus rule groups | PromQL the Grafana translator refuses (7) | The examples use recorded names with colons and `histogram_quantile`; managed Prometheus data has no documented export to New Relic |
 | Smart detector rules | machine-learning detector (7) | No New Relic equivalent (unsupported, with a baseline condition suggested as a replacement) |
 

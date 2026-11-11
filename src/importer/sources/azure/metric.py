@@ -11,11 +11,13 @@ See docs/research/azure-monitor-alerting.md sections 4.2 to 4.4.
 import math
 import re
 from dataclasses import dataclass
-from typing import Any
+from decimal import Decimal
+from typing import Any, Literal
 
-from importer.core.emit.nrql import build_nrql, identifier
+from importer.core.emit.nrql import NRQL_FUNCTIONS, build_nrql, identifier
 from importer.core.ir import (
     Aggregation,
+    BaselineSpec,
     Confidence,
     IRMonitor,
     MetricSignal,
@@ -127,12 +129,18 @@ def _dimensions(
         label = R.shown(item.get("name", ""), 40)
         attr = dimension_attribute(names, prefix, str(item.get("name", "")), metric)
         ok = isinstance(values, list) and values and all(isinstance(v, str) for v in values)
-        if attr is None or operator not in ("include", "exclude") or not ok:
+        if attr is None or operator not in ("include", "exclude", "startswith") or not ok:
             raise Fail(f"{R.M_DIMENSION}: {label}")
         if not isinstance(values, list):
             raise Fail(f"{R.M_DIMENSION}: {label}")
         facets.append(attr)
         notes.append(R.N_DIM_SPLIT.format(name=label))
+        if operator == "startswith":
+            # a prefix is a LIKE; several prefixes would need OR, which one filter cannot hold
+            if len(values) != 1 or set(values[0]) & set("*%"):
+                raise Fail(f"{R.M_DIMENSION}: {label} (StartsWith needs one plain prefix)")
+            filters.append(TagFilter(key=attr, value=values[0] + "*", wildcard=True))
+            continue
         if "*" in values and operator == "include":
             continue
         filters.append(TagFilter(key=attr, value="", values=values, negate=operator == "exclude"))
@@ -214,7 +222,7 @@ def _one(
         raise Fail(R.M_NO_CRITERIA)
     kind = crit.get("criterionType")
     if kind == "DynamicThresholdCriterion":
-        raise Fail(R.M_DYNAMIC)
+        return _dynamic(alert, crit, multiple, level)
     if kind not in ("StaticThresholdCriterion", None) or ("threshold" not in crit and kind is None):
         raise Fail(f"{R.M_CRITERIA_TYPE}: {R.shown(kind, 40)}")
     props = alert.properties
@@ -231,6 +239,123 @@ def _one(
         metric=metric,
     )
     return signal, threshold, [*notes, *scope.notes, *timed.notes]
+
+
+OPERATOR_TEXT = {
+    Operator.ABOVE: ">",
+    Operator.ABOVE_OR_EQUALS: ">=",
+    Operator.BELOW: "<",
+    Operator.BELOW_OR_EQUALS: "<=",
+    Operator.EQUALS: "=",
+}
+# Azure sensitivity to New Relic standard deviations. No document maps one to the other: Azure says
+# Medium or Low reduce noise, New Relic says 2 is sensitive and 3 conservative (about 99.7 percent
+# of normal variation). These values are a choice of this importer, not a fact.
+SENSITIVITY = {"high": 2.0, "medium": 3.0, "low": 4.0}
+DYNAMIC_DIRECTION: dict[str, Literal["upper_only", "lower_only", "upper_and_lower"]] = {
+    "greaterthan": "upper_only",
+    "lessthan": "lower_only",
+    "greaterorlessthan": "upper_and_lower",
+}
+
+
+def _number(value: float) -> str:
+    """A plain decimal for NRQL (no exponent)."""
+    text = format(Decimal(repr(value)), "f")
+    return text[:-2] if text.endswith(".0") else text
+
+
+def _dynamic(
+    alert: AzureAlert, crit: dict[str, Any], multiple: bool, level: Level
+) -> tuple[Signal, Threshold, list[str]]:
+    """A dynamic threshold as a baseline condition: an approximation, never an equivalent."""
+    sensitivity = str(crit.get("alertSensitivity", "")).lower()
+    direction = DYNAMIC_DIRECTION.get(str(crit.get("operator", "")).lower())
+    if sensitivity not in SENSITIVITY or direction is None:
+        raise Fail(f"{R.M_DYNAMIC}: sensitivity or operator is not one Azure documents")
+    scope = _scope(alert.properties.get("scopes"), multiple)
+    timed = timing(alert.properties)
+    metric, notes = _metric_signal(alert, crit, scope)
+    periods = crit.get("failingPeriods")
+    need, out_of = 1, 1
+    if isinstance(periods, dict):
+        need = _small(periods.get("minFailingPeriodsToAlert"))
+        out_of = _small(periods.get("numberOfEvaluationPeriods"))
+    if need > out_of:
+        raise Fail(f"{R.M_DYNAMIC}: failingPeriods is not readable")
+    deviations = SENSITIVITY[sensitivity]
+    notes.append(
+        R.N_DYNAMIC.format(
+            sensitivity=R.shown(crit.get("alertSensitivity"), 10),
+            deviations=f"{deviations:g}",
+            direction=direction.replace("_", " "),
+        )
+    )
+    if need != out_of or out_of > 1:
+        notes.append(R.N_FAILING.format(m=need, n=out_of))
+    if crit.get("ignoreDataBefore"):
+        notes.append(R.N_IGNORE_BEFORE.format(value=R.shown(crit["ignoreDataBefore"], 40)))
+    signal = Signal(
+        kind=SignalKind.METRIC,
+        raw_query=alert.name,
+        window_seconds=timed.window * need,
+        aggregation_window_seconds=timed.window,
+        occurrences=Occurrences.ALL,
+        metric=metric,
+        baseline=BaselineSpec(direction=direction, deviations=deviations),
+    )
+    threshold = Threshold(severity=level.severity, operator=Operator.ABOVE, value=deviations)
+    return signal, threshold, [*notes, *scope.notes, *timed.notes]
+
+
+def _small(value: object) -> int:
+    if isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 24:
+        return value
+    raise Fail(f"{R.M_DYNAMIC}: failingPeriods is not readable")
+
+
+def _several(
+    alert: AzureAlert, crits: list[Any], multiple: bool, level: Level
+) -> tuple[Signal, Threshold, list[str]]:
+    """Every criterion true: one query whose tests are joined with AND inside if(..., 1, 0).
+
+    Needs the same scope, dimensions and window (the window belongs to the rule); the cookbook
+    method is 'AND of two tests with if()' (VERIFIED-VALID).
+    """
+    parts = [_one(alert, crit, multiple, level) for crit in crits]
+    first = parts[0][0].metric
+    tests: list[str] = []
+    notes: list[str] = []
+    for signal, threshold, found in parts:
+        sig = signal.metric
+        if sig is None or first is None or signal.baseline is not None:
+            raise Fail("a dynamic threshold cannot be joined with another test")
+        if (sig.scope, sig.group_by) != (first.scope, first.group_by):
+            raise Fail("the criteria do not share the same dimensions or scope")
+        target = sig.terms["a"].nr_target
+        if target is None or threshold.operator not in OPERATOR_TEXT:
+            raise Fail(R.M_OPERATOR)
+        func = NRQL_FUNCTIONS[sig.aggregation]
+        body = target.select or f"{func}({identifier(target.attribute or '')})"
+        tests.append(f"{body} {OPERATOR_TEXT[threshold.operator]} {_number(threshold.value)}")
+        notes.extend(found)
+    select = f"if({' AND '.join(tests)}, 1, 0)"
+    target = NrTarget(event="Metric", select=select)
+    term = MetricTerm(
+        metric=" + ".join(c.get("name", "criterion") for c in crits if isinstance(c, dict)),
+        space_aggregation=Aggregation.MAX,
+        nr_target=target,
+    )
+    joined = MetricSignal(
+        terms={"a": term},
+        aggregation=Aggregation.MAX,
+        scope=first.scope if first else [],
+        group_by=first.group_by if first else [],
+    )
+    notes.append(R.N_COMPOSITE.format(count=len(crits)))
+    base = parts[0][0]
+    signal = base.model_copy(update={"metric": joined})
+    return signal, Threshold(severity=level.severity, operator=Operator.ABOVE, value=0.0), notes
 
 
 def _alone(alert: AzureAlert, crits: list[Any], multiple: bool, level: Level) -> list[str]:
@@ -280,11 +405,15 @@ def translate_metric_alert(alert: AzureAlert) -> IRMonitor:
     if not isinstance(crits, list) or not crits:
         return manual(base, [R.M_NO_CRITERIA], unmapped=extra)
     multiple = odata == SINGLE_TYPES[1]
-    if len(crits) > 1:
-        return manual(base, [R.M_SEVERAL], _alone(alert, crits, multiple, level), unmapped=extra)
     try:
-        signal, threshold, found = _one(alert, crits[0], multiple, level)
+        if len(crits) > 1:
+            signal, threshold, found = _several(alert, crits, multiple, level)
+        else:
+            signal, threshold, found = _one(alert, crits[0], multiple, level)
     except Fail as fail:
+        if len(crits) > 1:
+            steps = fail.steps or _alone(alert, crits, multiple, level)
+            return manual(base, [f"{R.M_SEVERAL}: {fail.reason}"], steps, unmapped=extra)
         return manual(base, [fail.reason], fail.steps, unmapped=extra)
     return IRMonitor(
         **base,
@@ -294,4 +423,5 @@ def translate_metric_alert(alert: AzureAlert) -> IRMonitor:
         reasons=list(dict.fromkeys([*found, *notes])),
         unmapped=extra,
         emit=timing(props).options,
+        data_path="native",
     )

@@ -269,8 +269,12 @@ is complete. Dashboard JSON is not an alert object and is not mapped here.
 
 - A NRQL condition has at most two terms (CRITICAL and an optional WARNING). Operators: above,
   above_or_equals, below, below_or_equals, equals, not_equals.
-- Signal: `aggregation_window` seconds (this repo keeps 30..3600; docs pages disagree on the upper
-  bound, 2 hours or 6 hours); `aggregation_method` EVENT_FLOW, EVENT_TIMER or CADENCE; `slide_by`
+- Signal: `aggregation_window` seconds. The NerdGraph schema (introspection of
+  `AlertsNrqlConditionSignalInput.aggregationWindow`, read 2026-11-11) says at least 30 s and at most
+  6 hours (21600 s); the NRQL conditions page (docs-website, `create-nrql-alert-conditions.mdx`)
+  says 30 s to 120 minutes in steps of 15 s. The Azure source emits up to 21600 s (the API limit,
+  the call that creates the condition); other sources keep 3600. No condition was created to
+  settle it, so a rejected window above 120 minutes is the first thing to check; `aggregation_method` EVENT_FLOW, EVENT_TIMER or CADENCE; `slide_by`
   must divide the window and costs extra data points; `fill_option` NONE, STATIC, LAST_VALUE.
 - Cloud integration data should use EVENT_TIMER (NRREF and NR-AM, which also gives the exact UI path).
 - Loss of signal: `expiration_duration` 30..172800 s, with `open_violation_on_expiration` and
@@ -302,7 +306,8 @@ is complete. Dashboard JSON is not an alert object and is not mapped here.
 | `windowSize` = `evaluationFrequency` (for example 5 min and 5 min) | `aggregation_window` = windowSize in seconds | exact for the arithmetic; window boundaries are aligned differently (Azure evaluates on the rule's own clock, New Relic on clock-aligned windows) |
 | `windowSize` > `evaluationFrequency` (for example 5 min every 1 min) | `aggregation_window` = windowSize and `slide_by` = frequency when frequency divides the window and is at least 30 s | approximate: costs extra data points, and the first full window delays alerts |
 | frequency below 30 s | not possible | manual (Azure's smallest is 1 minute, so this should not occur) |
-| `windowSize` above 3600 s (PT2H, P1D) | window above this repo's 3600 s cap | manual: pages disagree on the maximum (NRREF 2.1); needs the live test listed in NRREF |
+| `windowSize` above 3600 s up to 21600 s (PT2H, PT6H) | `aggregation_window` = windowSize, `slide_by` = frequency when it divides | approximate: no violation can open until one full window of data has been collected after creation or any edit; the 120 minute versus 6 hour limit is UNVERIFIED by a creation call |
+| `windowSize` above 21600 s (P1D) | none | manual: longer than any aggregation window the API accepts |
 | ISO 8601 durations such as `PT15M`, `PT1H`, `P1D` | parse to seconds | exact; reject months and years (`P1M` is ambiguous) |
 | `failingPeriods` M of N with M = N | `threshold_duration` = N x window, `threshold_occurrences` ALL | exact |
 | `failingPeriods` M of N with M < N | `threshold_duration` = M x window, ALL | approximate and stricter: Azure counts non-consecutive violations (LEARN L-LOG: "three failures happened in the last hour"); New Relic needs them consecutive. Same trade the Dynatrace research chose |
@@ -347,11 +352,13 @@ LessThanOrEqual to below_or_equals, Equals to equals.
 | Static, dimensions Include | `AND <dim attribute> IN (...)` | approximate: attribute name is `<resource type prefix>.<DimensionName>` as in the NR-MET examples; unverified for each service |
 | Static, dimension `*` (split) | `FACET <dim attribute>` in addition | approximate |
 | Static, dimension Exclude | `AND <dim attribute> NOT IN (...)` | approximate |
+| Static, dimension StartsWith (one prefix) | `AND <dim attribute> LIKE '<prefix>%'` | approximate; several prefixes would need OR and stay manual |
 | Static, metric has a dimension variant and a no-dimension variant | add `<dim attribute> IS NULL` | required to avoid double counting (NR-MET) |
-| Two or more criteria in `allOf` | none: Azure fires only when all criteria are true (LEARN L-TYPES); a condition per criterion would become OR | manual: report each criterion converted alone, state the AND is lost |
-| Dynamic threshold | baseline condition on the same query; GreaterThan to UPPER_ONLY, LessThan to LOWER_ONLY, GreaterOrLessThan to UPPER_AND_LOWER | approximate and different: Azure's model is machine learning with seasonality and needs three days and 30 samples before alerting (LEARN L-DYN); New Relic's baseline is its own model, default 3 standard deviations. `alertSensitivity` High/Medium/Low has no published equivalent in standard deviations. A guess would be invented data; leave a clearly marked default and ask the owner |
-| Dynamic `ignoreDataBefore` | none | manual note |
-| Dynamic `failingPeriods` | `threshold_duration` as in 4.2 | same verdicts as 4.2 |
+| Two or more criteria in `allOf`, same scope, dimensions and window | one query `SELECT if(<test1> AND <test2>, 1, 0) FROM Metric ...`, threshold above 0 (cookbook method 'AND of two tests with if()', VERIFIED-VALID; read-only NRQL check 2026-11-11 accepted the query and returned 0 with no data) | approximate: the tests share one window and series; a criterion with no data counts as false |
+| Two or more criteria that differ in dimensions or scope, or one cannot convert | none: a condition per criterion would become OR | manual: report each criterion converted alone, state the AND is lost |
+| Dynamic threshold | baseline condition on the same query; GreaterThan to UPPER_ONLY, LessThan to LOWER_ONLY, GreaterOrLessThan to UPPER_AND_LOWER | APPROXIMATE, never equivalent: Azure's model is machine learning with seasonality and needs three days and 30 samples before alerting (LEARN L-DYN); New Relic's baseline is its own model. No document maps `alertSensitivity` to standard deviations (Microsoft says Medium or Low reduce noise; New Relic's anomaly page uses 2 as sensitive and 3 as conservative, about 99.7 percent of normal variation). The importer therefore chooses High 2, Medium 3, Low 4 deviations, marked UNVERIFIED in every converted rule. Not readable (unknown sensitivity or operator) stays manual |
+| Dynamic `ignoreDataBefore` | none | ignored, with a note |
+| Dynamic `failingPeriods` M of N | `threshold_duration` = M x window as in 4.2 | same verdicts as 4.2 |
 | `WebtestLocationAvailabilityCriteria` | none | manual: availability test failures by location; New Relic Synthetics has its own conditions, no mapping from `webTestId` |
 | `PromQLCriteria` (static or dynamic), `failingPeriods.for` | PromQL to NRQL with the repo's PromQL work; `for` to `threshold_duration` | approximate: only if the Prometheus data is in New Relic (section 4.7) |
 | Custom metric (`metricNamespace` not a platform namespace), guest OS metric | none | none: the Azure Monitor integration does not support custom metrics (NR-AM) |
@@ -406,7 +413,11 @@ equivalent is a count over a short window, above 0.
 
 | Azure | New Relic | Verdict |
 |---|---|---|
-| `category` Administrative, ServiceHealth, ResourceHealth, Alert, Autoscale, Policy, Recommendation, Security | `SELECT count(*) FROM Log WHERE plugin.type = 'azure' AND <category filter>` above 0, window 60 s, EVENT_TIMER | approximate: the Event Hub template forwards exactly these subscription activity log categories (NR-LOG lists Administrative, Alert, Autoscale, Policy, Recommendation, Resource Health, Security, Service Health). Attribute names in the forwarded record are UNVERIFIED; events arrive minutes late; NULL on empty windows is harmless for an `above 0` rule |
+| `category` Administrative, ServiceHealth, ResourceHealth, Alert, Autoscale, Policy, Recommendation, Security | `SELECT count(*) FROM Log WHERE plugin.type = 'azure' AND <category filter>` above 0, window 60 s, EVENT_TIMER | approximate: the Event Hub template forwards exactly these subscription activity log categories (NR-LOG lists Administrative, Alert, Autoscale, Policy, Recommendation, Resource Health, Security, Service Health). Attribute names in the forwarded record are UNVERIFIED; events arrive minutes late; NULL on empty windows is harmless for an `above 0` rule. Implemented in `sources/azure/activity.py` with `data_path` needs-log-forwarding and the condition at or above 1 over 60 s with the forwarder's default streaming (the importer does not set EVENT_TIMER for logs) |
+| `field` equals / `anyOf` equals on one field / one `containsAny` value | `AND <attr> = '<v>'` / `<attr> IN (...)` / `<attr> LIKE '%v%'` | approximate. Attribute: the rule's field name; `status` is `resultType` and `subStatus` is `resultSignature` in the Event Hub record (UNVERIFIED); `name-map.json` wins |
+| scope resource ids / resource group / subscription | `resourceId = ...` / `IN (...)` / `LIKE '<prefix>/%'` and `FACET resourceId` (not for service health) | approximate; letter case of the forwarded `resourceId` UNVERIFIED |
+| `anyOf` across different fields, `containsAny` with several values, several prefixes, `tenantScope`, fields `resourceGroup`, `resourceType`, `resourceProvider`, `caller`, nested array paths | none | manual with the condition written out: the IR holds only AND of filters |
+| service health, resource health | same as above on `category` ServiceHealth or ResourceHealth, flags `forwardServiceHealthAzureActivityLogs`, `forwardResourceHealthAzureActivityLogs` | approximate: the forwarder template does list both categories, so they are no longer manual; `properties.*` names UNVERIFIED |
 | `operationName`, `status`, `subStatus`, `caller`, `level`, `resourceType`, `resourceGroup`, `resourceProvider`, `resourceId` with `equals` | `WHERE` equality on the matching log attribute | approximate (names UNVERIFIED) |
 | `containsAny[]` | `WHERE attr IN (...)` for equality or an OR of `LIKE` | approximate: Azure's `containsAny` is substring |
 | `anyOf` | OR group | approximate |
