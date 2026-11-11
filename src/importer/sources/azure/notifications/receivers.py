@@ -110,7 +110,7 @@ class SecretNamer:
 
 
 # --- fixed sentences ---------------------------------------------------------------------------
-STEP_SECRET = (  # noqa: S105 - a sentence, not a password
+STEP_URL_PART = (
     "Supply the secret part of the destination URL (everything after the host) as the secret "
     "named in the report; the URL is not stored in the plan."
 )
@@ -283,7 +283,7 @@ def _webhook(
             channel_properties=channel,
         )
         secrets = (ref.name,)
-        steps.insert(0, STEP_SECRET)
+        steps.insert(0, STEP_URL_PART)
         reasons.insert(0, R.R_SECRET)
     validate_destination(dest)
     return ReceiverResult(
