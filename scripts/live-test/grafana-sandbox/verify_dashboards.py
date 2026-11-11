@@ -51,7 +51,10 @@ def main() -> int:
             continue
         values: dict[str, str] = {}
         for var in dash["variables"]:
-            q = fill(var["nrqlQuery"]["query"].replace("ACCOUNT_ID_PLACEHOLDER", ""), values) + " SINCE 3 hours ago"
+            q = (
+                fill(var["nrqlQuery"]["query"].replace("ACCOUNT_ID_PLACEHOLDER", ""), values)
+                + " SINCE 3 hours ago"
+            )
             rows = nrcommon.nrql(q)
             found: list[str] = []
             for r in rows:
@@ -60,7 +63,9 @@ def main() -> int:
             found = sorted(set(found))
             multi = var.get("isMultiSelection")
             pick = found if multi else found[:1]
-            values[var["name"]] = ", ".join("'" + x.replace("'", "\\'") + "'" for x in pick) or "'__none__'"
+            values[var["name"]] = (
+                ", ".join("'" + x.replace("'", "\\'") + "'" for x in pick) or "'__none__'"
+            )
             print(f"  var {var['name']}: {len(found)} choices ({'all' if multi else 'first'})")
         widgets: dict[tuple[int, str], list[str]] = {}
         order = 0

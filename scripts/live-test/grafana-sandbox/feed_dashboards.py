@@ -59,7 +59,11 @@ CLAUSE = re.compile(
 )
 LIT = re.compile(r"'([^']*)'")
 COUNTER_NAME = re.compile(r"(_total|_sum|_count|_bucket)$")
-COUNTER_EXTRA = {"pg_stat_database_blks_hit", "pg_stat_database_blks_read", "nginx_ingress_controller_success"}
+COUNTER_EXTRA = {
+    "pg_stat_database_blks_hit",
+    "pg_stat_database_blks_read",
+    "nginx_ingress_controller_success",
+}
 SMALL_EVENTS = re.compile(
     r"(err|drop|fail|retrans|colls|carrier|nohandler|overflow|squeez|oom_kill|timeout|rst|syncookie|conflict|"
     r"deadlock|hung|edac|fifo|frame|compressed|multicast|discard|noport|buf_|rcvq|ofoqueue|throttle|refused|"
@@ -90,23 +94,46 @@ DOMAINS: dict[str, list[str]] = {
 
 # paired attributes per metric (metric regex -> list of label sets); the keys are always added
 PAIRS: list[tuple[str, list[dict[str, str]]]] = [
-    (r"^jvm_memory_(used|committed|max)_bytes$", [
-        {"area": "heap", "id": "G1 Eden Space"}, {"area": "heap", "id": "G1 Old Gen"},
-        {"area": "heap", "id": "G1 Survivor Space"}, {"area": "nonheap", "id": "Metaspace"},
-        {"area": "nonheap", "id": "CodeHeap 'non-nmethods'"}, {"area": "nonheap", "id": "Compressed Class Space"}]),
+    (
+        r"^jvm_memory_(used|committed|max)_bytes$",
+        [
+            {"area": "heap", "id": "G1 Eden Space"},
+            {"area": "heap", "id": "G1 Old Gen"},
+            {"area": "heap", "id": "G1 Survivor Space"},
+            {"area": "nonheap", "id": "Metaspace"},
+            {"area": "nonheap", "id": "CodeHeap 'non-nmethods'"},
+            {"area": "nonheap", "id": "Compressed Class Space"},
+        ],
+    ),
     (r"^jvm_buffer_", [{"id": "direct"}, {"id": "mapped"}]),
-    (r"^jvm_gc_pause_", [{"action": "end of minor GC", "cause": "G1 Evacuation Pause"},
-                         {"action": "end of major GC", "cause": "Allocation Failure"}]),
-    (r"^node_filesystem_", [{"device": "/dev/sda1", "fstype": "ext4", "mountpoint": "/"},
-                            {"device": "/dev/sdb1", "fstype": "xfs", "mountpoint": "/data"}]),
+    (
+        r"^jvm_gc_pause_",
+        [
+            {"action": "end of minor GC", "cause": "G1 Evacuation Pause"},
+            {"action": "end of major GC", "cause": "Allocation Failure"},
+        ],
+    ),
+    (
+        r"^node_filesystem_",
+        [
+            {"device": "/dev/sda1", "fstype": "ext4", "mountpoint": "/"},
+            {"device": "/dev/sdb1", "fstype": "xfs", "mountpoint": "/data"},
+        ],
+    ),
     (r"^node_network_", [{"device": "eth0"}, {"device": "ens5"}, {"device": "lo"}]),
     (r"^node_disk_", [{"device": "sda"}, {"device": "nvme0n1"}]),
     (r"^node_(softnet|schedstat|cpu_)", [{"cpu": "0"}, {"cpu": "1"}]),
-    (r"^node_scrape_collector", [{"collector": c} for c in ["cpu", "meminfo", "netdev", "diskstats", "filesystem"]]),
+    (
+        r"^node_scrape_collector",
+        [{"collector": c} for c in ["cpu", "meminfo", "netdev", "diskstats", "filesystem"]],
+    ),
     (r"^node_edac_", [{"controller": "0"}]),
     (r"^node_systemd_socket", [{"name": "sshd.socket"}, {"name": "docker.socket"}]),
     (r"^pg_static$", [{"short_version": "15.4", "version": "15.4.0", "server": "pg"}]),
-    (r"^container_", [{"name": f"c{i}", "id": f"/docker/c{i}", "image": f"img{i}"} for i in range(1, 5)]),
+    (
+        r"^container_",
+        [{"name": f"c{i}", "id": f"/docker/c{i}", "image": f"img{i}"} for i in range(1, 5)],
+    ),
     (r"^kube_statefulset_", [{"statefulset": "kafka"}, {"statefulset": "redis"}]),
     (r"^kube_hpa_", [{"hpa": "frontend"}, {"hpa": "worker"}]),
     (r"^kube_node_info$", [{"node": "node-a"}, {"node": "node-b"}, {"node": "node-c"}]),
@@ -114,70 +141,177 @@ PAIRS: list[tuple[str, list[dict[str, str]]]] = [
 GIB = 1024.0**3
 MEM_FRAC = {
     "MemTotal": 1.0,
-    "MemFree": 0.15, "Cached": 0.25, "Buffers": 0.03, "SReclaimable": 0.04, "Slab": 0.06, "PageTables": 0.005,
-    "SwapCached": 0.002, "Active": 0.35, "Inactive": 0.2, "Active_anon": 0.18, "Inactive_anon": 0.03,
-    "Active_file": 0.17, "Inactive_file": 0.17, "AnonPages": 0.2, "Mapped": 0.05, "Shmem": 0.02, "Dirty": 0.001,
-    "Writeback": 0.0002, "Mlocked": 0.0005, "Unevictable": 0.001, "KernelStack": 0.002, "SUnreclaim": 0.02,
-    "AnonHugePages": 0.0, "Percpu": 0.001, "CommitLimit": 1.0, "Committed_AS": 0.5, "VmallocTotal": 4096.0,
-    "VmallocUsed": 0.002, "VmallocChunk": 0.0, "DirectMap4k": 0.02, "DirectMap2M": 0.4, "DirectMap1G": 0.5,
-    "HardwareCorrupted": 0.0, "NFS_Unstable": 0.0, "WritebackTmp": 0.0, "ShmemHugePages": 0.0,
-    "ShmemPmdMapped": 0.0, "Zswap": 0.001, "Zswapped": 0.002, "SwapFree": 0.12, "SwapTotal": 0.125,
+    "MemFree": 0.15,
+    "Cached": 0.25,
+    "Buffers": 0.03,
+    "SReclaimable": 0.04,
+    "Slab": 0.06,
+    "PageTables": 0.005,
+    "SwapCached": 0.002,
+    "Active": 0.35,
+    "Inactive": 0.2,
+    "Active_anon": 0.18,
+    "Inactive_anon": 0.03,
+    "Active_file": 0.17,
+    "Inactive_file": 0.17,
+    "AnonPages": 0.2,
+    "Mapped": 0.05,
+    "Shmem": 0.02,
+    "Dirty": 0.001,
+    "Writeback": 0.0002,
+    "Mlocked": 0.0005,
+    "Unevictable": 0.001,
+    "KernelStack": 0.002,
+    "SUnreclaim": 0.02,
+    "AnonHugePages": 0.0,
+    "Percpu": 0.001,
+    "CommitLimit": 1.0,
+    "Committed_AS": 0.5,
+    "VmallocTotal": 4096.0,
+    "VmallocUsed": 0.002,
+    "VmallocChunk": 0.0,
+    "DirectMap4k": 0.02,
+    "DirectMap2M": 0.4,
+    "DirectMap1G": 0.5,
+    "HardwareCorrupted": 0.0,
+    "NFS_Unstable": 0.0,
+    "WritebackTmp": 0.0,
+    "ShmemHugePages": 0.0,
+    "ShmemPmdMapped": 0.0,
+    "Zswap": 0.001,
+    "Zswapped": 0.002,
+    "SwapFree": 0.12,
+    "SwapTotal": 0.125,
 }
 CONST_GAUGES = {
-    "node_processes_max_processes": 4194304, "node_processes_max_threads": 4194304, "node_filefd_maximum": 1048576,
-    "node_entropy_pool_size_bits": 4096, "node_nf_conntrack_entries_limit": 262144, "process_max_fds": 1048576,
-    "process_files_max_files": 1048576, "process_virtual_memory_max_bytes": 1.8e19, "tomcat_threads_config_max_threads": 200,
-    "jetty_threads_config_max": 200, "jvm_buffer_total_capacity_bytes": 67108864, "node_memory_Hugepagesize_bytes": 2097152,
-    "node_memory_HugePages_Total": 0, "node_memory_HugePages_Free": 0, "node_memory_HugePages_Rsvd": 0,
-    "node_memory_HugePages_Surp": 0, "kube_hpa_spec_max_replicas": 10, "kube_hpa_spec_min_replicas": 2,
-    "kube_statefulset_status_replicas": 3, "kube_statefulset_status_replicas_ready": 3,
-    "pg_settings_max_connections": 200, "pg_settings_shared_buffers_bytes": 2 * GIB,
-    "pg_settings_effective_cache_size_bytes": 6 * GIB, "pg_settings_maintenance_work_mem_bytes": 512 * 1048576,
-    "pg_settings_work_mem_bytes": 16 * 1048576, "pg_settings_max_wal_size_bytes": 4 * GIB,
-    "pg_settings_random_page_cost": 1.1, "pg_settings_seq_page_cost": 1.0, "pg_settings_max_worker_processes": 8,
-    "pg_settings_max_parallel_workers": 8, "node_cpu_scaling_frequency_max_hertz": 3.4e9,
-    "node_cpu_scaling_frequency_min_hertz": 8e8, "node_timex_loop_time_constant": 2, "node_timex_maxerror_seconds": 0.5,
-    "node_network_mtu_bytes": 1500, "node_network_speed_bytes": 1.25e9, "node_sockstat_TCP_mem_bytes": 3e6,
-    "node_vmstat_pgfault_const": 0, "pg_exporter_last_scrape_duration_seconds": 0.04,
-    "nginx_ingress_controller_config_hash": 1.2345e19, "nginx_ingress_controller_nginx_process_resident_memory_bytes": 1.2e8,
+    "node_processes_max_processes": 4194304,
+    "node_processes_max_threads": 4194304,
+    "node_filefd_maximum": 1048576,
+    "node_entropy_pool_size_bits": 4096,
+    "node_nf_conntrack_entries_limit": 262144,
+    "process_max_fds": 1048576,
+    "process_files_max_files": 1048576,
+    "process_virtual_memory_max_bytes": 1.8e19,
+    "tomcat_threads_config_max_threads": 200,
+    "jetty_threads_config_max": 200,
+    "jvm_buffer_total_capacity_bytes": 67108864,
+    "node_memory_Hugepagesize_bytes": 2097152,
+    "node_memory_HugePages_Total": 0,
+    "node_memory_HugePages_Free": 0,
+    "node_memory_HugePages_Rsvd": 0,
+    "node_memory_HugePages_Surp": 0,
+    "kube_hpa_spec_max_replicas": 10,
+    "kube_hpa_spec_min_replicas": 2,
+    "kube_statefulset_status_replicas": 3,
+    "kube_statefulset_status_replicas_ready": 3,
+    "pg_settings_max_connections": 200,
+    "pg_settings_shared_buffers_bytes": 2 * GIB,
+    "pg_settings_effective_cache_size_bytes": 6 * GIB,
+    "pg_settings_maintenance_work_mem_bytes": 512 * 1048576,
+    "pg_settings_work_mem_bytes": 16 * 1048576,
+    "pg_settings_max_wal_size_bytes": 4 * GIB,
+    "pg_settings_random_page_cost": 1.1,
+    "pg_settings_seq_page_cost": 1.0,
+    "pg_settings_max_worker_processes": 8,
+    "pg_settings_max_parallel_workers": 8,
+    "node_cpu_scaling_frequency_max_hertz": 3.4e9,
+    "node_cpu_scaling_frequency_min_hertz": 8e8,
+    "node_timex_loop_time_constant": 2,
+    "node_timex_maxerror_seconds": 0.5,
+    "node_network_mtu_bytes": 1500,
+    "node_network_speed_bytes": 1.25e9,
+    "node_sockstat_TCP_mem_bytes": 3e6,
+    "node_vmstat_pgfault_const": 0,
+    "pg_exporter_last_scrape_duration_seconds": 0.04,
+    "nginx_ingress_controller_config_hash": 1.2345e19,
+    "nginx_ingress_controller_nginx_process_resident_memory_bytes": 1.2e8,
 }
 GAUGE_LEVELS: list[tuple[str, float, float]] = [
     # regex, level, amplitude (fraction of level)
     (r"^node_cpu_scaling_frequency_hertz", 2.4e9, 0.2),
-    (r"^node_processes_pids", 320, 0.1), (r"^node_processes_threads", 900, 0.1), (r"^node_filefd_allocated", 2400, 0.1),
-    (r"^node_entropy_available_bits", 3500, 0.1), (r"^node_nf_conntrack_entries$", 1800, 0.3),
-    (r"^node_sockstat_.*_(mem|alloc)", 800, 0.3), (r"^node_sockstat_", 40, 0.3), (r"^node_tcp_connection_states", 30, 0.4),
-    (r"^node_udp_queues", 2000, 0.5), (r"^node_systemd_units", 6, 0.1), (r"^node_procs_", 3, 0.5),
-    (r"^node_arp_entries", 12, 0.2), (r"^node_disk_io_now", 1.5, 0.8), (r"^node_timex_offset", 0.0004, 0.8),
-    (r"^node_timex_estimated_error", 0.0008, 0.5), (r"^node_timex_frequency", 1.0, 0.0001),
-    (r"^process_open_fds", 14, 0.2), (r"^process_resident_memory_bytes", 2.4e7, 0.1),
-    (r"^process_virtual_memory_bytes", 1.2e9, 0.02), (r"^node_scrape_collector_duration", 0.006, 0.6),
-    (r"^process_uptime", 0, 0), (r"^process_memory_rss_bytes", 7.5e8, 0.1), (r"^process_memory_swap_bytes", 2e7, 0.1),
-    (r"^process_threads", 85, 0.05), (r"^process_files_open_files", 420, 0.1), (r"^jvm_threads_live", 70, 0.1),
-    (r"^jvm_threads_daemon", 55, 0.1), (r"^jvm_threads_peak", 92, 0.02), (r"^jvm_threads_states", 12, 0.3),
-    (r"^jvm_classes_loaded", 17500, 0.01), (r"^jvm_buffer_memory_used", 4e7, 0.2), (r"^jvm_buffer_count", 30, 0.1),
-    (r"^jvm_gc_pause_seconds_max", 0.03, 0.8), (r"^tomcat_threads_busy", 14, 0.5), (r"^tomcat_threads_current", 40, 0.1),
-    (r"^jetty_threads_busy", 9, 0.5), (r"^jetty_threads_current", 32, 0.1), (r"^http_server_requests_seconds_max", 0.4, 0.8),
-    (r"^pg_stat_database_numbackends", 25, 0.3), (r"^kube_hpa_status_current_replicas", 5, 0.4),
-    (r"^container_memory", 1.5e8, 0.2), (r"^nginx_ingress_controller_nginx_process_connections", 90, 0.3),
-    (r"_bytes$", 3e8, 0.2), (r"_seconds$", 0.02, 0.5),
+    (r"^node_processes_pids", 320, 0.1),
+    (r"^node_processes_threads", 900, 0.1),
+    (r"^node_filefd_allocated", 2400, 0.1),
+    (r"^node_entropy_available_bits", 3500, 0.1),
+    (r"^node_nf_conntrack_entries$", 1800, 0.3),
+    (r"^node_sockstat_.*_(mem|alloc)", 800, 0.3),
+    (r"^node_sockstat_", 40, 0.3),
+    (r"^node_tcp_connection_states", 30, 0.4),
+    (r"^node_udp_queues", 2000, 0.5),
+    (r"^node_systemd_units", 6, 0.1),
+    (r"^node_procs_", 3, 0.5),
+    (r"^node_arp_entries", 12, 0.2),
+    (r"^node_disk_io_now", 1.5, 0.8),
+    (r"^node_timex_offset", 0.0004, 0.8),
+    (r"^node_timex_estimated_error", 0.0008, 0.5),
+    (r"^node_timex_frequency", 1.0, 0.0001),
+    (r"^process_open_fds", 14, 0.2),
+    (r"^process_resident_memory_bytes", 2.4e7, 0.1),
+    (r"^process_virtual_memory_bytes", 1.2e9, 0.02),
+    (r"^node_scrape_collector_duration", 0.006, 0.6),
+    (r"^process_uptime", 0, 0),
+    (r"^process_memory_rss_bytes", 7.5e8, 0.1),
+    (r"^process_memory_swap_bytes", 2e7, 0.1),
+    (r"^process_threads", 85, 0.05),
+    (r"^process_files_open_files", 420, 0.1),
+    (r"^jvm_threads_live", 70, 0.1),
+    (r"^jvm_threads_daemon", 55, 0.1),
+    (r"^jvm_threads_peak", 92, 0.02),
+    (r"^jvm_threads_states", 12, 0.3),
+    (r"^jvm_classes_loaded", 17500, 0.01),
+    (r"^jvm_buffer_memory_used", 4e7, 0.2),
+    (r"^jvm_buffer_count", 30, 0.1),
+    (r"^jvm_gc_pause_seconds_max", 0.03, 0.8),
+    (r"^tomcat_threads_busy", 14, 0.5),
+    (r"^tomcat_threads_current", 40, 0.1),
+    (r"^jetty_threads_busy", 9, 0.5),
+    (r"^jetty_threads_current", 32, 0.1),
+    (r"^http_server_requests_seconds_max", 0.4, 0.8),
+    (r"^pg_stat_database_numbackends", 25, 0.3),
+    (r"^kube_hpa_status_current_replicas", 5, 0.4),
+    (r"^container_memory", 1.5e8, 0.2),
+    (r"^nginx_ingress_controller_nginx_process_connections", 90, 0.3),
+    (r"_bytes$", 3e8, 0.2),
+    (r"_seconds$", 0.02, 0.5),
 ]
 COUNTER_LEVELS: list[tuple[str, float]] = [
-    (r"^node_cpu_seconds", 0.2), (r"^process_cpu_seconds", 0.01), (r"^container_cpu_usage_seconds", 0.25),
-    (r"^node_disk_(read|written)_bytes", 1.5e6), (r"^node_network_(receive|transmit)_bytes", 3e5),
-    (r"^node_netstat_.*Octets", 2e5), (r"^node_disk_io_time_seconds", 0.12), (r"^node_disk_io_time_weighted", 0.2),
-    (r"^node_disk_.*time_seconds", 0.02), (r"^node_pressure_", 0.004), (r"^node_disk_.*(completed|merged)", 60),
-    (r"^node_network_.*(packets)", 400), (r"^node_netstat_.*(Segs|Datagrams|Msgs)", 300),
-    (r"^node_(intr|context_switches)_total", 8000), (r"^node_forks_total", 4), (r"^node_vmstat_pgp?(in|out)", 900),
-    (r"^node_vmstat_pgfault", 3000), (r"^node_softnet_processed", 250), (r"^node_schedstat_timeslices", 1500),
-    (r"^node_netstat_Tcp_(Active|Passive)Opens", 3), (r"^container_network_.*_bytes", 1.2e5),
-    (r"^jvm_gc_memory_allocated", 5e6), (r"^jvm_gc_memory_promoted", 4e5), (r"^logback_events_total", 1.2),
-    (r"^http_server_requests_seconds_count", 25), (r"^jvm_gc_pause_seconds_count", 0.05),
-    (r"^pg_stat_database_xact_commit", 220), (r"^pg_stat_database_xact_rollback", 1.2),
-    (r"^pg_stat_database_(blks_hit)", 5000), (r"^pg_stat_database_blks_read", 150), (r"^pg_stat_database_temp_bytes", 3e4),
-    (r"^pg_stat_bgwriter_checkpoint_(write|sync)_time", 20), (r"^pg_stat_bgwriter_", 40),
-    (r"^nginx_ingress_controller_requests", 18), (r"^nginx_ingress_controller_request_duration_seconds_bucket", 18),
-    (r"^nginx_ingress_controller_(request|response)_size_sum", 6e4), (r"^nginx_ingress_controller_nginx_process_cpu", 0.08),
+    (r"^node_cpu_seconds", 0.2),
+    (r"^process_cpu_seconds", 0.01),
+    (r"^container_cpu_usage_seconds", 0.25),
+    (r"^node_disk_(read|written)_bytes", 1.5e6),
+    (r"^node_network_(receive|transmit)_bytes", 3e5),
+    (r"^node_netstat_.*Octets", 2e5),
+    (r"^node_disk_io_time_seconds", 0.12),
+    (r"^node_disk_io_time_weighted", 0.2),
+    (r"^node_disk_.*time_seconds", 0.02),
+    (r"^node_pressure_", 0.004),
+    (r"^node_disk_.*(completed|merged)", 60),
+    (r"^node_network_.*(packets)", 400),
+    (r"^node_netstat_.*(Segs|Datagrams|Msgs)", 300),
+    (r"^node_(intr|context_switches)_total", 8000),
+    (r"^node_forks_total", 4),
+    (r"^node_vmstat_pgp?(in|out)", 900),
+    (r"^node_vmstat_pgfault", 3000),
+    (r"^node_softnet_processed", 250),
+    (r"^node_schedstat_timeslices", 1500),
+    (r"^node_netstat_Tcp_(Active|Passive)Opens", 3),
+    (r"^container_network_.*_bytes", 1.2e5),
+    (r"^jvm_gc_memory_allocated", 5e6),
+    (r"^jvm_gc_memory_promoted", 4e5),
+    (r"^logback_events_total", 1.2),
+    (r"^http_server_requests_seconds_count", 25),
+    (r"^jvm_gc_pause_seconds_count", 0.05),
+    (r"^pg_stat_database_xact_commit", 220),
+    (r"^pg_stat_database_xact_rollback", 1.2),
+    (r"^pg_stat_database_(blks_hit)", 5000),
+    (r"^pg_stat_database_blks_read", 150),
+    (r"^pg_stat_database_temp_bytes", 3e4),
+    (r"^pg_stat_bgwriter_checkpoint_(write|sync)_time", 20),
+    (r"^pg_stat_bgwriter_", 40),
+    (r"^nginx_ingress_controller_requests", 18),
+    (r"^nginx_ingress_controller_request_duration_seconds_bucket", 18),
+    (r"^nginx_ingress_controller_(request|response)_size_sum", 6e4),
+    (r"^nginx_ingress_controller_nginx_process_cpu", 0.08),
     (r"^nginx_ingress_controller_success", 0.002),
 ]
 STATUS_WEIGHT = {"200": 1.0, "301": 0.1, "404": 0.04, "500": 0.01, "503": 0.005}
@@ -197,7 +331,11 @@ def gauss(*parts: object) -> float:
 def wave(seed: str, t: float, amp: float, noise: float, spikes: float = 3.0) -> float:
     """Multiplier around 1: a daily wave, a ~40 min wave, noise and rare short spikes."""
     ph = h01(seed, "ph")
-    v = 1 + amp * math.sin(2 * math.pi * (t / 86400 + ph)) + amp * 0.6 * math.sin(2 * math.pi * (t / 2400 + ph * 3))
+    v = (
+        1
+        + amp * math.sin(2 * math.pi * (t / 86400 + ph))
+        + amp * 0.6 * math.sin(2 * math.pi * (t / 2400 + ph * 3))
+    )
     v += noise * gauss(seed, int(t))
     block = int(t // 900)
     if h01(seed, block) < 0.06 and (t % 900) < 120:
@@ -220,7 +358,9 @@ def load_dashboards(payload_dir: str) -> list[dict[str, Any]]:
             for w in p["widgets"]
             for q in w["rawConfiguration"].get("nrqlQueries", [])
         ]
-        out.append({"name": dash["name"], "queries": queries, "variables": dash.get("variables", [])})
+        out.append(
+            {"name": dash["name"], "queries": queries, "variables": dash.get("variables", [])}
+        )
     return out
 
 
@@ -272,21 +412,45 @@ def derive(dashboard: dict[str, Any]) -> dict[str, MetricSpec]:
 
 def entities(profile: str, host: str) -> list[dict[str, str]]:
     if profile == "node":
-        rows = [("node", f"{host}:9100", host), ("node", "node-b.ckg-synthetic:9100", "node-b"),
-                ("node-edge", "edge-1.ckg-synthetic:9100", "edge-1")]
+        rows = [
+            ("node", f"{host}:9100", host),
+            ("node", "node-b.ckg-synthetic:9100", "node-b"),
+            ("node-edge", "edge-1.ckg-synthetic:9100", "edge-1"),
+        ]
         return [{"job": j, "instance": i, "nodename": n} for j, i, n in rows]
     if profile == "jvm":
-        return [{"application": a, "instance": i} for a, i in [
-            ("orders-svc", "10.0.1.11:8080"), ("orders-svc", "10.0.1.12:8080"), ("payments-svc", "10.0.2.21:8080")]]
+        return [
+            {"application": a, "instance": i}
+            for a, i in [
+                ("orders-svc", "10.0.1.11:8080"),
+                ("orders-svc", "10.0.1.12:8080"),
+                ("payments-svc", "10.0.2.21:8080"),
+            ]
+        ]
     if profile == "pg":
-        return [{"kubernetes_namespace": ns, "release": r, "instance": i} for ns, r, i in [
-            ("db-prod", "pg-main", "pg-main-0:9187"), ("db-prod", "pg-reports", "pg-reports-0:9187"),
-            ("db-stage", "pg-stage", "pg-stage-0:9187")]]
+        return [
+            {"kubernetes_namespace": ns, "release": r, "instance": i}
+            for ns, r, i in [
+                ("db-prod", "pg-main", "pg-main-0:9187"),
+                ("db-prod", "pg-reports", "pg-reports-0:9187"),
+                ("db-stage", "pg-stage", "pg-stage-0:9187"),
+            ]
+        ]
     if profile == "nginx":
-        return [{"controller_namespace": ns, "namespace": ns, "controller_class": c, "controller_pod": p, "controller": p} for ns, c, p in [
-            ("ingress-nginx", "k8s.io/ingress-nginx", "ingress-nginx-controller-abc12"),
-            ("ingress-nginx", "k8s.io/ingress-nginx", "ingress-nginx-controller-def34"),
-            ("ingress-edge", "nginx-internal", "ingress-edge-controller-ghi56")]]
+        return [
+            {
+                "controller_namespace": ns,
+                "namespace": ns,
+                "controller_class": c,
+                "controller_pod": p,
+                "controller": p,
+            }
+            for ns, c, p in [
+                ("ingress-nginx", "k8s.io/ingress-nginx", "ingress-nginx-controller-abc12"),
+                ("ingress-nginx", "k8s.io/ingress-nginx", "ingress-nginx-controller-def34"),
+                ("ingress-edge", "nginx-internal", "ingress-edge-controller-ghi56"),
+            ]
+        ]
     if profile == "cadvisor":
         return [{"instance": f"10.0.3.{i}:8080"} for i in (31, 32, 33)]
     return [{"cluster": c} for c in ("prod-eu", "prod-us")]
@@ -294,8 +458,13 @@ def entities(profile: str, host: str) -> list[dict[str, str]]:
 
 def profile_of(name: str) -> str:
     n = name.lower()
-    for key, prof in [("node exporter", "node"), ("jvm", "jvm"), ("postgres", "pg"), ("nginx", "nginx"),
-                      ("cadvisor", "cadvisor")]:
+    for key, prof in [
+        ("node exporter", "node"),
+        ("jvm", "jvm"),
+        ("postgres", "pg"),
+        ("nginx", "nginx"),
+        ("cadvisor", "cadvisor"),
+    ]:
         if key in n:
             return prof
     return "ksm"
@@ -321,7 +490,9 @@ def combos(spec: MetricSpec, ent_keys: set[str]) -> list[dict[str, str]]:
 
 
 class Series:
-    def __init__(self, spec: MetricSpec, labels: dict[str, str], ent: dict[str, str], is_real_host: bool) -> None:
+    def __init__(
+        self, spec: MetricSpec, labels: dict[str, str], ent: dict[str, str], is_real_host: bool
+    ) -> None:
         self.spec = spec
         self.labels = {("metric_name" if k == "metricName" else k): v for k, v in labels.items()}
         self.ent = ent
@@ -343,7 +514,11 @@ class Series:
         if n.endswith("_sum") and "request_size" not in n and "response_size" not in n:
             cnt = sib.get(n[:-4] + "_count")
             if cnt is not None:
-                return cnt.counter_rate(t, sib) * (0.045 if "http" in n else 0.02) * (1 + 0.3 * math.sin(t / 900))
+                return (
+                    cnt.counter_rate(t, sib)
+                    * (0.045 if "http" in n else 0.02)
+                    * (1 + 0.3 * math.sin(t / 900))
+                )
         st = self.labels.get("status")
         if st:
             level *= STATUS_WEIGHT.get(st, 0.01)
@@ -355,15 +530,22 @@ class Series:
         if self.labels.get("device") == "lo":
             level *= 0.3
         rate = level * self.mult * wave(self.seed, t, 0.3, 0.12, 2.5)
-        if n.startswith(("node_cpu_seconds", "container_cpu", "node_disk_io_time", "node_pressure")):
+        if n.startswith(
+            ("node_cpu_seconds", "container_cpu", "node_disk_io_time", "node_pressure")
+        ):
             rate = min(rate, 0.95)
         return rate
 
     def gauge_value(self, t: float, t0: float) -> float:
         n = self.spec.name
         if n in CONST_GAUGES:
-            return float(CONST_GAUGES[n]) * (1 if n.startswith(("pg_", "kube_", "tomcat", "jetty")) else self.mult0())
-        if re.search(r"(_info|^up|^pg_up|^pg_static|_created|collector_success|network_carrier|power_supply|sync_status)", n):
+            return float(CONST_GAUGES[n]) * (
+                1 if n.startswith(("pg_", "kube_", "tomcat", "jetty")) else self.mult0()
+            )
+        if re.search(
+            r"(_info|^up|^pg_up|^pg_static|_created|collector_success|network_carrier|power_supply|sync_status)",
+            n,
+        ):
             return 1.0
         if n == "process_uptime_seconds":
             return t - (t0 - 86400 * (1 + 9 * h01(self.seed, "up")))
@@ -373,7 +555,15 @@ class Series:
         if m and m[1] in MEM_FRAC:
             total = (8, 16, 32)[int(h01(self.ent.get("instance", ""), "mem") * 3)] * GIB
             frac = MEM_FRAC[m[1]]
-            return total * frac * (1 if m[1] in ("MemTotal", "CommitLimit", "SwapTotal", "VmallocTotal") else wave(self.seed, t, 0.05, 0.01, 0.3))
+            return (
+                total
+                * frac
+                * (
+                    1
+                    if m[1] in ("MemTotal", "CommitLimit", "SwapTotal", "VmallocTotal")
+                    else wave(self.seed, t, 0.05, 0.01, 0.3)
+                )
+            )
         if n == "node_filesystem_size_bytes":
             return (100 if self.labels.get("mountpoint") == "/" else 500) * GIB
         if n in ("node_filesystem_avail_bytes", "node_filesystem_free_bytes"):
@@ -383,7 +573,9 @@ class Series:
             mx = (1.0 if self.labels.get("area") == "heap" else 0.25) * GIB
             part = 0.4 if self.labels.get("id") in ("G1 Old Gen", "Metaspace") else 0.15
             frac = part * (0.6 if "used" in n else 0.85) / 0.85
-            return mx * frac * self.mult * wave(self.seed, t, 0.1 if "used" in n else 0.02, 0.01, 0.2)
+            return (
+                mx * frac * self.mult * wave(self.seed, t, 0.1 if "used" in n else 0.02, 0.01, 0.2)
+            )
         if n == "jvm_memory_max_bytes":
             return (1.0 if self.labels.get("area") == "heap" else 0.25) * GIB
         for pat, level, amp in GAUGE_LEVELS:
@@ -394,30 +586,64 @@ class Series:
     def mult0(self) -> float:
         return 0.9 + 0.2 * h01(self.ent.get("instance", ""), self.spec.name)
 
-    def points(self, t: int, interval: int, t0: float, sib: "dict[str, Series]", source: str) -> list[dict[str, Any]]:
+    def points(
+        self, t: int, interval: int, t0: float, sib: "dict[str, Series]", source: str
+    ) -> list[dict[str, Any]]:
         attrs = {**self.ent, **self.labels, "ckg_test": "true", "ckg_source": source}
         if self.spec.name != "node_uname_info":
             attrs.pop("nodename", None)
         if self.spec.kind != "count":
-            return [{"name": self.spec.name, "type": "gauge", "value": round(self.gauge_value(t, t0), 6),
-                     "timestamp": t, "attributes": attrs}]
+            return [
+                {
+                    "name": self.spec.name,
+                    "type": "gauge",
+                    "value": round(self.gauge_value(t, t0), 6),
+                    "timestamp": t,
+                    "attributes": attrs,
+                }
+            ]
         if self.spec.name.endswith("_bucket"):
             total = 18.0 * self.mult * wave(self.seed, t, 0.3, 0.12, 2.5) * interval
             out = []
             med = 0.08 * (1 + 0.5 * math.sin(t / 1500))
             for le in LE:
                 x = float("inf") if le == "+Inf" else float(le)
-                cdf = 1.0 if x == float("inf") else 0.5 * (1 + math.erf((math.log(x / med)) / (0.9 * math.sqrt(2))))
-                out.append({"name": self.spec.name, "type": "count", "value": round(total * cdf, 4), "timestamp": t,
-                            "interval.ms": interval * 1000, "attributes": {**attrs, "le": le}})
+                cdf = (
+                    1.0
+                    if x == float("inf")
+                    else 0.5 * (1 + math.erf((math.log(x / med)) / (0.9 * math.sqrt(2))))
+                )
+                out.append(
+                    {
+                        "name": self.spec.name,
+                        "type": "count",
+                        "value": round(total * cdf, 4),
+                        "timestamp": t,
+                        "interval.ms": interval * 1000,
+                        "attributes": {**attrs, "le": le},
+                    }
+                )
             return out
         rate = self.counter_rate(t, sib)
-        return [{"name": self.spec.name, "type": "count", "value": round(rate * interval, 6), "timestamp": t,
-                 "interval.ms": interval * 1000, "attributes": attrs}]
+        return [
+            {
+                "name": self.spec.name,
+                "type": "count",
+                "value": round(rate * interval, 6),
+                "timestamp": t,
+                "interval.ms": interval * 1000,
+                "attributes": attrs,
+            }
+        ]
 
 
 class Model:
-    def __init__(self, dashboards: list[dict[str, Any]], host: str, real_combos: dict[str, list[dict[str, str]]]):
+    def __init__(
+        self,
+        dashboards: list[dict[str, Any]],
+        host: str,
+        real_combos: dict[str, list[dict[str, str]]],
+    ):
         self.series: list[Series] = []
         self.by_profile: dict[str, list[Series]] = {}
         for dash in dashboards:
@@ -430,13 +656,19 @@ class Model:
                     spec.attrs.add("nodename")
                 for ei, ent in enumerate(ents):
                     real = prof == "node" and ei == 0
-                    rows = real_combos.get(spec.name) if real and spec.name in real_combos else combos(spec, ent_keys)
+                    rows = (
+                        real_combos.get(spec.name)
+                        if real and spec.name in real_combos
+                        else combos(spec, ent_keys)
+                    )
                     for row in rows:
                         s = Series(spec, row, ent, real)
                         self.series.append(s)
                         self.by_profile.setdefault(prof, []).append(s)
                     if real and spec.name in real_combos and spec.name.startswith("node_disk_"):
-                        for row in combos(spec, ent_keys):  # macOS names (disk0) fail the dashboard's device regex
+                        for row in combos(
+                            spec, ent_keys
+                        ):  # macOS names (disk0) fail the dashboard's device regex
                             s = Series(spec, row, ent, real)
                             s.extra = True
                             self.series.append(s)
@@ -478,9 +710,16 @@ class Poster:
 
     def _post(self, body: bytes) -> None:
         for attempt in range(4):
-            req = urllib.request.Request(METRIC_API, data=body, method="POST", headers={
-                "Api-Key": os.environ["NEW_RELIC_LICENSE_KEY"], "Content-Type": "application/json",
-                "Content-Encoding": "gzip"})
+            req = urllib.request.Request(
+                METRIC_API,
+                data=body,
+                method="POST",
+                headers={
+                    "Api-Key": os.environ["NEW_RELIC_LICENSE_KEY"],
+                    "Content-Type": "application/json",
+                    "Content-Encoding": "gzip",
+                },
+            )
             try:
                 with urllib.request.urlopen(req, timeout=60) as resp:
                     self.requests += 1
@@ -508,7 +747,7 @@ LABEL = re.compile(r'(\w+)="((?:[^"\\]|\\.)*)"')
 
 
 def scrape() -> dict[tuple[str, tuple[tuple[str, str], ...]], tuple[str, float]]:
-    text = urllib.request.urlopen(NE_URL, timeout=10).read().decode()  # noqa: S310 (127.0.0.1 only)
+    text = urllib.request.urlopen(NE_URL, timeout=10).read().decode()
     types: dict[str, str] = {}
     out: dict[tuple[str, tuple[tuple[str, str], ...]], tuple[str, float]] = {}
     for line in text.splitlines():
@@ -526,7 +765,9 @@ def scrape() -> dict[tuple[str, tuple[tuple[str, str], ...]], tuple[str, float]]
     return out
 
 
-def real_points(prev: Any, cur: Any, ts: int, elapsed: float, wanted: set[str], host: str) -> list[dict[str, Any]]:
+def real_points(
+    prev: Any, cur: Any, ts: int, elapsed: float, wanted: set[str], host: str
+) -> list[dict[str, Any]]:
     pts: list[dict[str, Any]] = []
     per_metric: dict[str, int] = {}
     for key, (kind, val) in cur.items():
@@ -539,22 +780,38 @@ def real_points(prev: Any, cur: Any, ts: int, elapsed: float, wanted: set[str], 
         attrs = {k: v for k, v in labels}
         if "metricName" in attrs:
             attrs["metric_name"] = attrs.pop("metricName")
-        attrs.update(job="node", instance=f"{host}:9100", ckg_test="true", ckg_source="node_exporter")
+        attrs.update(
+            job="node", instance=f"{host}:9100", ckg_test="true", ckg_source="node_exporter"
+        )
         if kind == "counter":
             if prev is None or key not in prev:
                 continue
             before = prev[key][1]
             delta = val if val < before else val - before
-            pts.append({"name": name, "type": "count", "value": delta, "timestamp": ts,
-                        "interval.ms": int(elapsed * 1000), "attributes": attrs})
+            pts.append(
+                {
+                    "name": name,
+                    "type": "count",
+                    "value": delta,
+                    "timestamp": ts,
+                    "interval.ms": int(elapsed * 1000),
+                    "attributes": attrs,
+                }
+            )
         else:
-            pts.append({"name": name, "type": "gauge", "value": val, "timestamp": ts, "attributes": attrs})
+            pts.append(
+                {"name": name, "type": "gauge", "value": val, "timestamp": ts, "attributes": attrs}
+            )
     return pts
 
 
 def start_node_exporter(binary: str, log: Any) -> subprocess.Popen[bytes]:
-    proc = subprocess.Popen([binary, "--web.listen-address=127.0.0.1:9100"], stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL, start_new_session=True)
+    proc = subprocess.Popen(  # noqa: S603 - the verified node_exporter binary, fixed arguments
+        [binary, "--web.listen-address=127.0.0.1:9100"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
     for _ in range(30):
         try:
             scrape()
@@ -583,16 +840,22 @@ def run(args: argparse.Namespace, log: Any) -> None:
         first = scrape() if proc else {}
         real_combos: dict[str, list[dict[str, str]]] = {}
         counts: dict[str, int] = {}
-        for (name, labels), _ in first.items():
+        for name, labels in first:
             if name in wanted and counts.get(name, 0) < REAL_SERIES_PER_METRIC:
                 counts[name] = counts.get(name, 0) + 1
                 real_combos.setdefault(name, []).append(
-                    {k: v for k, v in labels if k not in ("job", "instance")})
+                    {k: v for k, v in labels if k not in ("job", "instance")}
+                )
         model = Model(dashboards, host, real_combos)
         sib = model.sibling_index()
-        per_series_sib = {id(s): sib[(json.dumps(s.ent, sort_keys=True), json.dumps(s.labels, sort_keys=True))]
-                          for s in model.series}
-        log(f"series: {len(model.series)}; per profile: " + ", ".join(f"{k}={len(v)}" for k, v in model.by_profile.items()))
+        per_series_sib = {
+            id(s): sib[(json.dumps(s.ent, sort_keys=True), json.dumps(s.labels, sort_keys=True))]
+            for s in model.series
+        }
+        log(
+            f"series: {len(model.series)}; per profile: "
+            + ", ".join(f"{k}={len(v)}" for k, v in model.by_profile.items())
+        )
         poster = Poster(args.dry_run, log)
         t0 = time.time()
         # backfill
@@ -604,8 +867,13 @@ def run(args: argparse.Namespace, log: Any) -> None:
             for s in model.series:
                 if args.backfill_extra_only and not s.extra:
                     continue
-                pts += s.points(ts, BACKFILL_STEP, t0, per_series_sib[id(s)],
-                                "synthetic-backfill" if s.real_host else "synthetic")
+                pts += s.points(
+                    ts,
+                    BACKFILL_STEP,
+                    t0,
+                    per_series_sib[id(s)],
+                    "synthetic-backfill" if s.real_host else "synthetic",
+                )
             poster.send(pts)
             if i % 20 == 0:
                 log(f"backfill step {i + 1}/{steps}, points sent {poster.total}")
@@ -630,8 +898,7 @@ def run(args: argparse.Namespace, log: Any) -> None:
             for s in model.series:
                 if s.real_host and not s.extra and s.spec.name in real_names:
                     continue
-                pts += s.points(tick, LIVE_STEP, t0, per_series_sib[id(s)],
-                                "synthetic")
+                pts += s.points(tick, LIVE_STEP, t0, per_series_sib[id(s)], "synthetic")
             if len(pts) > MAX_TICK_POINTS:
                 raise SystemExit("tick point cap exceeded")
             poster.send(pts)
@@ -656,7 +923,11 @@ def main() -> int:
     ap.add_argument("--node-exporter", help="path to the verified node_exporter binary")
     ap.add_argument("--backfill-minutes", type=int, default=120)
     ap.add_argument("--live-minutes", type=int, default=45)
-    ap.add_argument("--backfill-extra-only", action="store_true", help="backfill only the extra synthetic series")
+    ap.add_argument(
+        "--backfill-extra-only",
+        action="store_true",
+        help="backfill only the extra synthetic series",
+    )
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--daemon", action="store_true")
     ap.add_argument("--out-dir", default=os.path.join(root, "out", "live-run"))
