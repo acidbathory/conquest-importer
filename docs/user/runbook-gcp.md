@@ -159,7 +159,26 @@ Link the project to New Relic with the Google Cloud integration. This is what `g
 
 Warning: converted conditions and dashboards stay empty until data arrives. A `sum()` over a metric that
 does not exist returns 0, not an error, so a condition on a missing metric looks healthy and never
-fires. Run `check-gcp-data`. Custom, Ops Agent and log-based metrics have no documented route.
+fires. Run `check-gcp-data`.
+
+Metrics the Google integration does not poll still convert when a correct query exists for the metric
+as it will arrive. Each such item says in its reasons, and in the IR as `data_path`, what you must set
+up first. `importer plan-gcp-datapath --alerts out/gcp/alerts --dashboards out/gcp-dashboards` writes
+the steps (offline, no secrets) for each class:
+
+| `data_path` | Metric source | What to set up | Name in New Relic |
+|---|---|---|---|
+| native | Compute, Storage, SQL, Pub/Sub and other service metrics | Link the project (above). Not written to the saved IR | `gcp.<service>.<path>` |
+| needs-ops-agent-or-otel | `agent.googleapis.com/*`, `workload.googleapis.com/*` | An OpenTelemetry Collector with host metrics and application receivers (`otel-collector-ops-agent.yml`) | `workload.*`: the receiver's own name. `agent.*`: no documented mapping, so the Google name as `agent.<path>`, with a closest-match hint. UNVERIFIED |
+| needs-prometheus-remote-write | `prometheus.googleapis.com/<name>/<type>` | Prometheus remote write (`prometheus-remote-write.yml`) | The Prometheus name, type dropped; labels are plain attributes. Histograms stay manual |
+| needs-custom-ingest | `custom.googleapis.com/*`, `external.googleapis.com/*` | OTLP from the sender | The Google path with dots. UNVERIFIED |
+| needs-log-forwarding | Log-match conditions | Forward Cloud Logging to New Relic | Attributes UNVERIFIED |
+
+Log-based metrics (`logging.googleapis.com/user/*`) stay manual: the log filter is in the metric
+definition, which the policy does not carry. Rewrite them as log-match conditions.
+The scoreboard counts converted items per data path (`alerts_datapath_<class>`,
+`widgets_datapath_<class>`) and the items whose route is known (`*_datapath_known`) as separate
+numbers; "converted" alone never means the data arrives.
 
 ## 6. Verification checklist
 

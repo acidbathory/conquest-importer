@@ -34,6 +34,7 @@ from importer.core.ir import (
     TagFilter,
     Threshold,
 )
+from importer.sources.gcp import datapath
 from importer.sources.gcp.filter import FilterError, Term, parse_filter
 from importer.sources.gcp.models import GcpAlertPolicy, GcpCondition
 
@@ -143,6 +144,11 @@ def nr_metric_name(metric_type: str) -> str:
     is otherwise unchanged. No suffix is added: Google's own counter names already end in
     `_count` where they should (`disk/read_bytes_count`).
     """
+    if not datapath.is_polled(metric_type):
+        try:
+            return datapath.arrival(metric_type).name
+        except datapath.DataPathError as err:
+            raise Fail(Confidence.MANUAL, str(err)) from err
     match = SERVICE_SEGMENT.match(metric_type)
     if match is None or not SAFE_PATH.match(match["path"]):
         raise Fail(Confidence.MANUAL, f"metric type {metric_type!r} is not a recognised name")
@@ -150,21 +156,6 @@ def nr_metric_name(metric_type: str) -> str:
 
 
 PROJECT_LABELS = {"project_id": "gcp.projectId"}
-
-
-NOT_GOOGLE_SERVICE = (
-    "custom.googleapis.com/",
-    "external.googleapis.com/",
-    "workload.googleapis.com/",
-    "prometheus.googleapis.com/",
-    "agent.googleapis.com/",
-    "logging.googleapis.com/user/",
-)
-UNCOLLECTED = (
-    "the metric is not one of the Google Cloud service metrics that New Relic documents "
-    "collecting (custom, Ops Agent, Prometheus and log-based metrics are not listed), so a "
-    "converted query would return no data"
-)
 
 
 def _label_name(field: str) -> str | None:
@@ -299,9 +290,10 @@ def metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[st
             Confidence.MANUAL,
             "an uptime check alert depends on the check itself, which is not migrated",
         )
-    if metric_type.startswith(NOT_GOOGLE_SERVICE):
-        raise Fail(Confidence.MANUAL, UNCOLLECTED)
-    return metric_type, scope, notes
+    refusal = datapath.refusal(metric_type)
+    if refusal:
+        raise Fail(Confidence.MANUAL, refusal)
+    return metric_type, datapath.relabel(metric_type, scope), notes
 
 
 def _first_aggregation(body: dict[str, object]) -> tuple[dict[str, object], str]:
@@ -351,6 +343,14 @@ def metric_series(
     """
     aggregation, counter = ALIGNERS[aligner]
     group_by, notes = _reducer(agg, aggregation, aligner)
+    if not datapath.is_polled(metric_type):
+        if aligner.startswith("ALIGN_PERCENTILE_"):
+            raise Fail(
+                Confidence.MANUAL,
+                "a percentile of a distribution metric is not expressible once the metric is "
+                "sent by Prometheus, the Ops Agent or a custom route",
+            )
+        group_by = [datapath.arrival_label(g) for g in group_by]
     if period < 60 or period % 60:
         raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")
     name = nr_metric_name(metric_type)
@@ -364,7 +364,9 @@ def metric_series(
     if counter:
         period, scale, note = _counter_window(aligner, period, chart=chart)
         notes.append(note)
-    notes += _name_notes(name, aligner, uses_labels=bool(scope or group_by))
+    notes += _name_notes(
+        name, aligner, uses_labels=bool(scope or group_by), metric_type=metric_type
+    )
     term = MetricTerm(
         metric=metric_type,
         space_aggregation=aggregation,
@@ -399,9 +401,19 @@ def _metric_condition(
 
 
 def _name_notes(
-    name: str, aligner: str, *, uses_labels: bool, missing_note: str = MISSING_NOTE
+    name: str,
+    aligner: str,
+    *,
+    uses_labels: bool,
+    missing_note: str = MISSING_NOTE,
+    metric_type: str = "",
 ) -> list[str]:
     """Say what is and is not confirmed about the New Relic name and attributes."""
+    if metric_type and not datapath.is_polled(metric_type):
+        return [
+            *datapath.arrival(metric_type).notes,
+            *([datapath.LABEL_NOTE] if uses_labels else []),
+        ]
     notes: list[str] = []
     base = name.rsplit(".", 1)[0] if aligner.startswith("ALIGN_PERCENTILE_") else name
     if base in NOT_RECEIVED:
@@ -428,6 +440,8 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
         raise Fail(Confidence.MANUAL, f"duration {duration}s is not supported")
     name = nr_metric_name(metric_type)
     group_by, notes = _group_labels(agg)
+    if not datapath.is_polled(metric_type):
+        group_by = [datapath.arrival_label(g) for g in group_by]
     notes.append(ABSENCE_NOTE)
     if period < POLL_SECONDS:
         notes.append(
@@ -446,7 +460,11 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
             "series reports, so group by the resource id to alert for each one"
         )
     notes += _name_notes(
-        name, aligner, uses_labels=bool(scope or group_by), missing_note=ABSENCE_MISSING_NOTE
+        name,
+        aligner,
+        uses_labels=bool(scope or group_by),
+        missing_note=ABSENCE_MISSING_NOTE,
+        metric_type=metric_type,
     )
     signal = HeartbeatSignal(
         check=name,
@@ -600,6 +618,7 @@ def translate_policy(policy: GcpAlertPolicy) -> list[IRMonitor]:
     for cond in policy.conditions:
         name = f"{policy.displayName} / {cond.displayName}" if many else policy.displayName
         monitor = _convert(policy, cond, name)
+        datapath.tag_monitor(monitor, cond.body, cond.kind)
         if many and policy.combiner.startswith("AND") and monitor.confidence != Confidence.MANUAL:
             monitor.reasons.append(
                 f"the Google policy fires only when all {len(policy.conditions)} conditions "

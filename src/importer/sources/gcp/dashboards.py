@@ -20,6 +20,7 @@ from importer.core.dashboard_ir import (
 )
 from importer.core.ir import Confidence
 from importer.core.text import printable
+from importer.sources.gcp import datapath
 from importer.sources.gcp.dashboard_models import MAX_WIDGETS, GcpDashboard
 from importer.sources.gcp.translate import (
     POLL_SECONDS,
@@ -321,7 +322,7 @@ def translate_widget(widget: dict[str, Any], layout: Layout) -> IRWidget:
 
 def _safe_widget(widget: dict[str, Any], layout: Layout) -> IRWidget:
     try:
-        return translate_widget(widget, layout)
+        return datapath.tag_widget(translate_widget(widget, layout))
     except Exception:
         return _failed("widget", layout, "unknown", [READ_FAILED])
 

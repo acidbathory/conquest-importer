@@ -227,6 +227,9 @@ class IRMonitor(BaseModel):
     remediation: list[str] = []  # specific manual steps; see core/remediation.py for generic ones
     unmapped: dict[str, Any] = Field(default_factory=dict)
     emit: EmitOptions | None = None
+    # What must be in place for the converted query to return data (GCP: native, needs-...).
+    # None = not stated; "native" = nothing beyond the platform link, left out of saved IR.
+    data_path: str | None = None
 
     @model_serializer(mode="wrap")
     def _omit_unset_emit(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
@@ -234,4 +237,6 @@ class IRMonitor(BaseModel):
         data: dict[str, Any] = handler(self)
         if data.get("emit") is None:
             data.pop("emit", None)
+        if data.get("data_path") in (None, "native"):
+            data.pop("data_path", None)
         return data

@@ -40,6 +40,7 @@ from importer.core.dashboard_ir import WidgetKind
 from importer.core.ir import Confidence
 from importer.sources.gcp.dashboard_models import GcpDashboard
 from importer.sources.gcp.dashboards import LAYOUTS, translate_widget
+from importer.sources.gcp.datapath import tag_widget
 from importer.sources.gcp.extract import _channel_summary, _uptime_summary
 from importer.sources.gcp.models import GcpAlertPolicy
 from importer.sources.gcp.translate import NAMING_NOTE, translate_policy
@@ -100,6 +101,8 @@ REASON_CODES: list[tuple[str, str]] = [
     (r"^forecast conditions", "forecast"),
     (r"not one of the Google Cloud service metrics", "uncollected metric family"),
     (r"uptime check alert", "uptime-check alert"),
+    (r"Prometheus histogram metric arrives|histogram metric arrives", "prometheus histogram"),
+    (r"percentile of a distribution metric is not expressible", "percentile on a sent metric"),
     (r"a trigger on several time series", "multi-series trigger"),
     (r"cannot read '.*select_slo", "slo selector filter"),
     (r"log filter comparison on", "log filter comparison"),
@@ -256,9 +259,11 @@ def measure_conditions(corpus: Corpus) -> list[dict[str, Any]]:
                     "kind": cond.kind or "unknown",
                     "shape": shape,
                     "family": QUERY_FAMILIES.get(cond.kind) or metric_family(text),
+                    "data_path": (monitor.data_path or "native") if converted else "",
                     "verdict": "converted" if converted else monitor.confidence.value,
                     "code": "converted" if converted else primary_code(reasons),
                     "name_confirmed": converted
+                    and monitor.data_path == "native"
                     and not any(w in r for r in reasons for w in NAMING_WORDS)
                     and NAMING_NOTE not in reasons,
                     "multi": len(policy.conditions) > 1,
@@ -276,7 +281,7 @@ def measure_widgets(corpus: Corpus) -> list[dict[str, Any]]:
         key, layout = dash.layout
         placed = LAYOUTS[key](layout) if key else []
         for widget, lay in placed:
-            result = translate_widget(widget, lay)
+            result = tag_widget(translate_widget(widget, lay))
             kind = result.source_type
             structural = kind in STRUCTURAL
             if result.kind == WidgetKind.CHART:
@@ -292,6 +297,7 @@ def measure_widgets(corpus: Corpus) -> list[dict[str, Any]]:
                     "kind": kind,
                     "structural": structural,
                     "family": metric_family(json.dumps(widget)),
+                    "data_path": (result.data_path or "native") if verdict == "converted" else "",
                     "verdict": verdict,
                     "code": primary_code(result.reasons)
                     if verdict == "placeholder"
@@ -513,6 +519,16 @@ def cli_cross_check(
     return checks
 
 
+def by_data_path(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Converted items by the data path they need (placeholders and manual items never count)."""
+    return dict(sorted(Counter(r["data_path"] for r in rows if r["data_path"]).items()))
+
+
+def data_path_known(counts: dict[str, int]) -> int:
+    """Converted items whose route to New Relic is known: every class except `unknown`."""
+    return sum(n for path, n in counts.items() if path != "unknown")
+
+
 def percent(part: int, whole: int) -> str:
     return f"{100 * part / whole:.1f}%" if whole else "n/a"
 
@@ -541,6 +557,9 @@ def summarise(corpus: Corpus, *, experiments: bool = True) -> dict[str, Any]:
             "converted": converted,
             "converted_pct": percent(converted, total),
             "converted_with_confirmed_names": confirmed,
+            "by_data_path": by_data_path(conditions),
+            "converted_data_path_known": data_path_known(by_data_path(conditions)),
+            "manual": total - converted,
             "by_shape": _tally(conditions, "shape"),
             "by_family": _tally(conditions, "family"),
             "by_origin": _tally(conditions, "origin"),
@@ -555,6 +574,9 @@ def summarise(corpus: Corpus, *, experiments: bool = True) -> dict[str, Any]:
             "data_widgets": len(data),
             "data_converted": data_conv,
             "data_pct": percent(data_conv, len(data)),
+            "by_data_path": by_data_path(data),
+            "converted_data_path_known": data_path_known(by_data_path(data)),
+            "manual": len(data) - data_conv,
             "partially_converted": sum(w["partial"] for w in widgets),
             "by_kind": _tally(widgets, "kind"),
             "by_family": _tally([w for w in data], "family"),
@@ -581,6 +603,11 @@ def render(summary: dict[str, Any]) -> str:
         f"conditions converted: {c['converted']} of {c['total']} ({c['converted_pct']}); with a confirmed metric name: {c['converted_with_confirmed_names']}",
         f"widgets (scoreboard): {w['scoreboard_converted']} charts, {w['scoreboard_placeholders']} placeholders ({w['scoreboard_pct']})",
         f"data widgets (no structural): {w['data_converted']} of {w['data_widgets']} ({w['data_pct']})",
+        "",
+        f"conditions: converted {c['converted']}, data path known {c['converted_data_path_known']}, "
+        f"manual {c['manual']}; by data path {c['by_data_path']}",
+        f"data widgets: converted {w['data_converted']}, data path known {w['converted_data_path_known']}, "
+        f"manual (placeholders) {w['manual']}; by data path {w['by_data_path']}",
         "",
         "condition shape | " + " | ".join(["converted", "manual"]),
     ]

@@ -36,7 +36,7 @@ nothing else got worse:
 
 Not progress: more tests, more documentation, more code, a higher "dashboards created" count, or a
 placeholder counted as a converted widget. The scoreboard reports tests as information only.
-Converted means a real chart or condition; a placeholder is its own line. The headline percentage in
+Converted means a real chart or condition; a placeholder is its own line. Items that convert only once the customer sends the metric (GCP: Ops Agent, Prometheus, custom) carry a `data_path`; the scoreboard counts them in `*_datapath_<class>` and `*_datapath_known`, which are information, never part of the converted figure. The headline percentage in
 the report counts a dashboard as migrated when it can be created even if most widgets are
 placeholders; the overseer quotes widgets, never that percentage, until the owner decides.
 
