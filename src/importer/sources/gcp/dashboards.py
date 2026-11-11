@@ -43,6 +43,7 @@ from importer.sources.gcp.dashboard_extra import (
     split_pages,
 )
 from importer.sources.gcp.dashboard_models import MAX_WIDGETS, GcpDashboard
+from importer.sources.gcp.dashboard_options import options_of, thresholds_of, unit_of
 from importer.sources.gcp.dashboard_promql import promql_nrql
 from importer.sources.gcp.translate import (
     POLL_SECONDS,
@@ -402,9 +403,12 @@ def _chart(body: dict[str, Any], title: str, layout: Layout, kind: str, ctx: Con
     if scorecard:
         reasons += [
             f"{printable(k, 20)} is not migrated"
-            for k in ("gaugeView", "sparkChartView", "thresholds")
-            if k in body
+            for k in ("gaugeView", "sparkChartView")
+            if body.get(k)
         ]
+    unit, unit_notes = unit_of(queries)
+    thresholds, threshold_notes = thresholds_of(body.get("thresholds"), viz)
+    reasons += unit_notes + threshold_notes
     if kind == "timeSeriesTable":
         reasons.append(TABLE_NOTE)
     if kind == "pieChart":
@@ -425,6 +429,8 @@ def _chart(body: dict[str, Any], title: str, layout: Layout, kind: str, ctx: Con
         Confidence.APPROXIMATE,
         reasons,
         visualization=viz,
+        options=options_of(unit, viz),
+        thresholds=thresholds,
         **extra,
     )
 

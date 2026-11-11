@@ -166,3 +166,47 @@ def test_sample_dashboards_convert_at_least_the_measured_number() -> None:
             converted += sum(w.kind != WidgetKind.UNSUPPORTED for w in ir.widgets)
     # before this change 16 of the 350 content widgets converted; placeholders never count
     assert total == 350 and converted >= 115
+
+
+def test_a_scorecard_threshold_and_unit_are_kept() -> None:
+    body = {
+        "timeSeriesQuery": {**QUERY, "unitOverride": "10^2.%"},
+        "thresholds": [
+            {"color": "RED", "direction": "ABOVE", "value": 0.9},
+            {"color": "YELLOW", "direction": "ABOVE", "value": 0.7},
+        ],
+    }
+    w = one({"title": "s", "scorecard": body})
+    assert w.visualization == Visualization.BILLBOARD and w.options.unit == "PERCENTAGE"
+    assert [(t.severity.value, t.from_value) for t in w.thresholds] == [
+        ("critical", 0.9),
+        ("warning", 0.7),
+    ]
+    assert not any("thresholds" in r for r in w.reasons)
+
+
+def test_thresholds_that_new_relic_cannot_show_are_named() -> None:
+    body = {
+        "timeSeriesQuery": QUERY,
+        "thresholds": [
+            {"color": "RED", "direction": "BELOW", "value": 5},
+            {"color": "BLUE", "direction": "ABOVE", "value": 9},
+        ],
+    }
+    w = one({"title": "s", "scorecard": body})
+    assert not w.thresholds
+    notes = " ".join(w.reasons)
+    assert "below a value" in notes and "BLUE" in notes
+
+
+def test_a_line_chart_threshold_becomes_a_band_bound() -> None:
+    body = {
+        "dataSets": [{"timeSeriesQuery": QUERY}],
+        "thresholds": [{"color": "RED", "direction": "BELOW", "value": 5}],
+    }
+    w = one({"title": "x", "xyChart": body})
+    assert w.visualization == Visualization.LINE
+    assert [(t.severity.value, t.from_value, t.to_value) for t in w.thresholds] == [
+        ("critical", None, 5.0)
+    ]
+    nerdgraph_dashboard(dash(tile(0, {"title": "x", "xyChart": body})))
