@@ -8,6 +8,7 @@ integration naming rule and are reported as UNVERIFIED (see `names.py`).
 from importer.core.ir import IRMonitor
 from importer.sources.azure import reasons as R
 from importer.sources.azure.common import base_fields, common_notes, key_of, manual, severity_level
+from importer.sources.azure.links import add_links
 from importer.sources.azure.logs import (
     translate_activity_log_alert,
     translate_scheduled_query_rule,
@@ -52,11 +53,19 @@ def _prometheus_group(alert: AzureAlert) -> list[IRMonitor]:
             labels=rule.get("labels"),
             group=alert.name,
         )
-        monitors.append(finish(base, found, found_notes, level, notes, extra))
+        monitors.append(
+            add_links(alert, finish(base, found, found_notes, level, notes, extra), rule)
+        )
     return monitors
 
 
 def translate_alert(alert: AzureAlert) -> list[IRMonitor]:
+    if alert.family == "prometheusRuleGroups":
+        return _prometheus_group(alert)
+    return [add_links(alert, m) for m in _translate_other(alert)]
+
+
+def _translate_other(alert: AzureAlert) -> list[IRMonitor]:
     family = alert.family
     if family == "metricAlerts":
         return [translate_metric_alert(alert)]
@@ -64,8 +73,6 @@ def translate_alert(alert: AzureAlert) -> list[IRMonitor]:
         return [translate_scheduled_query_rule(alert)]
     if family == "activityLogAlerts":
         return [translate_activity_log_alert(alert)]
-    if family == "prometheusRuleGroups":
-        return _prometheus_group(alert)
     if family == "smartDetectorAlertRules":
         return [translate_smart_detector(alert)]
     base = base_fields(alert, key_of(alert), alert.type or "unknown", alert.name)

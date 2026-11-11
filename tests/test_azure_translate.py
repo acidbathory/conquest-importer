@@ -542,3 +542,45 @@ def test_unknown_families_are_manual_and_keys_stay_distinct() -> None:
     odd = make("metricAlerts", {})
     odd.family = "somethingNew"
     assert "not recognised" in one(odd).reasons[0]
+
+
+# --- the link to the notification side (docs/dev/azure-notification-link.md on its branch) ----
+
+GROUP = "/subscriptions/S1/resourceGroups/RG1/providers/microsoft.insights/actionGroups/Ops"
+
+
+def test_converted_and_manual_rules_carry_the_action_group_tag_and_handles() -> None:
+    ok = one(metric_alert(actions=[{"actionGroupId": GROUP}]))
+    manual_one = one(
+        metric_alert(
+            criterion(criterionType="DynamicThresholdCriterion"), actions=[{"actionGroupId": GROUP}]
+        )
+    )
+    for m in (ok, manual_one):
+        assert "azure.actionGroup:s1/rg1/ops" in m.tags
+        assert GROUP in m.notification.handles
+
+
+def test_every_rule_family_names_its_action_groups() -> None:
+    log = log_rule("T")
+    log.properties["actions"] = {"actionGroups": [GROUP]}
+    activity = make("activityLogAlerts", {"actions": {"actionGroups": [{"actionGroupId": GROUP}]}})
+    smart = make("smartDetectorAlertRules", {"actionGroups": {"groupIds": [GROUP]}})
+    prom = prom_group(
+        {"alert": "A", "expression": "avg(up) > 1", "actions": [{"actionGroupId": GROUP}]}
+    )
+    for alert in (log, activity, smart, prom):
+        assert "azure.actionGroup:s1/rg1/ops" in one(alert).tags
+
+
+def test_scoping_tags_for_processing_rules() -> None:
+    m = one(metric_alert(severity=1))
+    assert "azure.severity:Sev1" in m.tags
+    assert f"azure.resourceId:{VM}" in m.tags
+    assert "azure.resourceGroup:rg1" in m.tags
+    assert "azure.resourceType:microsoft.compute/virtualmachines" in m.tags
+
+
+def test_odd_action_group_ids_make_no_tag_but_never_fail() -> None:
+    m = one(metric_alert(actions=[{"actionGroupId": "x\ny"}, {"actionGroupId": 5}, "z", None]))
+    assert not [t for t in m.tags if t.startswith("azure.actionGroup")]
