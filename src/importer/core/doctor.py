@@ -2,11 +2,13 @@
 
 Requirements are only: Python, credentials that can read the source (AWS keys for CloudWatch, a
 Google login for Google Cloud, a token and tenant address for Dynatrace, a service account token and
-stack address for Grafana), and a New Relic API key (the last only for creating things).
+stack address for Grafana, a service principal for Azure), and a New Relic API key (the last only
+for creating things).
 Terraform is optional, for the data-ingestion and project-link steps.
 """
 
 import os
+import re
 import shutil
 import sys
 from collections.abc import Callable
@@ -18,7 +20,7 @@ from importer.sources.cloudwatch.extract import AwsError, Reader, caller_account
 from importer.sources.gcp.extract import GcpError, access_token
 from importer.sources.grafana.extract import validate_host as grafana_host
 
-DOCTOR_SOURCES = ("cloudwatch", "gcp", "dynatrace", "dynatrace-classic", "grafana")
+DOCTOR_SOURCES = ("cloudwatch", "gcp", "dynatrace", "dynatrace-classic", "grafana", "azure")
 
 
 @dataclass(frozen=True)
@@ -121,6 +123,66 @@ def _grafana_checks(env: dict[str, str]) -> list[Check]:
     ]
 
 
+def _azure_checks(env: dict[str, str]) -> list[Check]:
+    """Settings for the Azure source, checked without any network call or showing a value."""
+    guid = re.compile(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}")
+    given = env.get("AZURE_ACCESS_TOKEN", "").strip()
+    secret = env.get("AZURE_CLIENT_SECRET", "").strip()
+    if given:
+        ok = is_plain_token(given)
+        detail = (
+            "AZURE_ACCESS_TOKEN is set and plain text (it is not shown)"
+            if ok
+            else "AZURE_ACCESS_TOKEN is not plain ASCII text without spaces; check for a smart "
+            "quote, a dash or a line break from pasting"
+        )
+        creds = Check("azure credentials", ok, detail)
+    else:
+        missing = [
+            n
+            for n in ("AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET")
+            if not env.get(n, "").strip()
+        ]
+        bad_ids = [
+            n
+            for n in ("AZURE_TENANT_ID", "AZURE_CLIENT_ID")
+            if env.get(n, "").strip() and not guid.fullmatch(env[n].strip())
+        ]
+        if missing:
+            creds = Check(
+                "azure credentials",
+                False,
+                f"{', '.join(missing)} not set (a read-only service principal, see "
+                "docs/user/azure-credentials.md), or set AZURE_ACCESS_TOKEN",
+            )
+        elif bad_ids:
+            creds = Check("azure credentials", False, f"{', '.join(bad_ids)} must be a UUID")
+        elif not is_plain_token(secret):
+            creds = Check(
+                "azure credentials",
+                False,
+                "AZURE_CLIENT_SECRET is not plain ASCII text without spaces; check for a smart "
+                "quote, a dash or a line break from pasting",
+            )
+        else:
+            creds = Check(
+                "azure credentials",
+                True,
+                "tenant, client id and secret are set and look right (none is shown)",
+            )
+    sub = env.get("AZURE_SUBSCRIPTION_ID", "").strip()
+    sub_ok = bool(guid.fullmatch(sub))
+    subscription = Check(
+        "azure subscription",
+        sub_ok,
+        "AZURE_SUBSCRIPTION_ID is a UUID"
+        if sub_ok
+        else "AZURE_SUBSCRIPTION_ID is not set to a UUID; pass --subscription to extract-azure",
+        required=False,
+    )
+    return [creds, subscription]
+
+
 def run_checks(
     region: str,
     profile: str | None,
@@ -144,6 +206,8 @@ def run_checks(
         checks += _dynatrace_checks(env, classic=source == "dynatrace-classic")
     elif source == "grafana":
         checks += _grafana_checks(env)
+    elif source == "azure":
+        checks += _azure_checks(env)
     else:
         checks.append(_aws_login(region, profile, reader_factory))
     has_key = bool(env.get("NEW_RELIC_API_KEY"))

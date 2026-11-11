@@ -122,6 +122,21 @@ DYNATRACE_CLASSIC_CHECKLIST = (
     "Review each condition, then enable them one at a time. Nothing has been tried against a "
     "Dynatrace tenant or a live New Relic account.",
 )
+AZURE_CHECKLIST = (
+    "Turn on the New Relic Azure Monitor integration for the subscription (and, for log "
+    "conditions, the Event Hub log forwarder); converted conditions return nothing until the "
+    "data arrives. Metric names are derived from the documented naming rule and are not "
+    "confirmed: run <code>importer check-azure-data</code> and put corrections in "
+    "<code>name-map.json</code>.",
+    "Azure severities 0 to 4 collapse to critical and warning; the original severity is in "
+    "each condition's description. Conditions use the event timer and open later than the "
+    "Azure rule.",
+    "Rules marked manual use several criteria, dynamic thresholds, KQL, activity events or "
+    "agent data that New Relic cannot take over. Each lists its steps.",
+    "Action groups and alert processing rules are converted by the notification step. "
+    "Review each condition, then enable them one at a time. Nothing has been tried against a "
+    "live Azure subscription or a New Relic account.",
+)
 PROFILES: dict[str, Profile] = {
     "cloudwatch": Profile(
         account_label="AWS account",
@@ -173,6 +188,19 @@ PROFILES: dict[str, Profile] = {
         names_word="setting",
         create_command=_apply_create,
         checklist=DYNATRACE_CLASSIC_CHECKLIST,
+    ),
+    "azure": Profile(
+        account_label="Azure subscription",
+        read_phrase="Your Azure Monitor alert rules were read and converted.",
+        source_phrase="your Azure subscription",
+        alarm_title=("Alert rules", "alert rules"),
+        share_label="Share of alert rules converted",
+        unit_sentence="One metric alert, one log alert rule, one activity log alert, one smart "
+        "detector rule or one Prometheus alert rule is one asset. Action groups and alert "
+        "processing rules are notification routes and are counted by the notification step.",
+        names_word="rule",
+        create_command=_apply_create,
+        checklist=AZURE_CHECKLIST,
     ),
     "grafana": Profile(
         account_label="Grafana stack",
