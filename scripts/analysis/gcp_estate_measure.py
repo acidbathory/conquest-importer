@@ -646,7 +646,9 @@ def summarise(corpus: Corpus, *, experiments: bool = True) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="gcp-estate-") as tmp:
         work = Path(tmp)
         run_commands(corpus, work)
-        conditions = measure_conditions(corpus)
+        # `convert` reads the uptime checks (and any log metrics or SLOs) written beside the
+        # policies, so the library count must attach the same extras to equal the command's
+        conditions = measure_conditions(corpus, load_extras(work / "in"))
         widgets = measure_widgets(corpus)
         check = cli_cross_check(conditions, widgets, work)
         notifications = channel_table(corpus, work)

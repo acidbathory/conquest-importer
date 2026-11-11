@@ -315,3 +315,54 @@ What stays impossible or unproven in NRQL, with the reason in the report:
 - `ALIGN_PERCENT_CHANGE`, percentiles other than 50, 95 and 99, `metadata.system_labels.*` and user labels with
   `/` in the key: no NRQL form or no confirmed attribute name.
 - Regular expressions in alert conditions need an IR field for RLIKE (not added: the shared IR is pinned); logs panels use it.
+
+## 11. After wave 2 (2026-11-11, branch `integrate/wave2`)
+
+Same corpus and script as sections 9 and 10 (`uv run python scripts/analysis/gcp_estate_measure.py --json out.json`,
+offline), measured on the merge of `research/gcp-names`, `improve/gcp-extract-plus` and `improve/gcp-remaining`.
+Placeholders ("Not migrated" widgets, empty text boxes) are never counted as converted.
+
+| | Section 10 | After wave 2 |
+|---|---:|---:|
+| Whole corpus, alert conditions converted | 194 of 350 | **196 of 350 (56.0%)** |
+| Whole corpus, data widgets converted | 823 of 1,148 | **823 of 1,148 (71.7%)** |
+| Scoreboard widgets: charts / placeholders | 823 / 325 | 823 / 325 |
+| Native slice, conditions (Google service metrics, log filters, SLO, uptime: 121) | 85 of 121 (70.2%) | **87 of 121 (71.9%)** |
+| Native slice, widgets on Google service metrics (305) | 280 of 305 (91.8%) | **280 of 305 (91.8%)** |
+
+What moved, and why only that:
+
+- The two extra conditions are uptime-check alerts. The estate export now carries the uptime checks beside the policies
+  (`improve/gcp-extract-plus`), and `convert` reads them, so an uptime alert whose check is in the export is no longer
+  "depends on the check itself". Before this, the script attached no extras, which is why the figure was 194. To keep the
+  script equal to the command, `summarise` now attaches the extras the export folder holds (a cross-check inside the
+  script stops the run if the command and the script disagree; it did, on the first run, which is how this was found).
+  Without extras the corpus is 194 of 350, as in section 10.
+- Widgets did not move: the metric-name table (`research/gcp-names`) and the extras work change names and data paths,
+  not whether a widget converts. A widget total that stays equal is the expected result of merging three branches
+  that touch different blockers, not a missing merge.
+- With the synthetic API responses of `tests/fixtures/gcp-extract-plus` (`--extras`) the whole corpus reaches 204 of
+  350: log-based metrics 7 of 7 (before 0), SLO selectors 1 of 4, uptime checks 2 of 3. That is the ceiling the
+  extractor reaches when a customer exports those three kinds of object; the baseline row above does not include it
+  except for the uptime checks the corpus already holds.
+
+By the data path the customer must set up first:
+
+| Data path | Conditions (196) | Data widgets (823) |
+|---|---:|---:|
+| native (New Relic polls it) | 59 | 562 |
+| needs Ops Agent or OpenTelemetry | 66 | 166 |
+| needs Prometheus remote write | 35 | 8 |
+| needs log forwarding | 28 | 0 (15 logs panels count under native) |
+| needs custom ingest | 4 | 87 |
+| not classified | 4 | 0 |
+
+Names on the non-native paths, from the sourced table: conditions on Ops Agent paths 63 with a sourced name and 3
+without, Prometheus remote write 35 sourced, custom 4 without; widgets 155 sourced and 11 without on the Ops Agent
+paths, 8 sourced on remote write, 87 without on custom ingest. Only native conditions can return data with no setup:
+59 of 350 (16.9%) and 562 of 1,148 data widgets (49.0%).
+
+Four threshold scale bugs found by `research/gcp-names` are fixed in the combined code: a percent threshold on a
+metric that New Relic reports as a 0 to 1 ratio is divided by 100, and the reducer fix of `improve/gcp-remaining`
+(`ALIGN_MEAN` then `REDUCE_SUM` is `sum`, not `average`) survived the merge of both. The one pinned sample dashboard
+changes in one widget because of it; see `docs/improvement/proposals/2026-11-11-wave2-combined-output-diff.md`.

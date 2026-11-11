@@ -94,3 +94,31 @@ names are UNVERIFIED.
   estate probably holds more simple resource-log counts (convertible) and more multi-criteria
   rules (manual).
 - Latency. The notes say New Relic opens later than Azure; the size of the gap is not measured.
+
+## After wave 2 (2026-11-11, branch `integrate/wave2`)
+
+Measured offline on the merge of `research/azure-names`, `improve/azure-kql`, `improve/azure-metrics` and
+`improve/azure-dashboards` with `importer.sources.azure.baseline.measure()` (the table in "Result" is that function's
+output, kept equal by `tests/test_azure_baseline.py`, not a hand merge), `scripts/analysis/azure_kql_measure.py`,
+`convert-azure-notifications` and `importer.sources.azure.dashboard_measure`. Placeholders never count.
+
+| Set | Before wave 2 | After |
+|---|---:|---:|
+| Official alert rules converted (61) | 6 | **25 of 61** (metric 10 of 22, scheduled query 7 of 15, activity log 8 of 10, Prometheus 0 of 7, smart detector 0 of 7 unsupported) |
+| Official scheduled query rules (KQL) | 0 of 15 | **7 of 15** (all 7 are Perf rules: data path `needs-agent`, names UNVERIFIED) |
+| Live scheduled query rules (9 with API-version copies of 7) | 0 | **6 of 9** |
+| Live estate alerts (23 with copies) | n/a | **19 of 23** (metric 10 of 11, KQL 6 of 9, activity log 3 of 3) |
+| Action group receivers converted (21) | 8 | **8** (5 approximate; 7 manual; 6 with no New Relic destination) |
+| Alert processing rules (9) | 1 converted with stand-in conditions | **0 converted, 4 nothing to mute, 5 manual** against the real converted alerts |
+| Workbook and dashboard widgets, official examples (26 + 9) | 13 + 1 | **13 + 1** (no KQL item among them converts: 11 use `union`) |
+| Quickstart dashboard templates (10 widgets) | 6 | **7** |
+| 30 public workbook templates (458 widgets) | 259 | **273** (14 KQL items now convert, data path `needs-log-forwarding`) |
+
+Notes. The merge needed one real combination: the KQL translator (`improve/azure-kql`) and the metric and activity
+translators (`improve/azure-metrics`) each moved rows of the table; the combined row is the sum, and the old activity log
+translator left in `logs.py` was deleted because `activity.py` replaces it. The dashboards now use the same parser as
+the scheduled query rules; the dominant remaining blocker there is a workbook parameter written in braces inside a
+query (71 of the 91 KQL placeholders in the public templates), which is the next thing to build. The processing
+rules number fell from the stand-in figure because the real converted conditions do not carry the resource-group tags
+the two matching rules ask for; that is a measurement change, not a conversion that stopped working.
+The Data path footer of a converted Azure report now points to `docs/research/azure-datapath.md` instead of the Google command.

@@ -108,6 +108,33 @@
       "claim": "50 community dashboards and 55 realistic alert rules converted offline: 777 of 1699 data widgets approximate (0 exact), 7 of 55 rules approximate; 47 dashboards and 7 disabled conditions created in the sandbox",
       "method": "project commands on a published test estate in the owner's Grafana and the sandbox account; no values compared for these widgets",
       "evidence": "docs/research/grafana-test-estate-results.md"
+    },
+    {
+      "id": "azure-six-hour-window",
+      "source": "azure",
+      "status": "verified",
+      "date": "2026-11-11",
+      "claim": "New Relic accepts a 6 hour (21600 s) aggregation window with slide-by on an NRQL condition and stores it as 21600 with the slide-by, so the Azure windows up to PT6H convert",
+      "method": "one ckg- condition created in the sandbox account with a 6 hour window and a slide-by, read back, then deleted and re-read",
+      "evidence": "docs/research/azure-monitor-alerting.md"
+    },
+    {
+      "id": "azure-live-estate-read",
+      "source": "azure",
+      "status": "verified",
+      "date": "2026-11-11",
+      "claim": "Our extractor read a live Azure estate of 9 metric alerts, 7 scheduled query rules, 3 activity log alerts, 6 action groups and 2 alert processing rules; the read needed an api-version fix",
+      "method": "read-only list calls with a Reader service principal on a free-trial subscription; responses sanitised into the live fixtures and converted offline",
+      "evidence": "docs/research/azure-live-vs-official.md"
+    },
+    {
+      "id": "gcp-threshold-scale-bugs",
+      "source": "gcp",
+      "status": "verified",
+      "date": "2026-11-11",
+      "claim": "4 GCP conditions compared a percent threshold with a metric that arrives as a 0..1 ratio (agent memory and disk percent_used), so they could never fire; the threshold is now divided by 100 and the sourced metric name is used",
+      "method": "found by comparing the converted thresholds with the unit of the metric as the Ops Agent and OpenTelemetry send it (sourced table); fixed in code with tests; the corrected thresholds were not fired against live data",
+      "evidence": "docs/research/gcp-metric-name-mapping.md"
     }
   ]
 }

@@ -21,18 +21,18 @@ Written 2026-11-11. Offline: the Azure REST specs, the public `microsoft/Applica
 
 - Metric charts use `Metric` with `collector.name = 'azure-monitor'`, `azure.resourceId` scope and `TIMESERIES AUTO`, so the data path is the Azure Monitor integration ("native", left out of the saved IR).
 - A resource picker without a query becomes an NRQL variable (`uniques(azure.resourceId, 200)`, narrowed by `metricName LIKE 'azure.<type>.%'`); the chart uses `azure.resourceId IN ({{name}})`. A picker filled by a Resource Graph query is not migrated; the chart covers every resource of the type and says so.
-- KQL goes through `sources/azure/dashboard_kql.py`, one function that is a stub until the KQL translator branch lands. Its result carries the data path `needs-log-forwarding`.
+- KQL goes through `sources/azure/dashboard_kql.py`, one function that now calls the subset parser of the scheduled query rules (`kql_parse.py`, `kql_tables.py`, `kql_nrql.py`) and writes one SELECT over `Log` (aggregates, WHERE, FACET, TIMESERIES). Its result carries the data path of the table: `needs-log-forwarding` for forwarded tables, `needs-agent` for agent tables. A query with a workbook parameter in braces, raw rows or a `where` on the result stays a placeholder.
 - Not migrated, always with a reason that starts with a fixed phrase (see `dashboard_rules.py`): conditional visibility that is not a tab, parameters that depend on others, Resource Graph, ARM, merge, JSON and Data Explorer queries, unknown item types, linked templates, portal tiles without a counterpart.
 
 ## Measured (exact; placeholders never counted as converted)
 
-Before this work Azure visualisations converted 0 of N widgets (no reader, no converter). Now, with the KQL translator not connected:
+Before this work Azure visualisations converted 0 of N widgets (no reader, no converter). Now, with the KQL subset translator connected (2026-11-11, `integrate/wave2`):
 
 | Set | Dashboards | Widgets | Converted | Placeholders |
 |---|---:|---:|---:|---:|
 | 14 official workbook examples | 16 | 26 | 13 | 13 |
 | 6 official dashboard examples | 4 | 9 | 1 | 8 |
-| Quickstart dashboard templates | 2 | 10 | 6 | 4 |
-| 30 public workbook templates | 30 | 458 | 259 | 199 |
+| Quickstart dashboard templates | 2 | 10 | 7 | 3 |
+| 30 public workbook templates | 30 | 458 | 273 | 185 |
 
-Widgets are source items or parts; the headings added for workbook groups are in neither count. The dashboard examples have parts with a position and no type, so they are placeholders. In the public templates 105 of the 199 placeholders are KQL items waiting for the translator, 70 are conditional visibility that is not a tab, 8 are metric names that cannot be written, and the rest are Resource Graph, ARM, merge and linked-template items. `tests/test_azure_dashboard_corpus.py` pins these numbers.
+Widgets are source items or parts; the headings added for workbook groups are in neither count. The dashboard examples have parts with a position and no type, so they are placeholders. Before the translator was connected the public templates read 259 converted and 199 placeholders, and 105 of the placeholders were KQL items. Now 14 of those KQL items convert (all with the data path `needs-log-forwarding`) and 91 stay placeholders: 71 use a workbook parameter written in braces (`{Name}`) inside the query, which the subset does not read, 5 have an expression around an aggregate, 4 return rows with no aggregate, 4 define a `let` table, and the rest use `union`, a function or `{`. Of the 185 placeholders, 70 are conditional visibility that is not a tab, 8 are metric names that cannot be written, and the rest are Resource Graph, ARM, merge and linked-template items. `tests/test_azure_dashboard_corpus.py` pins these numbers.

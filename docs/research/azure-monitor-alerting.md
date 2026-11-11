@@ -273,8 +273,10 @@ is complete. Dashboard JSON is not an alert object and is not mapped here.
   `AlertsNrqlConditionSignalInput.aggregationWindow`, read 2026-11-11) says at least 30 s and at most
   6 hours (21600 s); the NRQL conditions page (docs-website, `create-nrql-alert-conditions.mdx`)
   says 30 s to 120 minutes in steps of 15 s. The Azure source emits up to 21600 s (the API limit,
-  the call that creates the condition); other sources keep 3600. No condition was created to
-  settle it, so a rejected window above 120 minutes is the first thing to check; `aggregation_method` EVENT_FLOW, EVENT_TIMER or CADENCE; `slide_by`
+  the call that creates the condition); other sources keep 3600. VERIFIED LIVE 2026-11-11: one
+  `ckg-` condition with a 6 hour window and a slide-by was created in the sandbox account and
+  deleted again; New Relic accepted it and stored the window as 21600 with the slide-by
+  (docs/improvement/live-evidence.json, `azure-six-hour-window`); `aggregation_method` EVENT_FLOW, EVENT_TIMER or CADENCE; `slide_by`
   must divide the window and costs extra data points; `fill_option` NONE, STATIC, LAST_VALUE.
 - Cloud integration data should use EVENT_TIMER (NRREF and NR-AM, which also gives the exact UI path).
 - Loss of signal: `expiration_duration` 30..172800 s, with `open_violation_on_expiration` and
@@ -306,7 +308,7 @@ is complete. Dashboard JSON is not an alert object and is not mapped here.
 | `windowSize` = `evaluationFrequency` (for example 5 min and 5 min) | `aggregation_window` = windowSize in seconds | exact for the arithmetic; window boundaries are aligned differently (Azure evaluates on the rule's own clock, New Relic on clock-aligned windows) |
 | `windowSize` > `evaluationFrequency` (for example 5 min every 1 min) | `aggregation_window` = windowSize and `slide_by` = frequency when frequency divides the window and is at least 30 s | approximate: costs extra data points, and the first full window delays alerts |
 | frequency below 30 s | not possible | manual (Azure's smallest is 1 minute, so this should not occur) |
-| `windowSize` above 3600 s up to 21600 s (PT2H, PT6H) | `aggregation_window` = windowSize, `slide_by` = frequency when it divides | approximate: no violation can open until one full window of data has been collected after creation or any edit; the 120 minute versus 6 hour limit is UNVERIFIED by a creation call |
+| `windowSize` above 3600 s up to 21600 s (PT2H, PT6H) | `aggregation_window` = windowSize, `slide_by` = frequency when it divides | approximate: no violation can open until one full window of data has been collected after creation or any edit; the 6 hour limit is VERIFIED by a creation call (2026-11-11, stored as 21600 with slide-by) |
 | `windowSize` above 21600 s (P1D) | none | manual: longer than any aggregation window the API accepts |
 | ISO 8601 durations such as `PT15M`, `PT1H`, `P1D` | parse to seconds | exact; reject months and years (`P1M` is ambiguous) |
 | `failingPeriods` M of N with M = N | `threshold_duration` = N x window, `threshold_occurrences` ALL | exact |
