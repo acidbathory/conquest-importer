@@ -12,10 +12,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, PrivateAttr
 
 from importer.core.ids import MAX_INPUT_BYTES, source_id
 from importer.core.json_depth import check_depth
+from importer.sources.datadog.names import NameMap, find_name_map
 
 MAX_MONITORS = 50_000
 NAME_MAP_FILE = "name-map.json"
@@ -36,6 +37,17 @@ class DatadogMonitor(BaseModel):
     # where the monitor came from (set by the loader): a stable, unique key
     source_key: str = ""
     template_title: str = ""
+    _names: NameMap = PrivateAttr(default_factory=NameMap)
+
+    @property
+    def names(self) -> NameMap:
+        """The name map found beside the export (empty when there is none)."""
+        return self._names
+
+    def bind(self, names: NameMap) -> "DatadogMonitor":
+        bound = self.model_copy()
+        bound._names = names
+        return bound
 
     @property
     def name_text(self) -> str:
@@ -131,6 +143,7 @@ def load_monitors(path: Path) -> list[DatadogMonitor]:
     skipped. Raises ValueError for a file that is too big, too deeply nested or not JSON."""
     monitors: list[DatadogMonitor] = []
     keys: set[str] = set()
+    names = find_name_map(path)
     for file in _files(path):
         data = _read(file)
         items = _items(data)
@@ -142,7 +155,7 @@ def load_monitors(path: Path) -> list[DatadogMonitor]:
             if key in keys:  # same id or name twice: keep both, with distinct stable keys
                 key = f"{key}@{source_id(file.name + str(index))}"
             keys.add(key)
-            monitors.append(monitor.model_copy(update={"source_key": key}))
+            monitors.append(monitor.model_copy(update={"source_key": key}).bind(names))
             if len(monitors) > MAX_MONITORS:
                 raise ValueError(f"more than {MAX_MONITORS} monitors in {path}")
     return monitors

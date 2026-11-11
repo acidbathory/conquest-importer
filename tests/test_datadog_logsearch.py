@@ -37,7 +37,7 @@ def test_comparison_and_range() -> None:
     assert _ok("@Severity:>=40").node == LTerm("@Severity", "cmp", "40", op=">=")
     assert _ok("@d:<5").node == LTerm("@d", "cmp", "5", op="<")
     r = _ok("@duration:[100 TO 200]")
-    assert r.node == LTerm("@duration", "range", "100", hi="200")
+    assert r.node == LTerm("@duration", "range", "100", op="[]", hi="200")
 
 
 def test_or_and_parentheses_and_precedence() -> None:

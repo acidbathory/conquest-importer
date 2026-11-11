@@ -5,6 +5,7 @@ NRQL is built only from validated identifiers, escaped string literals, and
 into a query any other way.
 """
 
+import math
 import re
 
 from importer.core.dashboard_ir import Series
@@ -115,6 +116,23 @@ def _expr_sql(expr: Expr, signal: MetricSignal, func: str, parent_prec: int = 0)
     return f"({text})" if prec < parent_prec else text
 
 
+_PLAIN_NUMBER = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?")
+COMPARE_OPERATORS = {"gt": ">", "gte": ">=", "lt": "<", "lte": "<="}
+
+
+def _compare_clause(attr: str, f: CountFilter) -> str | None:
+    """A numeric comparison or an is-set test on a log attribute; None for a plain match."""
+    if f.compare == "exists":
+        return f"{attr} IS NOT NULL"
+    if f.compare == "missing":
+        return f"{attr} IS NULL"
+    if f.compare in COMPARE_OPERATORS:
+        if not _PLAIN_NUMBER.fullmatch(f.value) or not math.isfinite(float(f.value)):
+            raise ValueError("a comparison value must be a plain finite number")
+        return f"{attr} {COMPARE_OPERATORS[f.compare]} {f.value}"
+    return None
+
+
 def _match_clause(attr: str, f: FilterBase) -> str:
     """One WHERE term for a filter; `attr` is already a validated identifier."""
     if f.values:
@@ -165,7 +183,8 @@ def widget_nrql(series: Series, timeseries: bool) -> str:
 
 
 def _filter_clause(kind: SignalKind, f: CountFilter) -> str:
-    return _match_clause(field_identifier(attribute_for(kind, f.key)), f)
+    attr = field_identifier(attribute_for(kind, f.key))
+    return _compare_clause(attr, f) or _match_clause(attr, f)
 
 
 def _count_nrql(

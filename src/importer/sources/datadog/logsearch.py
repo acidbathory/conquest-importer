@@ -23,7 +23,7 @@ class LTerm:
     field: str | None  # `@attr`, `service`, ... ; None for free text
     kind: str  # eq | exists | cmp | range | text
     value: str
-    op: str = ""  # for cmp: > >= < <=
+    op: str = ""  # cmp: > >= < <= ; range: "[]" inclusive or "{}" exclusive
     hi: str = ""  # for range
     phrase: bool = False  # the value was quoted
     wildcard: bool = False  # an unescaped * or ? in an eq or text value
@@ -255,12 +255,13 @@ class _Search:
             self.pos = len(self.text)
             return None
         inner = self.text[self.pos + 1 : close]
+        brackets = "[]" if self.text[self.pos] == "[" else "{}"
         self.pos = close + 1
         m = re.fullmatch(r"\s*(\S+)\s+TO\s+(\S+)\s*", inner)
         if m is None:
             self.lossy("syntax", "a range without TO")
             return None
-        return LTerm(field, "range", m[1], hi=m[2])
+        return LTerm(field, "range", m[1], op=brackets, hi=m[2])
 
 
 def parse_log_search(text: str) -> LogSearch:
