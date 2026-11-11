@@ -121,7 +121,24 @@ def real(m: IRMonitor) -> bool:
     return bool(s.metric and s.metric.terms) or s.heartbeat is not None or s.count is not None
 
 
-def test_sample_policies_converted_count() -> None:
+def test_sample_policies_before_and_after() -> None:
+    """Before this adapter 0 of the 84 samples converted; the rest stay manual with a reason."""
     monitors = load_fixtures()
     assert len(monitors) == 84
-    assert sum(real(m) for m in monitors) >= 1
+    converted = [m for m in monitors if real(m)]
+    assert len(converted) == 2
+    for m in monitors:
+        if not real(m):
+            assert m.confidence is Confidence.MANUAL
+            assert "not converted" not in m.reasons[0]
+    placeholders = [m for m in monitors if "placeholder" in m.reasons[0]]
+    assert len(placeholders) == 23
+    assert all(not real(m) for m in placeholders)
+
+
+def test_every_refusal_has_cookbook_steps() -> None:
+    from importer.core.remediation import steps_for
+
+    for m in load_fixtures():
+        if not real(m):
+            assert steps_for(m.reasons), m.reasons[0]

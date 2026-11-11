@@ -31,6 +31,7 @@ from importer.core.ir import (
 )
 from importer.core.remediation import Rule, register_rules
 from importer.sources.grafana.models import GrafanaRule, parse_duration
+from importer.sources.grafana.notifications.promrules import split_comparison
 from importer.sources.grafana.translate import (
     N_INFERRED,
     N_ROUTING,
@@ -131,8 +132,10 @@ def _colon_names(text: str, notes: list[str]) -> str:
     out: list[str] = []
     for piece, quoted in _scan(text):
         if not quoted:
-            for found in dict.fromkeys(COLON_FORM.findall(piece)):
-                notes.append(N_COLON_NAME.format(name=found + ":..."))
+            notes += [
+                N_COLON_NAME.format(name=f"{found}:...")
+                for found in dict.fromkeys(COLON_FORM.findall(piece))
+            ]
             piece = COLON_FORM.sub(r"\1_", piece)
         out.append(piece)
     return "".join(out)
@@ -250,11 +253,45 @@ def _labels(body: dict[str, Any]) -> dict[str, Any]:
     return dict(value) if isinstance(value, dict) else {}
 
 
+def _outer_parens(query: str) -> str:
+    """`(a / b) > 1` is `a / b > 1`: one pair of parentheses around the whole left side goes."""
+    comparison = split_comparison(query)
+    if comparison is None or not query.startswith(comparison.query):
+        return query
+    left, tail = comparison.query.strip(), query[len(comparison.query) :]
+    while left.startswith("(") and _closing_paren(left) == len(left) - 1:
+        left = left[1:-1].strip()
+    return left + tail
+
+
+def _closing_paren(text: str) -> int | None:
+    depth = 0
+    for index, (piece, quoted) in _pieces_with_offsets(text):
+        if quoted:
+            continue
+        for offset, ch in enumerate(piece):
+            depth += ch == "("
+            depth -= ch == ")"
+            if depth == 0:
+                return index + offset
+    return None
+
+
+def _pieces_with_offsets(text: str) -> list[tuple[int, tuple[str, bool]]]:
+    out: list[tuple[int, tuple[str, bool]]] = []
+    position = 0
+    for piece, quoted in _scan(text):
+        out.append((position, (piece, quoted)))
+        position += len(piece)
+    return out
+
+
 def _clean_query(raw: str, notes: list[str]) -> str:
     query = _strip_comments(raw)
     if "${" in query:
         raise Fail(R_PLACEHOLDER)
-    return _colon_names(_rewrite_selectors(query, notes), notes).strip()
+    query = _colon_names(_rewrite_selectors(query, notes), notes)
+    return _outer_parens(" ".join(query.split()))
 
 
 def convert(body: dict[str, Any], *, key: str, name: str, severity: Severity) -> IRMonitor:
@@ -293,7 +330,7 @@ def convert(body: dict[str, Any], *, key: str, name: str, severity: Severity) ->
     if body.get("disableMetricValidation") is True:
         extra.append(N_VALIDATION)
     extra += [N_LATENCY.format(interval=interval or 30), N_GOOGLE_FIELDS]
-    monitor.reasons = [*extra, *kept]
+    monitor.reasons = list(dict.fromkeys([*extra, *kept]))
     monitor.tags = _tags(body)
     return monitor
 
