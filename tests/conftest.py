@@ -17,6 +17,24 @@ def _isolated(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(cli, "LATEST", tmp_path / "latest-run")
 
 
+@pytest.fixture(autouse=True)
+def _no_real_browser(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A test must never open a page on the developer's screen: it fails instead.
+
+    Tests that check opening inject their own opener or patch these names themselves.
+    """
+
+    def refuse(*_args: object, **_kwargs: object) -> bool:
+        raise AssertionError("a test tried to open a real browser; inject a fake opener")
+
+    import webbrowser
+
+    from importer.core import menu
+
+    monkeypatch.setattr(webbrowser, "open", refuse)
+    monkeypatch.setattr(menu, "open_in_browser", refuse)
+
+
 @pytest.fixture
 def help_text() -> Callable[..., str]:
     """Run the CLI and return its output as plain text: no colour, no wrapping, no box drawing.
