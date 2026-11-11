@@ -1,0 +1,35 @@
+{
+  "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/activityLogAlerts/ckg-ala-admin-rg",
+  "location": "Global",
+  "name": "ckg-ala-admin-rg",
+  "properties": {
+    "actions": {
+      "actionGroups": [
+        {
+          "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+        }
+      ]
+    },
+    "condition": {
+      "allOf": [
+        {
+          "equals": "Administrative",
+          "field": "category"
+        },
+        {
+          "equals": "Microsoft.Storage/storageAccounts/delete",
+          "field": "operationName"
+        }
+      ]
+    },
+    "description": "ckg test activity log alert (disabled)",
+    "enabled": false,
+    "scopes": [
+      "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP"
+    ]
+  },
+  "tags": {
+    "ckg_test": "true"
+  },
+  "type": "Microsoft.Insights/ActivityLogAlerts"
+}

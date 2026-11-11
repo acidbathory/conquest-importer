@@ -1,0 +1,196 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/actionGroups/ckg-ag-eventhub",
+      "kind": null,
+      "location": "Global",
+      "name": "ckg-ag-eventhub",
+      "properties": {
+        "armRoleReceivers": [],
+        "automationRunbookReceivers": [],
+        "azureAppPushReceivers": [],
+        "azureFunctionReceivers": [],
+        "emailReceivers": [],
+        "enabled": true,
+        "eventHubReceivers": [
+          {
+            "eventHubName": "ckg-hub",
+            "eventHubNameSpace": "ckg-ns-placeholder",
+            "name": "ckg-eventhub",
+            "subscriptionId": "SUBSCRIPTION_ID",
+            "tenantId": "TENANT_ID",
+            "useCommonAlertSchema": true
+          }
+        ],
+        "groupShortName": "ckgeventhub",
+        "itsmReceivers": [],
+        "logicAppReceivers": [],
+        "smsReceivers": [],
+        "voiceReceivers": [],
+        "webhookReceivers": []
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/ActionGroups"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/actionGroups/ckg-ag-apppush",
+      "kind": null,
+      "location": "Global",
+      "name": "ckg-ag-apppush",
+      "properties": {
+        "armRoleReceivers": [],
+        "automationRunbookReceivers": [],
+        "azureAppPushReceivers": [
+          {
+            "emailAddress": "ckg-test@example.invalid",
+            "name": "ckg-push"
+          }
+        ],
+        "azureFunctionReceivers": [],
+        "emailReceivers": [],
+        "enabled": true,
+        "eventHubReceivers": [],
+        "groupShortName": "ckgapppush",
+        "itsmReceivers": [],
+        "logicAppReceivers": [],
+        "smsReceivers": [],
+        "voiceReceivers": [],
+        "webhookReceivers": []
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/ActionGroups"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/actionGroups/ckg-ag-email2",
+      "kind": null,
+      "location": "Global",
+      "name": "ckg-ag-email2",
+      "properties": {
+        "armRoleReceivers": [],
+        "automationRunbookReceivers": [],
+        "azureAppPushReceivers": [],
+        "azureFunctionReceivers": [],
+        "emailReceivers": [
+          {
+            "emailAddress": "ckg-test@example.invalid",
+            "name": "ckg-email-legacy",
+            "status": "Enabled",
+            "useCommonAlertSchema": false
+          }
+        ],
+        "enabled": true,
+        "eventHubReceivers": [],
+        "groupShortName": "ckgemail2",
+        "itsmReceivers": [],
+        "logicAppReceivers": [],
+        "smsReceivers": [],
+        "voiceReceivers": [],
+        "webhookReceivers": []
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/ActionGroups"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/actionGroups/ckg-ag-email",
+      "kind": null,
+      "location": "Global",
+      "name": "ckg-ag-email",
+      "properties": {
+        "armRoleReceivers": [],
+        "automationRunbookReceivers": [],
+        "azureAppPushReceivers": [],
+        "azureFunctionReceivers": [],
+        "emailReceivers": [
+          {
+            "emailAddress": "ckg-test@example.invalid",
+            "name": "ckg-email",
+            "status": "Enabled",
+            "useCommonAlertSchema": true
+          }
+        ],
+        "enabled": true,
+        "eventHubReceivers": [],
+        "groupShortName": "ckgemail",
+        "itsmReceivers": [],
+        "logicAppReceivers": [],
+        "smsReceivers": [],
+        "voiceReceivers": [],
+        "webhookReceivers": []
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/ActionGroups"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/actionGroups/ckg-ag-itsm",
+      "kind": null,
+      "location": "Global",
+      "name": "ckg-ag-itsm",
+      "properties": {
+        "armRoleReceivers": [],
+        "automationRunbookReceivers": [],
+        "azureAppPushReceivers": [],
+        "azureFunctionReceivers": [],
+        "emailReceivers": [],
+        "enabled": true,
+        "eventHubReceivers": [],
+        "groupShortName": "ckgitsm",
+        "itsmReceivers": [
+          {
+            "connectionId": "00000000-0000-0000-0000-000000000000",
+            "name": "ckg-itsm",
+            "region": "eastus",
+            "ticketConfiguration": "{\"PayloadRevision\":0,\"WorkItemType\":\"Incident\",\"UseTemplate\":false,\"WorkItemData\":\"{}\",\"CreateOneWIPerCI\":false}",
+            "workspaceId": "00000000-0000-0000-0000-000000000000|00000000-0000-0000-0000-000000000000"
+          }
+        ],
+        "logicAppReceivers": [],
+        "smsReceivers": [],
+        "voiceReceivers": [],
+        "webhookReceivers": []
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/ActionGroups"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/actionGroups/ckg-ag-armrole",
+      "kind": null,
+      "location": "Global",
+      "name": "ckg-ag-armrole",
+      "properties": {
+        "armRoleReceivers": [
+          {
+            "name": "ckg-armrole",
+            "roleId": "GUID-01",
+            "useCommonAlertSchema": true
+          }
+        ],
+        "automationRunbookReceivers": [],
+        "azureAppPushReceivers": [],
+        "azureFunctionReceivers": [],
+        "emailReceivers": [],
+        "enabled": true,
+        "eventHubReceivers": [],
+        "groupShortName": "ckgarmrole",
+        "itsmReceivers": [],
+        "logicAppReceivers": [],
+        "smsReceivers": [],
+        "voiceReceivers": [],
+        "webhookReceivers": []
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/ActionGroups"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.AlertsManagement/actionRules/ckg-apr-suppress-weekend",
+  "location": "Global",
+  "name": "ckg-apr-suppress-weekend",
+  "properties": {
+    "actions": [
+      {
+        "actionType": "RemoveAllActionGroups"
+      }
+    ],
+    "conditions": [
+      {
+        "field": "Severity",
+        "operator": "Equals",
+        "values": [
+          "Sev3",
+          "Sev4"
+        ]
+      }
+    ],
+    "description": "ckg test suppression during a weekly window (disabled)",
+    "enabled": false,
+    "schedule": {
+      "effectiveFrom": "2026-11-12T00:00:00",
+      "effectiveUntil": "2027-11-12T00:00:00",
+      "recurrences": [
+        {
+          "daysOfWeek": [
+            "Saturday",
+            "Sunday"
+          ],
+          "endTime": "06:00:00",
+          "recurrenceType": "Weekly",
+          "startTime": "22:00:00"
+        }
+      ],
+      "timeZone": "UTC"
+    },
+    "scopes": [
+      "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP"
+    ]
+  },
+  "systemData": {
+    "createdAt": "2026-11-11T04:52:24.5251266Z",
+    "createdBy": "GUID-01",
+    "createdByType": "Application",
+    "lastModifiedAt": "2026-11-11T04:57:52.3680078Z",
+    "lastModifiedBy": "GUID-01",
+    "lastModifiedByType": "Application"
+  },
+  "tags": {
+    "ckg_test": "true"
+  },
+  "type": "Microsoft.AlertsManagement/actionRules"
+}

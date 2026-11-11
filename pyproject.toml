@@ -67,6 +67,8 @@ max-complexity = 15
 "scripts/live-test/telemetry-rig/**" = [
   "E501", "S310", "S311", "S603", "S607", "ARG001", "B007", "PERF401", "C901", "RUF100",
 ]
+# Azure test-estate scripts: long JSON-shaped literals and URLs.
+"scripts/live-test/azure-estate/**" = ["E501"]
 # Lambda handler signature is fixed by AWS.
 "scripts/live-test/aws/handler.py" = ["ARG001"]
 # Terraform template text contains long lines that cannot be wrapped.

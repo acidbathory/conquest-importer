@@ -1,0 +1,184 @@
+{
+  "calls": [
+    {
+      "api": "2026-01-01",
+      "has_next_link": false,
+      "items_ckg": 9,
+      "items_total": 9,
+      "keys": [
+        "value"
+      ],
+      "kind": "metric_alerts",
+      "path": "Microsoft.Insights/metricAlerts",
+      "status": 200
+    },
+    {
+      "api": "2018-03-01",
+      "has_next_link": false,
+      "items_ckg": 9,
+      "items_total": 9,
+      "keys": [
+        "value"
+      ],
+      "kind": "metric_alerts",
+      "path": "Microsoft.Insights/metricAlerts",
+      "status": 200
+    },
+    {
+      "api": "2026-03-01",
+      "has_next_link": false,
+      "items_ckg": 7,
+      "items_total": 7,
+      "keys": [
+        "value"
+      ],
+      "kind": "scheduled_query_rules",
+      "path": "Microsoft.Insights/scheduledQueryRules",
+      "status": 200
+    },
+    {
+      "api": "2023-12-01",
+      "has_next_link": false,
+      "items_ckg": 7,
+      "items_total": 7,
+      "keys": [
+        "value"
+      ],
+      "kind": "scheduled_query_rules",
+      "path": "Microsoft.Insights/scheduledQueryRules",
+      "status": 200
+    },
+    {
+      "api": "2021-08-01",
+      "has_next_link": false,
+      "items_ckg": 7,
+      "items_total": 7,
+      "keys": [
+        "value"
+      ],
+      "kind": "scheduled_query_rules",
+      "path": "Microsoft.Insights/scheduledQueryRules",
+      "status": 200
+    },
+    {
+      "api": "2026-01-01",
+      "has_next_link": false,
+      "items_ckg": 3,
+      "items_total": 3,
+      "keys": [
+        "value"
+      ],
+      "kind": "activity_log_alerts",
+      "path": "Microsoft.Insights/activityLogAlerts",
+      "status": 200
+    },
+    {
+      "api": "2020-10-01",
+      "has_next_link": false,
+      "items_ckg": 3,
+      "items_total": 3,
+      "keys": [
+        "value"
+      ],
+      "kind": "activity_log_alerts",
+      "path": "Microsoft.Insights/activityLogAlerts",
+      "status": 200
+    },
+    {
+      "api": "2021-08-08",
+      "has_next_link": false,
+      "items_ckg": 2,
+      "items_total": 2,
+      "keys": [
+        "value"
+      ],
+      "kind": "alert_processing_rules",
+      "path": "Microsoft.AlertsManagement/actionRules",
+      "status": 200
+    },
+    {
+      "api": "2019-05-05-preview",
+      "has_next_link": false,
+      "items_ckg": 2,
+      "items_total": 2,
+      "keys": [
+        "value"
+      ],
+      "kind": "alert_processing_rules",
+      "path": "Microsoft.AlertsManagement/actionRules",
+      "status": 200
+    },
+    {
+      "api": "2023-01-01",
+      "has_next_link": false,
+      "items_ckg": 6,
+      "items_total": 6,
+      "keys": [
+        "value"
+      ],
+      "kind": "action_groups",
+      "path": "Microsoft.Insights/actionGroups",
+      "status": 200
+    },
+    {
+      "api": "2021-09-01",
+      "has_next_link": false,
+      "items_ckg": 6,
+      "items_total": 6,
+      "keys": [
+        "value"
+      ],
+      "kind": "action_groups",
+      "path": "Microsoft.Insights/actionGroups",
+      "status": 200
+    },
+    {
+      "api": "2023-03-01",
+      "has_next_link": false,
+      "items_ckg": 0,
+      "items_total": 0,
+      "keys": [
+        "value"
+      ],
+      "kind": "prometheus_rule_groups",
+      "path": "Microsoft.AlertsManagement/prometheusRuleGroups",
+      "status": 200
+    },
+    {
+      "api": "2021-04-01",
+      "has_next_link": false,
+      "items_ckg": 0,
+      "items_total": 0,
+      "keys": [
+        "value"
+      ],
+      "kind": "smart_detector_alert_rules",
+      "path": "microsoft.alertsManagement/smartDetectorAlertRules",
+      "status": 200
+    },
+    {
+      "api": "2023-05-01",
+      "has_next_link": false,
+      "items_ckg": 1,
+      "items_total": 1,
+      "keys": [
+        "value"
+      ],
+      "kind": "storage_accounts",
+      "path": "Microsoft.Storage/storageAccounts",
+      "status": 200
+    },
+    {
+      "api": "2022-10-01",
+      "has_next_link": false,
+      "items_ckg": 1,
+      "items_total": 1,
+      "keys": [
+        "value"
+      ],
+      "kind": "workspaces",
+      "path": "Microsoft.OperationalInsights/workspaces",
+      "status": 200
+    }
+  ]
+}

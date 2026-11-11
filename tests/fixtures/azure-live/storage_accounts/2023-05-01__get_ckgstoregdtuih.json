@@ -1,0 +1,60 @@
+{
+  "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/ckgstoregdtuih",
+  "kind": "StorageV2",
+  "location": "eastus",
+  "name": "ckgstoregdtuih",
+  "properties": {
+    "accessTier": "Hot",
+    "allowBlobPublicAccess": false,
+    "allowCrossTenantReplication": false,
+    "creationTime": "2026-11-11T04:50:23.7307930Z",
+    "encryption": {
+      "keySource": "Microsoft.Storage",
+      "services": {
+        "blob": {
+          "enabled": true,
+          "keyType": "Account",
+          "lastEnabledTime": "2026-11-11T04:50:24.3275550Z"
+        },
+        "file": {
+          "enabled": true,
+          "keyType": "Account",
+          "lastEnabledTime": "2026-11-11T04:50:24.3275550Z"
+        }
+      }
+    },
+    "keyCreationTime": {
+      "key1": "2026-11-11T04:50:24.3174040Z",
+      "key2": "2026-11-11T04:50:24.3174040Z"
+    },
+    "minimumTlsVersion": "TLS1_2",
+    "networkAcls": {
+      "bypass": "None",
+      "defaultAction": "Allow",
+      "ipRules": [],
+      "ipv6Rules": [],
+      "virtualNetworkRules": []
+    },
+    "primaryEndpoints": {
+      "blob": "https://ckgstoregdtuih.blob.core.windows.net/",
+      "dfs": "https://ckgstoregdtuih.dfs.core.windows.net/",
+      "file": "https://ckgstoregdtuih.file.core.windows.net/",
+      "queue": "https://ckgstoregdtuih.queue.core.windows.net/",
+      "table": "https://ckgstoregdtuih.table.core.windows.net/",
+      "web": "https://ckgstoregdtuih.z13.web.core.windows.net/"
+    },
+    "primaryLocation": "eastus",
+    "privateEndpointConnections": [],
+    "provisioningState": "Succeeded",
+    "statusOfPrimary": "available",
+    "supportsHttpsTrafficOnly": true
+  },
+  "sku": {
+    "name": "Standard_LRS",
+    "tier": "Standard"
+  },
+  "tags": {
+    "ckg_test": "true"
+  },
+  "type": "Microsoft.Storage/storageAccounts"
+}

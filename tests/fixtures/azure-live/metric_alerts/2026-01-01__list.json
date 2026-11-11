@@ -1,0 +1,396 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/metricAlerts/ckg-ma-static-txn",
+      "location": "global",
+      "name": "ckg-ma-static-txn",
+      "properties": {
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+          }
+        ],
+        "autoMitigate": true,
+        "criteria": {
+          "allOf": [
+            {
+              "criterionType": "StaticThresholdCriterion",
+              "metricName": "Transactions",
+              "metricNamespace": "Microsoft.Storage/storageAccounts",
+              "name": "txn",
+              "operator": "GreaterThan",
+              "threshold": 1000.0,
+              "timeAggregation": "Total"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "description": "ckg test metric alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT1M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/ckgstoregdtuih"
+        ],
+        "severity": 0,
+        "windowSize": "PT5M"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/metricAlerts"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/metricAlerts/ckg-ma-static-avail",
+      "location": "global",
+      "name": "ckg-ma-static-avail",
+      "properties": {
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+          }
+        ],
+        "autoMitigate": false,
+        "criteria": {
+          "allOf": [
+            {
+              "criterionType": "StaticThresholdCriterion",
+              "metricName": "Availability",
+              "metricNamespace": "Microsoft.Storage/storageAccounts",
+              "name": "avail",
+              "operator": "LessThan",
+              "threshold": 99.0,
+              "timeAggregation": "Average"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "description": "ckg test metric alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT5M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/ckgstoregdtuih"
+        ],
+        "severity": 1,
+        "windowSize": "PT15M"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/metricAlerts"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/metricAlerts/ckg-ma-dims",
+      "location": "global",
+      "name": "ckg-ma-dims",
+      "properties": {
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+          }
+        ],
+        "autoMitigate": true,
+        "criteria": {
+          "allOf": [
+            {
+              "criterionType": "StaticThresholdCriterion",
+              "dimensions": [
+                {
+                  "name": "ApiName",
+                  "operator": "Include",
+                  "values": [
+                    "GetBlob",
+                    "PutBlob"
+                  ]
+                },
+                {
+                  "name": "ResponseType",
+                  "operator": "Include",
+                  "values": [
+                    "*"
+                  ]
+                }
+              ],
+              "metricName": "Transactions",
+              "metricNamespace": "Microsoft.Storage/storageAccounts",
+              "name": "txn-dims",
+              "operator": "GreaterThan",
+              "threshold": 50.0,
+              "timeAggregation": "Total"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria"
+        },
+        "description": "ckg test metric alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT30M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/ckgstoregdtuih"
+        ],
+        "severity": 3,
+        "windowSize": "PT1H"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/metricAlerts"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/metricAlerts/ckg-ma-dyn-txn",
+      "location": "global",
+      "name": "ckg-ma-dyn-txn",
+      "properties": {
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+          }
+        ],
+        "autoMitigate": true,
+        "criteria": {
+          "allOf": [
+            {
+              "alertSensitivity": "Medium",
+              "criterionType": "DynamicThresholdCriterion",
+              "dimensions": [],
+              "failingPeriods": {
+                "minFailingPeriodsToAlert": 3,
+                "numberOfEvaluationPeriods": 4
+              },
+              "ignoreDataBefore": "2026-11-01T00:00:00.000Z",
+              "metricName": "Transactions",
+              "metricNamespace": "Microsoft.Storage/storageAccounts",
+              "name": "dtxn",
+              "operator": "GreaterThan",
+              "timeAggregation": "Total"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria"
+        },
+        "description": "ckg test metric alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT5M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/ckgstoregdtuih"
+        ],
+        "severity": 2,
+        "windowSize": "PT15M"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/metricAlerts"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/metricAlerts/ckg-ma-multi-cond",
+      "location": "global",
+      "name": "ckg-ma-multi-cond",
+      "properties": {
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email2"
+          }
+        ],
+        "autoMitigate": true,
+        "criteria": {
+          "allOf": [
+            {
+              "criterionType": "StaticThresholdCriterion",
+              "metricName": "Ingress",
+              "metricNamespace": "Microsoft.Storage/storageAccounts",
+              "name": "ingress",
+              "operator": "GreaterThan",
+              "threshold": 1000000000.0,
+              "timeAggregation": "Total"
+            },
+            {
+              "criterionType": "StaticThresholdCriterion",
+              "metricName": "Egress",
+              "metricNamespace": "Microsoft.Storage/storageAccounts",
+              "name": "egress",
+              "operator": "GreaterThanOrEqual",
+              "threshold": 1000000000.0,
+              "timeAggregation": "Total"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "description": "ckg test metric alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT15M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/ckgstoregdtuih"
+        ],
+        "severity": 2,
+        "windowSize": "PT1H"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/metricAlerts"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/metricAlerts/ckg-ma-latency-max",
+      "location": "global",
+      "name": "ckg-ma-latency-max",
+      "properties": {
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email2"
+          }
+        ],
+        "autoMitigate": false,
+        "criteria": {
+          "allOf": [
+            {
+              "criterionType": "StaticThresholdCriterion",
+              "metricName": "SuccessE2ELatency",
+              "metricNamespace": "Microsoft.Storage/storageAccounts",
+              "name": "lat",
+              "operator": "GreaterThan",
+              "threshold": 5000.0,
+              "timeAggregation": "Maximum"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "description": "ckg test metric alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT1H",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/ckgstoregdtuih"
+        ],
+        "severity": 4,
+        "windowSize": "P1D"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/metricAlerts"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/metricAlerts/ckg-ma-dyn-avail",
+      "location": "global",
+      "name": "ckg-ma-dyn-avail",
+      "properties": {
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email2"
+          }
+        ],
+        "autoMitigate": true,
+        "criteria": {
+          "allOf": [
+            {
+              "alertSensitivity": "High",
+              "criterionType": "DynamicThresholdCriterion",
+              "dimensions": [],
+              "failingPeriods": {
+                "minFailingPeriodsToAlert": 4,
+                "numberOfEvaluationPeriods": 4
+              },
+              "ignoreDataBefore": "2026-11-01T00:00:00.000Z",
+              "metricName": "Availability",
+              "metricNamespace": "Microsoft.Storage/storageAccounts",
+              "name": "davail",
+              "operator": "LessThan",
+              "timeAggregation": "Average"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria"
+        },
+        "description": "ckg test metric alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT15M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/ckgstoregdtuih"
+        ],
+        "severity": 3,
+        "windowSize": "PT1H"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/metricAlerts"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/metricAlerts/ckg-ma-capacity-min",
+      "location": "global",
+      "name": "ckg-ma-capacity-min",
+      "properties": {
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+          }
+        ],
+        "autoMitigate": true,
+        "criteria": {
+          "allOf": [
+            {
+              "criterionType": "StaticThresholdCriterion",
+              "metricName": "UsedCapacity",
+              "metricNamespace": "Microsoft.Storage/storageAccounts",
+              "name": "cap",
+              "operator": "LessThan",
+              "threshold": 1.0,
+              "timeAggregation": "Average"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "description": "ckg test metric alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT1H",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/ckgstoregdtuih"
+        ],
+        "severity": 1,
+        "windowSize": "PT6H"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/metricAlerts"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/metricAlerts/ckg-ma-min-latency",
+      "location": "global",
+      "name": "ckg-ma-min-latency",
+      "properties": {
+        "actions": [
+          {
+            "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email2",
+            "webHookProperties": {
+              "ckg": "test"
+            }
+          }
+        ],
+        "autoMitigate": true,
+        "criteria": {
+          "allOf": [
+            {
+              "criterionType": "StaticThresholdCriterion",
+              "metricName": "SuccessServerLatency",
+              "metricNamespace": "Microsoft.Storage/storageAccounts",
+              "name": "minlat",
+              "operator": "GreaterThanOrEqual",
+              "threshold": 5.0,
+              "timeAggregation": "Minimum"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "description": "ckg test metric alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT5M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/ckgstoregdtuih"
+        ],
+        "severity": 2,
+        "windowSize": "PT5M"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/metricAlerts"
+    }
+  ]
+}

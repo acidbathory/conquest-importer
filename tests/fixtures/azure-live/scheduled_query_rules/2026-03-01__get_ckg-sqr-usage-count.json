@@ -1,0 +1,47 @@
+{
+  "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/scheduledqueryrules/ckg-sqr-usage-count",
+  "location": "eastus",
+  "name": "ckg-sqr-usage-count",
+  "properties": {
+    "actions": {
+      "actionGroups": [
+        "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+      ]
+    },
+    "createdWithApiVersion": "2026-03-01",
+    "criteria": {
+      "allOf": [
+        {
+          "failingPeriods": {
+            "minFailingPeriodsToAlert": 1,
+            "numberOfEvaluationPeriods": 1
+          },
+          "operator": "GreaterThan",
+          "query": "Usage | where IsBillable == true",
+          "threshold": 0.0,
+          "timeAggregation": "Count"
+        }
+      ]
+    },
+    "description": "ckg test log alert (disabled)",
+    "enabled": false,
+    "evaluationFrequency": "PT5M",
+    "scopes": [
+      "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.OperationalInsights/workspaces/ckg-law"
+    ],
+    "severity": 3,
+    "windowSize": "PT5M"
+  },
+  "systemData": {
+    "createdAt": "2026-11-11T04:51:45.6777748Z",
+    "createdBy": "GUID-01",
+    "createdByType": "Application",
+    "lastModifiedAt": "2026-11-11T04:57:11.1509692Z",
+    "lastModifiedBy": "GUID-01",
+    "lastModifiedByType": "Application"
+  },
+  "tags": {
+    "ckg_test": "true"
+  },
+  "type": "Microsoft.Insights/scheduledQueryRules"
+}

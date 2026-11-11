@@ -1,0 +1,342 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/scheduledqueryrules/ckg-sqr-usage-count",
+      "location": "eastus",
+      "name": "ckg-sqr-usage-count",
+      "properties": {
+        "actions": {
+          "actionGroups": [
+            "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+          ]
+        },
+        "createdWithApiVersion": "2026-03-01",
+        "criteria": {
+          "allOf": [
+            {
+              "failingPeriods": {
+                "minFailingPeriodsToAlert": 1,
+                "numberOfEvaluationPeriods": 1
+              },
+              "operator": "GreaterThan",
+              "query": "Usage | where IsBillable == true",
+              "threshold": 0.0,
+              "timeAggregation": "Count"
+            }
+          ]
+        },
+        "description": "ckg test log alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT5M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.OperationalInsights/workspaces/ckg-law"
+        ],
+        "severity": 3,
+        "windowSize": "PT5M"
+      },
+      "systemData": {
+        "createdAt": "2026-11-11T04:51:45.6777748Z",
+        "createdBy": "GUID-01",
+        "createdByType": "Application",
+        "lastModifiedAt": "2026-11-11T04:57:11.1509692Z",
+        "lastModifiedBy": "GUID-01",
+        "lastModifiedByType": "Application"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/scheduledQueryRules"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/scheduledqueryrules/ckg-sqr-heartbeat-silent",
+      "location": "eastus",
+      "name": "ckg-sqr-heartbeat-silent",
+      "properties": {
+        "actions": {
+          "actionGroups": [
+            "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+          ]
+        },
+        "autoMitigate": false,
+        "createdWithApiVersion": "2026-03-01",
+        "criteria": {
+          "allOf": [
+            {
+              "failingPeriods": {
+                "minFailingPeriodsToAlert": 1,
+                "numberOfEvaluationPeriods": 1
+              },
+              "operator": "GreaterThan",
+              "query": "Heartbeat | summarize LastSeen = max(TimeGenerated) by Computer | where LastSeen < ago(10m)",
+              "threshold": 0.0,
+              "timeAggregation": "Count"
+            }
+          ]
+        },
+        "description": "ckg test log alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT5M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.OperationalInsights/workspaces/ckg-law"
+        ],
+        "severity": 0,
+        "windowSize": "PT30M"
+      },
+      "systemData": {
+        "createdAt": "2026-11-11T04:51:54.3630841Z",
+        "createdBy": "GUID-01",
+        "createdByType": "Application",
+        "lastModifiedAt": "2026-11-11T04:57:22.0187483Z",
+        "lastModifiedBy": "GUID-01",
+        "lastModifiedByType": "Application"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/scheduledQueryRules"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/scheduledqueryrules/ckg-sqr-dynamic",
+      "location": "eastus",
+      "name": "ckg-sqr-dynamic",
+      "properties": {
+        "actions": {
+          "actionGroups": [
+            "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+          ]
+        },
+        "createdWithApiVersion": "2026-03-01",
+        "criteria": {
+          "allOf": [
+            {
+              "failingPeriods": {
+                "minFailingPeriodsToAlert": 3,
+                "numberOfEvaluationPeriods": 4
+              },
+              "metricMeasureColumn": "AggregatedValue",
+              "operator": "GreaterOrLessThan",
+              "query": "Usage | summarize AggregatedValue = sum(Quantity) by bin(TimeGenerated, 5m)",
+              "timeAggregation": "Total"
+            }
+          ]
+        },
+        "description": "ckg test log alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT5M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.OperationalInsights/workspaces/ckg-law"
+        ],
+        "severity": 2,
+        "windowSize": "PT15M"
+      },
+      "systemData": {
+        "createdAt": "2026-11-11T04:52:02.2872379Z",
+        "createdBy": "GUID-01",
+        "createdByType": "Application",
+        "lastModifiedAt": "2026-11-11T04:57:37.3645194Z",
+        "lastModifiedBy": "GUID-01",
+        "lastModifiedByType": "Application"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/scheduledQueryRules"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/scheduledqueryrules/ckg-sqr-simple",
+      "kind": "SimpleLogAlert",
+      "location": "eastus",
+      "name": "ckg-sqr-simple",
+      "properties": {
+        "actions": {
+          "actionGroups": [
+            "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+          ]
+        },
+        "autoMitigate": false,
+        "createdWithApiVersion": "2026-03-01",
+        "criteria": {
+          "allOf": [
+            {
+              "query": "Usage | where IsBillable == true"
+            }
+          ]
+        },
+        "description": "ckg test log alert (disabled)",
+        "enabled": false,
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.OperationalInsights/workspaces/ckg-law"
+        ],
+        "severity": 4
+      },
+      "systemData": {
+        "createdAt": "2026-11-11T04:52:09.7380652Z",
+        "createdBy": "GUID-01",
+        "createdByType": "Application",
+        "lastModifiedAt": "2026-11-11T04:57:39.8120449Z",
+        "lastModifiedBy": "GUID-01",
+        "lastModifiedByType": "Application"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/scheduledQueryRules"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/scheduledqueryrules/ckg-sqr-usage-total",
+      "location": "eastus",
+      "name": "ckg-sqr-usage-total",
+      "properties": {
+        "actions": {
+          "actionGroups": [
+            "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email"
+          ]
+        },
+        "autoMitigate": false,
+        "createdWithApiVersion": "2026-03-01",
+        "criteria": {
+          "allOf": [
+            {
+              "dimensions": [
+                {
+                  "name": "DataType",
+                  "operator": "Include",
+                  "values": [
+                    "*"
+                  ]
+                }
+              ],
+              "failingPeriods": {
+                "minFailingPeriodsToAlert": 1,
+                "numberOfEvaluationPeriods": 1
+              },
+              "metricMeasureColumn": "AggregatedValue",
+              "operator": "GreaterThan",
+              "query": "Usage | summarize AggregatedValue = sum(Quantity) by DataType",
+              "threshold": 1000.0,
+              "timeAggregation": "Total"
+            }
+          ]
+        },
+        "description": "ckg test log alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT15M",
+        "muteActionsDuration": "PT1H",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.OperationalInsights/workspaces/ckg-law"
+        ],
+        "severity": 2,
+        "windowSize": "PT1H"
+      },
+      "systemData": {
+        "createdAt": "2026-11-11T04:55:46.0269316Z",
+        "createdBy": "GUID-01",
+        "createdByType": "Application",
+        "lastModifiedAt": "2026-11-11T04:57:05.6906528Z",
+        "lastModifiedBy": "GUID-01",
+        "lastModifiedByType": "Application"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/scheduledQueryRules"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/scheduledqueryrules/ckg-sqr-usage-avg",
+      "location": "eastus",
+      "name": "ckg-sqr-usage-avg",
+      "properties": {
+        "actions": {
+          "actionGroups": [
+            "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email2"
+          ]
+        },
+        "createdWithApiVersion": "2026-03-01",
+        "criteria": {
+          "allOf": [
+            {
+              "failingPeriods": {
+                "minFailingPeriodsToAlert": 2,
+                "numberOfEvaluationPeriods": 3
+              },
+              "metricMeasureColumn": "Quantity",
+              "operator": "GreaterThan",
+              "query": "Usage | where DataType == 'Operation'",
+              "threshold": 100.0,
+              "timeAggregation": "Average"
+            }
+          ]
+        },
+        "description": "ckg test log alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT10M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.OperationalInsights/workspaces/ckg-law"
+        ],
+        "severity": 3,
+        "windowSize": "PT30M"
+      },
+      "systemData": {
+        "createdAt": "2026-11-11T04:55:55.8952627Z",
+        "createdBy": "GUID-01",
+        "createdByType": "Application",
+        "lastModifiedAt": "2026-11-11T04:57:30.6124843Z",
+        "lastModifiedBy": "GUID-01",
+        "lastModifiedByType": "Application"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/scheduledQueryRules"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/microsoft.insights/scheduledqueryrules/ckg-sqr-activity-fail",
+      "location": "eastus",
+      "name": "ckg-sqr-activity-fail",
+      "properties": {
+        "actions": {
+          "actionGroups": [
+            "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email2"
+          ]
+        },
+        "autoMitigate": false,
+        "createdWithApiVersion": "2026-03-01",
+        "criteria": {
+          "allOf": [
+            {
+              "failingPeriods": {
+                "minFailingPeriodsToAlert": 2,
+                "numberOfEvaluationPeriods": 3
+              },
+              "operator": "GreaterThan",
+              "query": "AzureActivity | where CategoryValue == \"Administrative\" | where ActivityStatusValue == \"Failure\"",
+              "threshold": 5.0,
+              "timeAggregation": "Count"
+            }
+          ]
+        },
+        "description": "ckg test log alert (disabled)",
+        "enabled": false,
+        "evaluationFrequency": "PT15M",
+        "muteActionsDuration": "PT30M",
+        "scopes": [
+          "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.OperationalInsights/workspaces/ckg-law"
+        ],
+        "severity": 1,
+        "windowSize": "PT15M"
+      },
+      "systemData": {
+        "createdAt": "2026-11-11T04:57:17.8955845Z",
+        "createdBy": "GUID-01",
+        "createdByType": "Application",
+        "lastModifiedAt": "2026-11-11T04:57:17.8955845Z",
+        "lastModifiedBy": "GUID-01",
+        "lastModifiedByType": "Application"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.Insights/scheduledQueryRules"
+    }
+  ]
+}
