@@ -35,6 +35,7 @@ from importer.sources.gcp.dashboard_extra import (
     NOT_SHOWN,
     PAGE_KINDS,
     failed,
+    incident_list,
     kind_of,
     logs_panel,
     result,
@@ -451,6 +452,8 @@ def translate_widget(
         return section_header(body, title, layout)
     if kind == "logsPanel":
         return logs_panel(body, title, layout)
+    if kind == "incidentList":
+        return incident_list(title, layout)
     if kind in NOT_SHOWN:
         return _failed(title, layout, kind, [NOT_SHOWN[kind]])
     return _failed(title, layout, kind, ["dashboard widget type is not supported"])

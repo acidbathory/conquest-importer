@@ -38,10 +38,6 @@ SEVERITIES = [
 ]
 
 NOT_SHOWN = {
-    "incidentList": (
-        "dashboard widget type has no New Relic equivalent (incident list): New Relic has no "
-        "widget that lists Google Cloud incidents; use the alerts page or an issues table"
-    ),
     "errorReportingPanel": (
         "dashboard widget type has no New Relic equivalent (error reporting panel): "
         "Google Error Reporting data is not collected by New Relic, so no widget can show it"
@@ -52,6 +48,11 @@ NOT_SHOWN = {
         "watches instead"
     ),
 }
+ISSUE_NOTE = (
+    "an incident list is shown as a table of New Relic issues (NrAiIssue), which exist once the "
+    "converted alert conditions are created and fire: it lists the issues of the whole account, "
+    "not the incidents of the Google alert policies named in the source widget"
+)
 LOG_NOTE = (
     "logs panel shown as a table over Log; the logs must be forwarded to New Relic, and the "
     "attribute names of forwarded Google Cloud logs are not confirmed"
@@ -170,6 +171,23 @@ def logs_panel(body: dict[str, Any], title: str, layout: Layout) -> IRWidget:
         "logsPanel",
         Confidence.APPROXIMATE,
         reasons,
+        visualization=Visualization.TABLE,
+        raw_series=[RawNrqlSeries(nrql=query)],
+    )
+
+
+def incident_list(title: str, layout: Layout) -> IRWidget:
+    """Google's incident list as a table over the issues New Relic opens from alert conditions."""
+    query = (
+        "SELECT latest(title) AS 'Issue', latest(priority) AS 'Priority', "
+        "latest(timestamp) AS 'Last update' FROM NrAiIssue FACET issueId LIMIT 50"
+    )
+    return result(
+        title,
+        layout,
+        "incidentList",
+        Confidence.APPROXIMATE,
+        [ISSUE_NOTE],
         visualization=Visualization.TABLE,
         raw_series=[RawNrqlSeries(nrql=query)],
     )

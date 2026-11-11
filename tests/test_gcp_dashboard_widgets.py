@@ -83,7 +83,6 @@ def test_a_logs_panel_becomes_a_log_table_and_says_when_the_filter_is_lost() -> 
 
 def test_what_new_relic_cannot_show_stays_a_placeholder_with_its_own_reason() -> None:
     for kind, words in (
-        ("incidentList", "(incident list)"),
         ("errorReportingPanel", "(error reporting panel)"),
         ("alertChart", "(alert chart)"),
     ):
@@ -91,6 +90,17 @@ def test_what_new_relic_cannot_show_stays_a_placeholder_with_its_own_reason() ->
         assert w.kind == WidgetKind.UNSUPPORTED
         assert words in w.reasons[0]
         assert steps_for(w.reasons) and classify(w.reasons[0]) is not Category.OTHER
+
+
+def test_an_incident_list_becomes_an_issue_table() -> None:
+    w = one({"title": "Incidents", "incidentList": {"policyNames": ["p"]}})
+    assert w.kind == WidgetKind.CHART and w.visualization == Visualization.TABLE
+    nrql = w.raw_series[0].nrql
+    assert nrql.startswith("SELECT latest(title)") and "FROM NrAiIssue FACET issueId" in nrql
+    notes = " ".join(w.reasons)
+    assert "alert policies" in notes and "converted" in notes  # issues exist once alerts do
+    assert w.confidence == Confidence.APPROXIMATE
+    nerdgraph_dashboard(dash(tile(0, {"title": "Incidents", "incidentList": {}})))
 
 
 def test_blank_tiles_are_dropped() -> None:
