@@ -8,6 +8,8 @@ first is the one to try first. Every method says what it needs, what it changes,
 This file is generated from `src/importer/core/cookbook/data/*.toml` by
 `uv run python scripts/improve/render_cookbook.py`; edit the data, not this file.
 `importer plan-remediation` prints the recommended method for each unconverted item.
+`importer cookbook --in <converted folder>` writes the same guide as an HTML page with only the blockers your
+run hit (the guided menu opens it after a create); `importer cookbook --all` writes the whole guide.
 
 ## One-page decision guide
 

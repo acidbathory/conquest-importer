@@ -62,6 +62,7 @@ nav.toc ol{margin:8px 0 0;padding-left:28px;columns:2;column-gap:32px}
 nav.toc li{break-inside:avoid}
 @media (min-width:1100px){nav.toc.sticky{position:sticky;top:0;background:var(--paper);z-index:2}}
 a{color:var(--accent)}
+code{overflow-wrap:anywhere}
 .blocker{border-top:1px solid var(--ink);padding:8px 0}
 .blocker>summary{font:700 22px/1.3 var(--serif);padding:12px 0}
 .blocker>summary .count{margin-left:12px}
@@ -87,13 +88,15 @@ dl.facts dt{font:600 12px/1.8 var(--mono);color:var(--ink2);text-transform:upper
 letter-spacing:.06em}
 dl.facts dd{margin:0;overflow-wrap:anywhere}
 .ex{margin:14px 0}
-.ex .label{display:block;margin-bottom:4px}
+.ex .label{display:block;margin-bottom:4px;overflow-wrap:anywhere}
+.ex,.method,details.blocker{min-width:0}
 pre.code{font:13px/1.5 var(--mono);margin:0;padding:12px 14px;overflow-x:auto;
 white-space:pre;border:1px solid var(--rule);
 background:color-mix(in srgb,var(--ink) 5%,transparent);user-select:all;
 -webkit-user-select:all;tab-size:2}
 ul.sources{list-style:none;padding:0;margin:0}
 ul.sources li{overflow-wrap:anywhere}
+ul.sources .num{white-space:normal;display:block;font-size:12px}
 .items{font:13px/1.6 var(--mono);list-style:none;padding:0;margin:0;columns:2;column-gap:32px}
 .items li{overflow-wrap:anywhere;break-inside:avoid}
 .legend2{list-style:none;padding:0;margin:8px 0 0;font-size:15px}
@@ -102,7 +105,7 @@ ul.sources li{overflow-wrap:anywhere}
 .guide li{margin-bottom:8px}
 .sum{display:block;overflow-x:auto}
 @media (max-width:720px){main{padding:32px 16px 64px}h2{font-size:24px}
-nav.toc ol,.items{columns:1}dl.facts{grid-template-columns:1fr;gap:0}
+nav.toc ol,.items{columns:1}dl.facts{grid-template-columns:minmax(0,1fr);gap:0}
 dl.facts dd{margin-bottom:8px}.blocker>summary{font-size:19px}}
 @media print{:root{color-scheme:light;--paper:#fff;--ink:#000;--ink2:#333;--rule:#bbb;
 --accent:#8a2f10;--sv:#0a6b0a;--sw:#0a5f8a;--sd:#7a5a00;--su:#a02525}
