@@ -144,6 +144,10 @@ def _log_where(filter_text: str) -> list[str] | None:
                 where.append(f"{name} {'!=' if term.negate else '='} {quote_string(term.value)}")
             elif term.op == "!=":
                 where.append(f"{name} {'=' if term.negate else '!='} {quote_string(term.value)}")
+            elif term.op in ("=~", "regex_full") and "${" not in term.value:
+                # RLIKE matches the whole value; a Cloud Logging =~ matches anywhere in it
+                pattern = term.value if term.op == "regex_full" else f".*({term.value}).*"
+                where.append(f"{name} {not_}RLIKE {quote_string(pattern)}")
             elif term.op == ":":
                 where.append(f"{name} {not_}LIKE {quote_string('%' + term.value + '%')}")
             else:

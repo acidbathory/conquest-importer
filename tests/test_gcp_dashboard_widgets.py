@@ -210,3 +210,17 @@ def test_a_line_chart_threshold_becomes_a_band_bound() -> None:
         ("critical", None, 5.0)
     ]
     nerdgraph_dashboard(dash(tile(0, {"title": "x", "xyChart": body})))
+
+
+def test_a_logs_panel_regex_becomes_rlike_that_searches_like_google() -> None:
+    w = one({"title": "l", "logsPanel": {"filter": 'textPayload=~"timeout after [0-9]+ms"'}})
+    nrql = w.raw_series[0].nrql
+    # RLIKE must match the whole value, a Cloud Logging =~ matches anywhere in it
+    assert "textPayload RLIKE '.*(timeout after [0-9]+ms).*'" in nrql
+    assert not any("filter" in r and "every log line" in r for r in w.reasons)
+
+
+def test_a_logs_panel_regex_with_a_placeholder_is_not_a_real_pattern() -> None:
+    w = one({"title": "l", "logsPanel": {"filter": 'textPayload=~"${NAME}-[0-9]+"'}})
+    assert "RLIKE" not in w.raw_series[0].nrql
+    assert any("every log line" in r for r in w.reasons)
