@@ -30,7 +30,14 @@ def md_cell(text: str, limit: int = 120) -> str:
     return text
 
 
-def data_path_section(paths: list[str | None]) -> list[str]:
+DATA_PATH_HINTS = {
+    "gcp": "; see `plan-gcp-datapath`",
+    "azure": "; see docs/research/azure-datapath.md (the Event Hub forwarder or the agent that "
+    "has to send it)",
+}
+
+
+def data_path_section(paths: list[str | None], source: str = "") -> list[str]:
     """Counts of converted items by the data path they need; empty when none states one.
 
     A path of `native` needs nothing beyond the platform link, so an estate with only native
@@ -41,11 +48,8 @@ def data_path_section(paths: list[str | None]) -> list[str]:
         return []
     lines = ["", "## Data path", "", "| Data path | Converted items |", "|---|---:|"]
     lines += [f"| {md_cell(p, 60)} | {n} |" for p, n in sorted(counts.items())]
-    lines += [
-        "",
-        "Items other than `native` return data only after the data is sent; see "
-        "`plan-gcp-datapath`.",
-    ]
+    hint = DATA_PATH_HINTS.get(source, "")
+    lines += ["", "Items other than `native` return data only after the data is sent" + hint + "."]
     return lines
 
 
@@ -77,7 +81,7 @@ def build_report(monitors: list[IRMonitor], emitted_ids: set[int], source: str) 
             f"| {m.source_id} | {md_cell(m.name)} | {md_cell(m.source_type)} | "
             f"{m.confidence.value} | {md_cell('; '.join(reasons), 300)} |"
         )
-    lines += data_path_section([m.data_path for m in monitors])
+    lines += data_path_section([m.data_path for m in monitors], source)
     unmapped = [m for m in monitors if m.unmapped]
     if unmapped:
         lines += ["", "## Settings that were not migrated", ""]

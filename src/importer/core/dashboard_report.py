@@ -44,7 +44,7 @@ def build_dashboard_report(
     ]
     lines += [f"| {c.value} | {counts[c]} |" for c in Confidence]
     lines += ["", "## Notes", ""] + [f"- {n}" for n in NOTES]
-    lines += data_path_section([w.data_path for w in converted])
+    lines += data_path_section([w.data_path for w in converted], source)
     for d in sorted(dashboards, key=lambda x: x.source_key):
         done = sum(w.kind != WidgetKind.UNSUPPORTED for w in d.widgets)
         lines += [
