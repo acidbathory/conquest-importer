@@ -48,6 +48,7 @@ from importer.sources.gcp.translate import (
     POLL_SECONDS,
     Fail,
     check_aligner,
+    merge_two,
     metric_scope,
     metric_series,
     ratio_series,
@@ -216,19 +217,30 @@ LAYOUTS = {
 }
 
 
-def _second_stage(body: dict[str, Any]) -> list[str]:
-    """Notes for a second-stage aggregation that changes nothing material; Fail otherwise."""
+def _second_stage(
+    body: dict[str, Any], agg: dict[str, object]
+) -> tuple[dict[str, object], list[str]]:
+    """The aggregation with the dashboard's second stage merged in, and notes; Fail if it cannot
+    be written as one query."""
     second = body.get("secondaryAggregation")
     if not isinstance(second, dict) or not second:
-        return []
+        return agg, []
     smooths = (
         not second.get("groupByFields")
         and second.get("crossSeriesReducer") in (None, "", "REDUCE_NONE")
         and second.get("perSeriesAligner") in (None, "", "ALIGN_NONE", "ALIGN_MEAN")
     )
-    if not smooths:
-        raise Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
-    return [SECOND_STAGE_NOTE]
+    if smooths:
+        return agg, [SECOND_STAGE_NOTE]
+    fields = second.get("groupByFields")
+    if isinstance(fields, list):
+        second = {
+            **second,
+            "groupByFields": [
+                QUOTED_LABEL.sub(r"\1", f) if isinstance(f, str) else f for f in fields
+            ],
+        }
+    return merge_two(agg, second)
 
 
 QUOTED_LABEL = re.compile(r'(?<=\.label\.)"([A-Za-z_][A-Za-z0-9_]*)"')
@@ -247,9 +259,9 @@ def _filter_series(body: dict[str, Any], notes: set[str]) -> Series | str:
         body = {**body, "aggregation": {**agg, "groupByFields": fields}}
     try:
         metric_type, scope, scope_notes = metric_scope(body)
-        second_notes = _second_stage(body)
         raw = body.get("aggregation")
-        agg, aligner = check_aligner(raw if isinstance(raw, dict) else {})
+        agg, second_notes = _second_stage(body, raw if isinstance(raw, dict) else {})
+        agg, aligner = check_aligner(agg)
         period = seconds(agg.get("alignmentPeriod")) or POLL_SECONDS
         if period > MAX_SECONDS:
             raise Fail(Confidence.MANUAL, f"alignment period {period}s is not supported")

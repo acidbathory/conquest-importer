@@ -30,14 +30,13 @@ def test_conditions_converted_per_kind() -> None:
     assert dict(total) == {"conditionThreshold": 18, "conditionAbsent": 5, "conditionMatchedLog": 8}
     # data-path classification: a metric New Relic does not poll (Ops Agent, Prometheus, custom)
     # converts as an approximation that names what must be sent, instead of refusing
-    assert dict(done) == {"conditionThreshold": 15, "conditionAbsent": 5, "conditionMatchedLog": 8}
+    assert dict(done) == {"conditionThreshold": 16, "conditionAbsent": 5, "conditionMatchedLog": 8}
 
 
 def test_what_stays_manual_is_explained() -> None:
     manual = {n: m for n, m in convert_all().items() if m.confidence is Confidence.MANUAL}
     reasons = {n.split("__")[0]: m.reasons[0] for n, m in manual.items()}
-    assert sorted(reasons) == ["couchdb", "etcd-gke", "google-bigquery"]
-    assert "second-stage aggregation" in reasons["couchdb"]
+    assert sorted(reasons) == ["etcd-gke", "google-bigquery"]
     assert "histogram" in reasons["etcd-gke"]
     assert "several polls" in reasons["google-bigquery"]
 
@@ -67,3 +66,10 @@ def test_converted_samples_keep_their_fields() -> None:
     sap = monitors["google-cloud-agent-for-sap__host-memory-alert.v1.json"]
     assert sap.emit is not None and sap.emit.violation_time_limit_seconds == 300
     assert "gcp-severity:CRITICAL" in sap.tags
+
+
+def test_the_couchdb_two_stage_policy_is_one_grouped_sum_of_rates() -> None:
+    """ALIGN_RATE, then REDUCE_SUM by instance over the same 300s: one stage."""
+    monitor = convert_all()["couchdb__couchdb-high-request-rate.v1.json"]
+    assert monitor.confidence in CONVERTED
+    assert nrql_for(monitor) == ("SELECT sum(couchdb.httpd.requests) FROM Metric FACET instance_id")

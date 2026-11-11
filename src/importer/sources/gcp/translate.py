@@ -39,6 +39,7 @@ from importer.sources.gcp.log_scope import log_filters
 from importer.sources.gcp.models import GcpAlertPolicy, GcpCondition
 from importer.sources.gcp.promql import PROMQL_KIND, translate_condition
 from importer.sources.gcp.scope import ScopeFail, label_name, metric_filter
+from importer.sources.gcp.stages import StageError, merge_stages
 
 OPERATORS = {
     "COMPARISON_GT": Operator.ABOVE,
@@ -227,7 +228,7 @@ def _counter_window(aligner: str, period: int, *, chart: bool) -> tuple[int, flo
 
 
 def _reducer(
-    agg: dict[str, object], aggregation: Aggregation, aligner: str, period: int
+    agg: dict[str, object], aggregation: Aggregation, aligner: str, period: int, *, polled: bool
 ) -> tuple[list[str], list[str], Aggregation, int | None]:
     """Group-by labels, notes, time aggregation and percentile (if any) for the cross-series
     reducer of a condition."""
@@ -247,10 +248,25 @@ def _reducer(
             percentile,
         )
     if reducer in REDUCERS:
-        if REDUCERS[reducer] != aggregation:
+        target = REDUCERS[reducer]
+        if target != aggregation:
+            # Google takes the aligned value of each series first, then reduces across series.
+            # With one polled row per series in the window that is the reducer over the rows.
+            if not (polled and period <= POLL_SECONDS):
+                raise Fail(
+                    Confidence.MANUAL,
+                    f"{reducer} after {aligner or 'no aligner'} over {period}s: each series has "
+                    f"several polls in the window, Google takes the {aggregation.value} of each "
+                    f"series first and the {target.value} across series second, and one query "
+                    f"cannot do both; use {target.value} over the same window of "
+                    f"{POLL_SECONDS}s, or in a chart a nested query (not allowed in alert "
+                    "conditions)",
+                )
             notes.append(
-                f"{reducer} and {aligner} become one {aggregation.value} in New Relic's query"
+                f"{reducer} after {aligner or 'no aligner'} runs over the one point each series "
+                f"has in the window, so it is {target.value} of those points"
             )
+            aggregation = target
         return group_by, notes, aggregation, None
     if reducer in UNSUPPORTED_REDUCERS:
         raise Fail(Confidence.MANUAL, f"reducer {reducer} {UNSUPPORTED_REDUCERS[reducer]}")
@@ -349,13 +365,30 @@ def metric_scope(body: dict[str, object]) -> tuple[str, list[TagFilter], list[st
 
 def _first_aggregation(
     body: dict[str, object], key: str = "aggregations"
-) -> tuple[dict[str, object], str]:
-    """The single aggregation stage of a condition (or of its denominator) and its aligner."""
+) -> tuple[dict[str, object], str, list[str]]:
+    """The single aggregation stage of a condition (or of its denominator), its aligner and the
+    notes of merging a second stage into it."""
     aggregations = body.get(key)
-    if isinstance(aggregations, list) and len(aggregations) > 1:
-        raise Fail(Confidence.MANUAL, "second-stage aggregation is not supported")
-    first = aggregations[0] if isinstance(aggregations, list) and aggregations else {}
-    return check_aligner(first if isinstance(first, dict) else {})
+    listed = aggregations if isinstance(aggregations, list) else []
+    stages = [a for a in listed if isinstance(a, dict)]
+    first: dict[str, object] = stages[0] if stages else {}
+    notes: list[str] = []
+    if len(stages) > 2:
+        raise Fail(Confidence.MANUAL, "more than two aggregation stages are not supported")
+    if len(stages) == 2:
+        first, notes = merge_two(first, stages[1])
+    agg, aligner = check_aligner(first)
+    return agg, aligner, notes
+
+
+def merge_two(
+    first: dict[str, object], second: dict[str, object]
+) -> tuple[dict[str, object], list[str]]:
+    """`merge_stages` with a failure as the converter's manual reason."""
+    try:
+        return merge_stages(first, second)
+    except StageError as err:
+        raise Fail(Confidence.MANUAL, str(err)) from err
 
 
 def check_aligner(agg: dict[str, object]) -> tuple[dict[str, object], str]:
@@ -413,7 +446,10 @@ def metric_series(
             f"{POLL_SECONDS}s), which gives no meaningful deviation; use a period of "
             f"{STDDEV_MIN_PERIOD_SECONDS}s or more",
         )
-    group_by, notes, aggregation, percentile = _reducer(agg, aggregation, aligner, period)
+    name = nr_metric_name(metric_type)  # a metric with no usable name is refused first
+    group_by, notes, aggregation, percentile = _reducer(
+        agg, aggregation, aligner, period, polled=datapath.is_polled(metric_type)
+    )
     if period_note:
         notes.append(period_note)
     if not datapath.is_polled(metric_type):
@@ -424,7 +460,6 @@ def metric_series(
                 "sent by Prometheus, the Ops Agent or a custom route",
             )
         group_by = [datapath.arrival_label(g) for g in group_by]
-    name = nr_metric_name(metric_type)
     if aligner.startswith("ALIGN_PERCENTILE_"):
         name += "." + "p" + aligner.rsplit("_", 1)[1]
         notes.append(
@@ -512,7 +547,7 @@ def ratio_series(
     try:
         denominator = metric_scope({**body, "filter": body.get("denominatorFilter")})
         key = "denominatorAggregations" if body.get("denominatorAggregations") else "aggregations"
-        agg, den_aligner = _first_aggregation(body, key)
+        agg, den_aligner, _stage_notes = _first_aggregation(body, key)
         den_period = period_of(agg)
         den, *_ = metric_series(denominator[0], denominator[1], agg, den_aligner, den_period)
     except Fail as fail:
@@ -575,8 +610,8 @@ def _metric_condition(
     body: dict[str, object],
 ) -> tuple[MetricSignal, int, int, float, list[str]]:
     metric_type, scope, scope_notes = metric_scope(body)
-    agg, aligner = _first_aggregation(body)
-    trigger_notes = _threshold_trigger(body, agg)
+    agg, aligner, stage_notes = _first_aggregation(body)
+    trigger_notes = [*stage_notes, *_threshold_trigger(body, agg)]
     period = period_of(agg)
     duration = seconds(body.get("duration"))
     signal, period, scale, notes = metric_series(metric_type, scope, agg, aligner, period)
