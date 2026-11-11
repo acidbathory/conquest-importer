@@ -179,7 +179,10 @@ def test_log_count_nrql() -> None:
 
 
 def test_log_comparison_range_or_and_below() -> None:
-    q = 'logs("@sev:>=40 @n:[1 TO 5] status:(error OR warn)").index("*").rollup("count").last("5m") < 2'
+    q = (
+        'logs("@sev:>=40 @n:[1 TO 5] status:(error OR warn)")'
+        '.index("*").rollup("count").last("5m") < 2'
+    )
     m = mon(q, "log alert")
     assert nrql_for(m) == (
         "SELECT filter(count(*), WHERE sev >= 40 AND n >= 1 AND n <= 5 AND status IN "
