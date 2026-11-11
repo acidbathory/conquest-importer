@@ -15,13 +15,10 @@ def shown(text: object, limit: int = 120) -> str:
 
 
 # -- manual: metric alerts -----------------------------------------------------------------------
-M_SEVERAL = (
-    "metric alert has several criteria: Azure fires only when all of them are true and New "
-    "Relic has no composite condition"
-)
+M_SEVERAL = "metric alert has several criteria that one query cannot test together"
 M_DYNAMIC = (
-    "dynamic threshold: Azure learns the normal range with its own model and sensitivity levels "
-    "that New Relic baseline conditions do not match"
+    "dynamic threshold: the sensitivity, operator or failing periods cannot be mapped to a "
+    "New Relic baseline condition"
 )
 M_WEBTEST = "availability test alert: Azure counts failing test locations, which has no mapping"
 M_CRITERIA_TYPE = "unknown metric alert criteria type"
@@ -108,6 +105,23 @@ N_LONG_WINDOW = (
     "{window}s window has passed. The NerdGraph schema allows aggregation windows up to 6 hours "
     "(21600s) while the NRQL conditions page says 120 minutes; the creation call has not been "
     "tried (UNVERIFIED), and a rejected condition should be set to 120 minutes by hand"
+)
+N_COMPOSITE = (
+    "Azure fires only when all {count} criteria are true; one query tests them together as "
+    "if(test AND test, 1, 0) and the condition opens when the result is above 0. The tests see "
+    "the same series and window. With no data at all the query returned 0 in a read-only "
+    "test, so a criterion with no data in the window is not counted as true"
+)
+N_DYNAMIC = (
+    "dynamic threshold {sensitivity} is written as an APPROXIMATE New Relic baseline condition "
+    "({direction}, {deviations} standard deviations); it is not equivalent: Azure's model, "
+    "seasonality and history differ and no document maps Azure sensitivity to New Relic "
+    "deviations, so the mapping High 2, Medium 3, Low 4 is this importer's choice and "
+    "UNVERIFIED. Tune the deviations on a week of history"
+)
+N_IGNORE_BEFORE = (
+    "ignoreDataBefore {value} was ignored (no setting): a baseline condition learns from the "
+    "data it has, including the data Azure was told to ignore"
 )
 N_SLIDE = (
     "Azure evaluates every {freq}s over a {window}s window; a sliding window of {freq}s is used, "

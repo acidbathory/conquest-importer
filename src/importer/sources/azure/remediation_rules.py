@@ -15,23 +15,24 @@ RULES: list[Rule] = [
         re.compile(r"^metric alert has several criteria"),
         "Azure metric alert with several criteria",
         [
-            "Azure fires this alert only when every criterion is true. New Relic has no "
-            "composite condition, so the AND cannot be kept. The steps above list each "
-            "criterion converted alone.",
-            "Decide which criterion should page. Create that one alone, and keep the others as "
-            "warning conditions or as dashboard charts, so nothing is lost silently.",
+            "Azure fires this alert only when every criterion is true. The importer joins "
+            "criteria into one query with if(test AND test, 1, 0) when they share the scope, "
+            "dimensions and window; this rule did not (the reason says why). The steps above "
+            "list each criterion converted alone.",
+            "Either rewrite the criteria by hand as one query (the cookbook method 'AND of two "
+            "tests with if()'), or decide which criterion should page and keep the others as "
+            "warning conditions or dashboard charts, so nothing is lost silently.",
         ],
     ),
     (
         re.compile(r"^dynamic threshold"),
         "Azure dynamic threshold",
         [
-            "Azure learns the normal range with its own model (it needs several days of history) "
-            "and offers High, Medium and Low sensitivity. New Relic baseline conditions use a "
-            "different model and are set in standard deviations; there is no published "
-            "equivalence, so the importer does not guess one.",
-            "Either create a baseline condition on the metric and tune the deviations against "
-            "a week of history, or read the recent range in Azure and set a static threshold.",
+            "A dynamic threshold becomes an approximate New Relic baseline condition when its "
+            "sensitivity (High, Medium, Low) and operator are readable. This one was not "
+            "readable (the reason says what). Create a baseline condition on the metric by "
+            "hand and tune the standard deviations against a week of history, or read the "
+            "recent range in Azure and set a static threshold.",
         ],
     ),
     (

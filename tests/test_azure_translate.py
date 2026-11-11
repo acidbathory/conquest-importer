@@ -188,10 +188,12 @@ def test_namespace_falls_back_to_the_target_type_and_the_scope() -> None:
     )
 
 
-def test_two_criteria_are_manual_and_each_is_listed_alone() -> None:
+def test_criteria_with_different_dimensions_are_manual_and_each_is_listed_alone() -> None:
+    dims = [{"name": "Instance", "operator": "Include", "values": ["a"]}]
     m = one(
         metric_alert(
-            criterion(name="cpu"), criterion(name="mem", metricName="Available Memory Bytes")
+            criterion(name="cpu"),
+            criterion(name="mem", metricName="Available Memory Bytes", dimensions=dims),
         )
     )
     assert m.confidence is Confidence.MANUAL and "several criteria" in m.reasons[0]
