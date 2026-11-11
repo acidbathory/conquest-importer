@@ -110,10 +110,9 @@ def test_a_failed_widget_keeps_its_source_type_for_the_report() -> None:
 @pytest.mark.parametrize(
     ("title", "reason"),
     [
-        ("Errors", "dashboard widget type is not supported"),
         ("MQL chart", "MQL"),
         ("Error ratio", "ratio"),
-        ("Open alerts", "dashboard widget type is not supported"),
+        ("Open alerts", "alert chart"),
         ("Uptime", "uptime check"),
         ("Custom metric", "not one of the google cloud service metrics"),
     ],

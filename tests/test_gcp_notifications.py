@@ -82,9 +82,9 @@ def test_channel_display_names_are_escaped_in_the_report(tmp_path: Path) -> None
         ("webhook_basicauth", "Webhook channel with basic authentication"),
         ("slack", "Slack channel"),
         ("pagerduty", "PagerDuty channel"),
-        ("sms", "Channel type without a New Relic destination"),
-        ("pubsub", "Channel type without a New Relic destination"),
-        ("campfire", "Channel type without a New Relic destination"),
+        ("sms", "SMS channel"),
+        ("pubsub", "Pub/Sub channel"),
+        ("campfire", "Deprecated channel type"),
         ("something_new", "Channel type without a New Relic destination"),
         ("uptime check", "Channel type without a New Relic destination"),
         ("forecast no thresholds mql conditions", "Channel type without a New Relic destination"),
@@ -100,7 +100,7 @@ def test_every_channel_type_has_one_reason_a_category_and_its_own_rule(
 
 def test_a_channel_type_never_reaches_a_reason() -> None:
     hostile = "x@corp.example https://h.example/?t=SECRET"
-    assert reasons_for(hostile) == reasons_for("sms")
+    assert reasons_for(hostile) == reasons_for("something_new")
 
 
 def test_the_type_table_covers_the_documented_types() -> None:
