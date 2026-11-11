@@ -29,10 +29,7 @@ QUERY_EMPTY = "workbook query is empty"
 ITEM_TYPE = "workbook item type is not supported"
 GROUP_TEMPLATE = "workbook group loads another workbook template, which is not in this export"
 METRIC = "workbook metric cannot be converted"
-KQL_PENDING = (
-    "workbook query is KQL and no KQL translator is connected to dashboards yet: the query text "
-    "is kept in the report"
-)
+QUERY_KQL = "workbook query is KQL that cannot be converted"
 
 # -- placeholders: portal dashboards -----------------------------------------------------------
 PART_TYPE = "dashboard part type has no New Relic equivalent"

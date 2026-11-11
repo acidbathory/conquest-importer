@@ -192,7 +192,7 @@ def test_the_official_quickstart_dashboard_converts_and_emits() -> None:
     d = translate_portal(found)
     kinds = [w.source_type for w in d.widgets]
     assert kinds.count("dashboard markdown") == 2
-    assert sum(w.kind is WidgetKind.CHART for w in d.widgets) == 3
+    assert sum(w.kind is WidgetKind.CHART for w in d.widgets) == 4  # the logs part converts
     assert nerdgraph_dashboard(d)
     for w in d.widgets:
         if w.kind is WidgetKind.UNSUPPORTED:

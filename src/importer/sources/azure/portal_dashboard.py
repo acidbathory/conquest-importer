@@ -37,7 +37,6 @@ from importer.sources.azure.dashboard_common import (
     placeholder,
     result,
 )
-from importer.sources.azure.dashboard_kql import LOG_FORWARDING
 from importer.sources.azure.dashboard_models import AzureDashboard
 from importer.sources.azure.names import type_of_resource_id
 
@@ -221,7 +220,7 @@ def _logs_part(
         visualization=viz,
         raw_series=[RawNrqlSeries(nrql=found.nrql)],
         page=page,
-        data_path=LOG_FORWARDING,
+        data_path=found.data_path,
     )
 
 

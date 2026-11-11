@@ -1,7 +1,7 @@
 """The official fixtures and 30 real public workbook templates: exact counts and no gaps.
 
-The numbers are what the converter does today, with the KQL translator not yet connected (a KQL
-item is a placeholder). They change only when the converter or the fixtures change; update them
+The numbers are what the converter does today, with the KQL subset translator connected through
+`dashboard_kql.py` (a KQL item converts when the query is an aggregate in the subset). They change only when the converter or the fixtures change; update them
 with the reason in the commit. Placeholders are never counted as converted.
 """
 
@@ -28,8 +28,8 @@ SETS = {
 EXPECTED = {
     "workbook examples": (16, 26, 13, 13),
     "dashboard examples": (4, 9, 1, 8),
-    "quickstart templates": (2, 10, 6, 4),
-    "public templates": (30, 458, 259, 199),
+    "quickstart templates": (2, 10, 7, 3),
+    "public templates": (30, 458, 273, 185),
 }
 
 
@@ -85,5 +85,7 @@ def test_every_dashboard_that_is_not_a_total_placeholder_emits(name: str) -> Non
 
 def test_converted_metric_widgets_use_the_native_data_path() -> None:
     m = measure(convert("public templates"))
-    assert set(m.by_data_path) == {"native"}
+    # metric widgets read the Azure Monitor integration; only the KQL ones need log forwarding
+    assert m.by_data_path["native"] > 100
+    assert set(m.by_data_path) <= {"native", "needs-log-forwarding", "needs-agent", "unknown"}
     assert m.by_type["workbook metrics"] > 100
