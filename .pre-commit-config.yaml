@@ -39,3 +39,9 @@ repos:
         language: system
         files: ^\.github/workflows/
         pass_filenames: false
+      - id: gitleaks
+        name: gitleaks (secret scan of staged changes)
+        entry: gitleaks git --pre-commit --staged --redact --no-banner -c gitleaks.toml
+        language: system
+        pass_filenames: false
+        always_run: true
