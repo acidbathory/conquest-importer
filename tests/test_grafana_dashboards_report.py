@@ -42,7 +42,7 @@ def test_untrusted_text_in_the_report_is_escaped() -> None:
                 "id": 1,
                 "type": "stat",
                 "title": "<img src=x onerror=alert(1)>|\n# heading\x00",
-                "targets": [{"refId": "A", "expr": "up == 1"}],
+                "targets": [{"refId": "A", "expr": "up or on(x) up"}],
             }
         ],
         "templating": {"list": [{"name": "<b>|`", "type": "custom"}]},
