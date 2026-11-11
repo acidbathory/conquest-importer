@@ -107,11 +107,11 @@ def test_ops_agent_workload_metric_uses_the_receiver_name_and_is_unverified() ->
 
 
 def test_ops_agent_legacy_metric_keeps_the_google_name_with_a_hint() -> None:
-    m = convert("agent.googleapis.com/memory/percent_used")
+    m = convert("agent.googleapis.com/iis/request_count")  # no documented mapping: stays Google's
     assert m.data_path == "needs-ops-agent-or-otel"
-    assert "agent.memory.percent_used" in nrql_for(m)
+    assert "agent.iis.request_count" in nrql_for(m)
     text = " ".join(m.reasons)
-    assert "UNVERIFIED" in text and "system.memory.utilization" in text and "name map" in text
+    assert "UNVERIFIED" in text and "iis.request.count" in text and "name map" in text
 
 
 def test_custom_metric_needs_custom_ingest() -> None:

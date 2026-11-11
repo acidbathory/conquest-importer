@@ -9,19 +9,26 @@ data path the customer must set up first.
 Evidence (docs/research/gcp-estate-baseline.md, grafana-notifications-datapath.md section 6):
 - Managed Prometheus metrics keep their Prometheus name once sent by remote write; the Google
   type segment (gauge, counter) is not part of it. DOCS.
-- Ops Agent third-party metrics (`workload.googleapis.com/<name>`) are named after the
-  OpenTelemetry receiver's metric (`jvm.memory.used`). Taken from the Ops Agent integration pages;
-  not checked against live data: UNVERIFIED.
-- Ops Agent host metrics (`agent.googleapis.com/...`) have no documented mapping to the
-  OpenTelemetry host metrics receiver. The hint table below is our reading of both metric lists:
-  UNVERIFIED. The Google name is kept in the query and a name map fixes it.
+- Ops Agent third-party metrics (`workload.googleapis.com/<name>`) are the OpenTelemetry
+  receiver's metric name with the prefix added and nothing else renamed (ops-agent apps/*.go,
+  `AddPrefix`). A name found in the receiver's metadata or in the Ops Agent app definition is
+  VERIFIED; one not found there is UNVERIFIED (metric_names.json `workload_names`).
+- Ops Agent host metrics (`agent.googleapis.com/...`) are the OpenTelemetry host metrics receiver's
+  metrics renamed by the Ops Agent (ops-agent apps/hostmetrics.go) with utilization times 100.
+  `metric_names.json` holds each row, the scale (`factor`) and the sources; a row without a
+  source stays UNVERIFIED, keeps the Google name in the query and a name map fixes it.
 - Custom and external metrics have the name the sender gave them: UNVERIFIED.
+
+Every metric_names.json row and the sources behind it are in
+docs/research/gcp-metric-name-mapping.md.
 """
 
+import json
 import re
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from importer.core.ir import TagFilter
 
@@ -62,23 +69,20 @@ PROM_NAME = re.compile(r"[A-Za-z_:][A-Za-z0-9_:]{0,254}")
 PROM_TYPES = ("gauge", "counter", "summary", "summary:counter", "unknown", "unknown:counter")
 SAFE_DOTTED = re.compile(r"[A-Za-z0-9_.]{1,200}")
 
-# Our reading of the Ops Agent and OpenTelemetry host metrics receiver metric lists. UNVERIFIED.
-OTEL_HINTS = {
-    "agent.googleapis.com/cpu/utilization": "system.cpu.time (a rate by state)",
-    "agent.googleapis.com/cpu/load_1m": "system.cpu.load_average.1m",
-    "agent.googleapis.com/cpu/load_5m": "system.cpu.load_average.5m",
-    "agent.googleapis.com/cpu/load_15m": "system.cpu.load_average.15m",
-    "agent.googleapis.com/memory/percent_used": "system.memory.utilization",
-    "agent.googleapis.com/memory/bytes_used": "system.memory.usage",
-    "agent.googleapis.com/disk/percent_used": "system.filesystem.utilization",
-    "agent.googleapis.com/disk/bytes_used": "system.filesystem.usage",
-    "agent.googleapis.com/disk/read_bytes_count": "system.disk.io (direction=read)",
-    "agent.googleapis.com/disk/write_bytes_count": "system.disk.io (direction=write)",
-    "agent.googleapis.com/interface/traffic": "system.network.io",
-    "agent.googleapis.com/interface/errors": "system.network.errors",
-    "agent.googleapis.com/swap/percent_used": "system.paging.utilization",
-    "agent.googleapis.com/processes/count_by_state": "system.processes.count",
-}
+NAMES_PATH = Path(__file__).with_name("metric_names.json")
+VERIFIED = "metric name VERIFIED"
+UNVERIFIED = "metric name UNVERIFIED"
+
+
+def _load_names() -> tuple[dict[str, dict[str, Any]], dict[str, str]]:
+    data = json.loads(NAMES_PATH.read_text())
+    return data["agent"], data["workload_names"]
+
+
+AGENT_ROWS, WORKLOAD_NAMES = _load_names()
+# What the plan shows for each Ops Agent host metric: the OpenTelemetry name or our best reading.
+OTEL_HINTS = {google: row["name"] or row["otel_hint"] for google, row in AGENT_ROWS.items()}
+OTEL_VERIFIED = {google for google, row in AGENT_ROWS.items() if row["status"] == "VERIFIED"}
 
 
 class DataPathError(Exception):
@@ -92,6 +96,8 @@ class Arrival:
     name: str
     data_path: str
     notes: tuple[str, ...]
+    factor: float = 1.0  # the Google value is the New Relic value times this
+    labels_verified: bool = False
 
 
 def _domain(metric_type: str) -> str:
@@ -142,6 +148,34 @@ def refusal(metric_type: str) -> str | None:
     return None
 
 
+COUNTER_SUFFIXES = ("_total", "_count", "_bucket")
+COUNTER_TYPES = ("counter", "summary:counter", "unknown:counter")
+
+
+def _prometheus_type_note(name: str, kind: str) -> list[str]:
+    """New Relic infers a remote-write metric's type from its name (the protocol carries none)."""
+    counted = name.endswith(COUNTER_SUFFIXES)
+    if kind in COUNTER_TYPES and not counted:
+        return [
+            f"New Relic stores {name} as a gauge because its name does not end _total, _count or "
+            "_bucket, so a rate or change of it is wrong; add the remote write relabel rule "
+            "newrelic_metric_type = counter for this name (source: New Relic remote write "
+            "documentation, 'Override metric type mappings')"
+        ]
+    if kind == "gauge" and counted:
+        return [
+            f"New Relic stores {name} as a count because its name ends _total, _count or _bucket, "
+            "although it is a gauge; add the remote write relabel rule newrelic_metric_type = "
+            "gauge for this name"
+        ]
+    if name.endswith("_sum"):
+        return [
+            f"New Relic stores {name} as a summary type; the converted aggregation may need a "
+            "different function: UNVERIFIED"
+        ]
+    return []
+
+
 def _prometheus(path: str) -> Arrival:
     name, _, kind = path.partition("/")
     if not kind:  # external.googleapis.com/prometheus/<name>
@@ -157,32 +191,59 @@ def _prometheus(path: str) -> Arrival:
         name,
         PROMETHEUS,
         (
-            "arrives under its Prometheus name (the Google type segment is dropped); New Relic "
-            "stores names ending _total, _count or _bucket as counts (deltas), _sum as a summary "
-            "and the rest as gauges, and labels as attributes of the same name",
+            f"{VERIFIED}: it arrives under its Prometheus name (the Google type segment is "
+            "dropped; New Relic remote write and the OpenTelemetry Prometheus receiver, whose "
+            "trim_metric_suffixes is off by default, keep the name); New Relic stores names "
+            "ending _total, _count or _bucket as counts (deltas), _sum as a summary and the rest "
+            "as gauges, and labels as attributes of the same name",
+            *_prometheus_type_note(name, kind),
         ),
     )
 
 
+def _workload(path: str) -> Arrival:
+    if not SAFE_DOTTED.fullmatch(path):
+        raise DataPathError(f"{path!r} is not a usable metric name")
+    source = WORKLOAD_NAMES.get(path)
+    if source:
+        note = (
+            f"{VERIFIED}: the Ops Agent only adds the workload.googleapis.com prefix to the "
+            f"OpenTelemetry receiver's name, and {path} is defined by {source}; the exact name "
+            "New Relic stores is the same (OTLP names are not changed)"
+        )
+    else:
+        note = (
+            "third-party application metrics keep the OpenTelemetry receiver's metric name when "
+            f"the same receiver runs in an OpenTelemetry Collector ({path}), but {path} was not "
+            f"found in the receiver metadata or the Ops Agent app definitions: {UNVERIFIED}"
+        )
+    return Arrival(path, OPS_OR_OTEL, (note,))
+
+
 def _ops_agent(metric_type: str, path: str) -> Arrival:
     if metric_type.startswith("workload.googleapis.com/"):
-        if not SAFE_DOTTED.fullmatch(path):
-            raise DataPathError(f"{path!r} is not a usable metric name")
-        return Arrival(
-            path,
-            OPS_OR_OTEL,
-            (
-                "third-party application metrics keep the OpenTelemetry receiver's metric name "
-                f"when the same receiver runs in an OpenTelemetry Collector ({path}); the receiver "
-                "name and version decide the exact name: UNVERIFIED",
-            ),
-        )
+        return _workload(path)
     dotted = path.replace("/", ".")
     if not SAFE_DOTTED.fullmatch(dotted):
         raise DataPathError(f"{path!r} is not a usable metric name")
+    row = AGENT_ROWS.get(metric_type)
+    if row is not None and row["status"] == "VERIFIED":
+        extra = f"; {row['note']}" if row["note"] else ""
+        return Arrival(
+            row["name"],
+            OPS_OR_OTEL,
+            (
+                f"{VERIFIED}: the Ops Agent builds {metric_type} from the OpenTelemetry host "
+                f"metrics receiver's {row['name']} ({row['nr_type']} in New Relic, "
+                f"unit {row['unit']}); the Google value is {row['factor']:g} times the "
+                f"New Relic value{extra}",
+            ),
+            factor=float(row["factor"]),
+            labels_verified=True,
+        )
     hint = OTEL_HINTS.get(metric_type)
     where = (
-        f"the OpenTelemetry host metrics receiver's closest metric is {hint}"
+        f"the OpenTelemetry receiver's closest metric is {hint}"
         if hint
         else "no OpenTelemetry host metrics receiver metric has been matched to it"
     )
@@ -190,9 +251,9 @@ def _ops_agent(metric_type: str, path: str) -> Arrival:
         f"agent.{dotted}",
         OPS_OR_OTEL,
         (
-            "Ops Agent host metrics have no documented mapping to OpenTelemetry names, so the "
+            "this Ops Agent metric has no documented mapping to an OpenTelemetry name, so the "
             f"Google name is kept; {where}; add a name map to rename it once data arrives "
-            "(importer validate shows the names that did): UNVERIFIED",
+            f"(importer validate shows the names that did): {UNVERIFIED}",
         ),
     )
 
@@ -222,18 +283,44 @@ def arrival(metric_type: str) -> Arrival:
     raise DataPathError(reason or f"{metric_type!r} is polled by the Google integration")
 
 
-def arrival_label(key: str) -> str:
-    """A label attribute as a sender writes it: plain, without the `gcp.` or `metric.` prefix."""
+def arrival_label(key: str, metric_type: str = "") -> str:
+    """A label attribute as a sender writes it: plain, without the `gcp.` or `metric.` prefix,
+    and renamed where the Ops Agent renames it (cpu_state is state in OpenTelemetry)."""
     for prefix in ("gcp.", "metric."):
         if key.startswith(prefix):
-            return key.removeprefix(prefix).replace("projectId", "project_id")
+            key = key.removeprefix(prefix).replace("projectId", "project_id")
+            break
+    row = AGENT_ROWS.get(metric_type)
+    if row is not None and row["status"] == "VERIFIED":
+        return str(row["labels"].get(key, key))
     return key
 
 
 def relabel(metric_type: str, scope: list[TagFilter]) -> list[TagFilter]:
     if is_polled(metric_type):
         return scope
-    return [t.model_copy(update={"key": arrival_label(t.key)}) for t in scope]
+    row = AGENT_ROWS.get(metric_type)
+    verified = row is not None and row["status"] == "VERIFIED"
+    out: list[TagFilter] = []
+    for t in scope:
+        plain = arrival_label(t.key)
+        if verified and any(
+            plain == d["key"] and t.value == d["value"] and not t.negate and not t.wildcard
+            for d in row["drop"]  # type: ignore[index]
+        ):
+            continue  # a filter with no equivalent in OpenTelemetry (the row's note says so)
+        out.append(t.model_copy(update={"key": arrival_label(t.key, metric_type)}))
+    if verified:
+        out += [TagFilter(key=a["key"], value=a["value"]) for a in row["add"]]  # type: ignore[index]
+    return out
+
+
+def value_factor(metric_type: str) -> float:
+    """How many times larger the Google value is than the New Relic value (1 when the same)."""
+    row = AGENT_ROWS.get(metric_type)
+    if row is None or row["status"] != "VERIFIED":
+        return 1.0
+    return float(row["factor"])
 
 
 LABEL_NOTE = (

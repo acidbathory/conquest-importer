@@ -174,8 +174,9 @@ def _hint_rows(metrics: set[str]) -> list[str]:
     rows = []
     for google, hint in sorted(dp.OTEL_HINTS.items()):
         short = "agent." + google.split("/", 1)[1].replace("/", ".")
-        if short in metrics:
-            rows.append(f"| {md_cell(short)} | {md_cell(hint, 100)} | UNVERIFIED |")
+        if short in metrics or hint in metrics:
+            status = "VERIFIED" if google in dp.OTEL_VERIFIED else "UNVERIFIED"
+            rows.append(f"| {md_cell(short)} | {md_cell(hint, 100)} | {status} |")
     return rows
 
 

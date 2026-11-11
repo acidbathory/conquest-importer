@@ -423,7 +423,7 @@ def metric_series(
                 "a percentile of a distribution metric is not expressible once the metric is "
                 "sent by Prometheus, the Ops Agent or a custom route",
             )
-        group_by = [datapath.arrival_label(g) for g in group_by]
+        group_by = [datapath.arrival_label(g, metric_type) for g in group_by]
     name = nr_metric_name(metric_type)
     if aligner.startswith("ALIGN_PERCENTILE_"):
         name += "." + "p" + aligner.rsplit("_", 1)[1]
@@ -435,6 +435,8 @@ def metric_series(
     if counter:
         period, scale, note = _counter_window(aligner, period, chart=chart)
         notes.append(note)
+    if not datapath.is_polled(metric_type):
+        scale /= datapath.value_factor(metric_type)  # Google's percent is New Relic's ratio
     notes += _name_notes(
         name, aligner, uses_labels=bool(scope or group_by), metric_type=metric_type
     )
@@ -600,9 +602,10 @@ def _name_notes(
 ) -> list[str]:
     """Say what is and is not confirmed about the New Relic name and attributes."""
     if metric_type and not datapath.is_polled(metric_type):
+        arrived = datapath.arrival(metric_type)
         return [
-            *datapath.arrival(metric_type).notes,
-            *([datapath.LABEL_NOTE] if uses_labels else []),
+            *arrived.notes,
+            *([datapath.LABEL_NOTE] if uses_labels and not arrived.labels_verified else []),
         ]
     notes: list[str] = []
     base = name.rsplit(".", 1)[0] if aligner.startswith("ALIGN_PERCENTILE_") else name
@@ -650,7 +653,7 @@ def _absence_condition(body: dict[str, object]) -> tuple[HeartbeatSignal, int, i
     name = nr_metric_name(metric_type)
     group_by, notes = _group_labels(agg)
     if not datapath.is_polled(metric_type):
-        group_by = [datapath.arrival_label(g) for g in group_by]
+        group_by = [datapath.arrival_label(g, metric_type) for g in group_by]
     notes.append(ABSENCE_NOTE)
     notes += _absence_trigger(body, agg)
     reducer = str(agg.get("crossSeriesReducer", "REDUCE_NONE"))
@@ -794,7 +797,7 @@ def _convert(policy: GcpAlertPolicy, cond: GcpCondition, name: str) -> IRMonitor
                 occurrences=Occurrences.ALL,
                 metric=metric,
             )
-            value = float(str(body.get("thresholdValue", 0))) * scale
+            value = round(float(str(body.get("thresholdValue", 0))) * scale, 9)
             thresholds = [Threshold(severity=severity, operator=operator, value=value)]
     except Fail as fail:
         prefix = ABSENCE_PREFIX if cond.kind == ABSENCE_KIND else ""

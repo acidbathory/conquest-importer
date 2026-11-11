@@ -40,6 +40,7 @@ from importer.core.ir import Confidence
 from importer.core.scoreboard import widget_class
 from importer.sources.gcp.dashboard_models import GcpDashboard
 from importer.sources.gcp.dashboards import LAYOUTS, translate_dashboard
+from importer.sources.gcp.datapath import UNVERIFIED, VERIFIED
 from importer.sources.gcp.extract import _channel_summary, _uptime_summary
 from importer.sources.gcp.models import GcpAlertPolicy
 from importer.sources.gcp.translate import NAMING_NOTE, translate_policy
@@ -59,6 +60,24 @@ QUERY_FAMILIES = {
     "conditionSql": "sql query",
     "conditionMatchedLog": "log filter",
 }
+
+
+def name_status(data_path: str, reasons: list[str]) -> str:
+    """For a converted item on a metric New Relic does not poll: is the name it queries sourced?
+
+    `verified` when a reason carries the VERIFIED mark and none carries the UNVERIFIED one;
+    only the three metric routes have a status (polled metrics, log forwarding, unknown routes
+    and items that are not converted have none)."""
+    if data_path not in (
+        "needs-ops-agent-or-otel",
+        "needs-prometheus-remote-write",
+        "needs-custom-ingest",
+    ):
+        return ""
+    text = " ".join(reasons)
+    if VERIFIED in text and UNVERIFIED not in text:
+        return "verified"
+    return "unverified"
 
 
 def metric_family(text: str) -> str:
@@ -259,6 +278,9 @@ def measure_conditions(corpus: Corpus) -> list[dict[str, Any]]:
                     "shape": shape,
                     "family": QUERY_FAMILIES.get(cond.kind) or metric_family(text),
                     "data_path": (monitor.data_path or "native") if converted else "",
+                    "name_status": name_status(
+                        (monitor.data_path or "native") if converted else "", reasons
+                    ),
                     "verdict": "converted" if converted else monitor.confidence.value,
                     "code": "converted" if converted else primary_code(reasons),
                     "name_confirmed": converted
@@ -299,6 +321,10 @@ def measure_widgets(corpus: Corpus) -> list[dict[str, Any]]:
                     "structural": structural,
                     "family": metric_family(text),
                     "data_path": (result.data_path or "native") if verdict == "converted" else "",
+                    "name_status": name_status(
+                        (result.data_path or "native") if verdict == "converted" else "",
+                        result.reasons,
+                    ),
                     "verdict": verdict,
                     "code": primary_code(result.reasons)
                     if verdict == "placeholder"
@@ -525,6 +551,15 @@ def by_data_path(rows: list[dict[str, Any]]) -> dict[str, int]:
     return dict(sorted(Counter(r["data_path"] for r in rows if r["data_path"]).items()))
 
 
+def by_name_status(rows: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    """Converted items on non-polled metrics: per data path, how many query a sourced name."""
+    out: dict[str, Counter[str]] = {}
+    for r in rows:
+        if r["name_status"]:
+            out.setdefault(r["data_path"], Counter())[r["name_status"]] += 1
+    return {path: dict(sorted(c.items())) for path, c in sorted(out.items())}
+
+
 def data_path_known(counts: dict[str, int]) -> int:
     """Converted items whose route to New Relic is known: every class except `unknown`."""
     return sum(n for path, n in counts.items() if path != "unknown")
@@ -559,6 +594,7 @@ def summarise(corpus: Corpus, *, experiments: bool = True) -> dict[str, Any]:
             "converted_pct": percent(converted, total),
             "converted_with_confirmed_names": confirmed,
             "by_data_path": by_data_path(conditions),
+            "by_name_status": by_name_status(conditions),
             "converted_data_path_known": data_path_known(by_data_path(conditions)),
             "manual": total - converted,
             "by_shape": _tally(conditions, "shape"),
@@ -576,6 +612,7 @@ def summarise(corpus: Corpus, *, experiments: bool = True) -> dict[str, Any]:
             "data_converted": data_conv,
             "data_pct": percent(data_conv, len(data)),
             "by_data_path": by_data_path(data),
+            "by_name_status": by_name_status(data),
             "converted_data_path_known": data_path_known(by_data_path(data)),
             "manual": len(data) - data_conv,
             "partially_converted": sum(w["partial"] for w in widgets),
@@ -607,6 +644,7 @@ def render(summary: dict[str, Any]) -> str:
         "",
         f"conditions: converted {c['converted']}, data path known {c['converted_data_path_known']}, "
         f"manual {c['manual']}; by data path {c['by_data_path']}",
+        f"names on non-polled metrics, conditions: {c['by_name_status']}; data widgets: {w['by_name_status']}",
         f"data widgets: converted {w['data_converted']}, data path known {w['converted_data_path_known']}, "
         f"manual (placeholders) {w['manual']}; by data path {w['by_data_path']}",
         "",
