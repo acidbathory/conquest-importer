@@ -1,0 +1,28 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_INTERPOLATE"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"compute.googleapis.com/instance/uptime\"",
+    "thresholdValue": 0.8,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Interpolate"
+  }
+ ],
+ "displayName": "Interpolated gauge",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

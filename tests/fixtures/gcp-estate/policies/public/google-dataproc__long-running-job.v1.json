@@ -1,0 +1,25 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "3600s",
+    "evaluationInterval": "30s",
+    "query": "sum by (job_id, state) (\n  {\"dataproc.googleapis.com/job/state\", monitored_resource=\"cloud_dataproc_job\", state=\"RUNNING\"}\n) > 0"
+   },
+   "displayName": "Dataproc Long Running Job - Job in RUNNING state"
+  }
+ ],
+ "displayName": "Dataproc Long Running Job - Job in RUNNING state",
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

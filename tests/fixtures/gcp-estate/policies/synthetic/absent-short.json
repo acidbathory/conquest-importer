@@ -1,0 +1,16 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionAbsent": {
+    "duration": "30s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"compute.googleapis.com/instance/uptime\""
+   },
+   "displayName": "30s"
+  }
+ ],
+ "displayName": "Absent 30s",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

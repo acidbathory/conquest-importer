@@ -1,0 +1,46 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_SUM",
+      "groupByFields": [
+       "resource.label.url_map_name"
+      ],
+      "perSeriesAligner": "ALIGN_RATE"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "denominatorAggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_SUM",
+      "groupByFields": [
+       "resource.label.url_map_name"
+      ],
+      "perSeriesAligner": "ALIGN_RATE"
+     }
+    ],
+    "denominatorFilter": "resource.type = \"https_lb_rule\" AND metric.type = \"loadbalancing.googleapis.com/https/request_count\"",
+    "duration": "300s",
+    "filter": "resource.type = \"https_lb_rule\" AND metric.type = \"loadbalancing.googleapis.com/https/request_count\" AND metric.label.response_code_class = 500",
+    "thresholdValue": 0.05,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "5xx share"
+  }
+ ],
+ "displayName": "Load balancer 5xx ratio",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1002",
+  "projects/example-project/notificationChannels/1010"
+ ],
+ "severity": "CRITICAL",
+ "userLabels": {}
+}

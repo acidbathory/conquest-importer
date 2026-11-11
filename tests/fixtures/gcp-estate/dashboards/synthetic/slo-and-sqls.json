@@ -1,0 +1,87 @@
+{
+ "displayName": "SLO and SQL",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "SLO",
+     "xyChart": {
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "filter": "select_slo_health(\"projects/example-project/services/checkout/serviceLevelObjectives/availability-99-9\")"
+         }
+        }
+       }
+      ]
+     }
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 0
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "SQL chart",
+     "xyChart": {
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "timeSeriesQuery": {
+         "opsAnalyticsQuery": {
+          "sql": "SELECT 1"
+         }
+        }
+       }
+      ]
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 0
+   },
+   {
+    "height": 16,
+    "widget": {
+     "errorReportingPanel": {
+      "projectNames": [
+       "projects/example-project"
+      ],
+      "services": [
+       "checkout"
+      ]
+     },
+     "title": "Errors"
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "singleViewGroup": {},
+     "title": "Single view"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "blank": {},
+     "title": "Blank"
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 32
+   }
+  ]
+ }
+}

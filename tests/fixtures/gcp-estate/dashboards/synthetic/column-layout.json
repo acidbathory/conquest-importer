@@ -1,0 +1,91 @@
+{
+ "columnLayout": {
+  "columns": [
+   {
+    "weight": 2,
+    "widgets": [
+     {
+      "title": "CPU",
+      "xyChart": {
+       "chartOptions": {
+        "mode": "COLOR"
+       },
+       "dataSets": [
+        {
+         "plotType": "LINE",
+         "timeSeriesQuery": {
+          "timeSeriesFilter": {
+           "aggregation": {
+            "alignmentPeriod": "60s",
+            "crossSeriesReducer": "REDUCE_NONE",
+            "perSeriesAligner": "ALIGN_MEAN"
+           },
+           "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\""
+          }
+         }
+        }
+       ],
+       "yAxis": {
+        "scale": "LINEAR"
+       }
+      }
+     },
+     {
+      "title": "Net",
+      "xyChart": {
+       "chartOptions": {
+        "mode": "COLOR"
+       },
+       "dataSets": [
+        {
+         "plotType": "LINE",
+         "timeSeriesQuery": {
+          "timeSeriesFilter": {
+           "aggregation": {
+            "alignmentPeriod": "60s",
+            "crossSeriesReducer": "REDUCE_NONE",
+            "perSeriesAligner": "ALIGN_RATE"
+           },
+           "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/network/sent_bytes_count\""
+          }
+         }
+        }
+       ],
+       "yAxis": {
+        "scale": "LINEAR"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "weight": 1,
+    "widgets": [
+     {
+      "scorecard": {
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_MEAN",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\""
+        }
+       }
+      },
+      "title": "CPU now"
+     },
+     {
+      "text": {
+       "content": "Contact the platform team.",
+       "format": "RAW"
+      },
+      "title": "Help"
+     }
+    ]
+   }
+  ]
+ },
+ "displayName": "Column layout"
+}

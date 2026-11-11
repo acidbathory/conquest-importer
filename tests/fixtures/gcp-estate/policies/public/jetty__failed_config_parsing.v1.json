@@ -1,0 +1,25 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationRateLimit": {
+   "period": "3600s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMatchedLog": {
+    "filter": " (jsonPayload.message =~ \".*WARN  : Unknown Arguments detected.  Consider using --dry-run or --exec\" OR jsonPayload.message =~ \"Argument\\:.*\\(interpreted as a JVM argument\\, from \\<command-line\\>\\)\")"
+   },
+   "displayName": "Jetty - Failed Config Parsing"
+  }
+ ],
+ "displayName": "Jetty - Failed Config Parsing",
+ "documentation": {
+  "content": "This Alert identifies if a Jetty server is configured with invalid arguments.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

@@ -1,0 +1,680 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "cluster",
+   "stringValue": "",
+   "valueType": "STRING"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "location",
+   "stringValue": "",
+   "valueType": "STRING"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "namespace",
+   "stringValue": "",
+   "valueType": "STRING"
+  },
+  {
+   "filterType": "METRIC_LABEL",
+   "labelKey": "ModelName",
+   "stringValue": "",
+   "valueType": "STRING"
+  }
+ ],
+ "displayName": "TorchServe Prometheus Overview",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "Requests by response code",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "2xx",
+        "minAlignmentPeriod": "60s",
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"prometheus.googleapis.com/Requests2XX/counter\" resource.type=\"prometheus_target\""
+         }
+        }
+       },
+       {
+        "legendTemplate": "4xx",
+        "minAlignmentPeriod": "60s",
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"prometheus.googleapis.com/Requests4XX/counter\" resource.type=\"prometheus_target\""
+         }
+        }
+       },
+       {
+        "legendTemplate": "5xx",
+        "minAlignmentPeriod": "60s",
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"prometheus.googleapis.com/Requests5XX/counter\" resource.type=\"prometheus_target\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 69
+   },
+   {
+    "height": 4,
+    "widget": {
+     "sectionHeader": {
+      "dividerBelow": false,
+      "subtitle": "Inspect the rate at which the model server is handling requests and processing tokens."
+     },
+     "title": "Throughput"
+    },
+    "width": 48,
+    "yPos": 9
+   },
+   {
+    "height": 4,
+    "widget": {
+     "sectionHeader": {
+      "dividerBelow": false,
+      "subtitle": "Inspect the CPU, Memory and GPU utilization of the model server."
+     },
+     "title": "Resource Utilization"
+    },
+    "width": 48,
+    "yPos": 85
+   },
+   {
+    "height": 4,
+    "widget": {
+     "sectionHeader": {
+      "dividerBelow": false,
+      "subtitle": "Inspect the processing time taken for each request."
+     },
+     "title": "Latency"
+    },
+    "width": 48,
+    "yPos": 29
+   },
+   {
+    "height": 4,
+    "widget": {
+     "sectionHeader": {
+      "dividerBelow": false,
+      "subtitle": "Inspect what % of inference requests resulted in errors."
+     },
+     "title": "Errors"
+    },
+    "width": 48,
+    "yPos": 65
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Total inference rate",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"prometheus.googleapis.com/ts_inference_requests_total/counter\" resource.type=\"prometheus_target\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 13
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Queue time by model",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum (avg_over_time(QueueTime[${__interval}]))",
+         "unitOverride": "ms"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 13
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Inference latency by model",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum by (model_version,model_name)(rate(ts_inference_latency_microseconds[${__interval}]))",
+         "unitOverride": "us"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 33
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Backend prediction time",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum(avg_over_time(PredictionTime[${__interval}]))",
+         "unitOverride": "ms"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 33
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Time spent in backend handler",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum(avg_over_time(HandlerTime[${__interval}]))",
+         "unitOverride": "ms"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 49
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "4xx and 5xx error %",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "(sum(rate(Requests4XX[${__interval}])) or vector(0))\n/\n(sum(rate(Requests2XX[${__interval}])) or vector(0)\n+ sum(rate(Requests4XX[${__interval}])) or vector(0)\n+ sum(rate(Requests5XX[${__interval}])) or vector(0))",
+         "unitOverride": "%"
+        }
+       },
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "(sum(rate(Requests5XX[${__interval}])) or vector(0))\n/\n(sum(rate(Requests2XX[${__interval}])) or vector(0)\n+ sum(rate(Requests4XX[${__interval}])) or vector(0)\n+ sum(rate(Requests5XX[${__interval}])) or vector(0))",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 69
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "CPU utilization",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "avg_over_time(CPUUtilization[${__interval}])",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 89
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "GPU utilization",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "avg_over_time(GPUUtilization[${__interval}])",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 105
+   },
+   {
+    "height": 16,
+    "widget": {
+     "singleViewGroup": {
+      "displayType": "DROPDOWN"
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 105
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "GPU memory utilization",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "avg_over_time(GPUMemoryUtilization[${__interval}])",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 105
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "GPU memory used",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "avg_over_time(GPUMemoryUsed[${__interval}])",
+         "unitOverride": "MBy"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 105
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Disk available vs used",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum(avg_over_time(DiskAvailable[${__interval}]))",
+         "unitOverride": "GBy"
+        }
+       },
+       {
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum(avg_over_time(DiskUsage[${__interval}]))",
+         "unitOverride": "GBy"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 121
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Disk utilization",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "avg_over_time(DiskUtilization[${__interval}])",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 121
+   },
+   {
+    "height": 9,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "timeSeriesFilter": {
+        "aggregation": {
+         "alignmentPeriod": "60s",
+         "crossSeriesReducer": "REDUCE_SUM",
+         "groupByFields": [],
+         "perSeriesAligner": "ALIGN_RATE"
+        },
+        "filter": "metric.type=\"prometheus.googleapis.com/ts_inference_requests_total/counter\" resource.type=\"prometheus_target\""
+       }
+      }
+     },
+     "title": "Inference rate"
+    },
+    "width": 9,
+    "xPos": 30
+   },
+   {
+    "height": 9,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(rate(ts_inference_latency_microseconds[${__interval}]))",
+       "unitOverride": "us"
+      }
+     },
+     "title": "Inference latency"
+    },
+    "width": 9,
+    "xPos": 39
+   },
+   {
+    "height": 9,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "((sum(rate(Requests4XX[${__interval}])) or vector(0))\n+\n(sum(rate(Requests5XX[${__interval}])) or vector(0)))\n/\n(sum(rate(Requests2XX[${__interval}])) or vector(0)\n+ sum(rate(Requests4XX[${__interval}])) or vector(0)\n+ sum(rate(Requests5XX[${__interval}])) or vector(0))",
+       "unitOverride": "%"
+      }
+     },
+     "title": "Error rate"
+    },
+    "width": 9,
+    "xPos": 21
+   },
+   {
+    "height": 9,
+    "widget": {
+     "text": {
+      "content": "Use the filter dropdowns above to drill down to a single cluster / location / namespace / model. Some of these charts (e.g. p50 latency) may not show meaningful values when aggregated over multiple models.\n\nFor more information about the metrics used here, see [TorchServe metrics](https://pytorch.org/serve/metrics.html#default-metrics). For information on setting up TorchServe on your GKE cluster, see [Serve scalable LLMs on GKE with TorchServe](https://cloud.google.com/kubernetes-engine/docs/tutorials/scalable-ml-models-torchserve).",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#E7EFFE",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     }
+    },
+    "width": 21
+   },
+   {
+    "height": 16,
+    "widget": {
+     "singleViewGroup": {
+      "displayType": "DROPDOWN"
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 89
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Memory Utilization",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum(avg_over_time(MemoryUtilization[${__interval}]))",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 89
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Memory available vs used",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum(avg_over_time(MemoryUsed[${__interval}]))",
+         "unitOverride": "MBy"
+        }
+       },
+       {
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum(avg_over_time(MemoryAvailable[${__interval}]))",
+         "unitOverride": "MBy"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 89
+   }
+  ]
+ }
+}

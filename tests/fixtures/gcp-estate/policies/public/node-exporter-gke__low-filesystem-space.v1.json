@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "300s",
+    "evaluationInterval": "60s",
+    "query": "(\n  {\"node_filesystem_avail_bytes\"}\n  /\n  {\"node_filesystem_size_bytes\"}\n) < 0.1"
+   },
+   "displayName": "Filesystem Space Available < 10%"
+  }
+ ],
+ "displayName": "Node Exporter - Prometheus - Low Filesystem Space",
+ "documentation": {
+  "content": "This alert triggers when the amount of space for the affected filesystem is low. When filesystem space is low, GKE may be unable to assign any more pods to the node.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

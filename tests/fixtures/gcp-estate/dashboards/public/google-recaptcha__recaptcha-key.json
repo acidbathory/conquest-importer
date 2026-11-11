@@ -1,0 +1,431 @@
+{
+ "dashboardFilters": [],
+ "displayName": "reCAPTCHA Enterprise",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "timeSeriesTable": {
+      "columnSettings": [],
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "minAlignmentPeriod": "60s",
+        "secondary": false,
+        "tableTemplate": "",
+        "timeSeriesQuery": {
+         "outputFullDuration": true,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_PERCENTILE_50",
+           "groupByFields": [
+            "resource.label.\"key_id\"",
+            "resource.label.\"location\"",
+            "resource.label.\"resource_container\""
+           ],
+           "perSeriesAligner": "ALIGN_DELTA"
+          },
+          "filter": "metric.type=\"recaptchaenterprise.googleapis.com/assessments\" resource.type=\"recaptchaenterprise.googleapis.com/Key\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "displayColumnType": false,
+      "metricVisualization": "BAR",
+      "opsAnalyticsSettings": {
+       "maxRows": "0",
+       "pageSize": "0",
+       "showFilterBar": false
+      }
+     },
+     "title": "reCAPTCHA Keys"
+    },
+    "width": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Create Assessment Latencies",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_PERCENTILE_50",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_DELTA"
+          },
+          "filter": "(resource.type=\"consumed_api\"  AND (resource.labels.method=\"google.cloud.recaptchaenterprise.v1.RecaptchaEnterpriseService.CreateAssessment\" OR resource.labels.method=\"google.cloud.recaptchaenterprise.v1beta1.RecaptchaEnterpriseServiceV1Beta1.CreateAssessment\")) AND metric.type=\"serviceruntime.googleapis.com/api/request_latencies\""
+         },
+         "unitOverride": ""
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_PERCENTILE_95",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_DELTA"
+          },
+          "filter": "(resource.type=\"consumed_api\"  AND (resource.labels.method=\"google.cloud.recaptchaenterprise.v1.RecaptchaEnterpriseService.CreateAssessment\" OR resource.labels.method=\"google.cloud.recaptchaenterprise.v1beta1.RecaptchaEnterpriseServiceV1Beta1.CreateAssessment\")) AND metric.type=\"serviceruntime.googleapis.com/api/request_latencies\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Assessments per Response",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "metric.label.\"response_code_class\""
+           ],
+           "perSeriesAligner": "ALIGN_SUM"
+          },
+          "filter": "(resource.type=\"consumed_api\"  AND (resource.labels.method=\"google.cloud.recaptchaenterprise.v1.RecaptchaEnterpriseService.CreateAssessment\" OR resource.labels.method=\"google.cloud.recaptchaenterprise.v1beta1.RecaptchaEnterpriseServiceV1Beta1.CreateAssessment\")) AND metric.type=\"serviceruntime.googleapis.com/api/request_count\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Executes per Risk Level",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "prometheusQuery": "label_replace(\n  sum(rate(recaptchaenterprise_googleapis_com:executes_bucket{le=\"0.2\"}[${__interval}])),\n  \"risk\", \"high\", \"\", \"\"\n)",
+         "unitOverride": "10^2.%"
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "prometheusQuery": "label_replace(\n  (sum(rate(recaptchaenterprise_googleapis_com:executes_bucket{le=\"0.8\"}[${__interval}])) - \n    sum(rate(recaptchaenterprise_googleapis_com:executes_bucket{le=\"0.2\"}[${__interval}]))),\n  \"risk\", \"medium\", \"\", \"\"\n)",
+         "unitOverride": "10^2.%"
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "prometheusQuery": "label_replace(\n  (sum(rate(recaptchaenterprise_googleapis_com:executes_bucket{le=\"+Inf\"}[${__interval}])) - \n    sum(rate(recaptchaenterprise_googleapis_com:executes_bucket{le=\"0.8\"}[${__interval}]))),  \n  \"risk\", \"low\", \"\", \"\"\n)",
+         "unitOverride": "10^2.%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Assessments per Risk Level",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "prometheusQuery": "label_replace(\n  sum(rate(recaptchaenterprise_googleapis_com:assessments_bucket{le=\"0.2\"}[${__interval}])),\n  \"risk\", \"high\", \"\", \"\"\n)",
+         "unitOverride": "10^2.%"
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "prometheusQuery": "label_replace(\n  (sum(rate(recaptchaenterprise_googleapis_com:assessments_bucket{le=\"0.8\"}[${__interval}])) - \n    sum(rate(recaptchaenterprise_googleapis_com:assessments_bucket{le=\"0.2\"}[${__interval}]))),\n  \"risk\", \"medium\", \"\", \"\"\n)",
+         "unitOverride": "10^2.%"
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "prometheusQuery": "label_replace(\n  (sum(rate(recaptchaenterprise_googleapis_com:assessments_bucket{le=\"+Inf\"}[${__interval}])) - \n    sum(rate(recaptchaenterprise_googleapis_com:assessments_bucket{le=\"0.8\"}[${__interval}]))),  \n  \"risk\", \"low\", \"\", \"\"\n)",
+         "unitOverride": "10^2.%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Assessments per Action",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"action\""
+           ],
+           "perSeriesAligner": "ALIGN_SUM"
+          },
+          "filter": "(resource.type=\"consumed_api\"  AND (resource.labels.method=\"google.cloud.recaptchaenterprise.v1.RecaptchaEnterpriseService.CreateAssessment\" OR resource.labels.method=\"google.cloud.recaptchaenterprise.v1beta1.RecaptchaEnterpriseServiceV1Beta1.CreateAssessment\")) AND metric.type=\"serviceruntime.googleapis.com/api/request_count\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Execute Score Distribution",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "HEATMAP",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_SUM"
+          },
+          "filter": "metric.type=\"recaptchaenterprise.googleapis.com/executes\" resource.type=\"recaptchaenterprise.googleapis.com/Key\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Assessment Score Distribution",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "HEATMAP",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_SUM"
+          },
+          "filter": "metric.type=\"recaptchaenterprise.googleapis.com/assessments\" resource.type=\"recaptchaenterprise.googleapis.com/Key\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 48
+   }
+  ]
+ }
+}

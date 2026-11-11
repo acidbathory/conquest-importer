@@ -1,0 +1,28 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "3600s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_LT",
+    "duration": "3600s",
+    "filter": "resource.type = \"gcs_bucket\" AND metric.type = \"storage.googleapis.com/storage/total_bytes\"",
+    "thresholdValue": 1000000.0,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Total bytes"
+  }
+ ],
+ "displayName": "Bucket bytes dropped below floor",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

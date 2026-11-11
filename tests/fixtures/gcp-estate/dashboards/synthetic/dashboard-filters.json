@@ -1,0 +1,72 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "zone",
+   "stringValue": "us-central1-a",
+   "templateVariable": "zone"
+  }
+ ],
+ "displayName": "Dashboard with filters",
+ "labels": {
+  "env": "prod"
+ },
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "CPU",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_NONE",
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 0
+   },
+   {
+    "height": 16,
+    "widget": {
+     "scorecard": {
+      "timeSeriesQuery": {
+       "timeSeriesFilter": {
+        "aggregation": {
+         "alignmentPeriod": "60s",
+         "crossSeriesReducer": "REDUCE_MEAN",
+         "perSeriesAligner": "ALIGN_MEAN"
+        },
+        "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\""
+       }
+      }
+     },
+     "title": "CPU"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 0
+   }
+  ]
+ }
+}

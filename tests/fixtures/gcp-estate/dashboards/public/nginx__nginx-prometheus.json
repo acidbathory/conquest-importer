@@ -1,0 +1,407 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "cluster",
+   "templateVariable": "Cluster"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "location",
+   "templateVariable": "Location"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "namespace",
+   "templateVariable": "Namespace"
+  }
+ ],
+ "displayName": "NGINX Prometheus Overview",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 12,
+    "widget": {
+     "title": "HTTP Requests",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(nginx_http_requests_total{${Cluster},${Location},${Namespace}}[${__interval}])",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 48,
+    "yPos": 12
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Active Connections",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "nginx_connections_active{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 28
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Connections Waiting",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "nginx_connections_waiting{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 28
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Accepted Connections",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "nginx_connections_accepted{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 36
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Reading Connections",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "nginx_connections_reading{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 44
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Connections Writing",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "nginx_connections_writing{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 44
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#FFFFFF",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "Connections"
+    },
+    "width": 48,
+    "yPos": 24
+   },
+   {
+    "height": 8,
+    "widget": {
+     "title": "Connections Dropped",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "nginx_connections_accepted{${Cluster},${Location},${Namespace}} - nginx_connections_handled{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 36
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "sparkChartView": {
+       "sparkChartType": "SPARK_LINE"
+      },
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(nginx_connections_active{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Active Connections"
+    },
+    "width": 8
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "sparkChartView": {
+       "sparkChartType": "SPARK_LINE"
+      },
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(nginx_connections_waiting{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Waiting Connections"
+    },
+    "width": 8,
+    "xPos": 40
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "sparkChartView": {
+       "sparkChartType": "SPARK_LINE"
+      },
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(nginx_connections_writing{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Writing Connections"
+    },
+    "width": 8,
+    "xPos": 24
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "sparkChartView": {
+       "sparkChartType": "SPARK_LINE"
+      },
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(nginx_connections_accepted{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Accepted Connections"
+    },
+    "width": 8,
+    "xPos": 8
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "sparkChartView": {
+       "sparkChartType": "SPARK_LINE"
+      },
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(nginx_connections_reading{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Reading Connections"
+    },
+    "width": 8,
+    "xPos": 32
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "sparkChartView": {
+       "sparkChartType": "SPARK_LINE"
+      },
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(nginx_connections_accepted{${Cluster},${Location},${Namespace}} - nginx_connections_handled{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Dropped Connections"
+    },
+    "width": 8,
+    "xPos": 16
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#FFFFFF",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "Requests"
+    },
+    "width": 48,
+    "yPos": 8
+   }
+  ]
+ }
+}

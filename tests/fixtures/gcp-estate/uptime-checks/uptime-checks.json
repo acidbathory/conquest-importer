@@ -1,0 +1,308 @@
+[
+ {
+  "displayName": "Site health",
+  "httpCheck": {
+   "path": "/health",
+   "port": 443,
+   "requestMethod": "GET",
+   "useSsl": true,
+   "validateSsl": true
+  },
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/site-health",
+  "period": "60s",
+  "selectedRegions": [
+   "USA",
+   "EUROPE",
+   "ASIA_PACIFIC"
+  ],
+  "timeout": "10s"
+ },
+ {
+  "contentMatchers": [
+   {
+    "content": "Welcome",
+    "matcher": "CONTAINS_STRING"
+   }
+  ],
+  "displayName": "Home page",
+  "httpCheck": {
+   "path": "/health",
+   "port": 443,
+   "requestMethod": "GET",
+   "useSsl": true,
+   "validateSsl": true
+  },
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/home",
+  "period": "300s",
+  "selectedRegions": [
+   "USA",
+   "EUROPE",
+   "ASIA_PACIFIC"
+  ],
+  "timeout": "10s"
+ },
+ {
+  "displayName": "API login probe",
+  "httpCheck": {
+   "authInfo": {
+    "password": "PASSWORD_PLACEHOLDER",
+    "username": "USER_PLACEHOLDER"
+   },
+   "body": "e30=",
+   "contentType": "USER_PROVIDED",
+   "customContentType": "application/json",
+   "path": "/v1/login",
+   "port": 443,
+   "requestMethod": "POST",
+   "useSsl": true
+  },
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/api-post",
+  "period": "300s",
+  "selectedRegions": [
+   "USA",
+   "EUROPE",
+   "ASIA_PACIFIC"
+  ],
+  "timeout": "10s"
+ },
+ {
+  "displayName": "Database port",
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/db-port",
+  "period": "600s",
+  "selectedRegions": [
+   "USA",
+   "EUROPE",
+   "ASIA_PACIFIC"
+  ],
+  "tcpCheck": {
+   "port": 5432
+  },
+  "timeout": "10s"
+ },
+ {
+  "displayName": "API with headers",
+  "httpCheck": {
+   "headers": {
+    "X-Probe": "HEADER_PLACEHOLDER"
+   },
+   "path": "/status",
+   "port": 443,
+   "requestMethod": "GET",
+   "useSsl": true
+  },
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/api-headers",
+  "period": "900s",
+  "selectedRegions": [
+   "USA",
+   "EUROPE",
+   "ASIA_PACIFIC"
+  ],
+  "timeout": "10s"
+ },
+ {
+  "contentMatchers": [
+   {
+    "content": "ok.*",
+    "matcher": "MATCHES_REGEX"
+   }
+  ],
+  "displayName": "Regex content match",
+  "httpCheck": {
+   "path": "/health",
+   "port": 443,
+   "requestMethod": "GET",
+   "useSsl": true,
+   "validateSsl": true
+  },
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/regex-match",
+  "period": "300s",
+  "selectedRegions": [
+   "USA",
+   "EUROPE",
+   "ASIA_PACIFIC"
+  ],
+  "timeout": "10s"
+ },
+ {
+  "displayName": "Hourly cert watch",
+  "httpCheck": {
+   "path": "/health",
+   "port": 443,
+   "requestMethod": "GET",
+   "useSsl": true,
+   "validateSsl": true
+  },
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/slow-hourly",
+  "period": "3600s",
+  "selectedRegions": [
+   "USA",
+   "EUROPE",
+   "ASIA_PACIFIC"
+  ],
+  "timeout": "10s"
+ },
+ {
+  "displayName": "Fast probe",
+  "httpCheck": {
+   "path": "/health",
+   "port": 443,
+   "requestMethod": "GET",
+   "useSsl": true,
+   "validateSsl": true
+  },
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/sub-minute",
+  "period": "30s",
+  "selectedRegions": [
+   "USA",
+   "EUROPE",
+   "ASIA_PACIFIC"
+  ],
+  "timeout": "10s"
+ },
+ {
+  "displayName": "One region",
+  "httpCheck": {
+   "path": "/health",
+   "port": 443,
+   "requestMethod": "GET",
+   "useSsl": true,
+   "validateSsl": true
+  },
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/pinned-region",
+  "period": "300s",
+  "selectedRegions": [
+   "EUROPE"
+  ],
+  "timeout": "10s"
+ },
+ {
+  "checkerType": "VPC_CHECKERS",
+  "displayName": "Private endpoint",
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/internal-ip",
+  "period": "300s",
+  "selectedRegions": [
+   "USA",
+   "EUROPE",
+   "ASIA_PACIFIC"
+  ],
+  "tcpCheck": {
+   "port": 5432
+  },
+  "timeout": "10s"
+ },
+ {
+  "displayName": "Group check",
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/group-check",
+  "period": "300s",
+  "resourceGroup": {
+   "groupId": "123",
+   "resourceType": "INSTANCE"
+  },
+  "selectedRegions": [
+   "USA",
+   "EUROPE",
+   "ASIA_PACIFIC"
+  ],
+  "timeout": "10s"
+ },
+ {
+  "displayName": "Cloud Function probe",
+  "monitoredResource": {
+   "labels": {
+    "host": "host.example.com",
+    "project_id": "example-project"
+   },
+   "type": "uptime_url"
+  },
+  "name": "projects/example-project/uptimeCheckConfigs/synthetic-monitor",
+  "period": "300s",
+  "selectedRegions": [
+   "USA",
+   "EUROPE",
+   "ASIA_PACIFIC"
+  ],
+  "syntheticMonitor": {
+   "cloudFunctionV2": {
+    "name": "projects/example-project/locations/us-central1/functions/probe"
+   }
+  },
+  "timeout": "10s"
+ }
+]

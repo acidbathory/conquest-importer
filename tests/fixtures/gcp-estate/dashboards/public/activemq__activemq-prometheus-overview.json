@@ -1,0 +1,723 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "cluster",
+   "templateVariable": "Cluster"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "location",
+   "templateVariable": "Location"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "namespace",
+   "templateVariable": "Namespace"
+  }
+ ],
+ "displayName": "ActiveMQ Prometheus Overview",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(activemq_connections{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Connections"
+    },
+    "width": 12
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(activemq_memory_usage_ratio{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Memory Usage"
+    },
+    "width": 12,
+    "xPos": 12
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(activemq_store_usage_ratio{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Store Usage"
+    },
+    "width": 12,
+    "xPos": 24
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(activemq_temp_usage_ratio{${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Temp Usage"
+    },
+    "width": 12,
+    "xPos": 36
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Total Connections",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_connections_total{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 8
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Total Consumers",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_consumer_total{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 8
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Total Producers",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_producer_total{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 8
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Memory Usage",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_memory_usage_ratio{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Store Usage",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_store_usage_ratio{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Temp Usage",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_temp_usage_ratio{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Total Messages",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_message_total{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 40
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Total Messages Enqueued",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_enqueue_total{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 40
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Total Messages Dequeued",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_dequeue_total{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 40
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#FFFFFF",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "Topic"
+    },
+    "width": 48,
+    "yPos": 56
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Topic Message Size",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_topic_max_message_size{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_topic_average_message_size{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       },
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_topic_min_message_size{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 60
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Topic Producers",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_topic_producer_count{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 60
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Topic Consumers",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_topic_consumer_count{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 60
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Topic Dispatch Count",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_topic_dispatch_count{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 76
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Topic Average Blocked Time",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_topic_average_blocked_time{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 76
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Topics Expired",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_topic_expired_count{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 76
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Topic Queue Size",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_topic_queue_size{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 92
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Topic Enqueues",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_topic_enqueue_count{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 92
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Topic Dequeues",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "activemq_topic_dequeue_count{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 92
+   }
+  ]
+ }
+}

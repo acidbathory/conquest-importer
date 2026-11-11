@@ -1,0 +1,28 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"bigquery_project\" AND metric.type = \"bigquery.googleapis.com/slots/allocated_for_project\"",
+    "thresholdValue": 1800,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Slots"
+  }
+ ],
+ "displayName": "BigQuery slots allocated",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

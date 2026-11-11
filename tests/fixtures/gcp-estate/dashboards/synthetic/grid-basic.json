@@ -1,0 +1,114 @@
+{
+ "displayName": "Grid: VM basics",
+ "gridLayout": {
+  "columns": "2",
+  "widgets": [
+   {
+    "title": "CPU",
+    "xyChart": {
+     "chartOptions": {
+      "mode": "COLOR"
+     },
+     "dataSets": [
+      {
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_MEAN",
+          "groupByFields": [
+           "resource.label.instance_id"
+          ],
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\""
+        }
+       }
+      }
+     ],
+     "yAxis": {
+      "scale": "LINEAR"
+     }
+    }
+   },
+   {
+    "scorecard": {
+     "timeSeriesQuery": {
+      "timeSeriesFilter": {
+       "aggregation": {
+        "alignmentPeriod": "60s",
+        "crossSeriesReducer": "REDUCE_MEAN",
+        "perSeriesAligner": "ALIGN_MEAN"
+       },
+       "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\""
+      }
+     }
+    },
+    "title": "Mean CPU"
+   },
+   {
+    "title": "Disk read rate",
+    "xyChart": {
+     "chartOptions": {
+      "mode": "COLOR"
+     },
+     "dataSets": [
+      {
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_SUM",
+          "perSeriesAligner": "ALIGN_RATE"
+         },
+         "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/disk/read_bytes_count\""
+        }
+       }
+      }
+     ],
+     "yAxis": {
+      "scale": "LINEAR"
+     }
+    }
+   },
+   {
+    "title": "Pub/Sub backlog",
+    "xyChart": {
+     "chartOptions": {
+      "mode": "COLOR"
+     },
+     "dataSets": [
+      {
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_SUM",
+          "groupByFields": [
+           "resource.label.subscription_id"
+          ],
+          "perSeriesAligner": "ALIGN_MAX"
+         },
+         "filter": "resource.type=\"pubsub_subscription\" metric.type=\"pubsub.googleapis.com/subscription/num_undelivered_messages\""
+        }
+       }
+      }
+     ],
+     "yAxis": {
+      "scale": "LINEAR"
+     }
+    }
+   },
+   {
+    "text": {
+     "content": "# VM basics\nSee the runbook.",
+     "format": "MARKDOWN"
+    },
+    "title": "Notes"
+   }
+  ]
+ }
+}

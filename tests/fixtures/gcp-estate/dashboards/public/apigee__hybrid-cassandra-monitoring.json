@@ -1,0 +1,266 @@
+{
+ "displayName": "Apigee Cassandra Monitoring",
+ "gridLayout": {
+  "columns": "2",
+  "widgets": [
+   {
+    "title": "Apigee Cassandra Client READ Request Rate",
+    "xyChart": {
+     "chartOptions": {
+      "mode": "COLOR"
+     },
+     "dataSets": [
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_SUM",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"apigee.googleapis.com/cassandra/clientrequest_latency\" resource.type=\"k8s_container\" metric.label.\"scope\"=\"Read\" metric.label.\"unit\"=\"OneMinuteRate\""
+        }
+       }
+      }
+     ],
+     "timeshiftDuration": "0s",
+     "yAxis": {
+      "scale": "LINEAR"
+     }
+    }
+   },
+   {
+    "title": "Apigee Cassandra Client WRITE Request Rate",
+    "xyChart": {
+     "chartOptions": {
+      "mode": "COLOR"
+     },
+     "dataSets": [
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_NONE",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"apigee.googleapis.com/cassandra/clientrequest_latency\" resource.type=\"k8s_container\" metric.label.\"scope\"=\"Write\" metric.label.\"unit\"=\"OneMinuteRate\""
+        }
+       }
+      }
+     ],
+     "timeshiftDuration": "0s",
+     "yAxis": {
+      "scale": "LINEAR"
+     }
+    }
+   },
+   {
+    "title": "Apigee Cassandra Read Request Latency",
+    "xyChart": {
+     "chartOptions": {
+      "mode": "COLOR"
+     },
+     "dataSets": [
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_PERCENTILE_99",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"apigee.googleapis.com/cassandra/clientrequest_latency\" resource.type=\"k8s_container\" metric.label.\"scope\"=\"Read\"",
+         "secondaryAggregation": {}
+        },
+        "unitOverride": "percent"
+       }
+      },
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_PERCENTILE_95",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"apigee.googleapis.com/cassandra/clientrequest_latency\" resource.type=\"k8s_container\" metric.label.\"scope\"=\"Read\"",
+         "secondaryAggregation": {}
+        },
+        "unitOverride": "percent"
+       }
+      },
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_PERCENTILE_50",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"apigee.googleapis.com/cassandra/clientrequest_latency\" resource.type=\"k8s_container\" metric.label.\"scope\"=\"Read\"",
+         "secondaryAggregation": {}
+        },
+        "unitOverride": "percent"
+       }
+      }
+     ],
+     "timeshiftDuration": "0s",
+     "yAxis": {
+      "scale": "LINEAR"
+     }
+    }
+   },
+   {
+    "title": "Apigee Cassandra Write Request Latency",
+    "xyChart": {
+     "chartOptions": {
+      "mode": "COLOR"
+     },
+     "dataSets": [
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_PERCENTILE_99",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"apigee.googleapis.com/cassandra/clientrequest_latency\" resource.type=\"k8s_container\" metric.label.\"scope\"=\"Write\"",
+         "secondaryAggregation": {}
+        },
+        "unitOverride": "percent"
+       }
+      },
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_PERCENTILE_95",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"apigee.googleapis.com/cassandra/clientrequest_latency\" resource.type=\"k8s_container\" metric.label.\"scope\"=\"Write\"",
+         "secondaryAggregation": {}
+        },
+        "unitOverride": "percent"
+       }
+      },
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_PERCENTILE_50",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"apigee.googleapis.com/cassandra/clientrequest_latency\" resource.type=\"k8s_container\" metric.label.\"scope\"=\"Write\"",
+         "secondaryAggregation": {}
+        },
+        "unitOverride": "percent"
+       }
+      }
+     ],
+     "timeshiftDuration": "0s",
+     "yAxis": {
+      "scale": "LINEAR"
+     }
+    }
+   },
+   {
+    "title": "Apigee Cassandra CPU Request Utilization",
+    "xyChart": {
+     "chartOptions": {
+      "mode": "COLOR"
+     },
+     "dataSets": [
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_SUM",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"kubernetes.io/container/cpu/request_utilization\" resource.label.\"namespace_name\"=\"apigee\" resource.type=\"k8s_container\""
+        }
+       }
+      }
+     ],
+     "timeshiftDuration": "0s",
+     "yAxis": {
+      "scale": "LINEAR"
+     }
+    }
+   },
+   {
+    "title": "Apigee Cassandra Data Volume Utilization [95/50/5 PERCENTILE]",
+    "xyChart": {
+     "chartOptions": {
+      "mode": "COLOR"
+     },
+     "dataSets": [
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_PERCENTILE_95",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"kubernetes.io/pod/volume/utilization\" resource.type=\"k8s_pod\" metric.label.\"volume_name\"=\"/dev/sda1\"",
+         "secondaryAggregation": {}
+        },
+        "unitOverride": "1"
+       }
+      },
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_PERCENTILE_05",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"kubernetes.io/pod/volume/utilization\" resource.type=\"k8s_pod\" resource.label.\"namespace_name\"=\"apigee\"",
+         "secondaryAggregation": {}
+        },
+        "unitOverride": "1"
+       }
+      },
+      {
+       "minAlignmentPeriod": "60s",
+       "plotType": "LINE",
+       "timeSeriesQuery": {
+        "timeSeriesFilter": {
+         "aggregation": {
+          "crossSeriesReducer": "REDUCE_PERCENTILE_50",
+          "perSeriesAligner": "ALIGN_MEAN"
+         },
+         "filter": "metric.type=\"kubernetes.io/pod/volume/utilization\" resource.type=\"k8s_pod\" resource.label.\"namespace_name\"=\"apigee\"",
+         "secondaryAggregation": {}
+        },
+        "unitOverride": "1"
+       }
+      }
+     ],
+     "timeshiftDuration": "0s",
+     "yAxis": {
+      "scale": "LINEAR"
+     }
+    }
+   }
+  ]
+ }
+}

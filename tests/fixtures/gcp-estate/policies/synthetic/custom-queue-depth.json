@@ -1,0 +1,30 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MAX"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"global\" AND metric.type = \"custom.googleapis.com/app/queue_depth\"",
+    "thresholdValue": 1000,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Queue"
+  }
+ ],
+ "displayName": "Queue depth",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1002"
+ ],
+ "userLabels": {}
+}

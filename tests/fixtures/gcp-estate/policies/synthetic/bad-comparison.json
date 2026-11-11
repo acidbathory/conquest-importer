@@ -1,0 +1,28 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_UNSPECIFIED",
+    "duration": "300s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"compute.googleapis.com/instance/cpu/utilization\"",
+    "thresholdValue": 0.8,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Unspec"
+  }
+ ],
+ "displayName": "Unspecified comparison",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

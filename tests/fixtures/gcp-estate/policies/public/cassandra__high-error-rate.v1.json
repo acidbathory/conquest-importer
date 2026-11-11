@@ -1,0 +1,28 @@
+{
+ "alertStrategy": {
+  "autoClose": "3600s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "0s",
+    "evaluationInterval": "60s",
+    "query": "(\n  sum by (status, operation) (\n    rate({\"workload.googleapis.com/cassandra.client.request.error.count\", monitored_resource=\"gce_instance\"}[1m])\n  )\n  /\n  sum by (status, operation) (\n    rate({\"workload.googleapis.com/cassandra.client.request.count\", monitored_resource=\"gce_instance\"}[1m])\n  )\n) > 0.1"
+   },
+   "displayName": "Error Rate higher than 10%"
+  }
+ ],
+ "displayName": "Cassandra - High Error Rate",
+ "documentation": {
+  "content": "This alert policy looks at the amount of requests made and the amount of errors received. An alert is triggered alerts if the number of exceptions exceeds 10% of the total amount of requests. Things captured in this alert could include timeouts, write exceptions, unavailable exceptions, etc. These generally require further investigation and indicate an issue with the Cassandra node.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

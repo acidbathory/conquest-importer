@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "300s",
+    "evaluationInterval": "60s",
+    "query": "(\n  {\"workload.googleapis.com/hadoop.name_node.capacity.usage\", monitored_resource=\"gce_instance\"}\n  /\n  {\"workload.googleapis.com/hadoop.name_node.capacity.limit\", monitored_resource=\"gce_instance\"}\n) > 0.80"
+   },
+   "displayName": "VM Instance - workload/hadoop.name_node.capacity.usage"
+  }
+ ],
+ "displayName": "hadoop - low available capacity",
+ "documentation": {
+  "content": "A low available capacity means that the total disk space usage across all HDFS clusters is over 80% of the capacity limit and therefore the capacity limit should be increased.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

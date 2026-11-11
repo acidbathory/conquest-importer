@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "0s",
+    "evaluationInterval": "30s",
+    "query": "sum by (tunnel_name) (\n  rate({\"vpn.googleapis.com/network/sent_bytes_count\", monitored_resource=\"vpn_gateway\"}[1m])\n  + \n  rate({\"vpn.googleapis.com/network/received_bytes_count\", monitored_resource=\"vpn_gateway\"}[1m])\n) > 187500000"
+   },
+   "displayName": "Tunnel traffic"
+  }
+ ],
+ "displayName": "High VPN tunnel bps",
+ "documentation": {
+  "content": "Alerts when the sum of ingress and egress bytes exceeds 50% of the 3-Gbps (375 MBps) limit for a given VPN tunnel.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

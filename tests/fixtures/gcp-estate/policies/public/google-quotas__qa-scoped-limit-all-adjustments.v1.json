@@ -1,0 +1,32 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationRateLimit": {
+   "period": "3600s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMatchedLog": {
+    "filter": "log_id(\"cloudaudit.googleapis.com/system_event\")\nprotoPayload.methodName=\"google.cloud.quotaadjuster.v1main.QuotaAdjusterService.AutoAdjustQuota\"\nlabels.event_state=\"SUCCEEDED\"\nlabels.service=\"${SERVICE_NAME}\"\nlabels.limit=\"${LIMIT_NAME}\"\n",
+    "labelExtractors": {
+     "current_quota_limit": "EXTRACT(protoPayload.metadata.currentQuotaLimit)",
+     "limit_name": "EXTRACT(labels.limit)",
+     "location": "EXTRACT(labels.location)",
+     "new_quota_limit": "EXTRACT(protoPayload.metadata.success_Details.newQuotaLimit)",
+     "service_name": "EXTRACT(labels.service)"
+    }
+   },
+   "displayName": "Log match condition"
+  }
+ ],
+ "displayName": "All adjustments by quota adjuster < ${SERVICE_TITLE} - ${LIMIT_DISPLAY_NAME}",
+ "documentation": {
+  "content": "Log-based alerting detected a quota adjuster change for service ${log.extracted_label.service_name} quota ${LIMIT_DISPLAY_NAME} in location ${log.extracted_label.location}, which increased the limit from ${log.extracted_label.current_quota_limit} to ${log.extracted_label.new_quota_limit}.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

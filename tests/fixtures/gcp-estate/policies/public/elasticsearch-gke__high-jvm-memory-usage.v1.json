@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "300s",
+    "evaluationInterval": "60s",
+    "query": "(\n  {\"elasticsearch_jvm_memory_used_bytes\"}\n  /\n  {\"elasticsearch_jvm_memory_max_bytes\"}\n) > 0.9"
+   },
+   "displayName": "Prometheus Target - JVM memory ratio"
+  }
+ ],
+ "displayName": "Elasticsearch - Prometheus - High JVM Memory Usage",
+ "documentation": {
+  "content": "When the ratio of heap used to max heap becomes high, then application's performance may start to degrade.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

@@ -1,0 +1,432 @@
+{
+ "dashboardFilters": [],
+ "displayName": "Oracle Database GCE Overview",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "Tablespace Usage",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "100 * (\n  sum by (global_name, tablespace_name) (workload_googleapis_com:oracle_tablespace_size{monitored_resource=\"gce_instance\", state=\"used\"}) \n  /\n  (\n    sum by (global_name, tablespace_name) (workload_googleapis_com:oracle_tablespace_size{monitored_resource=\"gce_instance\", state=\"used\"})\n    +\n    sum by (global_name, tablespace_name) (workload_googleapis_com:oracle_tablespace_size{monitored_resource=\"gce_instance\", state=\"free\"})\n  )\n)\n\n",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Response Time",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_NONE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/oracle.service.response_time\" resource.type=\"gce_instance\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Session Usage %",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "100 * (\n  sum by(global_name) (workload_googleapis_com:oracle_session_count{monitored_resource=\"gce_instance\"})\n  /\n  sum by(global_name) (workload_googleapis_com:oracle_session_limit{monitored_resource=\"gce_instance\"})\n)",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Current Logon Count",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_NONE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/oracle.logon.current\" resource.type=\"gce_instance\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Process Usage %",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "100 * (\n  sum by(global_name) (workload_googleapis_com:oracle_process_count{monitored_resource=\"gce_instance\"})\n  /\n  sum by(global_name) (workload_googleapis_com:oracle_process_limit{monitored_resource=\"gce_instance\"})\n)",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Process PGA Memory Usage",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "100 * (\n  sum by (global_name, program) (\n    workload_googleapis_com:oracle_process_pga_memory_size{monitored_resource=\"gce_instance\", state=\"used\"}\n  )\n  /\n  (\n    sum by (global_name, program) (\n      workload_googleapis_com:oracle_process_pga_memory_size{monitored_resource=\"gce_instance\", state=\"used\"}\n    )\n    +\n    sum by (global_name, program) (\n      workload_googleapis_com:oracle_process_pga_memory_size{monitored_resource=\"gce_instance\", state=\"free\"}\n    )\n  )\n)\n\n",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Physical Disk Throughput",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/oracle.disk.operation.size\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Network Throughput",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/oracle.network.data\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "VMs CPU %",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "(avg by (project_id, zone, instance_name) (\n    avg_over_time(\n      compute_googleapis_com:instance_cpu_utilization{monitored_resource=\"gce_instance\"}[${__interval}]\n    )\n    and\n    on(instance_id, project_id, zone)\n    (workload_googleapis_com:oracle_logon_count{monitored_resource=\"gce_instance\"})\n  )\n)",
+         "unitOverride": "10^2.%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 64
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "VMs Memory %",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum by (project_id, zone, instance_id, metadata_system_name) (\n  avg_over_time(\n    agent_googleapis_com:memory_percent_used{monitored_resource=\"gce_instance\", state=\"used\"}[${__interval}]\n  )\n)\nand on(project_id, zone, instance_id) (\n  workload_googleapis_com:oracle_logon_count{monitored_resource=\"gce_instance\"}\n)",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 64
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Hosts by Region",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "count by (region) (\n  label_replace(\n    sum by (project_id, zone, instance_id) (\n      count_over_time(workload_googleapis_com:oracle_logon_count{monitored_resource=\"gce_instance\"}[${__interval}])\n    ),\n    \"region\",\n    \"$1\",\n    \"zone\",\n    \"([^-]+-[^-]+)-.*\"\n  )\n)"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 64
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "logsPanel": {
+      "filter": "(\n  labels.\"logging.googleapis.com/instrumentation_source\"=\"agent.googleapis.com/oracledb_alert\"\n  OR log_id(\"oracledb_alert\")\n)\nresource.type=\"gce_instance\"",
+      "resourceNames": []
+     },
+     "title": "Alert Logs"
+    },
+    "width": 24,
+    "yPos": 80
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "logsPanel": {
+      "filter": "(\n  labels.\"logging.googleapis.com/instrumentation_source\"=\"agent.googleapis.com/oracledb_audit\"\n  OR log_id(\"oracledb_audit\")\n)\nresource.type=\"gce_instance\"",
+      "resourceNames": []
+     },
+     "title": "Audit Logs"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 80
+   }
+  ]
+ }
+}

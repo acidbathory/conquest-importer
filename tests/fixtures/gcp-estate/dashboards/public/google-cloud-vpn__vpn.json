@@ -1,0 +1,266 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "project_id"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "region"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "gateway_id"
+  }
+ ],
+ "displayName": "VPN",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "incidentList": {
+      "monitoredResources": [
+       {
+        "type": "vpn_gateway"
+       }
+      ]
+     },
+     "title": "Incidents"
+    },
+    "width": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Tunnel Status",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${metric.labels.gateway_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "metric.label.\"gateway_name\"",
+            "resource.label.\"gateway_id\"",
+            "resource.label.\"region\""
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"vpn.googleapis.com/tunnel_established\" resource.type=\"vpn_gateway\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Received Bytes",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${metric.labels.gateway_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "metric.label.\"gateway_name\"",
+            "resource.label.\"gateway_id\"",
+            "resource.label.\"region\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"vpn.googleapis.com/network/received_bytes_count\" resource.type=\"vpn_gateway\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Sent Bytes",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${metric.labels.gateway_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "metric.label.\"gateway_name\"",
+            "resource.label.\"gateway_id\"",
+            "resource.label.\"region\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"vpn.googleapis.com/network/sent_bytes_count\" resource.type=\"vpn_gateway\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Dropped Packets",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${metric.labels.gateway_name}: ${shortMetric}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "metric.label.\"gateway_name\"",
+            "resource.label.\"gateway_id\"",
+            "resource.label.\"region\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"vpn.googleapis.com/network/dropped_received_packets_count\" resource.type=\"vpn_gateway\""
+         }
+        }
+       },
+       {
+        "legendTemplate": "${metric.labels.gateway_name}: ${shortMetric}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "metric.label.\"gateway_name\"",
+            "resource.label.\"gateway_id\"",
+            "resource.label.\"region\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"vpn.googleapis.com/network/dropped_sent_packets_count\" resource.type=\"vpn_gateway\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "timeSeriesTable": {
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "timeSeriesQuery": {
+         "outputFullDuration": true,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "metric.label.\"gateway_name\"",
+            "metric.label.\"tunnel_name\"",
+            "resource.label.\"gateway_id\"",
+            "resource.label.\"project_id\"",
+            "resource.label.\"region\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"vpn.googleapis.com/network/received_bytes_count\" resource.type=\"vpn_gateway\"",
+          "pickTimeSeriesFilter": {
+           "direction": "TOP",
+           "numTimeSeries": 30,
+           "rankingMethod": "METHOD_MEAN"
+          }
+         }
+        }
+       }
+      ],
+      "displayColumnType": false,
+      "metricVisualization": "BAR"
+     },
+     "title": "Gateways"
+    },
+    "width": 24,
+    "yPos": 16
+   }
+  ]
+ }
+}

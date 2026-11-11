@@ -1,0 +1,25 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "0s",
+    "evaluationInterval": "30s",
+    "query": "avg_over_time(\n  {\"logging.googleapis.com/log_entry_count\", monitored_resource=\"gce_instance\"}[5m]\n) > 500"
+   },
+   "displayName": "VM Instance - Log entries"
+  }
+ ],
+ "displayName": "OiC Sample MQL-Based Alert Policy",
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

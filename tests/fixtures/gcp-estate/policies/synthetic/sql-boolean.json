@@ -1,0 +1,21 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionSql": {
+    "booleanTest": {
+     "column": "bad"
+    },
+    "hourly": {
+     "minuteOffset": 5
+    },
+    "query": "SELECT LOGICAL_OR(failed) AS bad FROM `example-project.jobs.runs`"
+   },
+   "displayName": "SQL bool"
+  }
+ ],
+ "displayName": "SQL boolean",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

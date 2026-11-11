@@ -1,0 +1,373 @@
+{
+ "dashboardFilters": [],
+ "displayName": "Flink GCE Jobs Overview",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "Number of Restarts",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(workload_googleapis_com:flink_job_restart_count{monitored_resource=\"gce_instance\"}[${__interval}])"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Last Checkpoint Time",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum(avg_over_time(workload_googleapis_com:flink_job_last_checkpoint_time{monitored_resource=\"gce_instance\"}[${__interval}]))"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Last Checkpoint Size",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum(avg_over_time(workload_googleapis_com:flink_job_last_checkpoint_size{monitored_resource=\"gce_instance\"}[${__interval}]))"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Checkpoints In Progress",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum(avg_over_time(workload_googleapis_com:flink_job_checkpoint_in_progress{monitored_resource=\"gce_instance\"}[${__interval}]))"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Checkpoints Completed",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(workload_googleapis_com:flink_job_checkpoint_count{checkpoint=\"completed\", monitored_resource=\"gce_instance\"}[${__interval}])\n"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Checkpoints Failed",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(workload_googleapis_com:flink_job_checkpoint_count{monitored_resource=\"gce_instance\", checkpoint=\"failed\"}[${__interval}])\n"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Task Records In",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(workload_googleapis_com:flink_task_record_count{monitored_resource=\"gce_instance\", record=\"in\"}[${__interval}])"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Task Records Out",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(workload_googleapis_com:flink_task_record_count{monitored_resource=\"gce_instance\", record=\"out\"}[${__interval}])"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Task Records Dropped",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(workload_googleapis_com:flink_task_record_count{monitored_resource=\"gce_instance\", record=\"dropped\"}[${__interval}])"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Operator Records In",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(workload_googleapis_com:flink_operator_record_count{monitored_resource=\"gce_instance\", record=\"in\"}[${__interval}])"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Operator Records Out",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(workload_googleapis_com:flink_operator_record_count{monitored_resource=\"gce_instance\", record=\"out\"}[${__interval}])"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Operator Records Dropped",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(workload_googleapis_com:flink_operator_record_count{monitored_resource=\"gce_instance\", record=\"dropped\"}[${__interval}])"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "text": {
+      "content": "[How to configure flink Monitoring](https://cloud.google.com/monitoring/agent/ops-agent/third-party/flink)\n\n[View Flink Logs](https://console.cloud.google.com/logs/query?query=logName:%22flink%22%0Aresource.type%3D%22gce_instance%22)\n\n",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "",
+       "fontSize": "FONT_SIZE_UNSPECIFIED",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "PADDING_SIZE_UNSPECIFIED",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "flink Monitoring Links"
+    },
+    "width": 16,
+    "yPos": 64
+   }
+  ]
+ }
+}

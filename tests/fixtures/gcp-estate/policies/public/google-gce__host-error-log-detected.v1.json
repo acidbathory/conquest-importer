@@ -1,0 +1,25 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationRateLimit": {
+   "period": "3600s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMatchedLog": {
+    "filter": "log_id(\"cloudaudit.googleapis.com/system_event\") AND operation.producer=\"compute.instances.hostError\""
+   },
+   "displayName": "VM Instance - Host Error Log Detected"
+  }
+ ],
+ "displayName": "VM Instance - Host Error Log Detected",
+ "documentation": {
+  "content": "This alert fires when any host error is detected on any VM instance in the project based on system_event logs, limited to notifying once per hour.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

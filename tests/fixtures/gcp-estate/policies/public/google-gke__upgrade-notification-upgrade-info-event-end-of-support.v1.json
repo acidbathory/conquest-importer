@@ -1,0 +1,31 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationRateLimit": {
+   "period": "3600s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMatchedLog": {
+    "filter": "resource.type=(\"gke_cluster\" OR \"gke_nodepool\") AND log_id(\"container.googleapis.com/notifications\") AND jsonPayload.@type=\"type.googleapis.com/google.container.v1beta1.UpgradeInfoEvent\" AND jsonPayload.eventType=\"END_OF_SUPPORT\"",
+    "labelExtractors": {
+     "currentVersion": "EXTRACT(jsonPayload.currentVersion)",
+     "description": "EXTRACT(jsonPayload.description)",
+     "extendedSupportEndTime": "EXTRACT(jsonPayload.extendedSupportEndTime)",
+     "standardSupportEndTime": "EXTRACT(jsonPayload.standardSupportEndTime)"
+    }
+   },
+   "displayName": "Log match condition"
+  }
+ ],
+ "displayName": "GKE Version Nearing End of Support",
+ "documentation": {
+  "content": "Description:\\\n${log.extracted_label.description}\n\nCurrent version:\\\n${log.extracted_label.currentVersion}\n\nFor more information on upgrade events, see the [GKE UpgradeInfoEvent documentation](https://cloud.google.com/kubernetes-engine/docs/reference/rest/v1/UpgradeInfoEvent).",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

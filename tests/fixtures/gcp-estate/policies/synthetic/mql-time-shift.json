@@ -1,0 +1,19 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMonitoringQueryLanguage": {
+    "duration": "300s",
+    "query": "fetch gce_instance::compute.googleapis.com/instance/network/received_bytes_count\n| align rate(5m) | group_by [], [sum(val())]\n| { ident ; time_shift 1w } | join | value [v: val(0) / val(1)] | condition v > 2 '1'",
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "MQL shift"
+  }
+ ],
+ "displayName": "MQL week over week",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

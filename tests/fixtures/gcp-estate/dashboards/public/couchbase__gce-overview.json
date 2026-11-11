@@ -1,0 +1,338 @@
+{
+ "dashboardFilters": [],
+ "displayName": "Couchbase - GCE Overview",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "text": {
+      "content": "",
+      "format": "RAW",
+      "style": {
+       "backgroundColor": "",
+       "fontSize": "FONT_SIZE_UNSPECIFIED",
+       "horizontalAlignment": "HORIZONTAL_ALIGNMENT_UNSPECIFIED",
+       "padding": "PADDING_SIZE_UNSPECIFIED",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "",
+       "verticalAlignment": "VERTICAL_ALIGNMENT_UNSPECIFIED"
+      }
+     },
+     "title": "Bucket Metrics"
+    },
+    "width": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Bucket Memory Usage",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum by (zone, instance_id) (avg_over_time(workload_googleapis_com:couchbase_bucket_memory_usage{monitored_resource=\"gce_instance\"}[${__interval}]))",
+         "unitOverride": "By"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 4
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "OOM Errors",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/couchbase.bucket.error.oom.count\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 4
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Operation Count",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/couchbase.bucket.operation.count\" resource.type=\"gce_instance\"",
+          "secondaryAggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          }
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 20
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "title": "Item Count",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR",
+       "showLegend": false
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "legendTemplate": "",
+        "measures": [],
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "outputFullDuration": false,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/couchbase.bucket.item.count\" resource.type=\"gce_instance\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 20
+   },
+   {
+    "height": 4,
+    "widget": {
+     "id": "",
+     "text": {
+      "content": "",
+      "format": "RAW",
+      "style": {
+       "backgroundColor": "",
+       "fontSize": "FONT_SIZE_UNSPECIFIED",
+       "horizontalAlignment": "HORIZONTAL_ALIGNMENT_UNSPECIFIED",
+       "padding": "PADDING_SIZE_UNSPECIFIED",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "",
+       "verticalAlignment": "VERTICAL_ALIGNMENT_UNSPECIFIED"
+      }
+     },
+     "title": "Host Metrics"
+    },
+    "width": 48,
+    "yPos": 36
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "VMs CPU %",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "avg by (project_id, zone, instance_id) (\n  avg_over_time(\n    agent_googleapis_com:cpu_utilization{monitored_resource=\"gce_instance\"}[${__interval}]\n  )\n  and\n  on(project_id, zone, instance_id)\n  (workload_googleapis_com:couchbase_bucket_item_count{monitored_resource=\"gce_instance\"})\n)",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 40
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "VMs Memory %",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum by (project_id, zone, instance_id, metadata_system_name) (\n  avg_over_time(\n    agent_googleapis_com:memory_percent_used{monitored_resource=\"gce_instance\", state=\"used\"}[${__interval}]\n  )\n)\nand on(project_id, zone, instance_id) (\n  workload_googleapis_com:couchbase_bucket_memory_usage{monitored_resource=\"gce_instance\"}\n)",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 40
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Hosts By Region",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "STACKED_BAR",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "avg_over_time(\n  (count by (region) (\n    label_replace(\n      sum by (project_id, zone, instance_id) (\n        workload_googleapis_com:couchbase_bucket_item_count{monitored_resource=\"gce_instance\"}\n      ),\n      \"region\", \"$1\", \"zone\", \"([^-]+-[^-]+)-[^-]+\"\n    )\n  ))[${__interval}:]\n)"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 56
+   },
+   {
+    "height": 16,
+    "widget": {
+     "id": "",
+     "text": {
+      "content": "[Configuring Couchbase Monitoring](https://cloud.google.com/monitoring/agent/ops-agent/third-party/couchbase)\n\n[View Couchbase General Logs](https://console.cloud.google.com/logs/query?query=logName:%22couchbase_general%22%0Aresource.type%3D%22gce_instance%22)\n\n[View Couchbase HTTP Access Logs](https://console.cloud.google.com/logs/query?query=logName:%22couchbase_http_access%22%0Aresource.type%3D%22gce_instance%22)\n\n[View Couchbase Cross Datacenter Logs](https://console.cloud.google.com/logs/query?query=logName:%22couchbase_goxdcr%22%0Aresource.type%3D%22gce_instance%22)",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "",
+       "fontSize": "FONT_SIZE_UNSPECIFIED",
+       "horizontalAlignment": "HORIZONTAL_ALIGNMENT_UNSPECIFIED",
+       "padding": "PADDING_SIZE_UNSPECIFIED",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "",
+       "verticalAlignment": "VERTICAL_ALIGNMENT_UNSPECIFIED"
+      }
+     },
+     "title": "Logs"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 56
+   }
+  ]
+ }
+}

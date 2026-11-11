@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "300s",
+    "evaluationInterval": "60s",
+    "query": "(\n  {\"node_memory_MemAvailable_bytes\"}\n  /\n  {\"node_memory_MemTotal_bytes\"}\n) < 0.1"
+   },
+   "displayName": "Memory Available < 10%"
+  }
+ ],
+ "displayName": "Node Exporter - Prometheus - Low Available Memory",
+ "documentation": {
+  "content": "This alert triggers when the amount of memory available is low. When memory is low, GKE may be unable to assign any more pods to the node.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

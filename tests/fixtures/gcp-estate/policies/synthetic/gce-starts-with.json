@@ -1,0 +1,28 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"compute.googleapis.com/instance/cpu/utilization\" AND metadata.system_labels.name = starts_with(\"prod-\")",
+    "thresholdValue": 0.8,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "CPU prefix"
+  }
+ ],
+ "displayName": "VM CPU by name prefix",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

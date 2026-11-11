@@ -1,0 +1,47 @@
+{
+ "combiner": "AND_WITH_MATCHING_RESOURCE",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"compute.googleapis.com/instance/cpu/utilization\"",
+    "thresholdValue": 0.8,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "CPU"
+  },
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_RATE"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"compute.googleapis.com/instance/network/sent_bytes_count\"",
+    "thresholdValue": 100000000.0,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Net"
+  }
+ ],
+ "displayName": "Both on the same VM",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

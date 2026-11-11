@@ -1,0 +1,19 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "alertRule": "InstanceDown",
+    "duration": "120s",
+    "evaluationInterval": "60s",
+    "query": "up == 0",
+    "ruleGroup": "availability"
+   },
+   "displayName": "PromQL rule"
+  }
+ ],
+ "displayName": "PromQL rule",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

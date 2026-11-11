@@ -1,0 +1,79 @@
+{
+ "displayName": "MQL charts",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "MQL CPU",
+     "xyChart": {
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "timeSeriesQuery": {
+         "timeSeriesQueryLanguage": "fetch gce_instance::compute.googleapis.com/instance/cpu/utilization | group_by 1m, [m: mean(value.utilization)] | every 1m"
+        }
+       }
+      ]
+     }
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 0
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "MQL ratio",
+     "xyChart": {
+      "dataSets": [
+       {
+        "plotType": "STACKED_AREA",
+        "timeSeriesQuery": {
+         "timeSeriesQueryLanguage": "{ fetch https_lb_rule::loadbalancing.googleapis.com/https/request_count | filter metric.response_code_class = 500 ; fetch https_lb_rule::loadbalancing.googleapis.com/https/request_count } | ratio"
+        }
+       }
+      ]
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 0
+   },
+   {
+    "height": 16,
+    "widget": {
+     "scorecard": {
+      "timeSeriesQuery": {
+       "timeSeriesQueryLanguage": "fetch gce_instance::compute.googleapis.com/instance/uptime | group_by [], [sum(val())]"
+      }
+     },
+     "title": "MQL scorecard"
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "timeSeriesTable": {
+      "dataSets": [
+       {
+        "tableTemplate": "{{instance}}",
+        "timeSeriesQuery": {
+         "timeSeriesQueryLanguage": "fetch gce_instance::compute.googleapis.com/instance/cpu/utilization | group_by [resource.instance_id], [m: max(val())]"
+        }
+       }
+      ]
+     },
+     "title": "MQL table"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   }
+  ]
+ }
+}

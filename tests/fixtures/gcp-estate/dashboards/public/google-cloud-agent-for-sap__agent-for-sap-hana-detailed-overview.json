@@ -1,0 +1,473 @@
+{
+ "dashboardFilters": [],
+ "displayName": "Agent for SAP - Detailed HANA Overview",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "title": "Instance Memory",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${metric.labels.host} peak used memory",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/sap/hanamonitoring/host/instance_memory/total_peak_used_size\""
+         }
+        }
+       },
+       {
+        "legendTemplate": "${metric.labels.host} current ${metric.labels.state} memory",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/sap/hanamonitoring/host/instance_memory/total_used_size\""
+         }
+        }
+       },
+       {
+        "legendTemplate": "${metric.labels.host} total shared allocated memory size",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/sap/hanamonitoring/host/instance_shared_memory/total_allocated_size\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Service Memory Used",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/sap/hanamonitoring/service/memory/total_used_size\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Schema Estimated Max Memory",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/sap/hanamonitoring/schema/memory/estimated_max_total_size\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Rowstore Memory Total Size",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/sap/hanamonitoring/rowstore/memory/total_size\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Schema Read Outliers",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_DELTA"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/sap/hanamonitoring/schema/read/total_count\"",
+          "pickTimeSeriesFilter": {
+           "direction": "TOP",
+           "numTimeSeries": 5,
+           "rankingMethod": "METHOD_MEAN"
+          }
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Schema Write Outliers",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_DELTA"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/sap/hanamonitoring/schema/write/total_count\"",
+          "pickTimeSeriesFilter": {
+           "direction": "TOP",
+           "numTimeSeries": 5,
+           "rankingMethod": "METHOD_MEAN"
+          }
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Schema Lat Compressed Record Count Outliers",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/sap/hanamonitoring/schema/record/last_compressed_total\"",
+          "pickTimeSeriesFilter": {
+           "direction": "TOP",
+           "numTimeSeries": 5,
+           "rankingMethod": "METHOD_MEAN"
+          }
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "System Connections",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/sap/hanamonitoring/system/connection/total\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Alerts",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"workload.googleapis.com/sap/hanamonitoring/system/alert/total\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Hosts by Region",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "count by (region) (\n  label_replace(\n    sum by (project_id, zone, instance_id) (\n      count_over_time(workload_googleapis_com:sap_hanamonitoring_system_connection_total{monitored_resource=\"gce_instance\"}[${__interval}])\n    ),\n    \"region\",\n    \"$1\",\n    \"zone\",\n    \"([^-]+-[^-]+)-.*\"\n  )\n)"
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "VM CPU %",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "100 *\navg by (project_id, zone, instance_name) (\n  avg_over_time(\n    compute_googleapis_com:instance_cpu_utilization{monitored_resource=\"gce_instance\"}[${__interval}]\n  )\n  and\n  on(instance_id, project_id, zone)\n  (\n    workload_googleapis_com:sap_hanamonitoring_system_connection_total{monitored_resource=\"gce_instance\"}\n  )\n)",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 64
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "VM Memory %",
+     "xyChart": {
+      "chartOptions": {
+       "displayHorizontal": false,
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "avg by (instance_id, project_id, zone, metadata_system_name) (\n  avg_over_time(\n    agent_googleapis_com:memory_percent_used{monitored_resource=\"gce_instance\", state=\"used\"}[${__interval}]\n  )\n  and on(instance_id, project_id, zone)\n  (workload_googleapis_com:sap_hanamonitoring_system_connection_total{monitored_resource=\"gce_instance\"})\n)",
+         "unitOverride": "%"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 64
+   }
+  ]
+ }
+}

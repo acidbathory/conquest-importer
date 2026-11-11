@@ -1,0 +1,36 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_DELTA"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "denominatorAggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_DELTA"
+     }
+    ],
+    "denominatorFilter": "resource.type = \"pubsub_subscription\" AND metric.type = \"pubsub.googleapis.com/subscription/sent_message_count\"",
+    "duration": "300s",
+    "filter": "resource.type = \"pubsub_subscription\" AND metric.type = \"pubsub.googleapis.com/subscription/dead_letter_message_count\"",
+    "thresholdValue": 0.01,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "DLQ ratio"
+  }
+ ],
+ "displayName": "Pub/Sub dead letter ratio",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

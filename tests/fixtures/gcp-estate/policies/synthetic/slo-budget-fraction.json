@@ -1,0 +1,22 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [],
+    "comparison": "COMPARISON_LT",
+    "duration": "0s",
+    "filter": "select_slo_budget_fraction(\"projects/example-project/services/checkout/serviceLevelObjectives/availability-99-9\")",
+    "thresholdValue": 0.1,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Budget"
+  }
+ ],
+ "displayName": "SLO budget low",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

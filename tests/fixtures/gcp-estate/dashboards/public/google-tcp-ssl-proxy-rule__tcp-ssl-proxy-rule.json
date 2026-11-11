@@ -1,0 +1,387 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "project_id"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "region"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "policy_name"
+  }
+ ],
+ "displayName": "TCP/SSL Proxy Rule",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 12,
+    "widget": {
+     "incidentList": {
+      "monitoredResources": [
+       {
+        "labels": {},
+        "type": "network_security_policy"
+       }
+      ],
+      "policyNames": []
+     },
+     "title": "Incidents"
+    },
+    "width": 24
+   },
+   {
+    "height": 12,
+    "widget": {
+     "timeSeriesTable": {
+      "columnSettings": [
+       {
+        "column": "Metric",
+        "visible": false
+       },
+       {
+        "column": "policy_name",
+        "visible": true
+       },
+       {
+        "column": "value",
+        "visible": false
+       }
+      ],
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "tableTemplate": "",
+        "timeSeriesQuery": {
+         "outputFullDuration": true,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"policy_name\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/request_count\" resource.type=\"network_security_policy\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "displayColumnType": false,
+      "metricVisualization": "NUMBER"
+     },
+     "title": "Load Balancers"
+    },
+    "width": 24,
+    "yPos": 12
+   },
+   {
+    "height": 12,
+    "widget": {
+     "timeSeriesTable": {
+      "columnSettings": [
+       {
+        "column": "Metric",
+        "visible": false
+       },
+       {
+        "column": "backend_target_name",
+        "visible": true
+       },
+       {
+        "column": "monitored_resource_container",
+        "visible": true
+       },
+       {
+        "column": "location",
+        "visible": true
+       },
+       {
+        "column": "value",
+        "visible": false
+       }
+      ],
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "tableTemplate": "",
+        "timeSeriesQuery": {
+         "outputFullDuration": true,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "metric.label.\"backend_target_name\"",
+            "resource.label.\"monitored_resource_container\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"networksecurity.googleapis.com/https/request_count\" resource.type=\"network_security_policy\""
+         },
+         "unitOverride": ""
+        }
+       }
+      ],
+      "displayColumnType": false,
+      "metricVisualization": "NUMBER"
+     },
+     "title": "Backends"
+    },
+    "width": 24,
+    "yPos": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Outbound Traffic",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.backend_target_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"backend_target_name\"",
+            "resource.label.\"project_id\"",
+            "resource.label.\"region\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"loadbalancing.googleapis.com/tcp_ssl_proxy/egress_bytes_count\" resource.type=\"tcp_ssl_proxy_rule\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Inbound Traffic",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.backend_target_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"backend_target_name\"",
+            "resource.label.\"project_id\"",
+            "resource.label.\"region\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"loadbalancing.googleapis.com/tcp_ssl_proxy/ingress_bytes_count\" resource.type=\"tcp_ssl_proxy_rule\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Open Connections",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.backend_target_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"backend_target_name\"",
+            "resource.label.\"project_id\"",
+            "resource.label.\"region\""
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"loadbalancing.googleapis.com/tcp_ssl_proxy/open_connections\" resource.type=\"tcp_ssl_proxy_rule\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "New Connections per second",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.backend_target_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"backend_target_name\"",
+            "resource.label.\"project_id\"",
+            "resource.label.\"region\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"loadbalancing.googleapis.com/tcp_ssl_proxy/new_connections\" resource.type=\"tcp_ssl_proxy_rule\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Closed Connections per second",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.backend_target_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"backend_target_name\"",
+            "resource.label.\"project_id\"",
+            "resource.label.\"region\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"loadbalancing.googleapis.com/tcp_ssl_proxy/closed_connections\" resource.type=\"tcp_ssl_proxy_rule\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 36
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Frontend RTT",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.backend_target_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "HEATMAP",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [],
+           "perSeriesAligner": "ALIGN_SUM"
+          },
+          "filter": "metric.type=\"loadbalancing.googleapis.com/tcp_ssl_proxy/frontend_tcp_rtt\" resource.type=\"tcp_ssl_proxy_rule\""
+         }
+        }
+       }
+      ],
+      "thresholds": [],
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 52
+   }
+  ]
+ }
+}

@@ -1,0 +1,28 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"agent.googleapis.com/memory/percent_used\" AND metric.label.state = \"used\"",
+    "thresholdValue": 90,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Agent mem"
+  }
+ ],
+ "displayName": "Agent memory used",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

@@ -1,0 +1,29 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s",
+  "notificationPrompts": [
+   "OPENED",
+   "CLOSED"
+  ]
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "0s",
+    "evaluationInterval": "60s",
+    "query": "avg_over_time({\"workload.googleapis.com/postgresql.db_size\", monitored_resource=\"gce_instance\"}[1m]) > 1e+11"
+   },
+   "displayName": "Database Size Large for Environment"
+  }
+ ],
+ "displayName": "Postgresql - High Database Size",
+ "documentation": {
+  "content": "Alert fires when the database size is growing greater than expected (this value will be subject to instance size and utilization); defaulted to 93 GB but will be subject to instance size as well as connected storage.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "notificationChannels": [],
+ "severity": "SEVERITY_UNSPECIFIED",
+ "userLabels": {}
+}

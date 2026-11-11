@@ -1,0 +1,127 @@
+{
+ "displayName": "Mixed panels",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "alertChart": {
+      "name": "projects/example-project/alertPolicies/1234567890"
+     },
+     "title": "Alerts"
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 0
+   },
+   {
+    "height": 16,
+    "widget": {
+     "logsPanel": {
+      "filter": "severity>=ERROR",
+      "resourceNames": [
+       "projects/example-project"
+      ]
+     },
+     "title": "Logs"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 0
+   },
+   {
+    "height": 16,
+    "widget": {
+     "pieChart": {
+      "chartType": "DONUT",
+      "dataSets": [
+       {
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_MEAN",
+           "groupByFields": [
+            "resource.label.zone"
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\""
+         }
+        }
+       }
+      ]
+     },
+     "title": "Pie"
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "timeSeriesTable": {
+      "dataSets": [
+       {
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "resource.type=\"gce_instance\" metric.type=\"compute.googleapis.com/instance/cpu/utilization\""
+         }
+        }
+       }
+      ]
+     },
+     "title": "Table"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "incidentList": {
+      "policyNames": [
+       "projects/example-project/alertPolicies/1234567890"
+      ]
+     },
+     "title": "Incidents"
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "sectionHeader": {
+      "dividerBelow": true,
+      "subtitle": "Compute"
+     },
+     "title": "Section"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "collapsibleGroup": {
+      "collapsed": false
+     },
+     "title": "Group"
+    },
+    "width": 24,
+    "xPos": 0,
+    "yPos": 48
+   }
+  ]
+ }
+}

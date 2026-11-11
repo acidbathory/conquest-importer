@@ -1,0 +1,537 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "cluster",
+   "stringValue": "",
+   "templateVariable": "cluster"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "location",
+   "stringValue": "",
+   "templateVariable": "location"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "namespace",
+   "stringValue": "",
+   "templateVariable": "namespace"
+  },
+  {
+   "filterType": "METRIC_LABEL",
+   "labelKey": "destination_workload",
+   "stringValue": "",
+   "templateVariable": "destination_workload"
+  }
+ ],
+ "displayName": "Istio Envoy Prometheus Overview",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#C6DAFC",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_CENTER",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "Istio Service Metrics"
+    },
+    "width": 48
+   },
+   {
+    "height": 12,
+    "widget": {
+     "title": "Requests by destination workload",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum by (destination_workload, namespace, cluster)(rate(istio_requests_total{reporter=\"destination\", ${cluster}, ${location}, ${namespace}, ${destination_workload}}[${__interval}]))\nor\nsum by (destination_workload, namespace, cluster)(rate(workload:istio_requests_total{reporter=\"destination\", ${cluster}, ${location}, ${namespace}, ${destination_workload}}[${__interval}]))",
+         "unitOverride": "1/s"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 4
+   },
+   {
+    "height": 12,
+    "widget": {
+     "title": "Requests by status code",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "sum by (response_code)(rate(istio_requests_total{reporter=\"destination\", ${cluster}, ${location}, ${namespace}, ${destination_workload}}[${__interval}]))",
+         "unitOverride": "1/s"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 4
+   },
+   {
+    "height": 12,
+    "widget": {
+     "title": "Latency by destination workload (p50)",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "histogram_quantile(\n    0.50,\n    sum by (le, destination_workload, namespace, cluster)(\n        rate(istio_request_duration_milliseconds_bucket{reporter=\"destination\", ${cluster}, ${location}, ${namespace}, ${destination_workload}}[${__interval}])))",
+         "unitOverride": "ms"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 16
+   },
+   {
+    "height": 12,
+    "widget": {
+     "title": "Latency by destination workload (p95)",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "histogram_quantile(\n    0.95,\n    sum by (le, destination_workload, namespace, cluster)(\n        rate(istio_request_duration_milliseconds_bucket{reporter=\"destination\", ${cluster}, ${location}, ${namespace}, ${destination_workload}}[${__interval}])))",
+         "unitOverride": "ms"
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#E7EFFE",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_CENTER",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "Envoy Proxy Metrics"
+    },
+    "width": 48,
+    "yPos": 28
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [
+       {
+        "color": "RED",
+        "direction": "BELOW",
+        "label": "",
+        "value": 0
+       },
+       {
+        "color": "YELLOW",
+        "direction": "BELOW",
+        "label": "",
+        "value": 0
+       }
+      ],
+      "timeSeriesQuery": {
+       "prometheusQuery": "sum(envoy_server_live{${cluster},${location},${namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Live Proxies"
+    },
+    "width": 8,
+    "yPos": 32
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "prometheusQuery": "avg(envoy_server_uptime{${cluster},${location},${namespace}})/60",
+       "unitOverride": ""
+      }
+     },
+     "title": "Average Uptime (minutes)"
+    },
+    "width": 12,
+    "xPos": 8,
+    "yPos": 32
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "prometheusQuery": "SUM(envoy_server_memory_allocated{${cluster},${location},${namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Allocated Memory"
+    },
+    "width": 8,
+    "xPos": 20,
+    "yPos": 32
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "prometheusQuery": "SUM(envoy_server_memory_heap_size{${cluster},${location},${namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Heap Size"
+    },
+    "width": 8,
+    "xPos": 28,
+    "yPos": 32
+   },
+   {
+    "height": 8,
+    "widget": {
+     "scorecard": {
+      "thresholds": [
+       {
+        "color": "YELLOW",
+        "direction": "ABOVE",
+        "label": "",
+        "value": 0
+       }
+      ],
+      "timeSeriesQuery": {
+       "prometheusQuery": "(sum(envoy_cluster_membership_healthy{${cluster},${location},${namespace}})  - sum(envoy_cluster_membership_total{${cluster},${location},${namespace}}))",
+       "unitOverride": ""
+      }
+     },
+     "title": "Unhealthy Proxies"
+    },
+    "width": 12,
+    "xPos": 36,
+    "yPos": 32
+   },
+   {
+    "height": 12,
+    "widget": {
+     "title": "Total Active Connections",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "envoy_cluster_upstream_cx_active{envoy_cluster_name=~\"\",host=~\"()\",${cluster},${location},${namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 40
+   },
+   {
+    "height": 12,
+    "widget": {
+     "title": "Total Requests Rate",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "irate(envoy_cluster_upstream_rq_total{${cluster},${location},${namespace}}[${__interval}])",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 40
+   },
+   {
+    "height": 12,
+    "widget": {
+     "title": "Allocated Memory",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "envoy_server_memory_allocated{${cluster},${location},${namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 52
+   },
+   {
+    "height": 12,
+    "widget": {
+     "title": "Upstream Network Traffic",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "irate(envoy_cluster_upstream_cx_rx_bytes_total{${cluster},${location},${namespace}}[${__interval}])",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 52
+   },
+   {
+    "height": 12,
+    "widget": {
+     "title": "CDS Update Attempts",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(envoy_cluster_manager_cds_update_attempt{${cluster},${location},${namespace}}[${__interval}])",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 64
+   },
+   {
+    "height": 12,
+    "widget": {
+     "title": "CDS Update Success",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(envoy_cluster_manager_cds_update_success{${cluster},${location},${namespace}}[${__interval}])",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 64
+   },
+   {
+    "height": 12,
+    "widget": {
+     "title": "CDS Update Failure",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(envoy_cluster_manager_cds_update_failure{${cluster},${location},${namespace}}[${__interval}])",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 64
+   }
+  ]
+ }
+}

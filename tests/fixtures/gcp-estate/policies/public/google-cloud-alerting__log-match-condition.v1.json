@@ -1,0 +1,21 @@
+{
+ "alertStrategy": {
+  "autoClose": "1800s",
+  "notificationRateLimit": {
+   "period": "300s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMatchedLog": {
+    "filter": "logName=\"projects/example-project/logs/alerting-summit-log\""
+   },
+   "displayName": "Log match condition"
+  }
+ ],
+ "displayName": "OiC Sample Log-Based Alert Policy",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

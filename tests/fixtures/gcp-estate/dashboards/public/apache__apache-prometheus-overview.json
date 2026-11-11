@@ -1,0 +1,429 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "cluster",
+   "templateVariable": "Cluster"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "location",
+   "templateVariable": "Location"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "namespace",
+   "templateVariable": "Namespace"
+  }
+ ],
+ "displayName": "Apache Prometheus Overview",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 14,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "sum(apache_connections{state=\"total\",${Cluster},${Location},${Namespace}})",
+       "unitOverride": ""
+      }
+     },
+     "title": "Total Connections"
+    },
+    "width": 8
+   },
+   {
+    "height": 14,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "count(apache_up{${Cluster},${Location},${Namespace}} == 1)",
+       "unitOverride": ""
+      }
+     },
+     "title": "Servers Up"
+    },
+    "width": 8,
+    "xPos": 8
+   },
+   {
+    "height": 14,
+    "widget": {
+     "timeSeriesTable": {
+      "columnSettings": [
+       {
+        "column": "value",
+        "visible": true
+       },
+       {
+        "column": "pod",
+        "visible": true
+       }
+      ],
+      "dataSets": [
+       {
+        "timeSeriesQuery": {
+         "outputFullDuration": true,
+         "prometheusQuery": "apache_uptime_seconds_total{${Cluster},${Location},${Namespace}}"
+        }
+       }
+      ],
+      "metricVisualization": "BAR"
+     },
+     "title": "Uptime (seconds)"
+    },
+    "width": 24,
+    "xPos": 24
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#FFFFFF",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "Activity"
+    },
+    "width": 48,
+    "yPos": 14
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Scoreboard",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "apache_scoreboard{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 18
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Connections",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "apache_connections{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 18
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Processes",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "apache_processes{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 18
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#FFFFFF",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "Resource Utilization"
+    },
+    "width": 48,
+    "yPos": 34
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Workers",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "STACKED_AREA",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "apache_workers{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "yPos": 38
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "CPU Load",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "apache_cpuload{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 16,
+    "yPos": 38
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Load",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "apache_load{${Cluster},${Location},${Namespace}}",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 16,
+    "xPos": 32,
+    "yPos": 38
+   },
+   {
+    "height": 4,
+    "widget": {
+     "text": {
+      "content": "",
+      "format": "MARKDOWN",
+      "style": {
+       "backgroundColor": "#FFFFFF",
+       "fontSize": "FS_LARGE",
+       "horizontalAlignment": "H_LEFT",
+       "padding": "P_EXTRA_SMALL",
+       "pointerLocation": "POINTER_LOCATION_UNSPECIFIED",
+       "textColor": "#212121",
+       "verticalAlignment": "V_TOP"
+      }
+     },
+     "title": "Throughput"
+    },
+    "width": 48,
+    "yPos": 54
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Sent Request Rate (kb)",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(apache_sent_kilobytes_total{${Cluster},${Location},${Namespace}}[${__interval}])",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "yPos": 58
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Traffic Rate (ms)",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "breakdowns": [],
+        "dimensions": [],
+        "measures": [],
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "prometheusQuery": "rate(apache_duration_ms_total{${Cluster},${Location},${Namespace}}[${__interval}])",
+         "unitOverride": ""
+        }
+       }
+      ],
+      "thresholds": [],
+      "timeshiftDuration": "0s",
+      "yAxis": {
+       "label": "",
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 58
+   },
+   {
+    "height": 14,
+    "widget": {
+     "scorecard": {
+      "blankView": {},
+      "thresholds": [],
+      "timeSeriesQuery": {
+       "outputFullDuration": true,
+       "prometheusQuery": "(count(apache_up{${Cluster},${Location},${Namespace}} != 1) or vector(0))",
+       "unitOverride": ""
+      }
+     },
+     "title": "Servers Down"
+    },
+    "width": 8,
+    "xPos": 16
+   }
+  ]
+ }
+}

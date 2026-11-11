@@ -1,0 +1,39 @@
+{
+ "alertStrategy": {
+  "autoClose": "604800s"
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "0s",
+    "filter": "resource.type = \"redis_instance\" AND resource.labels.instance_id = \"projects/${PROJECT_ID}/locations/${REGION}/instances/${INSTANCE_ID}\" AND metric.type = \"redis.googleapis.com/stats/memory/system_memory_usage_ratio\"",
+    "thresholdValue": 0.8,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Cloud Memorystore Redis Instance - System Memory Usage Ratio"
+  }
+ ],
+ "displayName": "Cloud Redis - System Memory Utilization for ${INSTANCE_ID}(${REGION})",
+ "documentation": {
+  "content": "This alert fires if the system memory utilization is above the set threshold. The utilization is measured on a scale of 0 to 1.",
+  "mimeType": "text/markdown"
+ },
+ "enabled": true,
+ "userLabels": {
+  "context": "${CONTEXT}",
+  "instance_id": "${INSTANCE_ID}",
+  "project_id": "${PROJECT_ID}",
+  "region": "${REGION}",
+  "resource_type": "${RESOURCE_TYPE}"
+ }
+}

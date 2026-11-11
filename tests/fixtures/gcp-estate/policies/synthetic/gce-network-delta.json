@@ -1,0 +1,33 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_SUM",
+      "groupByFields": [
+       "resource.label.instance_id"
+      ],
+      "perSeriesAligner": "ALIGN_DELTA"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"compute.googleapis.com/instance/network/received_bytes_count\" AND resource.label.zone = \"us-central1-a\"",
+    "thresholdValue": 1000000000.0,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Received delta"
+  }
+ ],
+ "displayName": "VM network received bytes in a zone",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1001"
+ ],
+ "userLabels": {}
+}

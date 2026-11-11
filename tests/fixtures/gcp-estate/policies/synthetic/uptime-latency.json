@@ -1,0 +1,31 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_MEAN",
+      "groupByFields": [
+       "resource.label.host"
+      ],
+      "perSeriesAligner": "ALIGN_PERCENTILE_99"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"uptime_url\" AND metric.type = \"monitoring.googleapis.com/uptime_check/request_latency\"",
+    "thresholdValue": 1500,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Check latency"
+  }
+ ],
+ "displayName": "Slow site",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

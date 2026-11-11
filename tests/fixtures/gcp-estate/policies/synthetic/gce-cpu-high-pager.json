@@ -1,0 +1,46 @@
+{
+ "alertStrategy": {
+  "autoClose": "1800s",
+  "notificationRateLimit": {
+   "period": "3600s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "60s",
+      "crossSeriesReducer": "REDUCE_MEAN",
+      "groupByFields": [
+       "resource.label.instance_id"
+      ],
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "300s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"compute.googleapis.com/instance/cpu/utilization\"",
+    "thresholdValue": 0.8,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "CPU utilization"
+  }
+ ],
+ "displayName": "VM CPU above 80 percent",
+ "documentation": {
+  "content": "CPU is above 80 percent. Runbook: https://example.com/runbooks/cpu\n\nProject: ${resource.project}",
+  "mimeType": "text/markdown",
+  "subject": "[${policy.display_name}] ${metric.display_name}"
+ },
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1001",
+  "projects/example-project/notificationChannels/1010"
+ ],
+ "severity": "CRITICAL",
+ "userLabels": {}
+}

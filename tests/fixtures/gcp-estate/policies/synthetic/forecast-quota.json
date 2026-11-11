@@ -1,0 +1,31 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "3600s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_MEAN"
+     }
+    ],
+    "comparison": "COMPARISON_GT",
+    "duration": "0s",
+    "filter": "resource.type = \"gcs_bucket\" AND metric.type = \"storage.googleapis.com/storage/total_bytes\"",
+    "forecastOptions": {
+     "forecastHorizon": "604800s"
+    },
+    "thresholdValue": 5000000000000.0,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Forecast bytes"
+  }
+ ],
+ "displayName": "Bucket predicted to exceed",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

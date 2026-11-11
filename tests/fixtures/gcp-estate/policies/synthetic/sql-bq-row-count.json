@@ -1,0 +1,22 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionSql": {
+    "minutes": {
+     "periodicity": 60
+    },
+    "query": "SELECT COUNT(*) AS n FROM `example-project.logs.errors` WHERE ts > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)",
+    "rowCountTest": {
+     "comparison": "COMPARISON_GT",
+     "threshold": 100
+    }
+   },
+   "displayName": "SQL rows"
+  }
+ ],
+ "displayName": "SQL row count",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

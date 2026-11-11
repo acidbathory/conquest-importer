@@ -1,0 +1,28 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionThreshold": {
+    "aggregations": [
+     {
+      "alignmentPeriod": "300s",
+      "crossSeriesReducer": "REDUCE_NONE",
+      "perSeriesAligner": "ALIGN_FRACTION_TRUE"
+     }
+    ],
+    "comparison": "COMPARISON_LT",
+    "duration": "300s",
+    "filter": "resource.type = \"gce_instance\" AND metric.type = \"compute.googleapis.com/instance/uptime\"",
+    "thresholdValue": 0.9,
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "Fraction true"
+  }
+ ],
+ "displayName": "Share of healthy backends",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

@@ -1,0 +1,295 @@
+{
+ "dashboardFilters": [
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "project_id"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "location"
+  },
+  {
+   "filterType": "RESOURCE_LABEL",
+   "labelKey": "bucket_name"
+  }
+ ],
+ "displayName": "Cloud Storage",
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 16,
+    "widget": {
+     "incidentList": {
+      "monitoredResources": [
+       {
+        "type": "gcs_bucket"
+       }
+      ]
+     },
+     "title": "Incidents"
+    },
+    "width": 24
+   },
+   {
+    "height": 32,
+    "widget": {
+     "timeSeriesTable": {
+      "columnSettings": [
+       {
+        "column": "bucket_name",
+        "displayName": "Name",
+        "visible": true
+       },
+       {
+        "column": "project_id",
+        "displayName": "Project",
+        "visible": true
+       },
+       {
+        "column": "storage_class",
+        "displayName": "Storage Class",
+        "visible": true
+       },
+       {
+        "column": "location",
+        "displayName": "Location",
+        "visible": true
+       },
+       {
+        "column": "value",
+        "visible": false
+       }
+      ],
+      "dataSets": [
+       {
+        "minAlignmentPeriod": "60s",
+        "timeSeriesQuery": {
+         "outputFullDuration": true,
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"bucket_name\"",
+            "resource.label.\"project_id\"",
+            "metric.label.\"storage_class\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"storage.googleapis.com/storage/object_count\" resource.type=\"gcs_bucket\""
+         }
+        }
+       }
+      ],
+      "displayColumnType": false,
+      "metricVisualization": "BAR"
+     },
+     "title": "Buckets"
+    },
+    "width": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Requests",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.bucket_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"bucket_name\"",
+            "resource.label.\"project_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"storage.googleapis.com/api/request_count\" resource.type=\"gcs_bucket\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Network Traffic Sent",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.bucket_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"bucket_name\"",
+            "resource.label.\"project_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"storage.googleapis.com/network/sent_bytes_count\" resource.type=\"gcs_bucket\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 16
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Network Traffic Received",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.bucket_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"bucket_name\"",
+            "resource.label.\"project_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_RATE"
+          },
+          "filter": "metric.type=\"storage.googleapis.com/network/received_bytes_count\" resource.type=\"gcs_bucket\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 32
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Object Count",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.bucket_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"bucket_name\"",
+            "resource.label.\"project_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"storage.googleapis.com/storage/object_count\" resource.type=\"gcs_bucket\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 48
+   },
+   {
+    "height": 16,
+    "widget": {
+     "title": "Object Size",
+     "xyChart": {
+      "chartOptions": {
+       "mode": "COLOR"
+      },
+      "dataSets": [
+       {
+        "legendTemplate": "${resource.labels.bucket_name}",
+        "minAlignmentPeriod": "60s",
+        "plotType": "LINE",
+        "targetAxis": "Y1",
+        "timeSeriesQuery": {
+         "timeSeriesFilter": {
+          "aggregation": {
+           "alignmentPeriod": "60s",
+           "crossSeriesReducer": "REDUCE_SUM",
+           "groupByFields": [
+            "resource.label.\"bucket_name\"",
+            "resource.label.\"project_id\"",
+            "resource.label.\"location\""
+           ],
+           "perSeriesAligner": "ALIGN_MEAN"
+          },
+          "filter": "metric.type=\"storage.googleapis.com/storage/total_bytes\" resource.type=\"gcs_bucket\""
+         }
+        }
+       }
+      ],
+      "yAxis": {
+       "scale": "LINEAR"
+      }
+     }
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 64
+   }
+  ]
+ }
+}

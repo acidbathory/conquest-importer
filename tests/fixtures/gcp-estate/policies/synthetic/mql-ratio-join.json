@@ -1,0 +1,21 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMonitoringQueryLanguage": {
+    "duration": "180s",
+    "query": "{ fetch https_lb_rule::loadbalancing.googleapis.com/https/request_count\n  | filter metric.response_code_class = 500\n  | align rate(1m) | group_by [resource.url_map_name], [sum(val())]\n; fetch https_lb_rule::loadbalancing.googleapis.com/https/request_count\n  | align rate(1m) | group_by [resource.url_map_name], [sum(val())] }\n| ratio\n| every 1m\n| condition val() > 0.05 '1'",
+    "trigger": {
+     "count": 1
+    }
+   },
+   "displayName": "MQL ratio"
+  }
+ ],
+ "displayName": "MQL error ratio",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1002"
+ ],
+ "userLabels": {}
+}

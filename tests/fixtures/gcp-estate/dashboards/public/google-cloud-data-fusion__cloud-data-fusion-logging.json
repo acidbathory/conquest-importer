@@ -1,0 +1,154 @@
+{
+ "dashboardFilters": [],
+ "displayName": "Cloud Data Fusion Logging",
+ "labels": {},
+ "mosaicLayout": {
+  "columns": 48,
+  "tiles": [
+   {
+    "height": 24,
+    "widget": {
+     "logsPanel": {
+      "filter": "resource.type=\"datafusion.googleapis.com/PipelineV2\"",
+      "resourceNames": []
+     },
+     "title": "Pipeline Logs"
+    },
+    "width": 48
+   },
+   {
+    "height": 17,
+    "widget": {
+     "id": "",
+     "logsPanel": {
+      "filter": "resource.type=\"datafusion.googleapis.com/InstanceV2\" \nlabels.\".serviceId\"=\"appfabric\"",
+      "resourceNames": []
+     },
+     "title": "Appfabric"
+    },
+    "width": 24,
+    "yPos": 24
+   },
+   {
+    "height": 85,
+    "widget": {
+     "collapsibleGroup": {
+      "collapsed": false
+     },
+     "id": "",
+     "title": "Service Logs"
+    },
+    "width": 48,
+    "yPos": 24
+   },
+   {
+    "height": 17,
+    "widget": {
+     "id": "",
+     "logsPanel": {
+      "filter": "resource.type=\"datafusion.googleapis.com/InstanceV2\" \nlabels.\".serviceId\"=\"appfabric.processor\"",
+      "resourceNames": []
+     },
+     "title": "Appfabric Processor"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 24
+   },
+   {
+    "height": 17,
+    "widget": {
+     "id": "",
+     "logsPanel": {
+      "filter": "resource.type=\"datafusion.googleapis.com/InstanceV2\" \nlabels.\".serviceId\"=\"dataset.executor\"",
+      "resourceNames": []
+     },
+     "title": "Dataset Executor"
+    },
+    "width": 24,
+    "yPos": 41
+   },
+   {
+    "height": 17,
+    "widget": {
+     "id": "",
+     "logsPanel": {
+      "filter": "resource.type=\"datafusion.googleapis.com/InstanceV2\" \nlabels.\".serviceId\"=\"metadata.service\"",
+      "resourceNames": []
+     },
+     "title": "Metadata Service"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 41
+   },
+   {
+    "height": 17,
+    "widget": {
+     "id": "",
+     "logsPanel": {
+      "filter": "resource.type=\"datafusion.googleapis.com/InstanceV2\" \nlabels.\".serviceId\"=\"metrics\"",
+      "resourceNames": []
+     },
+     "title": "Metrics"
+    },
+    "width": 24,
+    "yPos": 58
+   },
+   {
+    "height": 17,
+    "widget": {
+     "id": "",
+     "logsPanel": {
+      "filter": "resource.type=\"datafusion.googleapis.com/InstanceV2\" \nlabels.\".serviceId\"=\"log.saver\"",
+      "resourceNames": []
+     },
+     "title": "Log Saver"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 58
+   },
+   {
+    "height": 17,
+    "widget": {
+     "id": "",
+     "logsPanel": {
+      "filter": "resource.type=\"datafusion.googleapis.com/InstanceV2\" \nresource.labels.namespace=\"system\"\nlabels.\".userserviceid\"=\"studio\"",
+      "resourceNames": []
+     },
+     "title": "Pipeline Studio"
+    },
+    "width": 24,
+    "yPos": 75
+   },
+   {
+    "height": 17,
+    "widget": {
+     "id": "",
+     "logsPanel": {
+      "filter": "resource.type=\"datafusion.googleapis.com/InstanceV2\" \nresource.labels.namespace=\"system\"\nlabels.\".applicationId\"=\"dataprep\"\nlabels.\".userserviceid\"=\"service\"",
+      "resourceNames": []
+     },
+     "title": "Wrangler Service"
+    },
+    "width": 24,
+    "xPos": 24,
+    "yPos": 75
+   },
+   {
+    "height": 17,
+    "widget": {
+     "id": "",
+     "logsPanel": {
+      "filter": "resource.type=\"datafusion.googleapis.com/InstanceV2\" \nlabels.\".serviceId\"=\"runtime\"",
+      "resourceNames": []
+     },
+     "title": "Runtime"
+    },
+    "width": 24,
+    "yPos": 92
+   }
+  ]
+ }
+}

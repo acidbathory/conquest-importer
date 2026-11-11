@@ -1,0 +1,20 @@
+{
+ "alertStrategy": {
+  "notificationRateLimit": {
+   "period": "300s"
+  }
+ },
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionMatchedLog": {
+    "filter": "protoPayload.status.code=7 AND protoPayload.serviceName=\"storage.googleapis.com\""
+   },
+   "displayName": "Denied"
+  }
+ ],
+ "displayName": "Audit denies",
+ "enabled": true,
+ "notificationChannels": [],
+ "userLabels": {}
+}

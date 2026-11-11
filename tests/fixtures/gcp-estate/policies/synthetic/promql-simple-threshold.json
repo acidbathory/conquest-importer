@@ -1,0 +1,19 @@
+{
+ "combiner": "OR",
+ "conditions": [
+  {
+   "conditionPrometheusQueryLanguage": {
+    "duration": "300s",
+    "evaluationInterval": "60s",
+    "query": "avg by (instance) (container_memory_working_set_bytes{namespace=\"prod\"}) > 1e9"
+   },
+   "displayName": "PromQL memory"
+  }
+ ],
+ "displayName": "PromQL memory",
+ "enabled": true,
+ "notificationChannels": [
+  "projects/example-project/notificationChannels/1002"
+ ],
+ "userLabels": {}
+}
