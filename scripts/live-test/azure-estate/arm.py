@@ -82,15 +82,13 @@ class Arm:
         self._expires = time.time() + 3000
         return self._token
 
-    def request(
-        self, method: str, path: str, api: str | None, body: Any = None
-    ) -> tuple[int, Any]:
+    def request(self, method: str, path: str, api: str | None, body: Any = None) -> tuple[int, Any]:
         url = path if path.startswith("https://") else MGMT + path
-        params = {"api-version": api} if api else None
+        # copy_merge_params keeps a query already in the URL (nextLink, ?forceDelete=true)
+        target = httpx.URL(url).copy_merge_params({"api-version": api} if api else {})
         resp = self._http.request(
             method,
-            url,
-            params=params,
+            target,
             json=body,
             headers={"Authorization": f"Bearer {self._bearer()}"},
         )

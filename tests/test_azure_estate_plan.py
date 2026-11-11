@@ -7,14 +7,20 @@ from typing import Any
 
 import httpx
 import pytest
+
 from test_azure_estate_arm import ENV, load
 
 SUB = "00000000-0000-0000-0000-000000000001"
 RG = "azure-signup-rg"
 
 
+def rid(rg: str, kind: str, name: str) -> str:
+    return f"/subscriptions/{SUB}/resourceGroups/{rg}/providers/Microsoft.Insights/{kind}/{name}"
+
+
 def plan() -> list[Any]:
-    return load("estate").build_plan(SUB, RG, "abc123", "t-1")
+    items: list[Any] = load("estate").build_plan(SUB, RG, "abc123", "t-1")
+    return items
 
 
 def walk(o: Any) -> list[str]:
@@ -59,7 +65,12 @@ def test_creation_order_puts_dependencies_first() -> None:
 def test_rules_are_disabled_and_only_use_safe_action_groups() -> None:
     safe = {"ckg-ag-email", "ckg-ag-webhook"}
     for it in plan():
-        if it.kind in {"metricAlert", "scheduledQueryRule", "activityLogAlert", "alertProcessingRule"}:
+        if it.kind in {
+            "metricAlert",
+            "scheduledQueryRule",
+            "activityLogAlert",
+            "alertProcessingRule",
+        }:
             assert it.body["properties"]["enabled"] is False, it.name
             for s in walk(it.body):
                 if "/actionGroups/" in s or "/actiongroups/" in s:
@@ -84,9 +95,7 @@ def test_metric_alerts_vary_severity_and_automitigate() -> None:
     assert len({p["windowSize"] for p in ma}) >= 4
 
 
-def fake_arm(
-    log: list[tuple[str, str]], fail: dict[str, tuple[int, str]] | None = None
-) -> Any:
+def fake_arm(log: list[tuple[str, str]], fail: dict[str, tuple[int, str]] | None = None) -> Any:
     def handler(req: httpx.Request) -> httpx.Response:
         if "login" in req.url.host:
             return httpx.Response(200, json={"access_token": "t"})
@@ -94,9 +103,13 @@ def fake_arm(
         for frag, (status, code) in (fail or {}).items():
             if frag in req.url.path:
                 return httpx.Response(status, json={"error": {"code": code, "message": "m"}})
-        return httpx.Response(200, json={"id": req.url.path, "properties": {"provisioningState": "Succeeded"}})
+        return httpx.Response(
+            200, json={"id": req.url.path, "properties": {"provisioningState": "Succeeded"}}
+        )
 
-    return load("arm").Arm({**ENV, "AZURE_SUBSCRIPTION_ID": SUB}, transport=httpx.MockTransport(handler))
+    return load("arm").Arm(
+        {**ENV, "AZURE_SUBSCRIPTION_ID": SUB}, transport=httpx.MockTransport(handler)
+    )
 
 
 def test_run_records_manifest_before_each_put(tmp_path: Path) -> None:
@@ -142,23 +155,28 @@ def test_run_records_validation_rejection_and_continues(tmp_path: Path) -> None:
 def test_cleanup_previews_and_refuses_foreign_names(tmp_path: Path) -> None:
     cl = load("cleanup")
     man = tmp_path / "m.json"
-    good = f"/subscriptions/{SUB}/resourceGroups/{RG}/providers/Microsoft.Insights/metricAlerts/ckg-ma-x"
-    bad = f"/subscriptions/{SUB}/resourceGroups/{RG}/providers/Microsoft.Insights/metricAlerts/prod-alert"
-    other_rg = f"/subscriptions/{SUB}/resourceGroups/other/providers/Microsoft.Insights/metricAlerts/ckg-ma-y"
+    good = rid(RG, "metricAlerts", "ckg-ma-x")
+    bad = rid(RG, "metricAlerts", "prod-alert")
+    other_rg = rid("other", "metricAlerts", "ckg-ma-y")
     man.write_text(
         json.dumps(
             {
                 "resources": [
                     {"name": "ckg-ma-x", "kind": "metricAlert", "id": good, "api": "2026-01-01"},
                     {"name": "prod-alert", "kind": "metricAlert", "id": bad, "api": "2026-01-01"},
-                    {"name": "ckg-ma-y", "kind": "metricAlert", "id": other_rg, "api": "2026-01-01"},
+                    {
+                        "name": "ckg-ma-y",
+                        "kind": "metricAlert",
+                        "id": other_rg,
+                        "api": "2026-01-01",
+                    },
                 ]
             }
         )
     )
     log: list[tuple[str, str]] = []
     out = cl.cleanup(fake_arm(log), man, RG, yes=False)
-    assert log == [] and out["refused"] == ["prod-alert", "ckg-ma-y"]
+    assert log == [] and sorted(out["refused"]) == ["ckg-ma-y", "prod-alert"]
     log.clear()
     out = cl.cleanup(fake_arm(log), man, RG, yes=True)
     assert [m for m, _ in log] == ["DELETE"] and log[0][1].endswith("/ckg-ma-x")
@@ -169,8 +187,8 @@ def test_cleanup_deletes_in_reverse_order(tmp_path: Path) -> None:
     cl = load("cleanup")
     man = tmp_path / "m.json"
     ids = [
-        f"/subscriptions/{SUB}/resourceGroups/{RG}/providers/Microsoft.Insights/actionGroups/ckg-ag-a",
-        f"/subscriptions/{SUB}/resourceGroups/{RG}/providers/Microsoft.Insights/metricAlerts/ckg-ma-b",
+        rid(RG, "actionGroups", "ckg-ag-a"),
+        rid(RG, "metricAlerts", "ckg-ma-b"),
     ]
     man.write_text(
         json.dumps(

@@ -15,6 +15,10 @@ HERE = Path(__file__).resolve().parents[1] / "scripts" / "live-test" / "azure-es
 def load(name: str) -> ModuleType:
     if str(HERE) not in sys.path:
         sys.path.insert(0, str(HERE))
+    if name in sys.modules and getattr(sys.modules[name], "__file__", "") == str(
+        HERE / f"{name}.py"
+    ):
+        return sys.modules[name]
     spec = importlib.util.spec_from_file_location(name, HERE / f"{name}.py")
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
@@ -50,7 +54,9 @@ def test_token_by_client_credentials_and_bearer_header() -> None:
         return httpx.Response(200, json={"value": []})
 
     arm = load("arm").Arm(ENV, transport=httpx.MockTransport(handler))
-    assert arm.get("/subscriptions/sub-1/providers/Microsoft.Insights", "2023-01-01") == {"value": []}
+    assert arm.get("/subscriptions/sub-1/providers/Microsoft.Insights", "2023-01-01") == {
+        "value": []
+    }
     assert "api-version=2023-01-01" in str(seen[-1].url)
 
 
@@ -97,3 +103,17 @@ def test_dotenv_parse_ignores_comments_and_quotes(tmp_path: Path) -> None:
     f.write_text('# c\nA=1\nB="two"\n\nexport C=3\n')
     assert mod.parse_dotenv(f) == {"A": "1", "B": "two", "C": "3"}
     assert json.dumps(mod.parse_dotenv(f))
+
+
+def test_existing_query_in_the_url_is_kept() -> None:
+    seen: list[str] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if "login" in req.url.host:
+            return httpx.Response(200, json={"access_token": "t"})
+        seen.append(str(req.url))
+        return httpx.Response(200)
+
+    arm = load("arm").Arm(ENV, transport=httpx.MockTransport(handler))
+    arm.delete("/x/ws?forceDelete=true", "2022-10-01")
+    assert "forceDelete=true" in seen[0] and "api-version=2022-10-01" in seen[0]
