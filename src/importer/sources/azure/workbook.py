@@ -354,8 +354,8 @@ def _tab_page(item: dict[str, Any], state: State) -> tuple[str | None, list[str]
     """(tab label or None, notes) when the item's visibility can be honoured.
 
     "This tab is selected" gives the tab's label. A rule that only asks that another parameter has
-    a value gives no label (the item stays on its page). A second rule is accepted when it only asks that another parameter has a value; it is kept as
-    a note because a New Relic widget is shown whether or not that parameter is set.
+    a value gives no label (the item stays on its page). Such a rule is kept as a note, because a
+    New Relic widget is shown whether or not that parameter is set.
     """
     tab: str | None = None
     notes: list[str] = []

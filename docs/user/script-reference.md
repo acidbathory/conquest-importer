@@ -151,6 +151,9 @@ unless you give `--apply` and `--confirm-account <account-id>` and the account i
 | `importer extract-azure` | Reads alert rules, action groups, alert processing rules, Prometheus rule groups. Drops secrets as it reads. | Azure Resource Manager (GET) | `--out` (private) | No |
 | `importer convert --source azure` | Metric alerts and simple KQL log counts to conditions; the rest manual. | extract folder | `--out` | No |
 | `importer check-azure-data` | Does the metric (or forwarded log) behind each converted condition arrive? Lists near names when not. Exit 2 if not. | New Relic (NRQL) | optional markdown | No |
+| `importer extract-azure --dashboards` | Also reads workbooks (with content) and portal dashboards. Drops identity, user, storage URI and secrets. A 5xx for portal dashboards is reported as not available. | Azure Resource Manager (GET) | `--out` (private) | No |
+| `importer convert-dashboards --source azure` | Workbook items and portal dashboard parts to NerdGraph, Terraform and a report; the rest are placeholders. | export folder, `.workbook` templates, downloaded dashboards | `--out` | No |
+| `importer plan-azure-dashboards` | How many widgets convert and why the rest do not; counts by data path. | export folder | `--out` (report.md, plan.json) | No |
 
 ### Datadog
 
