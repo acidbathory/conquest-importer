@@ -427,7 +427,6 @@ def test_identical_copies_that_were_merged_are_counted_in_a_note() -> None:
         ("max_over_time(x[1h:5m])", "promql uses a subquery"),
         ("a * on(p) group_left(t) b", "promql uses vector matching"),
         ("a / ignoring(x) group_right b", "promql uses vector matching"),
-        ("topk(3, x)", "promql uses topk"),
         ("bottomk(3, x)", "promql uses topk"),
         ("histogram_quantile(0.9, x)", "promql uses histogram_quantile"),
         ("absent(x)", "absent() returns 1"),

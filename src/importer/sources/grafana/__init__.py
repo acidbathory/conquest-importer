@@ -4,7 +4,10 @@ from importer.core.taxonomy import Category, register_taxonomy
 from importer.sources.base import Source, import_subpackages, register
 from importer.sources.grafana import remediation_rules  # noqa: F401  (registers its rules)
 from importer.sources.grafana.models import GrafanaRule, load_rules
-from importer.sources.grafana.rules2 import promql  # noqa: F401  (registers its PromQL forms)
+from importer.sources.grafana.rules2 import (  # noqa: F401  (register the PromQL forms)
+    promql,
+    promql_engine,
+)
 from importer.sources.grafana.translate import translate
 
 SOURCE: Source[GrafanaRule] = Source(

@@ -1,8 +1,8 @@
 """A ratio of two aggregates of different metrics with the same labels is one NRQL query.
 
 Two aggregates in one SELECT combined by arithmetic is a single value, which a condition can
-use. A ratio of one metric under two different label filters would need filter(), which the IR
-cannot express, so it stays manual.
+use. A ratio of one metric under two different label filters is written with filter() on each
+side (the engine, promql_engine.py); different grouping or ranges stay manual.
 """
 
 import importlib
@@ -60,8 +60,6 @@ def test_grouping_and_labels_are_shared_by_both_sides() -> None:
 @pytest.mark.parametrize(
     "expr",
     [
-        'sum(rate(r_total{code="500"}[5m])) / sum(rate(r_total[5m]))',
-        'sum(rate(a_total{env="p"}[5m])) / sum(rate(b_total{env="q"}[5m]))',
         "sum by (a) (rate(x_total[5m])) / sum by (b) (rate(y_total[5m]))",
         "sum(rate(x_total[5m])) / sum by (b) (rate(y_total[5m]))",
         "sum(rate(x_total[5m])) / sum(rate(y_total[10m]))",
@@ -88,17 +86,33 @@ def test_a_ratio_that_is_not_exact_has_a_precise_reason(expr: str, reason: str) 
 
 
 @pytest.mark.parametrize(
-    "expr",
+    ("expr", "nrql"),
     [
-        "avg(a) / avg(b) + 1",
-        "avg(a) / avg(b) * avg(c)",
-        "(avg(a) + avg(b)) / avg(c)",
-        "avg(a) / 0",
-        "avg(a) / avg(b) / avg(c)",
+        ("avg(a) / avg(b) + 1", "SELECT average(a) / average(b) + 1 FROM Metric"),
+        ("avg(a) / avg(b) * avg(c)", "SELECT average(a) / average(b) * average(c) FROM Metric"),
+        ("(avg(a) + avg(b)) / avg(c)", "SELECT (average(a) + average(b)) / average(c) FROM Metric"),
+        ("avg(a) / avg(b) / avg(c)", "SELECT average(a) / average(b) / average(c) FROM Metric"),
+        (
+            'sum(rate(r_total{code="500"}[5m])) / sum(rate(r_total[5m]))',
+            "SELECT filter(sum(r_total), WHERE code = '500') / 300 / (sum(r_total) / 300)"
+            " FROM Metric",
+        ),
+        (
+            'sum(rate(a_total{env="p"}[5m])) / sum(rate(b_total{env="q"}[5m]))',
+            "SELECT filter(sum(a_total), WHERE env = 'p') / 300 / "
+            "(filter(sum(b_total), WHERE env = 'q') / 300) FROM Metric",
+        ),
     ],
 )
-def test_other_arithmetic_keeps_the_binary_operator_reason(expr: str) -> None:
+def test_arithmetic_between_aggregates_is_one_query_with_math(expr: str, nrql: str) -> None:
+    """The engine (promql_engine.py) converts what the ratio form refused for its shape."""
     m = prom(expr)
+    assert m.confidence is Confidence.APPROXIMATE and nrql_for(m) == nrql
+    assert t.N_RATIO_ZERO in m.reasons
+
+
+def test_a_division_by_a_literal_zero_stays_manual() -> None:
+    m = prom("avg(a) / 0")
     assert m.confidence is Confidence.MANUAL and "binary operator" in text(m)
 
 

@@ -26,22 +26,22 @@ already read).
 
 | Alert type | Rules | Converted (approximate or better) | Manual | Unsupported |
 |---|---|---|---|---|
-| Metric alerts | 22 | 6 | 16 | 0 |
+| Metric alerts | 22 | 7 | 15 | 0 |
 | Scheduled query rules (KQL) | 15 | 0 | 15 | 0 |
 | Activity log alerts | 10 | 0 | 10 | 0 |
 | Prometheus rule groups | 7 | 0 | 7 | 0 |
 | Smart detector rules | 7 | 0 | 0 | 7 |
-| All | 61 | 6 | 48 | 7 |
+| All | 61 | 7 | 47 | 7 |
 Rules that differ only in fields the conversion ignores (descriptions, actions, tags) appear in
 several example files. Counting each distinct criteria, query, condition or detector once gives 38
-rules, of which 4 convert (metric alerts 4 of 16, scheduled query rules 0 of 7, activity log alerts
+rules, of which 5 convert (the fifth, `avg({"system.cpu.utilization"}) by ("microsoft.resourceid") > 90`, was added by the PromQL engine on 2026-11-11, which reads a quoted label in `by (...)`; metric alerts 5 of 16, scheduled query rules 0 of 7, activity log alerts
 0 of 8, Prometheus alert rules 0 of 2, smart detector rules 0 of 5). The share is similar either way:
-about one rule in ten converts.
+about one rule in eight converts.
 
 ## What converts
 
-Six metric alerts: four with a static threshold, one criterion and a platform metric (virtual
-machine CPU) on several resources or a subscription prefix, and two PromQL metric alerts. They become NRQL conditions on `Metric` with `collector.name = 'azure-monitor'`, the
+Seven metric alerts: four with a static threshold, one criterion and a platform metric (virtual
+machine CPU) on several resources or a subscription prefix, and three PromQL metric alerts. They become NRQL conditions on `Metric` with `collector.name = 'azure-monitor'`, the
 event timer, a sliding window when the evaluation frequency is shorter than the window, and the
 original Azure severity written into the description.
 

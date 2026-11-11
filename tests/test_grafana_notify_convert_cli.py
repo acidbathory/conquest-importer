@@ -99,7 +99,7 @@ def test_the_command_is_registered_and_prints_counts_only(
     result = convert(exported, alerts, tmp_path / "o")
     assert result.exit_code == 0
     assert (
-        "Read 29 contact points; routed 5 rules. Planned 16 workflows, 16 destinations"
+        "Read 29 contact points; routed 6 rules. Planned 16 workflows, 16 destinations"
         in result.output
     )
     assert "1 muting rules" in result.output and "18 secrets must be supplied" in result.output

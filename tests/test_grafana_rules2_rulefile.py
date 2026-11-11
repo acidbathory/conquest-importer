@@ -81,7 +81,7 @@ def test_a_rule_file_query_without_a_comparison_has_no_threshold() -> None:
     ("expr", "fragment"),
     [
         ("histogram_quantile(0.9, sum by (le) (x_bucket)) > 1", "histogram_quantile"),
-        ("topk(3, queue_depth) > 1", "topk"),
+        ("bottomk(3, queue_depth) > 1", "topk"),
         ("queue_depth offset 1d > 1", "offset"),
         ("queue_depth > queue_limit", "binary operator"),
         ("avg_over_time(queue_depth[5m]) > 1", "_over_time"),
