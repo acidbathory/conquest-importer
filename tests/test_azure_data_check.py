@@ -81,7 +81,7 @@ def test_log_conditions_check_forwarded_azure_logs() -> None:
 
 def test_manual_conditions_are_not_checked_and_send_nothing() -> None:
     nr = FakeNR({})
-    (check,) = dc.check_all(nr, 1, monitors(metric_alert(windowSize="PT2H")), 24)  # type: ignore[arg-type]
+    (check,) = dc.check_all(nr, 1, monitors(metric_alert(windowSize="P1D")), 24)  # type: ignore[arg-type]
     assert check.status is Status.NOT_CHECKED and nr.queries == []
 
 

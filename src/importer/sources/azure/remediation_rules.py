@@ -86,10 +86,11 @@ RULES: list[Rule] = [
         re.compile(r"^window is (longer|shorter)"),
         "Azure window outside the supported range",
         [
-            "The importer accepts windows from one minute to one hour. For a longer window, "
-            "create the condition by hand once the longest window New Relic accepts has been "
-            "checked in your account (the documentation pages disagree). A shorter evaluation "
-            "of the same rule is not equivalent.",
+            "The importer accepts windows from one minute to six hours (the NerdGraph schema "
+            "limit). A longer window, such as one day, cannot be one aggregation window: "
+            "create the condition by hand with the longest window and a threshold duration, "
+            "or move the check to a dashboard. A shorter evaluation of the same rule is not "
+            "equivalent.",
         ],
     ),
     (

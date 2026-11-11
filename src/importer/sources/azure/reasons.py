@@ -35,7 +35,7 @@ M_APP_INSIGHTS = (
     "the Azure Monitor integration"
 )
 M_NO_NAME = "metric name cannot be written as a New Relic name"
-M_WINDOW_LONG = "window is longer than the one hour this importer accepts"
+M_WINDOW_LONG = "window is longer than the six hours New Relic accepts for an aggregation window"
 M_WINDOW_MISSING = "window or evaluation frequency is missing or not an ISO 8601 duration"
 M_WINDOW_SHORT = "window is shorter than one minute"
 M_SCOPE = "scope is not a resource, resource group or subscription id"
@@ -101,6 +101,13 @@ N_LATENCY_LOG = (
 N_LOG_NULL_OPEN = (
     "a count over an empty window is NULL in New Relic, so a below or equals rule does not "
     "evaluate when no log arrives; this query has no filter to make it 0"
+)
+N_LONG_WINDOW = (
+    "the {window}s window is longer than an hour: a New Relic condition has to collect one full "
+    "window before it can open, so after creation or any edit no violation can open until a full "
+    "{window}s window has passed. The NerdGraph schema allows aggregation windows up to 6 hours "
+    "(21600s) while the NRQL conditions page says 120 minutes; the creation call has not been "
+    "tried (UNVERIFIED), and a rejected condition should be set to 120 minutes by hand"
 )
 N_SLIDE = (
     "Azure evaluates every {freq}s over a {window}s window; a sliding window of {freq}s is used, "

@@ -17,7 +17,7 @@ FIX = Path(__file__).parent / "fixtures" / "azure"
 def everything() -> list[IRMonitor]:
     monitors = REGISTRY["azure"].convert(FIX)
     extra = [
-        metric_alert(windowSize="PT2H"),
+        metric_alert(windowSize="P1D"),
         metric_alert(windowSize="PT30S"),
         metric_alert(
             scopes=["/subscriptions/s/resourceGroups/a", "/subscriptions/s/resourceGroups/b"]
