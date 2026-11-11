@@ -1,0 +1,40 @@
+{
+ "_synthetic": "SYNTHETIC: hand-written hostile test case, not a Datadog export (monitor_formula_variables)",
+ "name": "SYNTHETIC formula monitor with dynamic threshold",
+ "type": "query alert",
+ "query": "avg(last_1h):avg:a{*} / avg:b{*} > threshold",
+ "message": "m",
+ "options": {
+  "thresholds": {
+   "critical_query": "formula(\"2 * query1\").rollup(\"avg\").last(\"6mo\")"
+  },
+  "variables": [
+   {
+    "data_source": "metrics",
+    "name": "query1",
+    "query": "avg:a{*}",
+    "aggregator": "avg"
+   },
+   {
+    "data_source": "events",
+    "name": "query2",
+    "search": {
+     "query": "status:error"
+    },
+    "compute": {
+     "aggregation": "count"
+    },
+    "group_by": [
+     {
+      "facet": "@host",
+      "limit": 10,
+      "sort": {
+       "aggregation": "count",
+       "order": "desc"
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -25,6 +25,7 @@ FIXTURES: dict[str, list[str]] = {
     "gcp": ["tests/fixtures/gcp"],
     "dynatrace": ["tests/fixtures/dynatrace"],
     "grafana": ["tests/fixtures/grafana"],
+    "datadog": ["tests/fixtures/datadog"],
 }
 TOP = 10
 

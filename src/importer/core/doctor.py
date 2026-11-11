@@ -20,7 +20,15 @@ from importer.sources.cloudwatch.extract import AwsError, Reader, caller_account
 from importer.sources.gcp.extract import GcpError, access_token
 from importer.sources.grafana.extract import validate_host as grafana_host
 
-DOCTOR_SOURCES = ("cloudwatch", "gcp", "dynatrace", "dynatrace-classic", "grafana", "azure")
+DOCTOR_SOURCES = (
+    "cloudwatch",
+    "gcp",
+    "dynatrace",
+    "dynatrace-classic",
+    "grafana",
+    "azure",
+    "datadog",
+)
 
 
 @dataclass(frozen=True)
@@ -208,6 +216,8 @@ def run_checks(
         checks += _grafana_checks(env)
     elif source == "azure":
         checks += _azure_checks(env)
+    elif source == "datadog":
+        checks.append(Check("datadog input", True, "no login needed: it reads exported JSON files"))
     else:
         checks.append(_aws_login(region, profile, reader_factory))
     has_key = bool(env.get("NEW_RELIC_API_KEY"))

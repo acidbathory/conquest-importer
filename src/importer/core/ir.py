@@ -137,7 +137,16 @@ class MetricSignal(BaseModel):
 
 
 class CountFilter(FilterBase):
-    pass
+    # a numeric comparison, or whether the attribute is set; None is a plain match on `value`
+    compare: Literal["gt", "gte", "lt", "lte", "exists", "missing"] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_compare(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        """Saved IR keeps its old shape: `compare` appears only when it is used."""
+        data: dict[str, Any] = handler(self)
+        if data.get("compare") is None:
+            data.pop("compare", None)
+        return data
 
 
 class CountSignal(BaseModel):

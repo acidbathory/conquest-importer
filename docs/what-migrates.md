@@ -807,4 +807,25 @@ The live `Microsoft.Portal/dashboards` API answered 502 for every version on the
 subscription. `extract-azure --dashboards` then reports it as "not available" and still writes the
 workbooks; portal dashboards downloaded from the portal convert as files.
 
+## Datadog (monitors)
+
+Built offline from exported JSON; never run against a Datadog account (none exists, and the site is
+blocked on the project's network). Details and the measured share: [runbook-datadog](user/runbook-datadog.md),
+[baseline](research/datadog-baseline.md), [verified reference](research/datadog-verified.md).
+
+| Datadog | New Relic | Status |
+|---|---|---|
+| `query alert`, plain threshold on a metric (`avg`, `sum`, `min`, `max`; scope; `by {tag}`) | Static NRQL condition on `Metric`, disabled, `FACET` for the tags | Approximate; metric and tag names assumed unchanged, UNVERIFIED |
+| Arithmetic between series (a ratio), `.as_count()` on a sum | One NRQL with several selects; sum of delta counts | Approximate; ratio of window aggregates |
+| `log alert` counting lines (`rollup("count")`) | Count over `Log` with the search as WHERE | Approximate; log attributes UNVERIFIED |
+| Windows `last_1m` to `last_6h` | Aggregation window (60 s slide under an hour) | Approximate; longer windows manual |
+| `notify_no_data`, `no_data_timeframe`, `evaluation_delay` | Loss of signal, aggregation delay | Approximate; delay above 20 minutes and no-data above 48 hours are clamped with a note |
+| Priority, tags, message | Description (handles, URLs, tokens masked), tags in the IR | Priority P3 to P5 with one threshold becomes a warning term |
+| Recovery thresholds, reminders, `require_full_window`, `new_group_delay`, scheduling options | None | Listed as not migrated |
+| Anomaly, outlier, forecast, composite | Baseline, outlier, predictive, compound conditions | Manual now; D5 planned |
+| Change alert, cumulative window, time shift | None | Manual |
+| Service check, event, SLO, synthetics, RUM, trace analytics, CI, audit, database, network, cost, process | Depends on the New Relic product that replaces it | Manual |
+| Unknown monitor type, unreadable monitor | None | Unsupported |
+| Dashboards, downtimes, SLO objects, notification handles | Not read by this source yet | Planned (D4, D6, D7) |
+
 Other platforms are planned; see the [roadmap](../README.md#roadmap).

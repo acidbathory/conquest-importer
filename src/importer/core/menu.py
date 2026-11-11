@@ -121,6 +121,16 @@ SPECS: dict[str, Spec] = {
         "Check AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_SUBSCRIPTION_ID and AZURE_CLIENT_SECRET in "
         "your .env (docs/user/azure-credentials.md), then pick this again.",
     ),
+    # Datadog is file-first (no sign-in); it follows Azure so no earlier number moves
+    "11": Spec(
+        "11",
+        "Datadog",
+        "datadog",
+        ("--source", "datadog"),
+        (),
+        (),
+        "Nothing to sign in to; give a folder of exported Datadog monitor JSON.",
+    ),
 }
 MAIN = (
     "\nConquest Importer",
@@ -134,6 +144,7 @@ MAIN = (
     "  8  What did I just do?",
     "  9  Check my migration (parity)",
     " 10  Azure",
+    " 11  Datadog (exported JSON files)",
     "  0  Quit",
 )
 
@@ -279,6 +290,11 @@ class Menu:
             return args, ["--region", region]
         if spec.key == "10":
             return ["extract-azure"], []
+        if spec.key == "11":
+            folder = self.c.ask(
+                "Folder or file of exported Datadog monitor JSON (Enter to go back):"
+            )
+            return ([folder], []) if folder else None
         return [("extract-grafana" if spec.key == "3" else "extract-dynatrace")], []
 
     def _nr_account(self) -> int | None:

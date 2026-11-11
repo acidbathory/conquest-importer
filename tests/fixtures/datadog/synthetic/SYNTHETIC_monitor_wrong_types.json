@@ -1,0 +1,36 @@
+{
+ "_synthetic": "SYNTHETIC: hand-written hostile test case, not a Datadog export (monitor_wrong_types)",
+ "id": "not-a-number",
+ "name": 12345,
+ "type": [
+  "query alert"
+ ],
+ "query": {
+  "q": "avg(last_5m):avg:x{*} > 1"
+ },
+ "message": false,
+ "priority": "P1",
+ "tags": "env:prod",
+ "options": {
+  "thresholds": {
+   "critical": "high",
+   "warning": [
+    1
+   ],
+   "critical_recovery": {
+    "a": 1
+   }
+  },
+  "notify_no_data": "yes",
+  "no_data_timeframe": -5,
+  "renotify_interval": 1e+308,
+  "evaluation_delay": 1000000000000000000000000000000,
+  "new_group_delay": -1,
+  "require_full_window": "maybe",
+  "escalation_message": [
+   "a"
+  ],
+  "notify_by": "*",
+  "include_tags": 1
+ }
+}

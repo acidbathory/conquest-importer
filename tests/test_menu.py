@@ -105,7 +105,7 @@ def test_menu_lists_every_choice_and_quits(tmp_path: Path) -> None:
 
 
 def test_bad_choice_reprompts(tmp_path: Path) -> None:
-    menu, console, _, _, _ = make(tmp_path, ["x", "11", "0"])
+    menu, console, _, _, _ = make(tmp_path, ["x", "12", "0"])
     menu.run()
     assert console.text.count("Please type a number") == 2
 
@@ -147,7 +147,7 @@ def test_skipping_a_secret_stops_the_flow(tmp_path: Path, monkeypatch: pytest.Mo
 def test_check_my_setup_runs_doctor_for_each_source(tmp_path: Path) -> None:
     menu, console, run, _, _ = make(tmp_path, ["6", "0"], FakeRunner({"doctor": 1}))
     menu.run()
-    assert run.names().count("doctor") == 5
+    assert run.names().count("doctor") == 6
     assert console.text.count("Next:") >= 5
 
 
@@ -247,3 +247,20 @@ def test_azure_is_choice_10_and_runs_the_azure_extract_and_convert(
     assert run.calls[0] == ["doctor", "--source", "azure"]
     assert any(c[0] == "extract-azure" for c in run.calls)
     assert any(c[:3] == ["convert", "--source", "azure"] for c in run.calls)
+
+
+def test_datadog_is_menu_eleven_and_converts_the_users_own_folder(tmp_path: Path) -> None:
+    from importer.core.menu import MAIN, SPECS
+    from importer.core.menu_flow import Layout, build_kinds
+
+    assert SPECS["11"].source == "datadog" and any("Datadog" in line for line in MAIN)
+    (plan,) = build_kinds("11", "datadog", ["/some/export"], Layout(tmp_path))
+    assert plan.read == []  # nothing is fetched: the export is already on disk
+    assert plan.convert[0][:6] == [
+        "convert",
+        "--source",
+        "datadog",
+        "--in",
+        "/some/export",
+        "--out",
+    ]

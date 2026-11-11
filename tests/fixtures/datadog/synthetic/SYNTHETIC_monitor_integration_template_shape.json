@@ -1,0 +1,26 @@
+{
+ "_synthetic": "SYNTHETIC: hand-written hostile test case, not a Datadog export (monitor_integration_template_shape)",
+ "version": 2,
+ "title": "SYNTHETIC integration template wrapper with missing definition fields",
+ "tags": [
+  "integration:x"
+ ],
+ "description": "d",
+ "definition": {
+  "name": "[X] wrapper",
+  "type": "query alert",
+  "query": "avg(last_5m):default_zero(sum:x.errors{$env} by {host}.as_count()) > 5",
+  "message": "m",
+  "options": {
+   "thresholds": {
+    "critical": 5,
+    "warning": 3,
+    "critical_recovery": 2
+   },
+   "avalanche_window": 10,
+   "queryConfig": {
+    "a": 1
+   }
+  }
+ }
+}

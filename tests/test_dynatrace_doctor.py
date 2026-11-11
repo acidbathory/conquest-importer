@@ -92,5 +92,5 @@ def test_the_command_exits_by_the_result(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_the_command_rejects_an_unknown_source() -> None:
-    res = CliRunner().invoke(app, ["doctor", "--source", "datadog"])
+    res = CliRunner().invoke(app, ["doctor", "--source", "nagios"])
     assert res.exit_code == 1 and "dynatrace" in res.output

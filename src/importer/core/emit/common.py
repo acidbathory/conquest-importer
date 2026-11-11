@@ -66,14 +66,21 @@ MAX_AGGREGATION_WINDOW_SECONDS = 3600
 # verified the longer limit is listed here; every other source keeps the one hour above, which the
 # pinned outputs record. docs/research/azure-monitor-alerting.md says which source checked what.
 LONG_AGGREGATION_WINDOW_SECONDS = 21600
-SOURCES_WITH_LONG_WINDOWS = frozenset({"azure"})
+SOURCES_WITH_LONG_WINDOWS = frozenset({"azure", "datadog"})
 SOURCE_LABELS = {
     "cloudwatch": "CloudWatch alarm",
     "gcp": "Google Cloud alert policy",
     "dynatrace-classic": "Dynatrace classic alerting object",
     "azure": "Azure Monitor alert rule",
+    "datadog": "Datadog monitor",
 }
-RESOURCE_PREFIXES = {"cloudwatch": "cw", "gcp": "gcp", "dynatrace-classic": "dtc", "azure": "az"}
+RESOURCE_PREFIXES = {
+    "cloudwatch": "cw",
+    "gcp": "gcp",
+    "dynatrace-classic": "dtc",
+    "azure": "az",
+    "datadog": "dd",
+}
 
 
 def condition_name(name: str) -> str:
