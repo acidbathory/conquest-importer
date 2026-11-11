@@ -41,6 +41,8 @@ from importer.core.scoreboard import widget_class
 from importer.sources.gcp.dashboard_models import GcpDashboard
 from importer.sources.gcp.dashboards import LAYOUTS, translate_dashboard
 from importer.sources.gcp.extract import _channel_summary, _uptime_summary
+from importer.sources.gcp.extract_plus import log_metric_summary, slo_summary
+from importer.sources.gcp.extras import GcpExtras, load_extras
 from importer.sources.gcp.models import GcpAlertPolicy
 from importer.sources.gcp.translate import NAMING_NOTE, translate_policy
 
@@ -229,10 +231,12 @@ def _tally(rows: list[dict[str, Any]], key: str) -> dict[str, dict[str, int]]:
     return {k: dict(v) for k, v in sorted(table.items())}
 
 
-def measure_conditions(corpus: Corpus) -> list[dict[str, Any]]:
+def measure_conditions(corpus: Corpus, extras: GcpExtras | None = None) -> list[dict[str, Any]]:
+    """One row per condition; `extras` (log-based metrics, SLOs, uptime checks) is optional."""
     rows: list[dict[str, Any]] = []
     for path, raw in corpus.policies:
         policy = GcpAlertPolicy.model_validate(raw)
+        policy.attach_extras(extras)
         monitors = translate_policy(policy)
         for cond, monitor in zip(policy.conditions, monitors, strict=True):
             body = cond.body
@@ -265,12 +269,81 @@ def measure_conditions(corpus: Corpus) -> list[dict[str, Any]]:
                     and monitor.data_path == "native"
                     and not any(w in r for r in reasons for w in NAMING_WORDS)
                     and NAMING_NOTE not in reasons,
+                    "filter": str(body.get("filter", "")),
                     "multi": len(policy.conditions) > 1,
                     "combiner": policy.combiner,
                     "channels": len(policy.notificationChannels),
                 }
             )
     return rows
+
+
+PLUS_SHAPES = (
+    ("log-based metric", re.compile(r"logging\.googleapis\.com/user/")),
+    ("SLO selector", SLO_SELECTOR),
+    ("uptime check", re.compile(r"uptime_check/")),
+)
+
+
+def plus_shape(row: dict[str, Any]) -> str:
+    """The shape the extras can change, or "" for every other condition."""
+    text = row["filter"]
+    return next((name for name, found in PLUS_SHAPES if found.search(text)), "")
+
+
+def build_extras(fixtures: Path, work: Path) -> GcpExtras:
+    """Write an export folder from the synthetic API responses and read the extras back."""
+
+    def items(name: str, key: str) -> list[dict[str, Any]]:
+        data: list[dict[str, Any]] = json.loads((fixtures / name).read_text())[key]
+        return data
+
+    files = {
+        "log-metrics": [log_metric_summary(m) for m in items("api-log-metrics.json", "metrics")],
+        "slos": [slo_summary(s) for s in items("api-slos-checkout.json", "serviceLevelObjectives")],
+        "uptime-checks": [
+            _uptime_summary(c) for c in items("api-uptime-check-configs.json", "uptimeCheckConfigs")
+        ],
+    }
+    for folder, data in files.items():
+        (work / folder).mkdir(parents=True)
+        (work / folder / f"{folder}.json").write_text(json.dumps(data))
+    extras = load_extras(work)
+    if extras is None:
+        raise RuntimeError("the extras folder is empty")
+    return extras
+
+
+def before_after(corpus: Corpus, fixtures: Path) -> dict[str, Any]:
+    """Conditions converted without and with the extras, for the shapes the extras can change.
+
+    Counts follow the scoreboard: exact or approximate only. Placeholders are widgets and never
+    appear here; a manual condition is not converted.
+    """
+    with tempfile.TemporaryDirectory(prefix="gcp-extras-") as tmp:
+        extras = build_extras(fixtures, Path(tmp))
+        before = measure_conditions(corpus)
+        after = measure_conditions(corpus, extras)
+    shapes: dict[str, dict[str, int]] = {}
+    for old, new in zip(before, after, strict=True):
+        shape = plus_shape(new)
+        if not shape:
+            if old["verdict"] != new["verdict"]:
+                raise RuntimeError(f"an unrelated condition changed: {new['file']}")
+            continue
+        row = shapes.setdefault(shape, {"total": 0, "before": 0, "after": 0})
+        row["total"] += 1
+        row["before"] += old["verdict"] == "converted"
+        row["after"] += new["verdict"] == "converted"
+    return {
+        "shapes": shapes,
+        "conditions_total": len(after),
+        "converted_before": sum(r["verdict"] == "converted" for r in before),
+        "converted_after": sum(r["verdict"] == "converted" for r in after),
+        "blockers_after": {
+            shape: ranked([r for r in after if plus_shape(r) == shape]) for shape in shapes
+        },
+    }
 
 
 def measure_widgets(corpus: Corpus) -> list[dict[str, Any]]:
@@ -633,7 +706,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--corpus", type=Path, default=DEFAULT_CORPUS)
     parser.add_argument("--json", type=Path, help="write the full numbers here")
     parser.add_argument("--no-experiments", action="store_true")
+    parser.add_argument(
+        "--extras",
+        type=Path,
+        help="folder with the api-*.json responses (tests/fixtures/gcp-extract-plus): print "
+        "conditions converted before and after reading log-based metrics, SLOs and uptime checks",
+    )
     args = parser.parse_args(argv)
+    if args.extras:
+        result = before_after(Corpus(args.corpus), args.extras)
+        print(json.dumps(result, indent=2))
+        return 0
     summary = summarise(Corpus(args.corpus), experiments=not args.no_experiments)
     print(render(summary))
     if args.json:

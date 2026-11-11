@@ -259,6 +259,27 @@ Alert fields beyond the query (threshold, absence and log-match conditions):
 - Names that look like addresses, URLs or tokens are replaced by the resource id in outputs. Other names
   are kept as written, so do not put secrets in names.
 
+### Definitions the policy does not carry (log-based metrics, SLOs, uptime checks)
+
+`extract-gcp` also reads, with GET only: log-based metrics (Logging API `projects/{p}/metrics`), services and
+their SLOs (`projects/{p}/services/{s}/serviceLevelObjectives`) and the full uptime check configs. They are
+written to `log-metrics/`, `slos/` and `uptime-checks/` beside `policies/`, and `convert --source gcp --in
+<export>/policies` picks them up from there. An export without them (older, or a read that failed and was
+reported as a warning) converts exactly as before.
+
+| Condition | Result |
+|---|---|
+| Threshold on `logging.googleapis.com/user/<name>` | A count of Log events with the metric's own log filter (same grammar as log-match conditions). ALIGN_RATE and ALIGN_MEAN thresholds are rescaled to a count per window. Logs must be forwarded (data path `needs-log-forwarding`). Distribution metrics, value extractors and label extractors other than `EXTRACT(field)` stay manual with the query to write. |
+| `select_slo_burn_rate(slo, lookback)` | A ratio condition on the SLO's good (or bad) and total request metrics: burn rate over X is a bad share above X times (1 - goal). Lookback up to 3600 s only. |
+| `select_slo_health`, `select_slo_compliance`, `select_slo_budget_fraction`, a lookback over 3600 s, distribution-cut, windows-based and basic SLIs | Manual. The reason says what service level to create (target, 1, 7 or 28 day period, good and valid events). A New Relic condition sees one window of at most 3600 s, the SLO period is days. |
+| `check_passed`, `request_latency` of an uptime check | A query on `SyntheticCheck` results for the monitor of that check (count of FAILED runs, or `duration` in ms). The monitor must exist. `time_until_ssl_cert_expires` is manual: use a certificate check monitor. |
+
+`importer convert-gcp-uptime` also writes `synthetic-monitor-plan.json`: for each check the monitor type (simple
+or scripted API), URL, frequency, locations, Google timeout and, for a basic-auth password, header values or a body,
+the name of a secret to create (`GCP_UPTIME_<ID>_PASSWORD`). Those values are never read into the export. Nothing
+is created. The host of a check is now in the export (in `uptime-checks`, `details.host`), which it was not before.
+UNVERIFIED: the SyntheticCheck attribute names and the location names; neither was run against a live account.
+
 Remediation plan: `importer plan-remediation --in out/gcp/alerts --out out/remediation` (the menu writes
 it for you). Offline and read-only.
 

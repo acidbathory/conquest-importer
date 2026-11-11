@@ -38,6 +38,13 @@ LATENCY = {
     "ALIGN_PERCENTILE_95": (Aggregation.AVG, "REDUCE_NONE", 95),
     "ALIGN_PERCENTILE_99": (Aggregation.AVG, "REDUCE_NONE", 99),
 }
+# a percentile per location, then the mean over locations: approximated by one percentile
+_PERCENTILE_REDUCERS: dict[int | None, tuple[str, ...]] = {
+    None: (),
+    50: ("REDUCE_MEAN",),
+    95: ("REDUCE_MEAN",),
+    99: ("REDUCE_MEAN",),
+}
 GROUPS = {
     "metric.label.check_id": "monitorName",
     "resource.label.host": "monitorName",
@@ -137,7 +144,11 @@ def convert(extras: GcpExtras, metric: str, body: dict[str, object]) -> Built | 
             )
     else:
         found = LATENCY.get(aligner)
-        if found is None or reducer not in (found[1], "REDUCE_NONE"):
+        if found is None or reducer not in (
+            found[1],
+            "REDUCE_NONE",
+            *_PERCENTILE_REDUCERS[found[2]],
+        ):
             raise Fail(
                 Confidence.MANUAL,
                 f"request_latency with the aligner {aligner or 'none'} and reducer {reducer} "
@@ -146,6 +157,11 @@ def convert(extras: GcpExtras, metric: str, body: dict[str, object]) -> Built | 
         aggregation, percentile = found[0], found[2]
         select = f"percentile(duration, {percentile})" if percentile else None
         notes.append("request_latency is in milliseconds, like the duration of a Synthetics run")
+        if percentile and reducer != "REDUCE_NONE":
+            notes.append(
+                "Google takes the percentile per location and then the mean over locations; "
+                "this is the percentile over all runs in the window, which differs slightly"
+            )
     period, period_note = whole_minutes(period_of(agg))
     check_period = _check_period(extras.uptime, monitors)
     if check_period > period:

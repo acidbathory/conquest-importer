@@ -59,6 +59,9 @@ class GcpAlertPolicy(BaseModel):
     def extras(self) -> GcpExtras | None:
         return self._extras
 
+    def attach_extras(self, extras: GcpExtras | None) -> None:
+        self._extras = extras
+
 
 def _files(path: Path) -> list[Path]:
     return sorted(path.glob("*.json")) if path.is_dir() else [path]
@@ -79,5 +82,5 @@ def load_policies(path: Path) -> list[GcpAlertPolicy]:
         policies += [GcpAlertPolicy.model_validate(i) for i in items]
     extras = load_extras(path.parent) if path.is_dir() else None
     for policy in policies:
-        policy._extras = extras  # set once here, read through `extras`
+        policy.attach_extras(extras)
     return policies

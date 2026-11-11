@@ -52,7 +52,7 @@ def policy(filter_text: str, **body: Any) -> GcpAlertPolicy:
 
 def run(pol: GcpAlertPolicy, with_extras: bool = True) -> IRMonitor:
     if with_extras:
-        pol._extras = extras()
+        pol.attach_extras(extras())
     (monitor,) = translate_policy(pol)
     return monitor
 
