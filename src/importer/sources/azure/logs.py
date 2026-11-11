@@ -210,12 +210,14 @@ def _log_condition(
     base = base_fields(alert, key_of(alert), "log alert", alert.name)
     if cond.get("criterionType") == "DynamicThresholdCriterion":
         raise Fail(R.M_DYNAMIC)
+    text = str(cond.get("query", ""))
+    head = re.match(r"\s*([A-Za-z_]\w*)\s*(?:\||$)", text)
+    if head is not None and AGENT_TABLES.fullmatch(head[1]):  # said before any parse problem
+        raise Fail(f"{R.M_KQL_TABLE}: {R.shown(head[1], 40)}")
     try:
-        query = parse(str(cond.get("query", "")))
+        query = parse(text)
     except KqlError as exc:
         raise Fail(f"{R.M_KQL}: {exc}") from None
-    if AGENT_TABLES.fullmatch(query.table):
-        raise Fail(f"{R.M_KQL_TABLE}: {R.shown(query.table, 40)}")
     _check_scopes(props.get("scopes"))
     operator, value = (
         _operator_and_value(cond)
