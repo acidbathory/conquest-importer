@@ -59,7 +59,14 @@ def test_unknown_fields_and_options_are_kept(tmp_path: Path) -> None:
 
 
 def test_wrong_types_give_safe_accessors(tmp_path: Path) -> None:
-    raw = {"id": "x", "name": 12, "type": ["a"], "query": {"q": 1}, "tags": "env:prod", "options": 3}
+    raw = {
+        "id": "x",
+        "name": 12,
+        "type": ["a"],
+        "query": {"q": 1},
+        "tags": "env:prod",
+        "options": 3,
+    }
     (monitor,) = load_monitors(_write(tmp_path, "t.json", raw))
     assert monitor.type_text == ""
     assert monitor.query_text == ""
