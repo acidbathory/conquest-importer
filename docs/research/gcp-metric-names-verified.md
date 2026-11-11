@@ -42,7 +42,7 @@ writes. The test resources were destroyed once the check was done.
 table, and Google had data for all three on the test VM, but none reached New Relic in over an
 hour. The reason is unknown. Other Compute Engine metrics (disk, firewall, quota, reserved cores)
 did arrive. An alert on VM CPU utilization may therefore return no data. The importer says so on
-that conversion. Worth raising with New Relic support.
+that conversion. Worth raising with New Relic support. Diagnosis, with ranked causes: [gcp-vm-cpu-diagnosis.md](gcp-vm-cpu-diagnosis.md).
 
 Not tested: Cloud Run, Cloud SQL, GKE, load balancing, BigQuery and the other services.
 Metrics from those still carry the "not confirmed" note.

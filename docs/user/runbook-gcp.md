@@ -27,8 +27,9 @@ What you do NOT get:
 - No firing test has been done on a converted Google condition.
 - **VM CPU utilization does not arrive.** `gcp.compute.instance.cpu.utilization`, `cpu.usage_time` and
   `uptime` never reached New Relic in two sandbox runs (checked for 40 minutes and more than an hour),
-  although Google had the data. The reason is unknown. A CPU alert will return nothing. The conversion
-  says so.
+  although Google had the data. Network, uptime and memory-balloon VM metrics were also absent. The reason
+  is unknown and no other name exists in New Relic (see [diagnosis](../research/gcp-vm-cpu-diagnosis.md)).
+  A CPU alert will return nothing. The conversion says so.
 - Metric names are confirmed only for Compute Engine, Pub/Sub and Storage: 60 names arrived, and 4
   documented names did not. Cloud Run, Cloud SQL, GKE, load balancing, BigQuery and others carry a
   "not confirmed" note. See [verified names](../research/gcp-metric-names-verified.md).
@@ -225,7 +226,7 @@ it for you). Offline and read-only.
 | Certificate error on a company network | TLS inspection | Set `SSL_CERT_FILE` to the corporate root PEM. Never disable verification. |
 | New Relic 401, or key not set | No key, wrong key, EU account | Use a User key. For EU use `--region eu` (apply) or `--nr-region eu` (check). |
 | `NEW_RELIC_ALLOWED_ACCOUNT_IDS is not set` or account not listed | Write safety catch | Add the account id. `--confirm-account` must repeat it. |
-| VM CPU condition returns nothing | `cpu.utilization`, `cpu.usage_time` and `uptime` do not reach New Relic (unexplained) | Raise with New Relic support. Alert on another VM metric meanwhile. |
+| VM CPU condition returns nothing | `cpu.utilization`, `cpu.usage_time` and `uptime` do not reach New Relic (unexplained) | Raise with New Relic support (evidence in the [diagnosis](../research/gcp-vm-cpu-diagnosis.md)). No Terraform setting changes it. Keep the Google policy, or alert on the infrastructure agent's `SystemSample.cpuPercent` (unverified). |
 | Condition returns nothing for a label filter | Event-style metrics carry no resource label | Filter on `fullResourceName`. |
 | Counter condition looks too quiet | Data arrives once per 5-minute poll; a 60 s window sees a point one time in five | Already handled: window of at least 300 s with a rescaled threshold. Do not shorten it. |
 | `sum()` returns 0 and no error | The metric does not exist in New Relic | Run `check-gcp-data`. A condition on a missing metric never fires. |
