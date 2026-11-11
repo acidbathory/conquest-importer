@@ -50,7 +50,7 @@ READS: dict[str, tuple[str, str]] = {
     "scheduledQueryRules": ("Microsoft.Insights/scheduledQueryRules", "2026-03-01"),
     "activityLogAlerts": ("Microsoft.Insights/activityLogAlerts", "2026-01-01"),
     "actionGroups": ("Microsoft.Insights/actionGroups", "2023-01-01"),
-    "alertProcessingRules": ("Microsoft.AlertsManagement/actionRules", "2021-08-01"),
+    "alertProcessingRules": ("Microsoft.AlertsManagement/actionRules", "2021-08-08"),
     "prometheusRuleGroups": ("Microsoft.AlertsManagement/prometheusRuleGroups", "2023-03-01"),
     "smartDetectorAlertRules": (
         "microsoft.alertsManagement/smartDetectorAlertRules",

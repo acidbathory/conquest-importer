@@ -36,7 +36,7 @@ VERSIONS = {
     "scheduledQueryRules": "2026-03-01",
     "activityLogAlerts": "2026-01-01",
     "actionGroups": "2023-01-01",
-    "alertProcessingRules": "2021-08-01",
+    "alertProcessingRules": "2021-08-08",
     "prometheusRuleGroups": "2023-03-01",
     "smartDetectorAlertRules": "2021-04-01",
 }
@@ -413,3 +413,10 @@ def test_a_nested_or_non_json_response_is_an_error_not_a_crash(env: None, tmp_pa
         run(fake, tmp_path / "out")
     assert os.listdir(tmp_path) == []
     _ = json  # keep the import used
+
+
+def test_alert_processing_rules_use_the_api_version_azure_documents_and_accepts() -> None:
+    """2021-08-01 was a typo: the live API answered 404 for it; the swagger says 2021-08-08."""
+    from importer.sources.azure.extract import READS
+
+    assert READS["alertProcessingRules"][1] == "2021-08-08"
