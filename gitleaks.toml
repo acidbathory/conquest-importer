@@ -51,3 +51,10 @@ description = "40-hex git commit ids quoted in the Azure research note (pinned s
 condition = "AND"
 paths = ['''^docs/research/azure-monitor-alerting\.md$''']
 regexes = ['''^[0-9a-f]{40}$''']
+
+[[allowlists]]
+description = "Deliberately fake secret in a SYNTHETIC Datadog monitor message (the value is the literal text SYNTHETIC-FAKE-NOT-A-SECRET...); the fixture exists to prove the loader masks secrets in message bodies (tests/fixtures/datadog/synthetic/SYNTHETIC_monitor_secret_in_body.json only)"
+condition = "AND"
+targetRules = ["curl-auth-header"]
+paths = ['''^tests/fixtures/datadog/synthetic/SYNTHETIC_monitor_secret_in_body\.json$''']
+regexes = ['''^(SYNTHETIC-FAKE-NOT-A-SECRET[A-Za-z-]*|REDACTED)$''']
