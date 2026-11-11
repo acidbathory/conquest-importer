@@ -8,7 +8,7 @@ and no other source's reasons.
 # action group receivers
 R_SECRET = "azure converted webhook destination needs a secret supplied at apply time"  # noqa: S105 - a sentence
 R_COMMON_SCHEMA = "azure webhook receiver gets a payload that is not the common alert schema"
-R_AAD = "azure webhook receiver authenticates with Microsoft Entra, which a script cannot set up"
+R_AAD = "azure webhook receiver authenticates with microsoft entra, which a script cannot set up"
 R_NO_URL = "azure receiver has no usable callback url in the export"
 R_URL_CREDENTIALS = "azure webhook url carries a user name and password"
 R_HTTP_URL = "azure webhook url is not https"
@@ -42,4 +42,3 @@ R_RULE_ZONE = "azure alert processing rule time zone is not recognised"
 R_RULE_SEVERAL = "azure alert processing rule became several muting rules"
 R_RULE_ALWAYS = "azure alert processing rule has no schedule so its muting rule is always active"
 R_RULE_EXPIRED = "azure alert processing rule schedule ended before today"
-R_RULE_TOO_MANY = "azure alert processing rule matches more conditions than a muting rule holds"

@@ -182,8 +182,9 @@ def test_add_action_groups_stays_manual_with_the_workflow_workaround() -> None:
 
 
 def test_the_old_preview_api_and_unknown_actions_are_manual() -> None:
-    export = load_export(FIX)
-    legacy = next(r for r in export.rules if r.legacy)
+    legacy = load_export(FIX / "2019-05-05-preview__ActionRules_Create_SuppressionRule.json").rules[
+        0
+    ]
     assert R.R_RULE_LEGACY in convert(legacy).reasons
     synthetic = load_export(
         Path(__file__).parent

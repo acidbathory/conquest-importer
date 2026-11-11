@@ -186,11 +186,15 @@ def _schedule(raw: object) -> RuleSchedule | None:
     )
 
 
+def _old_api(raw: dict[str, Any]) -> bool:
+    return "scopes" not in _props(raw)
+
+
 def _rule(raw: dict[str, Any], hint: str) -> ProcessingRule:
     props = _props(raw)
     rid = str(raw.get("id") or "")
     name = str(raw.get("name") or hint or _last(rid))
-    if "scopes" not in props:  # the 2019 preview API: scope, suppressionConfig, status
+    if _old_api(raw):  # the 2019 preview API: scope, suppressionConfig, status
         return ProcessingRule(
             id=rid,
             name=name,
@@ -312,7 +316,10 @@ def load_export(path: Path) -> AzureExport:
         for kind, raw, hint in _walk(doc):
             rid = str(raw.get("id") or "").lower()
             if rid:
-                with_id.setdefault((kind, rid), (kind, raw, hint))
+                known = with_id.get((kind, rid))
+                # the same rule from the retired 2019 API and the current one: keep the current
+                if known is None or (kind == "rule" and _old_api(known[1]) and not _old_api(raw)):
+                    with_id[(kind, rid)] = (kind, raw, hint)
             else:
                 without_id.append((kind, raw, hint))
     items = list(with_id.values())

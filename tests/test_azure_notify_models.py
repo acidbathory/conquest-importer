@@ -49,12 +49,22 @@ def test_unknown_receiver_kinds_and_nulls_are_reported_not_fatal() -> None:
     assert {r.kind for r in group.receivers} == {"smsReceivers", "webhookReceivers"}
 
 
-def test_processing_rules_load_from_the_wrapped_request_and_mark_the_old_api() -> None:
+def test_processing_rules_load_from_the_wrapped_request() -> None:
     export = load_export(FIX / "alert_processing_rules")
-    names = {r.name for r in export.rules}
-    assert "DailySuppression" in names
-    assert any(r.legacy for r in export.rules)
+    assert "DailySuppression" in {r.name for r in export.rules}
     assert any(not r.legacy and r.actions for r in export.rules)
+
+
+def test_the_retired_2019_api_is_marked_and_loses_to_the_current_api_for_one_rule() -> None:
+    old = load_export(
+        FIX
+        / "alert_processing_rules"
+        / "2019-05-05-preview__ActionRules_Create_SuppressionRule.json"
+    )
+    assert [r.legacy for r in old.rules] == [True]
+    both = load_export(FIX / "alert_processing_rules")
+    daily = [r for r in both.rules if r.name == "DailySuppression"]
+    assert len(daily) == 1 and not daily[0].legacy
 
 
 def test_a_broken_resource_becomes_a_problem_without_its_text(tmp_path: Path) -> None:
