@@ -41,6 +41,10 @@ C_GAUGE_SERIES = (
 C_COUNTER_NAME = (
     f"{PREFIX}: rate of a metric with no counter suffix; New Relic may store it as a gauge total"
 )
+C_RATE_OF_GAUGE = (
+    f"{PREFIX}: rate, irate or increase of a metric the name map types as a gauge; a gauge is "
+    "sampled values, not a running count"
+)
 C_REUSE = f"{PREFIX}: the panel reuses a query that did not convert"
 C_UNEXPECTED = f"{PREFIX}: the panel could not be read"
 

@@ -28,6 +28,7 @@ from importer.core.ir import (
     SignalKind,
     Threshold,
 )
+from importer.sources.grafana.dashboard_convert.name_map import hinted_gauge
 from importer.sources.grafana.translate import (
     BODY,
     COUNTER_SUFFIXES,
@@ -53,6 +54,7 @@ from importer.sources.grafana.translate import (
     R_COUNTER_RANGE,
     R_COUNTER_REDUCER,
     R_COUNTER_UNAGG,
+    R_RATE_OF_GAUGE,
     R_RATIO_AGG,
     R_RATIO_SHAPE,
     RANGE_SECONDS,
@@ -151,6 +153,8 @@ def _check_counter(operand: _Operand, ctx: Ctx) -> int:
         raise Fail(R_COUNTER_UNAGG)
     if operand.aggregator != "sum":
         raise Fail(R_COUNTER_AGG.format(agg=operand.aggregator))
+    if hinted_gauge(operand.name):
+        raise Fail(R_RATE_OF_GAUGE)
     if not operand.name.endswith(COUNT_SUFFIXES):
         raise Fail(R_COUNTER_NAME)
     reducer = looked_back(ctx)

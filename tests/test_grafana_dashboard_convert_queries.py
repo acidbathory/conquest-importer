@@ -427,3 +427,14 @@ def test_a_hinted_counter_without_a_suffix_converts_under_rate() -> None:
     hint = NameMap(types={"nginx_requests": "counter"})
     opts = QueryOptions(variables={}, name_map=hint, timeseries=True)
     assert "rate(sum(nginx_requests), 1 second)" in nrql("sum(rate(nginx_requests[2m]))", opts)
+
+
+@pytest.mark.parametrize("name", ["temp_c", "cpu_seconds_total"])
+@pytest.mark.parametrize("fn", ["rate", "irate", "increase"])
+def test_a_rate_of_a_metric_hinted_as_a_gauge_is_refused_with_its_own_reason(
+    fn: str, name: str
+) -> None:
+    opts = QueryOptions(variables={}, name_map=NameMap(types={name: "gauge"}), timeseries=True)
+    with pytest.raises(Unconvertible) as caught:
+        nrql(f"sum({fn}({name}[2m]))", opts)
+    assert caught.value.reason == r.C_RATE_OF_GAUGE

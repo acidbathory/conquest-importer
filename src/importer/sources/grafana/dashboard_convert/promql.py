@@ -424,6 +424,8 @@ class _Parse:
             raise Unconvertible(r.C_SHAPE)
         if agg in ("avg", "min", "max"):  # one sample's delta over a whole bucket: too low
             raise Unconvertible(r.C_AGG_RATE)
+        if self.opts.name_map.is_gauge(name):
+            raise Unconvertible(r.C_RATE_OF_GAUGE)
         if not self.is_counter(name):  # same refusal as the alert path: a gauge's total is no rate
             raise Unconvertible(r.C_COUNTER_NAME)
         event, metric = self.metric(name)

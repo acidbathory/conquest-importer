@@ -238,7 +238,7 @@ fields) are unverified until one dashboard is read back in a sandbox.
   with `FACET` for the `by` labels (`LIMIT MAX`, at most 5 labels). `rate`, `irate` become
   `rate(sum(x), 1 second)` with `TIMESERIES AUTO` (only for a counter: a name ending `_total`, `_count`,
   `_sum` or `_bucket`, or a `types` hint of `counter`; any other name is refused, as in an alert, because New
-  Relic stores it as a gauge holding the running total); `increase` over a literal window becomes
+  Relic stores it as a gauge holding the running total; a metric the hints type as `gauge` is refused with its own reason and steps, in alerts too); `increase` over a literal window becomes
   `rate(sum(x), <window>)`, over `$__range` or a variable window `sum(x)`. `histogram_quantile`
   becomes `bucketPercentile(x_bucket, <100 q>)`. `topk(n, ...)` becomes `FACET ... LIMIT n`.
   Arithmetic between terms and numbers is written as one `SELECT` with `filter()` around a term

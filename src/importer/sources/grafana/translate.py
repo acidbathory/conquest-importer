@@ -135,6 +135,10 @@ R_COUNTER_NAME = (
     "promql counter function on a metric whose name does not end in _total, _count or _bucket, "
     "so New Relic may not store it as a delta count"
 )
+R_RATE_OF_GAUGE = (
+    "promql counter function on a gauge (the hints file types the metric as one); New Relic "
+    "keeps a gauge as sampled values, so a sum over the window is not a rate or an increase"
+)
 R_COUNTER_AGG = (
     "promql counter rate aggregated with {agg}(); only sum() of a rate or increase converts"
 )

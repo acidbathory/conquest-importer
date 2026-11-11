@@ -79,6 +79,10 @@ class NameMap(BaseModel):
     # metric -> every label it carries (from keyset()); lets without() become a by() list
     labels: dict[str, list[str]] = {}
 
+    def is_gauge(self, name: str) -> bool:
+        """True when the hints file types this metric as a gauge (never a guess from the name)."""
+        return self.types.get(name) == "gauge"
+
     @field_validator("variables")
     @classmethod
     def _variables(cls, found: dict[str, str]) -> dict[str, str]:
@@ -171,3 +175,11 @@ def active_name_map() -> NameMap:
     """The map named by IMPORTER_GRAFANA_NAME_MAP, or an empty one. Read at each call."""
     named = os.environ.get(MAP_ENV, "").strip()
     return load_name_map(Path(named)) if named else NameMap()
+
+
+def hinted_gauge(name: str) -> bool:
+    """is_gauge on the active name map; an unreadable map hints nothing."""
+    try:
+        return active_name_map().is_gauge(name)
+    except NameMapError:
+        return False

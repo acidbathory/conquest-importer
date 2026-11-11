@@ -6,6 +6,8 @@ that converts also runs the NRQL on sample rows and compares it with the PromQL 
 """
 
 import importlib
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -125,3 +127,15 @@ def test_a_rule_file_rate_comparison_converts_like_the_grafana_rule() -> None:
     grafana = prom(expr, params=[2], for_=600)
     assert from_file.signal == grafana.signal
     assert from_file.thresholds == grafana.thresholds
+
+
+@pytest.mark.parametrize("name", ["temp_c", "cpu_seconds_total"])
+@pytest.mark.parametrize("fn", ["rate", "increase"])
+def test_a_rate_of_a_metric_hinted_as_a_gauge_is_manual_with_its_own_reason(
+    fn: str, name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "map.json"
+    path.write_text(json.dumps({"types": {name: "gauge"}}))
+    monkeypatch.setenv("IMPORTER_GRAFANA_NAME_MAP", str(path))
+    m = prom(f"sum({fn}({name}[5m]))")
+    assert m.confidence is Confidence.MANUAL and m.reasons == [t.R_RATE_OF_GAUGE]

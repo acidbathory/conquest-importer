@@ -74,6 +74,7 @@ from importer.sources.grafana.translate import (
     PROM_NOT_SIMPLE,
     R_AGG_MIX,
     R_COUNTER_REDUCER,
+    R_RATE_OF_GAUGE,
     RANGE_SECONDS,
     REDUCERS,
     Built,
@@ -276,6 +277,8 @@ def _call_leaf(
     if call.func in COUNTER_FUNCTIONS:
         if aggregator not in (None, "sum"):
             raise Fail(PROM_NOT_SIMPLE)
+        if hints.is_gauge(name):
+            raise Fail(R_RATE_OF_GAUGE)
         if not _stored_as_count(name, hints):
             raise Fail(PROM_COUNTER)
         # no aggregator: a per-series rate, which needs the series labels (hints) to be a FACET
