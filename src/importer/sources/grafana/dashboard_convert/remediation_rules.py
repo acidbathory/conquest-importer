@@ -168,6 +168,22 @@ ROWS: list[tuple[str, str, list[str], Category]] = [
         C.UNSUPPORTED_QUERY,
     ),
     (
+        r.C_COUNTER_NAME,
+        "Dashboard rate of a metric not stored as a counter",
+        [
+            "New Relic decides counter or gauge from the name (`_total`, `_count`, `_sum`, "
+            "`_bucket`). A counter without one of these is stored as a gauge holding the "
+            "running total, so `rate(sum(x), 1 second)` returns the total divided by the "
+            "bucket, not the rate. The importer refuses it rather than draw a wrong chart.",
+            "Fix the data path: add the label `newrelic_metric_type` with the value `counter` "
+            "in the remote write relabel config for this metric, so it arrives as a delta.",
+            'Or tell the importer the type: add `{"types": {"<metric>": "counter"}}` to '
+            "the name map or hints file (`grafana-prom-hints` writes it), and convert again. "
+            "Do this only if the metric really arrives as a counter.",
+        ],
+        C.UNSUPPORTED_QUERY,
+    ),
+    (
         r.C_REUSE,
         "Dashboard panel reusing a query that did not convert",
         [

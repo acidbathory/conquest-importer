@@ -38,6 +38,9 @@ C_GAUGE_SERIES = (
     f"{PREFIX}: sum() or count() across the series of a gauge cannot be written without knowing "
     "which labels name one series"
 )
+C_COUNTER_NAME = (
+    f"{PREFIX}: rate of a metric with no counter suffix; New Relic may store it as a gauge total"
+)
 C_REUSE = f"{PREFIX}: the panel reuses a query that did not convert"
 C_UNEXPECTED = f"{PREFIX}: the panel could not be read"
 

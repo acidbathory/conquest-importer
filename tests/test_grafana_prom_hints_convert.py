@@ -138,5 +138,5 @@ def test_hinted_type_that_matches_the_name_rule_has_no_type_note() -> None:
     # without hints nothing is known, so nothing is said
     assert not any(
         "newrelic_metric_type" in n
-        for n in convert_query("sum(rate(requests[5m]))", "prometheus", opts(NameMap())).notes
+        for n in convert_query("sum(rate(requests_total[5m]))", "prometheus", opts(NameMap())).notes
     )

@@ -379,7 +379,7 @@ def test_rate_chart_note_warns_when_the_bucket_may_not_match_the_scrape_interval
 @pytest.mark.parametrize(
     ("expr", "select"),
     [
-        ("round(sum(irate(up[5m])))", "round(rate(sum(up), 1 second))"),
+        ("round(sum(irate(up_total[5m])))", "round(rate(sum(up_total), 1 second))"),
         ("ceil(sum by (pod) (rate(x_total[5m])))", "ceil(rate(sum(x_total), 1 second))"),
         ("floor(up)", "floor(average(up))"),
         ("abs(max(up))", "abs(max(up))"),
@@ -414,3 +414,16 @@ def test_round_with_a_second_argument_or_inside_an_aggregation_stays_manual(expr
 def test_recording_rule_names_with_colons_are_quoted(expr: str, expected: str) -> None:
     # Measured live (telemetry rig): remote write keeps the colon name; NRQL reads it in backticks.
     assert nrql(expr) == expected
+
+
+@pytest.mark.parametrize("fn", ["rate", "irate", "increase"])
+def test_a_rate_of_a_name_without_a_counter_suffix_is_refused_like_the_alert_path(fn: str) -> None:
+    with pytest.raises(Unconvertible) as caught:
+        nrql(f"sum({fn}(nginx_requests[2m]))")
+    assert caught.value.reason == r.C_COUNTER_NAME
+
+
+def test_a_hinted_counter_without_a_suffix_converts_under_rate() -> None:
+    hint = NameMap(types={"nginx_requests": "counter"})
+    opts = QueryOptions(variables={}, name_map=hint, timeseries=True)
+    assert "rate(sum(nginx_requests), 1 second)" in nrql("sum(rate(nginx_requests[2m]))", opts)

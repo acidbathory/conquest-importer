@@ -59,15 +59,6 @@ SUGGEST = {
 # Rules the harness found WRONG on clean data. Each has a failing test marked xfail; the rule is
 # left as it is until a person decides (rule 6 of docs/dev/parallel-work.md and the brief).
 KNOWN_WRONG: dict[str, str] = {
-    "DIFF-RATE-D03": (
-        "a dashboard counter whose name has no _total/_count/_bucket suffix is written as "
-        "`rate(sum(x), 1 second)`, but New Relic stores it as a gauge holding the running total, "
-        "so the query returns the total divided by the bucket, not the rate. Same finding as "
-        "finding 1 of telemetry-rig-results.md; the alert reader already refuses this shape "
-        "(DIFF-RATE-A05). The real fix is on the data path, not the rule: relabel the metric to "
-        "a counter type (`newrelic_metric_type=counter` write relabel) so it arrives as a delta. "
-        "The rule was not changed."
-    ),
     "DIFF-GAUGE-D03": (
         "a Prometheus gauge whose name ends in _count (`pg_stat_activity_count`) is stored as a "
         "delta count by the name-suffix rule, so `average()` of it is the average of differences. "

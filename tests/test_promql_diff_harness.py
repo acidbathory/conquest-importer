@@ -343,8 +343,13 @@ def test_a_gauge_named_like_a_count_is_reported_as_wrong() -> None:
     assert "DIFF-GAUGE-D03" in load_harness().KNOWN_WRONG
 
 
-def test_the_xfail_reason_points_to_the_data_path() -> None:
-    assert "relabel" in load_harness().KNOWN_WRONG["DIFF-RATE-D03"]
+def test_a_dashboard_rate_of_an_unsuffixed_counter_is_refused_like_the_alert_path() -> None:
+    """DIFF-RATE-D03 was WRONG (a strict xfail) until the dashboard converter refused the shape."""
+    assert "DIFF-RATE-D03" not in load_harness().KNOWN_WRONG
+    res = results()
+    assert res["DIFF-RATE-D03"]["verdict"] == "REFUSED"
+    assert "no counter suffix" in str(res["DIFF-RATE-D03"]["why"])
+    assert res["DIFF-RATE-A05"]["verdict"] == "REFUSED"
 
 
 def test_misalignment_is_tried_with_more_than_one_shift() -> None:

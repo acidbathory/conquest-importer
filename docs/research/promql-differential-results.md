@@ -33,9 +33,9 @@ shifts; HIGH is suggested only when every scenario is within tolerance.
 | IDENTICAL | 1 |
 | EQUAL_WITHIN_TOLERANCE | 9 |
 | DIFFERS_AT_EDGES | 25 |
-| WRONG | 2 |
+| WRONG | 1 |
 | NOT_MODELLED | 7 |
-| REFUSED | 15 |
+| REFUSED | 16 |
 
 ## Cases
 
@@ -67,7 +67,7 @@ Columns after the verdict are the worst relative divergence per scenario.
 | WITHOUT-01 | WITHOUT | DIFFERS_AT_EDGES | 0.0007 | 0.0019 | 0.6600 | 0.0341 | 0.0025 | MEDIUM |  |
 | WITHOUT-02 | WITHOUT | REFUSED |  |  |  |  |  |  | promql uses rate, increase or another range function |
 | PLACEHOLDER-01 | PLACEHOLDER | DIFFERS_AT_EDGES | 0.0005 | 0.0011 | 0.7907 | 0.0243 | 0.0016 | MEDIUM |  |
-| PLACEHOLDER-02 | PLACEHOLDER | REFUSED |  |  |  |  |  |  | promql query contains a template placeholder such as ${NAME}; fill it in with the real value before the condition can be converted |
+| PLACEHOLDER-02 | PLACEHOLDER | REFUSED |  |  |  |  |  |  | promql query contains a template placeholder (${CLUSTER}) with no value in the name map (variables); the policy does not say what it stands for, so give it a value before the condition can be converted |
 | CMP-FILTER-01 | CMP-FILTER | DIFFERS_AT_EDGES | 0.0000 | 0.0000 | 0.0000 | 0.0000 +M | 0.0000 | MEDIUM | flapping state: PromQL tests the latest sample, NRQL filters every sample |
 | CMP-FILTER-02 | CMP-FILTER | DIFFERS_AT_EDGES | 0.0000 | 0.0000 | 0.0000 | 0.0000 +M | 0.0000 | MEDIUM | flapping value: PromQL tests the latest sample, NRQL averages the samples above 0 |
 | CMP-FILTER-03 | CMP-FILTER | NOT_MODELLED |  |  |  |  |  |  | NRQL: sub-query |
@@ -84,7 +84,7 @@ Columns after the verdict are the worst relative divergence per scenario.
 | GAUGE-SUM-D02 | GAUGE-SUM | REFUSED |  |  |  |  |  |  | grafana dashboard convert: sum() or count() across the series of a gauge cannot be written without knowing which labels name one series |
 | DIFF-RATE-D01 | DIFF-RATE | DIFFERS_AT_EDGES | 0.0029 | 0.0204 | 0.6754 +M | 0.1472 | 0.0035 | MEDIUM |  |
 | DIFF-RATE-D02 | DIFF-RATE | DIFFERS_AT_EDGES | 0.0054 | 0.0258 | 0.7363 +M | 0.2329 | 0.0054 | MEDIUM |  |
-| DIFF-RATE-D03 | DIFF-RATE | WRONG | 0.9978 | 0.9976 | 0.9983 | 0.9978 | 0.9978 | MANUAL | counter without _total is stored as a gauge (rig finding 1) |
+| DIFF-RATE-D03 | DIFF-RATE | REFUSED |  |  |  |  |  |  | grafana dashboard convert: rate of a metric with no counter suffix; New Relic may store it as a gauge total |
 | DIFF-RATE-D04 | DIFF-RATE | DIFFERS_AT_EDGES | 0.0054 | 0.0242 | 0.6755 +M | 0.2695 | 0.0054 | MEDIUM |  |
 | DIFF-IRATE-D01 | DIFF-RATE | DIFFERS_AT_EDGES | 0.0053 | 0.0068 | 0.0047 +M | 0.3126 | 0.0109 | MEDIUM |  |
 | DIFF-INCREASE-D01 | DIFF-RATE | EQUAL_WITHIN_TOLERANCE | 0.0002 | 0.0003 | 0.0185 | 0.0126 | 0.0012 | HIGH |  |
@@ -138,5 +138,4 @@ difference of two nearly equal rates is not judged on its small result.
 
 ### Rules found WRONG (xfail tests, rules untouched)
 
-- `DIFF-RATE-D03`: a dashboard counter whose name has no _total/_count/_bucket suffix is written as `rate(sum(x), 1 second)`, but New Relic stores it as a gauge holding the running total, so the query returns the total divided by the bucket, not the rate. Same finding as finding 1 of telemetry-rig-results.md; the alert reader already refuses this shape (DIFF-RATE-A05). The real fix is on the data path, not the rule: relabel the metric to a counter type (`newrelic_metric_type=counter` write relabel) so it arrives as a delta. The rule was not changed.
 - `DIFF-GAUGE-D03`: a Prometheus gauge whose name ends in _count (`pg_stat_activity_count`) is stored as a delta count by the name-suffix rule, so `average()` of it is the average of differences. Same as finding 2 of telemetry-rig-results.md. The real fix is on the data path, not the rule: relabel the metric to a gauge type (`newrelic_metric_type=gauge` write relabel), which the rig showed restores the gauge. The rule was not changed.

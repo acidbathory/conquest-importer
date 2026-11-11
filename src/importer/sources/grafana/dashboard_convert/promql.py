@@ -424,6 +424,8 @@ class _Parse:
             raise Unconvertible(r.C_SHAPE)
         if agg in ("avg", "min", "max"):  # one sample's delta over a whole bucket: too low
             raise Unconvertible(r.C_AGG_RATE)
+        if not self.is_counter(name):  # same refusal as the alert path: a gauge's total is no rate
+            raise Unconvertible(r.C_COUNTER_NAME)
         event, metric = self.metric(name)
         core = f"{NR_AGGREGATE[agg or 'sum']}({metric})"
         kind, seconds = _window(window)

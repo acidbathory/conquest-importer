@@ -236,7 +236,9 @@ fields) are unverified until one dashboard is read back in a sandbox.
   200 lines, and a text panel becomes markdown (html is reduced to text).
 - **Queries.** A selector with `avg`, `sum`, `min`, `max` becomes `average`, `sum`, `min`, `max`
   with `FACET` for the `by` labels (`LIMIT MAX`, at most 5 labels). `rate`, `irate` become
-  `rate(sum(x), 1 second)` with `TIMESERIES AUTO`; `increase` over a literal window becomes
+  `rate(sum(x), 1 second)` with `TIMESERIES AUTO` (only for a counter: a name ending `_total`, `_count`,
+  `_sum` or `_bucket`, or a `types` hint of `counter`; any other name is refused, as in an alert, because New
+  Relic stores it as a gauge holding the running total); `increase` over a literal window becomes
   `rate(sum(x), <window>)`, over `$__range` or a variable window `sum(x)`. `histogram_quantile`
   becomes `bucketPercentile(x_bucket, <100 q>)`. `topk(n, ...)` becomes `FACET ... LIMIT n`.
   Arithmetic between terms and numbers is written as one `SELECT` with `filter()` around a term
