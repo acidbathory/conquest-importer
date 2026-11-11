@@ -18,6 +18,20 @@ W_SEVERAL = (
     "dashboard widget has several queries or requests; only a single metric query is converted"
 )
 W_FORMULA = "dashboard widget uses a formula over its queries, which is not converted yet"
+W_FORMULA_FUNC = (
+    "dashboard widget uses a formula with the function {name}(), which has no single-SELECT form"
+)
+W_FORMULA_NAME = "dashboard widget uses a formula that names a query that does not exist: {name}"
+W_FORMULA_UNREADABLE = "dashboard widget uses a formula that could not be read: {why}"
+W_FORMULA_GROUP = (
+    "dashboard widget uses a formula over queries that group by different tags, which NRQL "
+    "cannot combine in one query"
+)
+W_FORMULA_EVENTS = (
+    "dashboard widget uses a formula over metrics on different New Relic events, which NRQL "
+    "cannot join"
+)
+W_FORMULA_QUERY = "dashboard widget uses a formula over a query with {what}, which is not combined"
 W_FUNCTION = "dashboard query function is not converted yet: {name}()"
 W_NO_FORM = "dashboard query function has no New Relic form: {name}() ({why})"
 W_FUNC_ARGS = "dashboard query function: {name}() {why}"
@@ -39,6 +53,10 @@ V_DEFAULT = "dashboard template variable default is not a scope that can be conv
 V_INVALID = "dashboard template variable is not accepted as a New Relic variable: {name}"
 
 # -- notes on converted widgets --------------------------------------------------------------
+N_FORMULA = (
+    "dashboard formula is written as one SELECT of window aggregates; Datadog combines the "
+    "series point by point, so a ratio can differ (compare both on a day of data)"
+)
 N_RATE = (
     "rate functions are written as rate(sum(x), 1 second), which is right for a metric that "
     "arrives as counts; set the metric kind to count in name-map.json if it does"

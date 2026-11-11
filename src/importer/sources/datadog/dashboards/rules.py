@@ -154,7 +154,8 @@ TAXONOMY: list[tuple[Category, str]] = [
     ),
     (
         Category.APPROXIMATION,
-        r"^(dashboard (sum adds|widget has its own time range|note text is copied"
+        r"^(dashboard (sum adds|formula is written|widget has its own time range"
+        r"|note text is copied"
         r"|template variable has no tag key)|bars over time|new relic shows at most"
         r"|number formats, conditional|\d+ widgets overlapped|rate functions are written"
         r"|the space aggregator .* was replaced by sum|rollup\(\) bucket size"

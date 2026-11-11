@@ -12,21 +12,24 @@ weighted, derivative, formulas) is a placeholder with a reason.
 from dataclasses import dataclass, replace
 
 from importer.core.dashboard_ir import Series
-from importer.core.emit.nrql import identifier, widget_nrql
+from importer.core.emit.nrql import MAX_ALIAS, identifier, quote_string, widget_nrql
 from importer.core.ir import BinOp, Expr, MetricSignal, Num, Ref, TagFilter
+from importer.core.text import printable
 from importer.sources.datadog import reasons as R
 from importer.sources.datadog.common import Fail
 from importer.sources.datadog.dashboards import reasons as DR
+from importer.sources.datadog.dashboards.formulas import parse_formula, refs_in, top_formula
 from importer.sources.datadog.dashboards.reasons import shown
 from importer.sources.datadog.dashboards.variables import (
     Resolver,
+    Scope,
     TemplateVar,
     UsedVariable,
     with_variables,
 )
 from importer.sources.datadog.metric import AGGREGATIONS
 from importer.sources.datadog.metric import _Terms as Terms  # shared with the monitor path
-from importer.sources.datadog.names import NameMap, resolve_metric
+from importer.sources.datadog.names import NameMap, Resolved, resolve_metric
 from importer.sources.datadog.query import Bin, Call, MetricQuery, Node, Word, parse_metric_query
 from importer.sources.datadog.query import Num as QueryNum
 from importer.sources.datadog.query import Series as QuerySeries
@@ -55,6 +58,20 @@ def _several(text: str) -> bool:
         if ch == "," and depth == 0:
             return True
     return False
+
+
+def split_queries(text: str) -> list[str]:
+    """The queries of `a{*}, b{*}`: split at each comma outside braces and parentheses."""
+    parts: list[str] = []
+    depth, start = 0, 0
+    for i, ch in enumerate(text):
+        depth += ch in "({"
+        depth -= ch in ")}"
+        if ch == "," and depth == 0:
+            parts.append(text[start:i])
+            start = i + 1
+    parts.append(text[start:])
+    return [p.strip() for p in parts if p.strip()]
 
 
 @dataclass(frozen=True)
@@ -214,11 +231,14 @@ def _raw_query(
     signal = out.signal
     if shape.rate:
         signal = signal.model_copy(update={"expression": None})
-    query = widget_nrql(out.model_copy(update={"signal": signal, "auto_period": False}), False)
+    label = out.label
+    change = {"signal": signal, "auto_period": False, "label": None if shape.rate else label}
+    query = widget_nrql(out.model_copy(update=change), False)
     if shape.rate:
         select, rest = _select(query)
         times = "" if scale == 1.0 else f" * {scale:g}"
-        query = f"SELECT rate({select}, 1 second){times}{rest}"
+        alias = f" AS {quote_string(printable(label, MAX_ALIAS))}" if label else ""
+        query = f"SELECT rate({select}, 1 second){times}{alias}{rest}"
     query = with_variables(query, filters)
     if shape.top is not None:
         select, _ = _select(query)
@@ -268,7 +288,17 @@ def _time_function(shape: Shape, time_aggr: str, timeseries: bool) -> str:
     return func
 
 
-def convert_series(
+@dataclass
+class _Query:
+    """One query read and resolved, before it is placed in a series."""
+
+    shape: Shape
+    found: Resolved
+    scope: Scope
+    func: str
+
+
+def _prepare(
     text: str,
     time_aggr: str,
     timeseries: bool,
@@ -276,9 +306,7 @@ def convert_series(
     names: NameMap,
     variables: dict[str, TemplateVar],
     committed: dict[str, UsedVariable],
-) -> Converted:
-    """The series for one query. `time_aggr` is the function applied over each bucket (or over the
-    whole window for a single value); the series' own space aggregator is used when it is empty."""
+) -> _Query:
     shape = read_shape(text)
     series = shape.series
     _group_by(series, variables)
@@ -292,43 +320,174 @@ def convert_series(
         raise Fail(DR.W_FUNC_ARGS.format(name="as_rate", why=why))
     scope = Resolver(variables, names, committed, found.event, found.attribute).split(series.scope)
     func = _time_function(shape, time_aggr, timeseries)
-    built = Terms(func, names)
-    built.series(
-        replace(
-            series,
-            scope=scope.fixed,
-            functions=tuple(f for f in series.functions if shape.as_count and f.name == "as_count"),
-        )
+    return _Query(shape, found, scope, func)
+
+
+def _plain_in_formula(shape: Shape) -> None:
+    what = (
+        "a rate"
+        if shape.rate
+        else "top()"
+        if shape.top
+        else "a daily rollup"
+        if shape.rollup_daily
+        else ""
     )
+    if what:
+        raise Fail(DR.W_FORMULA_QUERY.format(what=what))
+
+
+def _build(
+    queries: dict[str, _Query],
+    formula: Expr | None,
+    timeseries: bool,
+    label: str | None,
+    names: NameMap,
+) -> Converted:
+    """One series from one query, or from several combined by `formula` into one SELECT."""
+    first = next(iter(queries.values()))
+    built = Terms(first.func, names)
+    refs: dict[str, Ref] = {}
+    for key, q in queries.items():
+        built.time = q.func
+        series = replace(
+            q.shape.series,
+            scope=q.scope.fixed,
+            functions=tuple(f for f in q.shape.series.functions if f.name == "as_count"),
+        )
+        ref = built.series(series)
+        extra = [*q.scope.defaults, *q.scope.variable_filters]
+        built.scopes[ref.name] = [*built.scopes[ref.name], *extra]
+        built.tag_keys += [f.key for f in extra if f.key not in built.tag_keys]
+        refs[key] = ref
+    many = len(queries) > 1
+    if many and len({frozenset(g) for g in built.groups}) > 1:
+        raise Fail(DR.W_FORMULA_GROUP)
+    if many and len(built.events) > 1:
+        raise Fail(DR.W_FORMULA_EVENTS)
+    shape = first.shape
     if shape.rate:  # the monitor note about a missing as_count() or as_rate() does not apply
-        built.notes = [n for n in built.notes if n != R.N_KIND.format(kind=found.kind)]
-    extra = [*scope.defaults, *scope.variable_filters]
-    built.scopes["a"] = [*built.scopes["a"], *extra]
-    built.tag_keys += [f.key for f in extra if f.key not in built.tag_keys]
-    notes = [*built.notes, *scope.notes, *_function_notes(shape, series.aggr, timeseries)]
-    if func == "sum" and found.kind != "count" and not shape.rate and not shape.as_count:
-        notes.append(DR.N_SUM_GAUGE)
-    if found.unit_scale != 1.0:
-        notes.append(R.N_SCALE.format(scale=f"{found.unit_scale:g}"))
-    notes.append(R.N_NAMES_MAPPED if found.from_map else R.N_NAMES_UNVERIFIED)
+        built.notes = [n for n in built.notes if n != R.N_KIND.format(kind=first.found.kind)]
+    used: dict[str, UsedVariable] = {}
+    filters: list[TagFilter] = []
+    notes = list(built.notes)
+    for q in queries.values():
+        used.update(q.scope.used)
+        filters += [f for f in q.scope.variable_filters if f not in filters]
+        notes += q.scope.notes
+    notes += _function_notes(shape, first.shape.series.aggr, timeseries)
+    if many:
+        notes.append(DR.N_FORMULA)
+    for q in queries.values():
+        if q.func == "sum" and q.found.kind != "count" and not (q.shape.rate or q.shape.as_count):
+            notes.append(DR.N_SUM_GAUGE)
+        if q.found.unit_scale != 1.0:
+            notes.append(R.N_SCALE.format(scale=f"{q.found.unit_scale:g}"))
+        notes.append(R.N_NAMES_MAPPED if q.found.from_map else R.N_NAMES_UNVERIFIED)
     if built.tag_keys:
         notes.append(R.N_ATTRS_UNVERIFIED.format(names=shown(", ".join(built.tag_keys[:8]), 120)))
+    scopes = list(built.scopes.values())
+    shared = all(s == scopes[0] for s in scopes)
+    terms = built.terms
+    if not shared:
+        terms = {k: v.model_copy(update={"scope": built.scopes[k]}) for k, v in terms.items()}
+    if formula is None:
+        expression = _expression(first.found.unit_scale)
+    else:
+        expression = _scaled(formula, {k: queries[k].found.unit_scale for k in queries}, refs)
     signal = MetricSignal(
-        terms=built.terms,
-        expression=_expression(found.unit_scale),
-        aggregation=AGGREGATIONS[func],
-        scope=built.scopes["a"],
+        terms=terms,
+        expression=expression,
+        aggregation=AGGREGATIONS[first.func],
+        scope=scopes[0] if shared else [],
         group_by=list(built.groups[0]),
     )
-    out = Series(signal=signal, period_seconds=PERIOD_SECONDS, auto_period=timeseries)
-    path = "name-map" if found.from_map else "datadog-same-names"
+    out = Series(signal=signal, period_seconds=PERIOD_SECONDS, auto_period=timeseries, label=label)
+    path = "name-map" if all(q.found.from_map for q in queries.values()) else "datadog-same-names"
     notes = list(dict.fromkeys(notes))
-    structured = not (
-        shape.rate or shape.top or scope.variable_filters or (timeseries and shape.rollup_daily)
-    )
+    structured = not (shape.rate or shape.top or filters or (timeseries and shape.rollup_daily))
     if structured:
-        return Converted(out, None, notes, path, scope.used)
+        return Converted(out, None, notes, path, used)
     query = _raw_query(
-        out, shape, found.unit_scale, timeseries, scope.variable_filters, found.attribute
+        out, shape, first.found.unit_scale, timeseries, filters, first.found.attribute
     )
-    return Converted(None, query, notes, path, scope.used, limited=shape.top is not None)
+    return Converted(None, query, notes, path, used, limited=shape.top is not None)
+
+
+def _scaled(formula: Expr, scales: dict[str, float], refs: dict[str, Ref]) -> Expr:
+    """The formula over the terms' own names, each metric's unit scale folded in."""
+    if isinstance(formula, Ref):
+        ref = refs[formula.name]
+        scale = scales[formula.name]
+        return ref if scale == 1.0 else BinOp(op="*", left=ref, right=Num(value=scale))
+    if isinstance(formula, BinOp):
+        return BinOp(
+            op=formula.op,
+            left=_scaled(formula.left, scales, refs),
+            right=_scaled(formula.right, scales, refs),
+        )
+    return formula
+
+
+def convert_series(
+    text: str,
+    time_aggr: str,
+    timeseries: bool,
+    grouped: bool,
+    names: NameMap,
+    variables: dict[str, TemplateVar],
+    committed: dict[str, UsedVariable],
+    label: str | None = None,
+) -> Converted:
+    """The series for one query. `time_aggr` is the function applied over each bucket (or over the
+    whole window for a single value); the series' own space aggregator is used when it is empty."""
+    query = _prepare(text, time_aggr, timeseries, grouped, names, variables, committed)
+    return _build({"q": query}, None, timeseries, label, names)
+
+
+def convert_formula(
+    formula: str,
+    queries: dict[str, str],
+    time_aggr: str,
+    timeseries: bool,
+    grouped: bool,
+    names: NameMap,
+    variables: dict[str, TemplateVar],
+    committed: dict[str, UsedVariable],
+    label: str | None = None,
+) -> Converted:
+    """One series for an arithmetic formula over named queries, all in one SELECT. The queries
+    must group by the same tags and live on one event; NRQL cannot join anything else."""
+    ranked = top_formula(formula)
+    if ranked is not None:
+        if ranked.name not in queries:
+            raise Fail(DR.W_FORMULA_NAME.format(name=shown(ranked.name, 40)))
+        text = f"top({queries[ranked.name]}, {ranked.limit}, '{ranked.by}', '{ranked.direction}')"
+        only = _prepare(text, time_aggr, timeseries, grouped, names, variables, committed)
+        scaled = (
+            None
+            if ranked.factor is None
+            else BinOp(op="*", left=Ref(name="q"), right=Num(value=ranked.factor))
+        )
+        return _build({"q": only}, scaled, timeseries, label, names)
+    expr = parse_formula(formula, set(queries))
+    seen = dict(committed)
+    prepared: dict[str, _Query] = {}
+    for name in refs_in(expr):
+        q = _prepare(queries[name], time_aggr, timeseries, grouped, names, variables, seen)
+        _plain_in_formula(q.shape)
+        seen.update(q.scope.used)
+        prepared[name] = q
+    if not prepared:
+        raise Fail(DR.W_FORMULA_UNREADABLE.format(why="it names no query"))
+    return _build(prepared, expr, timeseries, label, names)
+
+
+def as_nrql(done: Converted, timeseries: bool) -> str:
+    """The finished query text of a converted series, for a widget that mixes both forms."""
+    if done.nrql is not None:
+        return done.nrql
+    if done.series is None:
+        raise ValueError("a converted series holds neither a series nor a query")
+    flat = done.series.model_copy(update={"auto_period": False})
+    return widget_nrql(flat, False) + (" TIMESERIES AUTO" if timeseries else "")

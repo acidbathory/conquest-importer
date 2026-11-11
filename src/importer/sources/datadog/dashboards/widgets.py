@@ -6,6 +6,7 @@ reason it is not converted, so a gap is visible on the dashboard. A converted ch
 approximate: Datadog and New Relic aggregate differently (see the notes on each widget).
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -15,12 +16,19 @@ from importer.core.report import md_cell
 from importer.core.text import printable
 from importer.sources.datadog.common import Fail
 from importer.sources.datadog.dashboards import reasons as DR
-from importer.sources.datadog.dashboards.metric_query import Converted, convert_series
+from importer.sources.datadog.dashboards.metric_query import (
+    Converted,
+    as_nrql,
+    convert_formula,
+    convert_series,
+    split_queries,
+)
 from importer.sources.datadog.dashboards.reasons import shown
 from importer.sources.datadog.dashboards.variables import TemplateVar, UsedVariable
 from importer.sources.datadog.names import NameMap
 
 MAX_TITLE = 200
+MAX_LABEL = 100
 MAX_TEXT = 6000
 QUERY_VALUE_AGGREGATORS = ("avg", "sum", "min", "max")
 CHARTS = {
@@ -60,39 +68,80 @@ def _dicts(value: Any) -> list[dict[str, Any]]:
     return [v for v in value if isinstance(v, dict)] if isinstance(value, list) else []
 
 
-def _new_style(request: dict[str, Any]) -> str:
-    """The query text of a request written with `queries` and `formulas`."""
+@dataclass(frozen=True)
+class Spec:
+    """One series a widget asks for: a plain query, or a formula over named queries."""
+
+    text: str = ""
+    formula: str = ""
+    queries: dict[str, str] = field(default_factory=dict)
+    alias: str | None = None
+
+
+MAX_SPECS = 12
+_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_.]*")
+
+
+def _new_style(request: dict[str, Any]) -> list[Spec]:
+    """The series of a request written with `queries` and `formulas`."""
     queries = _dicts(request.get("queries"))
     formulas = _dicts(request.get("formulas"))
-    for q in queries:
-        source = q.get("data_source")
+    sources = {str(q.get("name")): q.get("data_source") for q in queries}
+    texts = {
+        str(q.get("name")): q["query"]
+        for q in queries
+        if q.get("data_source") == "metrics" and isinstance(q.get("query"), str)
+    }
+    if not formulas:
+        if len(queries) != 1:
+            raise Fail(DR.W_SEVERAL)
+        source = queries[0].get("data_source")
         if source != "metrics":
             raise Fail(DR.W_DATA_SOURCE.format(source=shown(source, 40)))
-    if len(queries) != 1:
-        raise Fail(DR.W_FORMULA if formulas else DR.W_SEVERAL)
-    only = queries[0]
-    if any(set(f) - FORMULA_KEYS or f.get("formula") != only.get("name") for f in formulas):
-        raise Fail(DR.W_FORMULA)
-    if len(formulas) > 1 or not isinstance(only.get("query"), str):
-        raise Fail(DR.W_FORMULA if len(formulas) > 1 else DR.W_NO_QUERY)
-    return str(only["query"])
+        return [Spec(text=texts[next(iter(texts))])] if texts else _no_query()
+    out: list[Spec] = []
+    for f in formulas:
+        text = f.get("formula")
+        if set(f) - FORMULA_KEYS:
+            raise Fail(DR.W_FORMULA)
+        if not isinstance(text, str):
+            raise Fail(DR.W_NO_QUERY)
+        for name in _NAME.findall(text):
+            if name in sources and sources[name] != "metrics":
+                raise Fail(DR.W_DATA_SOURCE.format(source=shown(sources[name], 40)))
+        alias = f.get("alias")
+        label = alias if isinstance(alias, str) else None
+        if text in texts:  # a formula that only names its query
+            out.append(Spec(text=texts[text], alias=label))
+        else:
+            out.append(Spec(formula=text, queries=texts, alias=label))
+    return out
 
 
-def _request(definition: dict[str, Any]) -> tuple[dict[str, Any], str]:
+def _no_query() -> list[Spec]:
+    raise Fail(DR.W_NO_QUERY)
+
+
+def _specs(definition: dict[str, Any]) -> tuple[dict[str, Any], list[Spec]]:
     requests = _dicts(definition.get("requests"))
     if not requests:
         raise Fail(DR.W_NO_QUERY)
-    if len(requests) > 1:
+    specs: list[Spec] = []
+    for request in requests:
+        if isinstance(request.get("q"), str):
+            specs += [Spec(text=t) for t in split_queries(request["q"])]
+        elif "queries" in request:
+            specs += _new_style(request)
+        else:
+            for key, label in OTHER_SOURCES.items():
+                if key in request:
+                    raise Fail(DR.W_DATA_SOURCE.format(source=label))
+            raise Fail(DR.W_NO_QUERY)
+    if not specs:
+        raise Fail(DR.W_NO_QUERY)
+    if len(specs) > MAX_SPECS:
         raise Fail(DR.W_SEVERAL)
-    request = requests[0]
-    if isinstance(request.get("q"), str):
-        return request, request["q"]
-    if "queries" in request:
-        return request, _new_style(request)
-    for key, label in OTHER_SOURCES.items():
-        if key in request:
-            raise Fail(DR.W_DATA_SOURCE.format(source=label))
-    raise Fail(DR.W_NO_QUERY)
+    return requests[0], specs
 
 
 def _aggregator(kind: str, request: dict[str, Any]) -> str:
@@ -211,42 +260,74 @@ def _markdown(definition: dict[str, Any], layout: Layout, kind: str, page: str |
     )
 
 
+def _label(spec: Spec, many: bool) -> str | None:
+    """The legend name: the formula alias, used when it tells series apart or names a formula."""
+    if spec.alias is None or not (many or spec.formula):
+        return None
+    return printable(" ".join(spec.alias.split()), MAX_LABEL) or None
+
+
+def _convert_all(
+    specs: list[Spec], time_aggr: str, timeseries: bool, grouped: bool, ctx: Context
+) -> list[Converted]:
+    done: list[Converted] = []
+    seen = dict(ctx.used)  # variables used by earlier series of this widget count as committed
+    for spec in specs:
+        label = _label(spec, len(specs) > 1)
+        if spec.formula:
+            one = convert_formula(
+                spec.formula, spec.queries, time_aggr, timeseries, grouped, ctx.names,
+                ctx.variables, seen, label,
+            )  # fmt: skip
+        else:
+            one = convert_series(
+                spec.text, time_aggr, timeseries, grouped, ctx.names, ctx.variables, seen, label
+            )
+        seen.update(one.variables)
+        done.append(one)
+    return done
+
+
 def _chart(
     definition: dict[str, Any], layout: Layout, kind: str, page: str | None, ctx: Context
 ) -> IRWidget:
-    request, text = _request(definition)
+    request, specs = _specs(definition)
+    if len(specs) > 1 and kind != "timeseries":
+        raise Fail(DR.W_SEVERAL)
     notes = _display_notes(definition, request)
     viz = _visualization(kind, request, notes)
     timeseries = viz in (Visualization.LINE, Visualization.AREA)
-    done: Converted = convert_series(
-        text,
-        _aggregator(kind, request),
-        timeseries,
-        kind != "query_value",
-        ctx.names,
-        ctx.variables,
-        ctx.used,
+    results = _convert_all(
+        specs, _aggregator(kind, request), timeseries, kind != "query_value", ctx
     )
-    series = done.series
-    grouped = bool((series and series.signal.group_by) or (done.nrql and " FACET " in done.nrql))
-    if grouped and kind in ("timeseries", "query_table") and not done.limited:
+    grouped = any(
+        bool((r.series and r.series.signal.group_by) or (r.nrql and " FACET " in r.nrql))
+        for r in results
+    )
+    if grouped and kind in ("timeseries", "query_table") and not all(r.limited for r in results):
         notes.append(DR.N_FACET_LIMIT)
-    fields: dict[str, Any] = (
-        {"series": [series]} if series else {"raw_series": [{"nrql": done.nrql}]}
-    )
+    fields: dict[str, Any]
+    if all(r.series for r in results):
+        fields = {"series": [r.series for r in results]}
+    else:
+        fields = {"raw_series": [{"nrql": as_nrql(r, timeseries)} for r in results]}
+    reasons = [n for r in results for n in r.notes]
     built = _widget(
         title_of(definition, kind),
         layout,
         kind,
         Confidence.APPROXIMATE,
-        [*done.notes, *notes],
+        [*reasons, *notes],
         page,
         kind=WidgetKind.CHART,
         visualization=viz,
-        data_path=done.data_path,
+        data_path=(
+            "name-map" if all(r.data_path == "name-map" for r in results) else "datadog-same-names"
+        ),
         **fields,
     )
-    ctx.used.update(done.variables)  # only once the widget exists, so a refused one adds none
+    for r in results:  # only once the widget exists, so a refused one adds none
+        ctx.used.update(r.variables)
     return built
 
 

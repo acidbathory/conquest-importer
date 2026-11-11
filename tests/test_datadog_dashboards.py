@@ -39,6 +39,30 @@ def ts(q: str, **fields: Any) -> dict[str, Any]:
     return widget("timeseries", requests=[{"q": q}], **fields)
 
 
+def formula_widget(
+    formulas: str | list[str],
+    queries: list[str],
+    names: list[str] | None = None,
+    kind: str = "timeseries",
+    alias: str | None = None,
+) -> dict[str, Any]:
+    names = names or [f"query{i + 1}" for i in range(len(queries))]
+    items = [formulas] if isinstance(formulas, str) else formulas
+    fs = [{"formula": f, **({"alias": alias} if alias else {})} for f in items]
+    return widget(
+        kind,
+        requests=[
+            {
+                "queries": [
+                    {"data_source": "metrics", "name": n, "query": q}
+                    for n, q in zip(names, queries, strict=True)
+                ],
+                "formulas": fs,
+            }
+        ],
+    )
+
+
 def convert(
     tmp_path: Path,
     widgets: list[dict[str, Any]],
@@ -177,24 +201,16 @@ def test_widget_time_span_is_reported(tmp_path: Path) -> None:
         (ts("avg:a.b{*"), "dashboard query could not be read"),
         (ts("p95:a.b{*}"), "query function"),
         (
-            widget("timeseries", requests=[{"q": "avg:a.b{*}"}, {"q": "avg:a.c{*}"}]),
+            widget("toplist", requests=[{"q": "avg:a.b{*}"}, {"q": "avg:a.c{*}"}]),
             "dashboard widget has several queries",
         ),
-        (ts("avg:a.b{x:1,y:2}, avg:a.c{*}"), "dashboard widget has several queries"),
         (
-            widget(
-                "timeseries",
-                requests=[
-                    {
-                        "queries": [
-                            {"data_source": "metrics", "name": "a", "query": "avg:a.b{*}"},
-                            {"data_source": "metrics", "name": "b", "query": "avg:a.c{*}"},
-                        ],
-                        "formulas": [{"formula": "a / b"}],
-                    }
-                ],
-            ),
-            "dashboard widget uses a formula",
+            widget("query_value", requests=[{"q": "avg:a.b{x:1,y:2}, avg:a.c{*}"}]),
+            "dashboard widget has several queries",
+        ),
+        (
+            formula_widget("a / b", ["avg:a.b{*} by {h}", "avg:a.c{*}"], names=["a", "b"]),
+            "dashboard widget uses a formula over queries that group by different tags",
         ),
         (
             widget(
@@ -479,6 +495,198 @@ def test_overlapping_boxes_are_moved_and_counted(tmp_path: Path) -> None:
     assert any("overlapped" in r for r in d.reasons)
 
 
+# -- step 3B: formulas and several queries --------------------------------------------------------
+@pytest.mark.parametrize(
+    ("w", "nrqls"),
+    [
+        (
+            formula_widget("query1 / query2 * 100", ["sum:a.b{*} by {h}", "sum:a.c{*} by {h}"]),
+            ["SELECT sum(a.b) / sum(a.c) * 100 FROM Metric FACET h TIMESERIES AUTO"],
+        ),
+        (
+            formula_widget("(query1 - query2) / query1", ["avg:a.b{*}", "max:a.c{*}"]),
+            ["SELECT (average(a.b) - max(a.c)) / average(a.b) FROM Metric TIMESERIES AUTO"],
+        ),
+        (
+            formula_widget(["query1", "query2 - query1"], ["sum:a.b{*}", "sum:a.c{*}"]),
+            [
+                "SELECT sum(a.b) FROM Metric TIMESERIES AUTO",
+                "SELECT sum(a.c) - sum(a.b) FROM Metric TIMESERIES AUTO",
+            ],
+        ),
+        (
+            formula_widget("query1 + query2", ["avg:a.b{env:x}", "avg:a.c{env:y}"]),
+            [
+                "SELECT filter(average(a.b), WHERE env = 'x') + filter(average(a.c), "
+                "WHERE env = 'y') FROM Metric TIMESERIES AUTO"
+            ],
+        ),
+        (
+            formula_widget("query1 + query2", ["avg:a.b{env:x}", "avg:a.c{env:x}"], kind="toplist"),
+            ["SELECT average(a.b) + average(a.c) FROM Metric WHERE env = 'x'"],
+        ),
+        (
+            widget("timeseries", requests=[{"q": "avg:a.b{*}"}, {"q": "max:a.c{*} by {h}"}]),
+            [
+                "SELECT average(a.b) FROM Metric TIMESERIES AUTO",
+                "SELECT max(a.c) FROM Metric FACET h TIMESERIES AUTO",
+            ],
+        ),
+        (
+            ts("avg:a.b{*}, avg:a.c{*}"),
+            [
+                "SELECT average(a.b) FROM Metric TIMESERIES AUTO",
+                "SELECT average(a.c) FROM Metric TIMESERIES AUTO",
+            ],
+        ),
+        (
+            formula_widget("query1 / query2", ["sum:a.b{*}", "sum:a.c{*}"], alias="Ratio"),
+            ["SELECT sum(a.b) / sum(a.c) AS 'Ratio' FROM Metric TIMESERIES AUTO"],
+        ),
+    ],
+)
+def test_formulas_and_several_queries(tmp_path: Path, w: dict[str, Any], nrqls: list[str]) -> None:
+    _, item, queries = one(tmp_path, w)
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert item.confidence is Confidence.APPROXIMATE
+    assert queries == nrqls
+
+
+@pytest.mark.parametrize(
+    ("formula", "nrql"),
+    [
+        (
+            "top(query1, 25, 'max', 'desc')",
+            "SELECT average(a.b) FROM Metric FACET h ORDER BY max(a.b) DESC LIMIT 25 "
+            "TIMESERIES AUTO",
+        ),
+        (
+            "top(query1, 5, 'mean', 'desc') * 8",
+            "SELECT average(a.b) * 8 FROM Metric FACET h ORDER BY average(a.b) DESC LIMIT 5 "
+            "TIMESERIES AUTO",
+        ),
+    ],
+)
+def test_a_formula_that_is_a_top_of_one_query(tmp_path: Path, formula: str, nrql: str) -> None:
+    w = formula_widget(formula, ["avg:a.b{*} by {h}"])
+    _, item, queries = one(tmp_path, w)
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert queries == [nrql]
+
+
+def test_a_top_formula_over_a_query_that_cannot_be_ranked_is_refused(tmp_path: Path) -> None:
+    _, item, _ = one(
+        tmp_path, formula_widget("top(query1, 5, 'l2norm', 'desc')", ["avg:a.b{*} by {h}"])
+    )
+    assert item.kind is WidgetKind.UNSUPPORTED
+    assert item.reasons[0].startswith("dashboard query function: top()")
+
+
+def test_a_formula_with_a_variable_scope_hoists_it_and_keeps_the_variable(tmp_path: Path) -> None:
+    w = formula_widget("query1 / query2", ["sum:a.b{$host} by {az}", "sum:a.c{$host} by {az}"])
+    d, item, queries = one(tmp_path, w, variables=[HOST])
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert queries == [
+        "SELECT sum(a.b) / sum(a.c) FROM Metric WHERE host IN ({{host}}) FACET az TIMESERIES AUTO"
+    ]
+    assert [v.name for v in d.variables] == ["host"]
+    nerdgraph_dashboard(d)
+
+
+def test_a_formula_carries_each_metrics_unit_scale(tmp_path: Path) -> None:
+    nm = {"metrics": {"a.b": {"event": "Metric", "attribute": "a.b", "unit_scale": 8}}}
+    _, item, queries = one(
+        tmp_path, formula_widget("query1 / query2", ["sum:a.b{*}", "sum:a.c{*}"]), name_map=nm
+    )
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert queries == ["SELECT sum(a.b) * 8 / sum(a.c) FROM Metric TIMESERIES AUTO"]
+
+
+def test_a_formula_over_queries_says_it_is_a_ratio_of_window_aggregates(tmp_path: Path) -> None:
+    _, item, _ = one(tmp_path, formula_widget("query1 / query2", ["sum:a.b{*}", "sum:a.c{*}"]))
+    assert any(r.startswith("dashboard formula") for r in item.reasons), item.reasons
+
+
+@pytest.mark.parametrize(
+    ("w", "start"),
+    [
+        (
+            formula_widget("default_zero(query1) + query2", ["sum:a.b{*}", "sum:a.c{*}"]),
+            "dashboard widget uses a formula with the function default_zero()",
+        ),
+        (
+            formula_widget("top(query1, 5, 'mean', 'desc') + query2", ["sum:a.b{*}", "sum:a.c{*}"]),
+            "dashboard widget uses a formula with the function top()",
+        ),
+        (
+            formula_widget("week_before(query1)", ["sum:a.b{*}", "sum:a.c{*}"]),
+            "dashboard widget uses a formula with the function week_before()",
+        ),
+        (
+            formula_widget("query1 + nope", ["sum:a.b{*}", "sum:a.c{*}"]),
+            "dashboard widget uses a formula that names a query that does not exist",
+        ),
+        (
+            formula_widget("query1 +", ["sum:a.b{*}", "sum:a.c{*}"]),
+            "dashboard widget uses a formula that could not be read",
+        ),
+        (
+            formula_widget("query1 / query2", ["sum:a.b{*} by {h}", "sum:a.c{*} by {g}"]),
+            "dashboard widget uses a formula over queries that group by different tags",
+        ),
+        (
+            formula_widget("query1 / query2", ["sum:a.b{*}.as_rate()", "sum:a.c{*}.as_rate()"]),
+            "dashboard widget uses a formula over a query with",
+        ),
+        (
+            formula_widget(
+                "query1 / query2", ["top(sum:a.b{*} by {h}, 5, 'max', 'desc')", "sum:a.c{*}"]
+            ),
+            "dashboard widget uses a formula over a query with",
+        ),
+        (
+            formula_widget(["query1", "query2"], ["sum:a.b{*}", "sum:a.c{*}"], kind="query_table"),
+            "dashboard widget has several queries",
+        ),
+    ],
+)
+def test_formulas_that_cannot_be_one_select_stay_placeholders(
+    tmp_path: Path, w: dict[str, Any], start: str
+) -> None:
+    _, item, _ = one(tmp_path, w)
+    assert item.kind is WidgetKind.UNSUPPORTED, item.reasons
+    assert item.reasons[0].startswith(start), item.reasons
+    assert steps_for(item.reasons)
+    assert classify(item.reasons[0]) is not Category.OTHER
+
+
+def test_formulas_over_different_events_are_refused(tmp_path: Path) -> None:
+    nm = {
+        "metrics": {
+            "a.b": {"event": "Metric", "attribute": "a.b"},
+            "a.c": {"event": "Other", "attribute": "a.c"},
+        }
+    }
+    _, item, _ = one(
+        tmp_path, formula_widget("query1 / query2", ["sum:a.b{*}", "sum:a.c{*}"]), name_map=nm
+    )
+    assert item.kind is WidgetKind.UNSUPPORTED
+    assert item.reasons[0].startswith("dashboard widget uses a formula over metrics on different")
+
+
+def test_a_failing_series_makes_the_whole_widget_a_placeholder(tmp_path: Path) -> None:
+    w = widget("timeseries", requests=[{"q": "avg:a.b{*}"}, {"q": "weighted(avg:a.c{*})"}])
+    _, item, _ = one(tmp_path, w)
+    assert item.kind is WidgetKind.UNSUPPORTED
+
+
+def test_hostile_formula_text_does_not_reach_a_query(tmp_path: Path) -> None:
+    w = formula_widget("query1 / query2", ["sum:a.b{*}", "sum:a.c{*}"], alias="x' ; DROP")
+    _, item, queries = one(tmp_path, w)
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert queries == ["SELECT sum(a.b) / sum(a.c) AS 'x\\' ; DROP' FROM Metric TIMESERIES AUTO"]
+
+
 # -- step 3: the function table -------------------------------------------------------------------
 COUNT_MAP = {"metrics": {"a.b": {"event": "Metric", "attribute": "a.b", "kind": "count"}}}
 GAUGE_MAP = {"metrics": {"a.b": {"event": "Metric", "attribute": "a.b", "kind": "gauge"}}}
@@ -648,7 +856,7 @@ def test_a_query_value_with_a_function_still_converts(tmp_path: Path) -> None:
 def test_the_real_dashboards_measure_is_pinned() -> None:
     """Data widgets exclude notes. Before this converter nothing converted (0 of 454)."""
     m = measure(DASHBOARD_REGISTRY["datadog"].convert(REAL))
-    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 190, 264)
+    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 259, 195)
     assert (m.notes, m.note_placeholders) == (62, 0)
     assert m.converted + m.placeholders == m.data_widgets
     assert sum(m.by_reason.values()) == m.placeholders
