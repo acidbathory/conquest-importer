@@ -126,6 +126,8 @@ The Logic App `callbackUrl` in the upstream action group examples carries a `sig
 | `action_groups/2023-01-01__patchActionGroup.json` | https://raw.githubusercontent.com/Azure/azure-rest-api-specs/939d1a81ec5159e61394cd8ca2589c2c0ce49ccd/specification/monitor/resource-manager/Microsoft.Insights/Insights/stable/2023-01-01/examples/patchActionGroup.json | 2023-01-01 |
 | `action_groups/2023-01-01__postTestNotificationsAtActionGroupResourceLevel.json` | https://raw.githubusercontent.com/Azure/azure-rest-api-specs/939d1a81ec5159e61394cd8ca2589c2c0ce49ccd/specification/monitor/resource-manager/Microsoft.Insights/Insights/stable/2023-01-01/examples/postTestNotificationsAtActionGroupResourceLevel.json | 2023-01-01 |
 
+Files that contain all eleven receiver types: `action_groups/2021-09-01__createOrUpdateActionGroup.json`, `action_groups/2023-01-01__createOrUpdateActionGroup.json` (request bodies) and the `postTestNotifications*` files. The get, list and patch examples carry three or fewer.
+
 ## Alert processing rules (Microsoft.AlertsManagement/actionRules)
 
 | File | Source URL | API version |
