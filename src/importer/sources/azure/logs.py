@@ -62,7 +62,6 @@ AGGREGATIONS = {
 BAD_SCOPE_TYPES = ("microsoft.insights/components", "microsoft.kusto/clusters")
 FORWARDED = ("plugin.type", "azure")  # the attribute New Relic's forwarder documents
 MAX_PERIODS = 24
-SERVICE_HEALTH_WORDS = ("servicehealth", "resourcehealth")
 
 
 def _positive_int(value: object, default: int) -> int:
@@ -278,38 +277,6 @@ def translate_scheduled_query_rule(alert: AzureAlert) -> IRMonitor:
     monitor.reasons = list(dict.fromkeys([*found, *notes]))
     monitor.unmapped = extra
     return monitor
-
-
-def _leaf_text(leaf: dict[str, Any]) -> str:
-    wanted = leaf.get("equals", leaf.get("containsAny", ""))
-    return f"{R.shown(leaf.get('field'), 40)} = {R.shown(wanted, 80)}"
-
-
-def _condition_lines(condition: object) -> list[str]:
-    lines: list[str] = []
-    leaves = condition.get("allOf") if isinstance(condition, dict) else None
-    for leaf in leaves if isinstance(leaves, list) else []:
-        if not isinstance(leaf, dict):
-            continue
-        any_of = leaf.get("anyOf")
-        parts: list[Any] = any_of if isinstance(any_of, list) else [leaf]
-        text = " or ".join(_leaf_text(p) for p in parts if isinstance(p, dict))
-        if text:
-            lines.append(text)
-    return lines
-
-
-def translate_activity_log_alert(alert: AzureAlert) -> IRMonitor:
-    props = alert.properties
-    base = base_fields(alert, key_of(alert), "activity log alert", alert.name)
-    lines = _condition_lines(props.get("condition"))
-    health = any(w in " ".join(lines).lower().replace(" ", "") for w in SERVICE_HEALTH_WORDS)
-    reason = R.M_SERVICE_HEALTH if health else R.M_ACTIVITY
-    steps = [f"The Azure rule matches events where {' and '.join(lines)}."] if lines else []
-    extra: dict[str, Any] = {}
-    if props.get("tenantScope"):
-        reason = f"{reason}; the rule is tenant or management group scoped"
-    return manual(base, [reason], steps, unmapped=extra)
 
 
 def translate_smart_detector(alert: AzureAlert) -> IRMonitor:
