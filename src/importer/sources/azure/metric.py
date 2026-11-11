@@ -112,7 +112,7 @@ def _scope(scopes: object, multiple: bool) -> Scope:
 
 
 def _dimensions(
-    raw: object, names: NameMap, prefix: str
+    raw: object, names: NameMap, prefix: str, metric: str = ""
 ) -> tuple[list[TagFilter], list[str], list[str]]:
     filters: list[TagFilter] = []
     facets: list[str] = []
@@ -125,7 +125,7 @@ def _dimensions(
         operator = str(item.get("operator", "Include")).lower()
         values = item.get("values")
         label = R.shown(item.get("name", ""), 40)
-        attr = dimension_attribute(names, prefix, str(item.get("name", "")))
+        attr = dimension_attribute(names, prefix, str(item.get("name", "")), metric)
         ok = isinstance(values, list) and values and all(isinstance(v, str) for v in values)
         if attr is None or operator not in ("include", "exclude") or not ok:
             raise Fail(f"{R.M_DIMENSION}: {label}")
@@ -178,11 +178,9 @@ def _metric_signal(
             identifier(found.attribute)
     except ValueError:
         raise Fail(f"{R.M_NO_NAME}: {R.shown(metric, 60)}") from None
-    filters, facets, notes = _dimensions(crit.get("dimensions"), alert.names, found.prefix)
-    notes.insert(
-        0,
-        (R.N_NAME_MAPPED if found.from_map else R.N_NAME_DERIVED).format(name=found.attribute),
-    )
+    filters, facets, notes = _dimensions(crit.get("dimensions"), alert.names, found.prefix, metric)
+    note = {"map": R.N_NAME_MAPPED, "table": R.N_NAME_TABLE}.get(found.basis, R.N_NAME_DERIVED)
+    notes.insert(0, note.format(name=found.attribute))
     if facets:
         notes.append(R.N_ATTR_DERIVED.format(names=", ".join(facets)))
     if not facets:

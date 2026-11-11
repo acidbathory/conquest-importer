@@ -26,7 +26,8 @@ PATTERNS: list[tuple[Category, str]] = [
     ),
     (
         Category.UNVERIFIED_NAMES,
-        r"^(metric name .* (is derived|comes from name-map)|attribute names .* are derived"
+        r"^(metric name .* (is derived|is listed in|comes from name-map)"
+        r"|attribute names .* are derived"
         r"|log attribute names|azure\.resourceid is matched|metric names are read as prometheus)",
     ),
     (

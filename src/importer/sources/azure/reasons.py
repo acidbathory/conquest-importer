@@ -81,6 +81,11 @@ N_NAME_DERIVED = (
     "integration and is UNVERIFIED: it has not been seen arriving; run check-azure-data and, if "
     "it differs, put the real name in name-map.json"
 )
+N_NAME_TABLE = (
+    "metric name {name} is listed in the New Relic Azure Monitor integration documentation "
+    "(VERIFIED against the documentation, not yet seen arriving in an account); run "
+    "check-azure-data"
+)
 N_NAME_MAPPED = (
     "metric name {name} comes from name-map.json and has not been checked against New Relic; "
     "run check-azure-data"
