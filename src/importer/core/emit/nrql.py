@@ -37,6 +37,8 @@ COUNT_EVENTS = {SignalKind.LOG: "Log", SignalKind.APM: "Transaction"}
 PRECEDENCE = {"+": 1, "-": 1, "*": 2, "/": 2}
 MAX_ALIAS = 100
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]*$")
+# names such as a JSON log field "@type" or a label "a/b" are valid only inside backticks
+_QUOTED_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_.@/\-]*$")
 
 
 def attribute_for(kind: SignalKind, key: str) -> str:  # noqa: ARG001 - kept for call-site clarity
@@ -65,6 +67,14 @@ def identifier(name: str) -> str:
     if any(part[:1].isdigit() for part in name.split(".")):
         return f"`{name}`"
     return name
+
+
+def field_identifier(name: str) -> str:
+    """Like `identifier`, and a name the caller wrapped in backticks may also hold `@`, `/` or `-`
+    (a JSON log field such as `jsonPayload.@type`). Used for log and event filters only."""
+    if len(name) > 2 and name[0] == name[-1] == "`" and _QUOTED_IDENTIFIER.match(name[1:-1]):
+        return name
+    return identifier(name)
 
 
 def _facet(kind: SignalKind, group_by: list[str]) -> str:
@@ -147,7 +157,7 @@ def widget_nrql(series: Series, timeseries: bool) -> str:
 
 
 def _filter_clause(kind: SignalKind, f: CountFilter) -> str:
-    return _match_clause(identifier(attribute_for(kind, f.key)), f)
+    return _match_clause(field_identifier(attribute_for(kind, f.key)), f)
 
 
 def _count_nrql(

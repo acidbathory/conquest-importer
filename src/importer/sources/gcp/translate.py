@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 from importer.core.emit.common import MAX_AGGREGATION_WINDOW_SECONDS, MAX_DURATION_SECONDS
-from importer.core.emit.nrql import identifier
+from importer.core.emit.nrql import field_identifier, identifier
 from importer.core.ids import source_id
 from importer.core.ir import (
     Aggregation,
@@ -33,6 +33,7 @@ from importer.core.ir import (
     TagFilter,
     Threshold,
 )
+from importer.core.text import printable
 from importer.sources.gcp import alert_fields
 from importer.sources.gcp.filter import FilterError, Term, parse_filter
 from importer.sources.gcp.models import GcpAlertPolicy, GcpCondition
@@ -127,6 +128,8 @@ MANUAL_KINDS = {
 ABSENCE_KIND = "conditionAbsent"
 ABSENCE_PREFIX = "a metric-absence condition could not be converted: "
 SERVICE_SEGMENT = re.compile(r"^(?P<service>[a-z0-9_.]+?)(?:\.googleapis\.com)?/(?P<path>.+)$")
+PLAIN_ATTRIBUTE = re.compile(r"[A-Za-z0-9_.]+")
+_PLAIN_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_.]*")
 SAFE_PATH = re.compile(r"^[a-z0-9_/]+$")
 NAMING_NOTE = (
     "this metric did not appear in our live test, so its New Relic name follows the documented "
@@ -241,6 +244,8 @@ def _valid_attribute(attribute: str, field: str) -> str:
     """The attribute when NRQL accepts it as a name; otherwise the condition stays manual."""
     try:
         identifier(attribute)
+        if not PLAIN_ATTRIBUTE.fullmatch(attribute):
+            raise ValueError(attribute)  # a metric label never needs a quoted name
     except ValueError:
         raise Fail(
             Confidence.MANUAL, f"label {field!r} does not make a valid New Relic attribute name"
@@ -253,12 +258,16 @@ def _scope(terms: list[Term]) -> tuple[str, list[TagFilter], list[str]]:
     scope: list[TagFilter] = []
     notes: list[str] = []
     for term in terms:
-        if term.field == "metric.type" and term.op == "=" and not term.negate:
+        plain = term.op == "=" and not term.negate and not term.values
+        if term.field == "metric.type" and plain:
             metric_type = term.value
-        elif term.field == "resource.type" and term.op == "=" and not term.negate:
+        elif term.field == "resource.type" and plain:
             notes.append(f"resource type {term.value!r} is not part of the query")
-        elif (label := _label_name(term.field)) and term.op == "=" and not term.negate:
-            scope.append(TagFilter(key=label, value=term.value))
+        elif (label := _label_name(term.field)) and term.op in ("=", "!="):
+            negate = term.negate != (term.op == "!=")
+            scope.append(
+                TagFilter(key=label, value=term.value, negate=negate, values=list(term.values))
+            )
         else:
             raise Fail(Confidence.MANUAL, f"filter term on {term.field!r} is not supported")
     if not metric_type:
@@ -626,7 +635,17 @@ def _log_count(body: dict[str, object]) -> CountSignal:
         raise Fail(Confidence.MANUAL, f"log filter not supported: {err}") from err
     filters: list[CountFilter] = []
     for term in terms:
-        if (
+        if term.field == "log_id" and term.op == "()":
+            # the log name ends in the URL-encoded id; the encoded slash cannot be written in a
+            # LIKE pattern, so the slashes in the id match anything
+            pattern = "*/logs/" + term.value.replace("/", "*")
+            filters.append(CountFilter(key="logName", value=pattern, wildcard=True))
+        elif term.values and term.op in ("=", "!="):
+            negate = term.negate != (term.op == "!=")
+            filters.append(
+                CountFilter(key=term.field, value="", values=list(term.values), negate=negate)
+            )
+        elif (
             term.field == "severity"
             and term.op in SEVERITY_OPS
             and term.value.upper() in SEVERITIES
@@ -654,6 +673,14 @@ def _log_count(body: dict[str, object]) -> CountSignal:
             raise Fail(
                 Confidence.MANUAL, f"log filter comparison on {term.field!r} is not supported"
             )
+    for f in filters:
+        try:
+            f.key = field_identifier(f.key if _PLAIN_NAME.fullmatch(f.key) else f"`{f.key}`")
+        except ValueError:
+            raise Fail(
+                Confidence.MANUAL,
+                f"log field {printable(f.key, 60)!r} is not a valid New Relic attribute name",
+            ) from None
     return CountSignal(filters=filters)
 
 

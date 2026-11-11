@@ -11,7 +11,18 @@ from typing import Any
 
 from importer.core.emit.common import RUNBOOK_URL, VIOLATION_TIME_LIMIT_SECONDS
 from importer.core.ir import EmitOptions, NoData, Severity
+from importer.core.taxonomy import Category, register_taxonomy
 from importer.core.text import printable
+
+# notes on conditions that did convert; anchored so no older reason changes category
+register_taxonomy(
+    Category.APPROXIMATION,
+    r"^(?:evaluation_missing_data_|google notifies for|google closes the incident"
+    r"|google repeats notifications|google sends notifications|google requires a notification"
+    r"|autoclose of|the google policy severity|the trigger of|labelextractors"
+    r"|a notification rate limit|this log alert has no|a forecast condition becomes"
+    r"|the aligner \S+ and reducer|reduce_\w+ runs over)",
+)
 
 FIELD_LIMIT = 200  # characters kept from any one untrusted value
 MAX_ITEMS = 10  # labels, links or extractors listed in a description
