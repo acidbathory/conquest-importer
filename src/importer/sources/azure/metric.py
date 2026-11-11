@@ -283,13 +283,11 @@ def translate_metric_alert(alert: AzureAlert) -> IRMonitor:
         return manual(base, [R.M_NO_CRITERIA], unmapped=extra)
     multiple = odata == SINGLE_TYPES[1]
     if len(crits) > 1:
-        return manual(
-            base, [R.M_SEVERAL, *notes], _alone(alert, crits, multiple, level), unmapped=extra
-        )
+        return manual(base, [R.M_SEVERAL], _alone(alert, crits, multiple, level), unmapped=extra)
     try:
         signal, threshold, found = _one(alert, crits[0], multiple, level)
     except Fail as fail:
-        return manual(base, [fail.reason, *notes], fail.steps, unmapped=extra)
+        return manual(base, [fail.reason], fail.steps, unmapped=extra)
     return IRMonitor(
         **base,
         signal=signal,

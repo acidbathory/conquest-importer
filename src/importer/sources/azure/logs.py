@@ -318,11 +318,9 @@ def translate_scheduled_query_rule(alert: AzureAlert) -> IRMonitor:
     conditions = criteria.get("allOf") if isinstance(criteria, dict) else None
     if not isinstance(conditions, list) or not conditions:
         legacy = any(k in props for k in ("source", "action", "trigger"))
-        return manual(
-            base, [R.M_LOG_LEGACY if legacy else R.M_LOG_NO_CRITERIA, *notes], unmapped=extra
-        )
+        return manual(base, [R.M_LOG_LEGACY if legacy else R.M_LOG_NO_CRITERIA], unmapped=extra)
     if len(conditions) > 1:
-        return manual(base, [R.M_LOG_SEVERAL, *notes], unmapped=extra)
+        return manual(base, [R.M_LOG_SEVERAL], unmapped=extra)
     cond = conditions[0]
     if not isinstance(cond, dict):
         return manual(base, [R.M_LOG_NO_CRITERIA], unmapped=extra)
@@ -330,7 +328,7 @@ def translate_scheduled_query_rule(alert: AzureAlert) -> IRMonitor:
         monitor, found = _log_condition(alert, cond, level, kind == "SimpleLogAlert")
     except (Fail, ValueError) as exc:
         reason = exc.reason if isinstance(exc, Fail) else f"{R.M_KQL}: {R.shown(exc, 150)}"
-        return manual(base, [reason, *notes], getattr(exc, "steps", []), unmapped=extra)
+        return manual(base, [reason], getattr(exc, "steps", []), unmapped=extra)
     monitor.reasons = list(dict.fromkeys([*found, *notes]))
     monitor.unmapped = extra
     return monitor

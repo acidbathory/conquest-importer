@@ -3,7 +3,7 @@
 from importer.sources.azure import playbooks, remediation_rules, taxonomy  # noqa: F401
 from importer.sources.azure.models import AzureAlert, load_alerts
 from importer.sources.azure.translate import translate
-from importer.sources.base import Source, import_subpackages, register
+from importer.sources.base import Source, import_subpackages, register, register_fixtures
 
 SOURCE: Source[AzureAlert] = Source(
     name="azure",
@@ -14,6 +14,8 @@ SOURCE: Source[AzureAlert] = Source(
     translate=translate,
 )
 register(SOURCE)
+# official examples and hostile cases; real captured responses go in tests/fixtures/azure-live/
+register_fixtures("azure", "tests/fixtures/azure", "tests/fixtures/azure-live")
 
 # Feature sub-packages (src/importer/sources/azure/<feature>/) load themselves; see
 # docs/dev/parallel-work.md.

@@ -125,6 +125,9 @@ def build_kinds(key: str, source: str, extract: Step, lay: Layout) -> list[KindP
             [_s("extract-grafana-dashboards", "--out", raw_d)],
             [_s("convert-grafana-dashboards", "--in", raw_d, "--out", out_d)],
         )
+    elif key == "10":  # Azure: one extract holds alert rules, action groups and processing rules
+        convert_alerts = _s("convert", "--source", source, "--in", alerts_raw)
+        return [KindPlan("alerts", read_alerts, [[*convert_alerts, "--out", str(alerts)]])]
     else:  # Dynatrace; dashboards are planned only
         convert_alerts = _s("convert", "--source", source, "--in", alerts_raw)
         topics = _s("convert-notifications", "--source", "dynatrace", "--topics", alerts_raw)

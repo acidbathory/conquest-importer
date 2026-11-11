@@ -129,7 +129,7 @@ def finish(
 ) -> IRMonitor:
     """Turn the Grafana-built monitor into an Azure one with Azure wording and severity."""
     if found.confidence is Confidence.MANUAL:
-        return manual(base, [*found.reasons, *extra_notes], unmapped=unmapped)
+        return manual(base, list(found.reasons), unmapped=unmapped)
     thresholds = [
         Threshold(severity=level.severity, operator=t.operator, value=t.value)
         for t in found.thresholds
@@ -157,11 +157,11 @@ def convert_metric_promql(
     if not isinstance(queries, list) or not queries or not isinstance(queries[0], dict):
         return manual(base, [R.M_NO_CRITERIA], unmapped=extra)
     if len(queries) > 1:
-        return manual(base, [R.M_SEVERAL, *notes], unmapped=extra)
+        return manual(base, [R.M_SEVERAL], unmapped=extra)
     failing = criteria.get("failingPeriods") if isinstance(criteria, dict) else None
     for_text = failing.get("for") if isinstance(failing, dict) else None
     if queries[0].get("criterionType") == "DynamicThresholdCriterion":
-        return manual(base, [R.M_DYNAMIC, *notes], unmapped=extra)
+        return manual(base, [R.M_DYNAMIC], unmapped=extra)
     found, found_notes = convert_expression(
         queries[0].get("query"),
         key=str(base["source_key"]),
