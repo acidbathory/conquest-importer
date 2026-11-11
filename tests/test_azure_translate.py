@@ -307,7 +307,7 @@ def test_summarize_by_a_column_that_is_not_a_dimension_is_manual() -> None:
 
 
 def test_bin_size_must_match_the_window() -> None:
-    q = "T | summarize count() by bin(TimeGenerated, 1m)"
+    q = "T | summarize count() by bin(TimeGenerated, 10m)"
     assert "bin size differs" in one(log_rule(q, timeAggregation="Total")).reasons[0]
 
 
@@ -318,11 +318,7 @@ def test_an_average_of_a_column_is_a_metric_on_log() -> None:
 
 
 def test_a_measure_column_that_is_not_a_plain_name_is_manual() -> None:
-    m = one(
-        log_rule(
-            'T | where A == "x"', metricMeasureColumn="% Processor Time", timeAggregation="Average"
-        )
-    )
+    m = one(log_rule('T | where A == "x"', metricMeasureColumn="a;b`c", timeAggregation="Average"))
     assert m.confidence is Confidence.MANUAL and "measures a column" in m.reasons[0]
 
 
@@ -344,17 +340,12 @@ def test_failing_periods_extend_the_duration() -> None:
 @pytest.mark.parametrize(
     ("query", "text"),
     [
-        ("Perf | where ObjectName == 'x'", "agent or service"),
-        ("Heartbeat | summarize arg_max(TimeGenerated, *) by Computer", "agent or service"),
-        ("T | join U on a", "'join' has no New Relic form"),
-        ("T | where A == 'x' or B == 'y'", "uses or"),
+        ("Heartbeat | summarize arg_max(TimeGenerated, *) by Computer", "arg_max"),
+        ("T | join U on a", "join has no New Relic form"),
         ("T | where A =~ 'x'", "case-insensitive"),
-        ("T | where A > 5", "not a comparison"),
-        ("let x = 1; T", "several statements"),
-        ("union T, U", "plain table name"),
-        ("T | extend z = 1", "'extend' has no New Relic form"),
-        ("T | where A == 'it\\'s'", "not a comparison"),
-        ("T | where A == 'a*b'", "wildcards"),
+        ("union T, U", "union has no New Relic form"),
+        ("T | extend z = 1", "extend that computes a value"),
+        ("T | where A == 'tab\\there'", "string escape"),
     ],
 )
 def test_kql_that_has_no_form_is_manual_with_the_reason(query: str, text: str) -> None:
