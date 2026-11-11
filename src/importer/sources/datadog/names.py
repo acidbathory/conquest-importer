@@ -21,12 +21,15 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, FiniteFloat, ValidationError, field_validator
 
 from importer.core.emit.nrql import identifier
 from importer.core.ids import MAX_INPUT_BYTES
+
+if TYPE_CHECKING:
+    from importer.sources.datadog.models import DatadogMonitor
 
 MAP_ENV = "IMPORTER_DATADOG_NAME_MAP"
 MAP_FILE = "name-map.json"
@@ -142,3 +145,75 @@ def resolve_attribute(names: NameMap, key: str) -> str | None:
     except ValueError:
         return None
     return name
+
+
+@dataclass(frozen=True)
+class Scaffold:
+    metrics: list[str]  # Datadog metric names the map does not cover
+    tags: list[str]  # tag keys and log attributes the map does not cover
+    skeleton: dict[str, object]
+
+
+def scaffold(monitors: "list[DatadogMonitor]") -> Scaffold:
+    """Metrics and tag keys used by the monitors that the monitors' name map does not list."""
+    from importer.sources.datadog.logsearch import parse_log_search
+    from importer.sources.datadog.query import parse_chain, parse_metric_query
+    from importer.sources.datadog.sanitize import shown
+
+    metrics: dict[str, None] = {}
+    tags: dict[str, None] = {}
+    known = monitors[0].names if monitors else NameMap()
+    for m in monitors:
+        if m.type_text == "log alert":
+            chain = parse_chain(m.query_text)
+            if chain.ok and chain.head == "logs" and chain.head_args:
+                for term in parse_log_search(str(chain.head_args[0])).terms():
+                    if term.field:
+                        tags[term.field.removeprefix("@")] = None
+            by = chain.call("by")
+            for arg in by.args if by else ():
+                for part in str(arg).split(","):
+                    if part.strip():
+                        tags[part.strip().removeprefix("@")] = None
+            continue
+        query = parse_metric_query(m.query_text)
+        for series in query.series():
+            metrics[series.metric] = None
+            for tag in series.group_by:
+                tags[tag] = None
+            _scope_keys(series.scope, tags)
+    todo_metrics = [x for x in metrics if x not in known.metrics and shown(x, 250) == x]
+    todo_tags = [x for x in tags if x not in known.attributes and shown(x, 250) == x]
+    skeleton: dict[str, object] = {
+        "metrics": {
+            **{k: v.model_dump(exclude_none=True) for k, v in known.metrics.items()},
+            **{
+                name: {"event": "Metric", "attribute": name, "unit_scale": 1.0}
+                for name in todo_metrics
+                if _is_identifier(name)
+            },
+        },
+        "attributes": {**known.attributes, **{t: t for t in todo_tags if _is_identifier(t)}},
+    }
+    return Scaffold(todo_metrics, todo_tags, skeleton)
+
+
+def _is_identifier(name: str) -> bool:
+    try:
+        identifier(name)
+    except ValueError:
+        return False
+    return True
+
+
+def _scope_keys(node: object, tags: dict[str, None]) -> None:
+    from importer.sources.datadog.query import BoolOp, InSet, Not, Tag
+
+    key = node.key if isinstance(node, Tag | InSet) else None
+    if key:
+        tags[key] = None
+    elif isinstance(node, Not):
+        _scope_keys(node.item, tags)
+    elif isinstance(node, BoolOp):
+        for item in node.items:
+            _scope_keys(item, tags)

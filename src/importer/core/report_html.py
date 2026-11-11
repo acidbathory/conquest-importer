@@ -217,6 +217,33 @@ PROFILES: dict[str, Profile] = {
     ),
 }
 
+DATADOG_CHECKLIST = (
+    "Send the Datadog metrics and logs to New Relic first (the OpenTelemetry collector, StatsD "
+    "or a log forwarder); converted conditions return nothing until the data arrives. Metric "
+    "and tag names are assumed to stay the same and are not confirmed: run "
+    "<code>importer check-datadog-data</code> and put corrections in <code>name-map.json</code>.",
+    "Only plain threshold metric monitors and log count monitors are converted. Anomaly, outlier, "
+    "forecast, change, composite, service check, SLO and product-specific monitors are marked "
+    "manual, each with its reason and steps.",
+    "Message handles (@slack, @pagerduty, @webhook) are not copied: recreate each destination "
+    "and attach a workflow. Datadog priorities, recovery thresholds and reminders are listed as "
+    "not migrated.",
+    "Review each condition, then enable them one at a time. Nothing has been tried against a "
+    "Datadog account or a live New Relic account.",
+)
+PROFILES["datadog"] = Profile(
+    account_label="Datadog organisation",
+    read_phrase="Your Datadog monitors were read and converted.",
+    source_phrase="your Datadog organisation",
+    alarm_title=("Monitors", "monitors"),
+    share_label="Share of monitors converted",
+    unit_sentence="One Datadog monitor is one asset. Dashboards, downtimes, SLOs and notification "
+    "handles are not converted by this source, so they are not counted.",
+    names_word="monitor",
+    create_command=_apply_create,
+    checklist=DATADOG_CHECKLIST,
+)
+
 MIN_LABEL_SHARE = 10  # a segment narrower than this prints no label (its number is in the table)
 
 GRAIN = (
