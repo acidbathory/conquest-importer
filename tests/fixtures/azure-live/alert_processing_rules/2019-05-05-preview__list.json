@@ -1,0 +1,75 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.AlertsManagement/actionRules/ckg-apr-suppress-weekend",
+      "location": "Global",
+      "name": "ckg-apr-suppress-weekend",
+      "properties": {
+        "conditions": {
+          "severity": {
+            "operator": "Equals",
+            "values": [
+              "Sev3",
+              "Sev4"
+            ]
+          }
+        },
+        "createdAt": "2026-11-11T04:52:24.5251266Z",
+        "createdBy": "GUID-01",
+        "description": "ckg test suppression during a weekly window (disabled)",
+        "lastModifiedAt": "2026-11-11T04:57:52.3680078Z",
+        "lastModifiedBy": "GUID-01",
+        "scope": {
+          "scopeType": "ResourceGroup",
+          "values": [
+            "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP"
+          ]
+        },
+        "status": "Disabled",
+        "suppressionConfig": {
+          "recurrenceType": "Weekly",
+          "schedule": {
+            "endDate": "11/11/2027",
+            "endTime": "06:00:00",
+            "recurrenceValues": [
+              6,
+              0
+            ],
+            "startDate": "11/12/2026",
+            "startTime": "22:00:00"
+          }
+        },
+        "type": "Suppression"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.AlertsManagement/actionRules"
+    },
+    {
+      "id": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.AlertsManagement/actionRules/ckg-apr-add-ag",
+      "location": "Global",
+      "name": "ckg-apr-add-ag",
+      "properties": {
+        "actionGroupId": "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.Insights/actionGroups/ckg-ag-email",
+        "createdAt": "2026-11-11T04:52:24.9378393Z",
+        "createdBy": "GUID-01",
+        "description": "ckg test: add an action group to all alerts in the resource group (disabled)",
+        "lastModifiedAt": "2026-11-11T04:57:52.7550471Z",
+        "lastModifiedBy": "GUID-01",
+        "scope": {
+          "scopeType": "ResourceGroup",
+          "values": [
+            "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP"
+          ]
+        },
+        "status": "Disabled",
+        "type": "ActionGroup"
+      },
+      "tags": {
+        "ckg_test": "true"
+      },
+      "type": "Microsoft.AlertsManagement/actionRules"
+    }
+  ]
+}
