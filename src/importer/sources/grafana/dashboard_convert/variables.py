@@ -47,6 +47,7 @@ from importer.sources.grafana.dashboards.variables import (
     QUERY_RESULT,
     VariablePlan,
     query_result_label,
+    query_result_selector,
 )
 
 ALL = "$__all"
@@ -269,7 +270,9 @@ def variable_query(variable: Variable, opts: QueryOptions) -> VariableQuery:
         picked = query_result_label(variable.regex)
         if picked is None:
             raise Unconvertible(r.C_SHAPE)
-        source, label = result[1], picked
+        source, label = query_result_selector(result[1], picked), picked
+        if source is None:
+            raise Unconvertible(r.C_SHAPE)
     else:
         found = LABEL_VALUES.fullmatch(text)
         if found is None:

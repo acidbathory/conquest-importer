@@ -91,6 +91,7 @@ EXAMPLES: list[tuple[str, str, Category]] = [
     (r.V_QUERY_SHAPE, "Dashboard variable query", C.UNSUPPORTED_FEATURE),
     (r.V_QUERY_DS, "Dashboard variable query", C.UNSUPPORTED_FEATURE),
     (r.V_QUERY_RESULT, "Dashboard variable query", C.UNSUPPORTED_FEATURE),
+    (r.V_QUERY_RESULT_LABEL, "Dashboard variable query", C.UNSUPPORTED_FEATURE),
     (r.V_NESTED, "Dashboard nested variable", C.UNSUPPORTED_FEATURE),
     (r.V_CYCLE, "Dashboard nested variable", C.UNSUPPORTED_FEATURE),
     (r.V_ADHOC, "Dashboard ad hoc variable", C.UNSUPPORTED_FEATURE),

@@ -257,6 +257,9 @@ def test_a_target_reference_beats_the_panel_one_and_mixed_falls_back_to_the_hint
     assert resolve(None, "prometheus", d) == "prometheus"
 
 
+ISTIO = '/.*job="([^"]*)".*/'
+
+
 def var(**kw: Any) -> m.Variable:
     return m.Variable(**{"name": "v", **kw})
 
@@ -297,6 +300,24 @@ VARIABLES = [
     ),
     (
         var(kind="query", query="query_result(sum(up) by (job))", regex='/job="([^"]+)/'),
+        "converts",
+        "",
+        "nrql variable",
+    ),
+    (
+        var(kind="query", query="query_result(sum(up) by (job))", regex='/pod="([^"]+)/'),
+        "manual",
+        r.V_QUERY_RESULT_LABEL,
+        "",
+    ),
+    (
+        var(kind="query", query="query_result(sum(rate(up[5m])) by (job))", regex='/job="([^"]+)/'),
+        "manual",
+        r.V_QUERY_RESULT,
+        "",
+    ),
+    (
+        var(kind="query", query="query_result(sum(a) by (job) or sum(b) by (job))", regex=ISTIO),
         "manual",
         r.V_QUERY_RESULT,
         "",

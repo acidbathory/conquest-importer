@@ -268,7 +268,9 @@ fields) are unverified until one dashboard is read back in a sandbox.
   (a plain regex filter becomes `IN` or `LIKE`); a custom list an `enum`; a text box a `string`;
   multi-value and include-all make a multi-select variable that defaults to all; a constant is
   written into the queries; interval and data source variables are dropped. Queries use
-  `IN ({{name}})`. A variable inside a metric or label name, or mixed with text in a matcher, stays
+  `IN ({{name}})`. `query_result(selector)` or `query_result(sum(selector) by (l))` becomes the
+  same `uniques(l)` query when the regex captures exactly the label `l` (`name="(...)"`); an
+  `or`, a function inside, or a regex that captures another label stays manual. A variable inside a metric or label name, or mixed with text in a matcher, stays
   manual.
 - **Layout.** 24 columns become 12 by halving the edges; rows and tabs become full-width markdown
   headings, collapsed rows are shown open, and a section starts under the one before; widgets that

@@ -27,7 +27,11 @@ LABEL_VALUES = re.compile(r"label_values\( ?(?:(.+?) ?, ?)?([A-Za-z_]\w*) ?\)")
 QUERY_RESULT = re.compile(r"query_result\( ?(.+?) ?\)")
 METRICS = re.compile(r"metrics\( ?(.*?) ?\)")
 # The regex people write to read one label out of `metric{a="1",b="2"} 1 1700000000`.
-CAPTURE_LABEL = re.compile(r'/(?:\.\*)?([A-Za-z_]\w*)="\(\[\^"\]\+\)(?:"?\.\*)?/')
+CAPTURE_LABEL = re.compile(r'/(?:\.\*)?([A-Za-z_]\w*)="\(\[\^"\][+*]\)(?:"?\.\*)?/')
+# `sum by (l) (selector)` and `sum(selector) by (l)`: the series that exist, grouped by one label.
+GROUP_OPS = "sum|min|max|avg|count|group"
+GROUPED_BEFORE = re.compile(rf"(?:{GROUP_OPS}) ?by ?\( ?([A-Za-z_]\w*) ?\) ?\((.+)\)")
+GROUPED_AFTER = re.compile(rf"(?:{GROUP_OPS}) ?\((.+)\) ?by ?\( ?([A-Za-z_]\w*) ?\)")
 SELECTOR = re.compile(r"([A-Za-z_:][A-Za-z0-9_:]*)?(?:\{(.*)\})?", re.DOTALL)
 MATCH_ALL = ".*"
 CONVERTS, DROPPED, MANUAL = "converts", "dropped", "manual"
@@ -76,11 +80,39 @@ def is_selector(text: str) -> bool:
     return bool(found and (found[1] or found[2] is not None) and "(" not in (found[1] or ""))
 
 
+def grouped_selector(text: str) -> tuple[str, str] | None:
+    """(grouped label, selector) of `sum by (l) (selector)` or `sum(selector) by (l)`."""
+    text = text.strip()
+    if (found := GROUPED_BEFORE.fullmatch(text)) is not None:
+        label, inner = found[1], found[2]
+    elif (found := GROUPED_AFTER.fullmatch(text)) is not None:
+        inner, label = found[1], found[2]
+    else:
+        return None
+    return (label, inner.strip()) if is_selector(inner) else None
+
+
+def query_result_selector(inner: str, captured: str) -> str | None:
+    """The selector whose series carry the captured label, or None when the shapes differ.
+
+    A bare selector reads like label_values(selector, label). A selector grouped by exactly the
+    captured label lists the same values, because grouping keeps one series per value.
+    """
+    if is_selector(inner):
+        return inner.strip()
+    grouped = grouped_selector(inner)
+    return grouped[1] if grouped and grouped[0] == captured else None
+
+
 def _query_result(variable: Variable, inner: str) -> tuple[str, str]:
     """`query_result(selector)` with a capture regex reads like label_values(selector, label)."""
-    if query_result_label(variable.regex) is None or not is_selector(inner):
+    label = query_result_label(variable.regex)
+    if label is None:
         return r.V_QUERY_RESULT, ""
-    return "", "nrql variable"
+    if query_result_selector(inner, label) is not None:
+        return "", "nrql variable"
+    grouped = grouped_selector(inner)
+    return (r.V_QUERY_RESULT_LABEL if grouped else r.V_QUERY_RESULT), ""
 
 
 def _query_variable(variable: Variable, dash: Dashboard) -> tuple[str, str]:
