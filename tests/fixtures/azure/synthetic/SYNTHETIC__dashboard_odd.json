@@ -1,0 +1,66 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Portal/dashboards/odd",
+  "name": "odd",
+  "type": "Microsoft.Portal/dashboards",
+  "location": "westeurope",
+  "tags": {
+    "hidden-title": "Dashboard ü \"quoted\""
+  },
+  "properties": {
+    "lenses": [
+      {
+        "order": 0,
+        "parts": [
+          {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "type": "Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart",
+              "inputs": [
+                {
+                  "name": "queryInputs",
+                  "value": null
+                }
+              ],
+              "settings": {
+                "content": {
+                  "options": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Compute/virtualMachines/vm1"
+                          },
+                          "name": "Percentage CPU",
+                          "aggregationType": 4
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "position": {
+              "x": 6,
+              "y": 0,
+              "colSpan": 0,
+              "rowSpan": 0
+            },
+            "metadata": {
+              "type": "Extension/Unknown/PartType/Future"
+            }
+          },
+          null
+        ]
+      }
+    ],
+    "metadata": null
+  }
+}

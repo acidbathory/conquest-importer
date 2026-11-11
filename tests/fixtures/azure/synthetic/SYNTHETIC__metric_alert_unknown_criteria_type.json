@@ -1,0 +1,36 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/metricAlerts/future",
+  "name": "future",
+  "type": "Microsoft.Insights/metricAlerts",
+  "location": "global",
+  "properties": {
+    "severity": 9,
+    "enabled": true,
+    "scopes": [
+      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Storage/storageAccounts/st1"
+    ],
+    "evaluationFrequency": "P1D",
+    "windowSize": "PT0S",
+    "criteria": {
+      "odata.type": "Microsoft.Azure.Monitor.FutureCriteria",
+      "allOf": [
+        {
+          "criterionType": "QuantumThresholdCriterion",
+          "name": "c1",
+          "metricName": "X",
+          "timeAggregation": "Median",
+          "operator": "Approximately",
+          "threshold": "not-a-number"
+        }
+      ]
+    },
+    "unknownTopLevelField": {
+      "nested": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

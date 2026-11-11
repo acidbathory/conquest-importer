@@ -1,0 +1,32 @@
+{
+  "_synthetic": "SYNTHETIC hostile case written for this repository; not from Microsoft; not a real resource",
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-synthetic/providers/Microsoft.Insights/actionGroups/ag-synthetic",
+  "name": "ag-ü-高",
+  "type": "Microsoft.Insights/actionGroups",
+  "location": "Global",
+  "properties": {
+    "groupShortName": "",
+    "enabled": false,
+    "emailReceivers": [
+      {
+        "name": "ünï",
+        "emailAddress": "user+tag@example.invalid",
+        "useCommonAlertSchema": false,
+        "status": "Disabled"
+      },
+      {
+        "name": "",
+        "emailAddress": ""
+      }
+    ],
+    "voiceReceivers": [],
+    "eventHubReceivers": [
+      {
+        "name": "eh",
+        "eventHubNameSpace": "ns",
+        "eventHubName": "hub",
+        "subscriptionId": "00000000-0000-0000-0000-000000000000"
+      }
+    ]
+  }
+}
