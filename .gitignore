@@ -49,3 +49,21 @@ destroyplan
 # Local collateral (not for the repo)
 collateral/
 .prepush-identities
+
+# Repo scope (owner decision 2026-11-11): only what is needed to run, test and CI the tool is
+# published. Everything below stays on disk but is not tracked.
+.claude/
+docs/dev/
+docs/improvement/
+docs/testing-results/
+scripts/analysis/
+scripts/improve/*
+!scripts/improve/license_check.py
+tests/test_cookbook_verified test_gcp_estate_measure test_next_actions test_prepush_scan test_promql_census test_promql_diff_harness test_promql_engine_rules.py
+tests/test_cookbook_verified.py
+tests/test_gcp_estate_measure.py
+tests/test_next_actions.py
+tests/test_prepush_scan.py
+tests/test_promql_census.py
+tests/test_promql_diff_harness.py
+tests/test_promql_engine_rules.py

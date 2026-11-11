@@ -163,6 +163,10 @@ def test_live_evidence_counts_verified_and_lists_unproven(tmp_path: Path) -> Non
     assert any("c" in w for w in board["warnings"])  # incomplete entry is flagged, not counted
 
 
+@pytest.mark.skipif(
+    not (Path(__file__).resolve().parent.parent / "docs/improvement/live-evidence.json").exists(),
+    reason="dev-only file is not published",
+)
 def test_tracked_evidence_file_is_valid() -> None:
     root = Path(__file__).resolve().parent.parent
     board = sb.gather(

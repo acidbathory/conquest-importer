@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from typer.testing import CliRunner
 
 from importer.cli import app
@@ -73,6 +74,10 @@ def test_history_is_appended_one_object_per_line(tmp_path: Path) -> None:
     assert len(lines) == 2 and json.loads(lines[1])["sources"]["gcp"]["total"] == 2
 
 
+@pytest.mark.skipif(
+    not (ROOT / "docs" / "improvement" / "baseline.json").exists(),
+    reason="dev-only file is not published",
+)
 def test_the_committed_baseline_still_holds() -> None:
     baseline = ROOT / "docs" / "improvement" / "baseline.json"
     out = CliRunner().invoke(

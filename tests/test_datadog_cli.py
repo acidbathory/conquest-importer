@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from importer.cli import app
@@ -42,6 +43,10 @@ def test_input_help_and_fixtures_are_registered() -> None:
     assert result["total"] == 70 + 14 and result["converted"] >= 50
 
 
+@pytest.mark.skipif(
+    not (ROOT / "scripts" / "analysis" / "datadog_measure.py").exists(),
+    reason="dev-only file is not published",
+)
 def test_the_measure_script_reproduces_the_baseline_numbers() -> None:
     spec = importlib.util.spec_from_file_location(
         "datadog_measure", ROOT / "scripts" / "analysis" / "datadog_measure.py"
