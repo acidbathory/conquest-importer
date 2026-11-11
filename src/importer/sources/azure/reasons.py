@@ -17,8 +17,8 @@ def shown(text: object, limit: int = 120) -> str:
 # -- manual: metric alerts -----------------------------------------------------------------------
 M_SEVERAL = "metric alert has several criteria that one query cannot test together"
 M_DYNAMIC = (
-    "dynamic threshold: the sensitivity, operator or failing periods cannot be mapped to a "
-    "New Relic baseline condition"
+    "dynamic threshold: not converted to a New Relic baseline condition; only a metric alert "
+    "with a readable sensitivity, operator and failing periods is"
 )
 M_WEBTEST = "availability test alert: Azure counts failing test locations, which has no mapping"
 M_CRITERIA_TYPE = "unknown metric alert criteria type"
