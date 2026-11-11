@@ -8,7 +8,7 @@ attention. Nothing here talks to a network; the numbers are never estimated.
 
 import json
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from importer.core.apply import load_plan
@@ -66,6 +66,10 @@ class Layout:
     @property
     def triage(self) -> Path:
         return self.folder / "triage"
+
+    @property
+    def hints(self) -> Path:
+        return self.folder / "hints.json"
 
     @property
     def quickstarts(self) -> Path:
@@ -148,6 +152,24 @@ def build_kinds(key: str, source: str, extract: Step, lay: Layout) -> list[KindP
         )
     alert_plan = KindPlan("alerts", read_alerts, [[*convert_alerts, "--out", str(alerts)]])
     return [alert_plan, notes_plan, dash_plan]
+
+
+def hints_step(url: str, lay: Layout) -> Step:
+    """Read-only: metric types and series keys from a Prometheus URL, for the dashboards read."""
+    return _s(
+        "grafana-prom-hints", "--prometheus-url", url,
+        "--metrics-from", lay.raw("dashboards"), "--out", lay.hints,
+    )  # fmt: skip
+
+
+def with_hints(kinds: list[KindPlan], hints: Path) -> list[KindPlan]:
+    """The dashboard conversion also reads the hints file (it replaces the name-suffix guess)."""
+    return [
+        replace(kp, convert=[[*step, "--hints", str(hints)] for step in kp.convert])
+        if kp.kind == "dashboards"
+        else kp
+        for kp in kinds
+    ]
 
 
 def extra_plans(key: str, lay: Layout) -> list[Step]:

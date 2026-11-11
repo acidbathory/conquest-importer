@@ -128,7 +128,7 @@ def test_missing_secret_is_asked_hidden_and_not_echoed(
 ) -> None:
     monkeypatch.setenv("GRAFANA_URL", "https://x.grafana.net")
     monkeypatch.delenv("GRAFANA_SA_TOKEN", raising=False)
-    menu, console, run, _, _ = make(tmp_path, ["3", "tok-SECRET", "0", "0"])
+    menu, console, run, _, _ = make(tmp_path, ["3", "tok-SECRET", "", "0", "0"])
     menu.run()
     assert console.secrets_asked and "GRAFANA_SA_TOKEN" in console.secrets_asked[0]
     assert "tok-SECRET" not in console.text

@@ -39,10 +39,12 @@ from importer.core.menu_flow import (
     Summary,
     build_kinds,
     extra_plans,
+    hints_step,
     planned_names,
     read_int,
     summarise,
     triage_buckets,
+    with_hints,
 )
 from importer.core.migration_summary import load_summary
 from importer.core.remediation_plan import build_plan, read_items
@@ -316,6 +318,7 @@ class Menu:
         if inputs is None:
             return
         extract, doctor_extra = inputs
+        prometheus = self._ask_prometheus(spec)
         self.c.say("\nStep 1 of 4: checking your setup")
         if not self._doctor(spec, tuple(doctor_extra)):
             return
@@ -325,6 +328,7 @@ class Menu:
         kinds = self._stage(kinds, "read", "Reading")
         if not kinds:
             return
+        kinds = self._hints(kinds, lay, prometheus)
         self.c.say("\nStep 3 of 4: converting everything (local files only)")
         kinds = self._stage(kinds, "convert", "Converting")
         if not kinds:
@@ -347,6 +351,35 @@ class Menu:
             self.c.say("There is nothing to create from this source. Nothing was created.")
             return
         self._create_all(spec, lay, summary, account, name)
+
+    def _ask_prometheus(self, spec: Spec) -> str:
+        """Grafana only: a Prometheus URL for exact metric types; Enter skips and says the cost."""
+        if spec.key != "3":
+            return ""
+        url = self.c.ask(
+            "Prometheus URL for exact metric types, such as http://127.0.0.1:9090 "
+            "(optional, Enter to skip):"
+        )
+        if not url:
+            self.c.say(
+                "Skipping the Prometheus step. Without it the importer cannot tell which "
+                "dashboard panels that sum() or count() a gauge show one series, so those panels "
+                "stay manual (they are listed in the report). Give a URL next time to convert them."
+            )
+        return url
+
+    def _hints(self, kinds: list[KindPlan], lay: Layout, url: str) -> list[KindPlan]:
+        """Read hints (read-only) for the dashboard conversion; a failure only costs the hints."""
+        if not url:
+            return kinds
+        self.c.say("\nReading metric types and series from your Prometheus (read-only)")
+        if self.runner(hints_step(url, lay)) != 0:
+            self.c.say(
+                "The Prometheus step did not work (see above), so the dashboards are converted "
+                "without hints and gauge sums stay manual. Nothing was changed."
+            )
+            return kinds
+        return with_hints(kinds, lay.hints)
 
     def _stage(self, kinds: list[KindPlan], which: str, verb: str) -> list[KindPlan]:
         """Run one stage for every kind. Alerts failing ends the flow; other kinds are dropped."""

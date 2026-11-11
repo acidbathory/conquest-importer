@@ -46,7 +46,7 @@ def _run(tmp_path: Path, answers: list[str], **kw: Any) -> tuple[list[str], Any,
 def test_before_opens_after_convert_and_before_the_question_then_after_create(
     tmp_path: Path,
 ) -> None:
-    events, console, _ = _run(tmp_path, ["3", "yes", "0"])
+    events, console, _ = _run(tmp_path, ["3", "", "yes", "0"])
     opens = [e for e in events if e.startswith("open")]
     assert opens == ["open:report.html", "open:report-created.html", "open:cookbook.html"]
     assert events.index("open:report.html") < events.index("question")
@@ -58,7 +58,7 @@ def test_before_opens_after_convert_and_before_the_question_then_after_create(
 
 
 def test_decline_opens_only_the_plan(tmp_path: Path) -> None:
-    events, console, _ = _run(tmp_path, ["3", "no", "0"])
+    events, console, _ = _run(tmp_path, ["3", "", "no", "0"])
     assert [e for e in events if e.startswith("open")] == ["open:report.html"]
     assert "Nothing was created." in console.text
     assert "report-created.html" not in console.text
@@ -66,13 +66,13 @@ def test_decline_opens_only_the_plan(tmp_path: Path) -> None:
 
 
 def test_failed_create_does_not_open_the_after_report(tmp_path: Path) -> None:
-    events, _, _ = _run(tmp_path, ["3", "yes", "0", "0"], runner=HybridRunner(fail={"apply"}))
+    events, _, _ = _run(tmp_path, ["3", "", "yes", "0", "0"], runner=HybridRunner(fail={"apply"}))
     assert [e for e in events if e.startswith("open")] == ["open:report.html"]
     assert not list(Path(tmp_path).rglob("cookbook.html"))
 
 
 def test_no_terminal_means_no_opening_but_the_path_is_printed(tmp_path: Path) -> None:
-    events, console, _ = _run(tmp_path, ["3", "yes", "0"], terminal=False)
+    events, console, _ = _run(tmp_path, ["3", "", "yes", "0"], terminal=False)
     assert not [e for e in events if e.startswith("open")]
     assert console.text.count("HTML report: file://") == 2
     assert "Remediation cookbook: file://" in console.text
@@ -80,7 +80,7 @@ def test_no_terminal_means_no_opening_but_the_path_is_printed(tmp_path: Path) ->
 
 
 def test_cookbook_is_inside_the_run_folder_and_lists_what_the_run_hit(tmp_path: Path) -> None:
-    _run(tmp_path, ["3", "yes", "0"])
+    _run(tmp_path, ["3", "", "yes", "0"])
     page = next(Path(tmp_path).rglob("cookbook.html"))
     assert page.parent == next(Path(tmp_path).rglob("report-created.html")).parent
     text = page.read_text()
@@ -91,14 +91,14 @@ def test_cookbook_is_inside_the_run_folder_and_lists_what_the_run_hit(tmp_path: 
 def test_env_and_flag_turn_opening_off(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("IMPORTER_NO_BROWSER", "1")
     (tmp_path / "a").mkdir()
-    events, console, _ = _run(tmp_path / "a", ["3", "yes", "0"])
+    events, console, _ = _run(tmp_path / "a", ["3", "", "yes", "0"])
     assert not [e for e in events if e.startswith("open")]
     assert "HTML report: file://" in console.text
     assert "Remediation cookbook: file://" in console.text
     monkeypatch.delenv("IMPORTER_NO_BROWSER")
     (tmp_path / "b").mkdir()
     runner = HybridRunner()
-    menu, _, _, _ = _menu(tmp_path / "b", ["3", "no", "0"], runner)
+    menu, _, _, _ = _menu(tmp_path / "b", ["3", "", "no", "0"], runner)
     seen: list[str] = []
     _wire(menu, runner, seen)
     menu.open_reports = False
@@ -108,7 +108,7 @@ def test_env_and_flag_turn_opening_off(tmp_path: Path, monkeypatch: pytest.Monke
 
 def test_an_opener_that_fails_does_not_stop_the_flow(tmp_path: Path) -> None:
     runner = HybridRunner()
-    menu, console, store, _ = _menu(tmp_path, ["3", "yes", "0"], runner)
+    menu, console, store, _ = _menu(tmp_path, ["3", "", "yes", "0"], runner)
     menu.terminal = lambda: True
 
     def broken(url: str) -> None:
@@ -123,7 +123,7 @@ def test_an_opener_that_fails_does_not_stop_the_flow(tmp_path: Path) -> None:
 def test_an_opener_that_returns_false_is_reported_not_silent(tmp_path: Path) -> None:
     """webbrowser.open often fails by returning False (seen on macOS); that must be reported."""
     runner = HybridRunner()
-    menu, console, _, _ = _menu(tmp_path, ["3", "yes", "0"], runner)
+    menu, console, _, _ = _menu(tmp_path, ["3", "", "yes", "0"], runner)
     menu.terminal = lambda: True
     menu.opener = lambda _url: False
     assert menu.run() == 0
@@ -132,7 +132,7 @@ def test_an_opener_that_returns_false_is_reported_not_silent(tmp_path: Path) -> 
 
 
 def test_each_phase_opens_once_even_if_shown_again(tmp_path: Path) -> None:
-    events, _, menu = _run(tmp_path, ["3", "yes", "0"])
+    events, _, menu = _run(tmp_path, ["3", "", "yes", "0"])
     lay_folder = next(Path(tmp_path).rglob("report.html")).parent
     from importer.core.menu_flow import Layout
 
@@ -141,7 +141,7 @@ def test_each_phase_opens_once_even_if_shown_again(tmp_path: Path) -> None:
 
 
 def test_never_opens_a_file_outside_the_run_folder(tmp_path: Path) -> None:
-    events, _, menu = _run(tmp_path, ["3", "no", "0"])
+    events, _, menu = _run(tmp_path, ["3", "", "no", "0"])
     from importer.core.menu_flow import Layout
 
     elsewhere = tmp_path / "elsewhere.html"
@@ -159,7 +159,7 @@ def _reports(tmp_path: Path) -> tuple[str, str]:
 def test_before_report_is_a_preview_with_all_kinds_reasons_links_and_logos(
     tmp_path: Path,
 ) -> None:
-    _run(tmp_path, ["3", "yes", "0"])
+    _run(tmp_path, ["3", "", "yes", "0"])
     before, _ = _reports(tmp_path)
     assert "nothing has changed in New Relic" in before and "forecast" in before
     assert "Nothing is created until you answer" in before
@@ -173,7 +173,7 @@ def test_before_report_is_a_preview_with_all_kinds_reasons_links_and_logos(
 
 
 def test_after_report_states_what_was_created_without_the_preview_banner(tmp_path: Path) -> None:
-    _run(tmp_path, ["3", "yes", "0"])
+    _run(tmp_path, ["3", "", "yes", "0"])
     _, after = _reports(tmp_path)
     assert "Preview" not in after and "nothing has changed" not in after
     assert "forecast" not in after
@@ -185,7 +185,7 @@ def test_after_report_states_what_was_created_without_the_preview_banner(tmp_pat
 
 
 def test_after_report_describes_what_exists_not_conversion_quality(tmp_path: Path) -> None:
-    _, _, menu = _run(tmp_path, ["3", "yes", "0"])
+    _, _, menu = _run(tmp_path, ["3", "", "yes", "0"])
     _, after = _reports(tmp_path)
     record = menu.store.list()[0]
     made = len(record.objects)
@@ -199,7 +199,7 @@ def test_after_report_describes_what_exists_not_conversion_quality(tmp_path: Pat
 
 
 def test_before_report_keeps_the_forecast_wording(tmp_path: Path) -> None:
-    _run(tmp_path, ["3", "yes", "0"])
+    _run(tmp_path, ["3", "", "yes", "0"])
     before, _ = _reports(tmp_path)
     assert "What was migrated" in before and "assets can be migrated" in before
     assert "planned objects were created" not in before
@@ -216,7 +216,7 @@ def test_all_existing_creates_nothing_so_no_created_report_and_no_run_record(
     tmp_path: Path,
 ) -> None:
     runner = _all_existing()
-    menu, console, store, _ = _menu(tmp_path, ["3", "yes", "0"], runner)
+    menu, console, store, _ = _menu(tmp_path, ["3", "", "yes", "0"], runner)
     events: list[str] = []
     _wire(menu, runner, events)
     assert menu.run() == 0
@@ -233,7 +233,7 @@ def test_all_existing_creates_nothing_so_no_created_report_and_no_run_record(
 
 def test_all_existing_names_the_earlier_runs_that_created_them(tmp_path: Path) -> None:
     runner = _all_existing()
-    menu, console, store, _ = _menu(tmp_path, ["3", "yes", "0"], runner)
+    menu, console, store, _ = _menu(tmp_path, ["3", "", "yes", "0"], runner)
     earlier = store.start(
         source="grafana", account_id=7, region="us", out_dir=tmp_path / "x", sandbox=True
     )
@@ -248,7 +248,7 @@ def test_all_existing_names_the_earlier_runs_that_created_them(tmp_path: Path) -
 
 def test_partly_existing_says_created_and_already_existed_per_kind(tmp_path: Path) -> None:
     runner = HybridRunner(existing={"apply": 4, "apply-dashboards": 13})
-    _run(tmp_path, ["3", "yes", "0"], runner=runner)
+    _run(tmp_path, ["3", "", "yes", "0"], runner=runner)
     _, after = _reports(tmp_path)
     assert "<b>3</b> created, <b>17</b> already existed" in after
     assert "Already existed" in after and "Created" in after and "Need attention" in after
@@ -256,14 +256,14 @@ def test_partly_existing_says_created_and_already_existed_per_kind(tmp_path: Pat
 
 
 def test_none_existing_report_has_no_already_existed_claim(tmp_path: Path) -> None:
-    _run(tmp_path, ["3", "yes", "0"])
+    _run(tmp_path, ["3", "", "yes", "0"])
     _, after = _reports(tmp_path)
     assert "already existed" not in after
 
 
 def test_preview_warns_when_planned_objects_exist_from_earlier_runs(tmp_path: Path) -> None:
     runner = HybridRunner()
-    menu, console, store, _ = _menu(tmp_path, ["3", "no", "0"], runner)
+    menu, console, store, _ = _menu(tmp_path, ["3", "", "no", "0"], runner)
     earlier = store.start(
         source="grafana", account_id=7, region="us", out_dir=tmp_path / "x", sandbox=True
     )
@@ -278,5 +278,5 @@ def test_preview_warns_when_planned_objects_exist_from_earlier_runs(tmp_path: Pa
 
 
 def test_preview_has_no_warning_without_earlier_runs(tmp_path: Path) -> None:
-    _, console, _ = _run(tmp_path, ["3", "no", "0"])
+    _, console, _ = _run(tmp_path, ["3", "", "no", "0"])
     assert "already exist" not in console.text

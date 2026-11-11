@@ -26,6 +26,7 @@ from typing import Any
 import httpx
 
 from importer.core.safe_http import ReadBudget, get_json
+from importer.parity.source import SourceError, check_direct
 from importer.sources.grafana.dashboards.datasources import resolve_target
 from importer.sources.grafana.dashboards.load import load_estate
 from importer.sources.grafana.extract import GrafanaError, validate_host
@@ -34,9 +35,9 @@ SERVICE = "Grafana"
 UID = re.compile(r"[A-Za-z0-9_-]{1,40}")
 DS_NAME = re.compile(r"[A-Za-z0-9 _.()-]{1,100}")
 METRIC = re.compile(r"[A-Za-z_:][A-Za-z0-9_:]{0,200}")
-PROXY = re.compile(
-    r"/api/datasources/proxy/uid/([A-Za-z0-9_-]{1,40})/api/v1/(metadata|series|label/__name__/values)"
-)
+READ_PATH = r"(?P<kind>metadata|series|label/__name__/values)"
+PROXY = re.compile(rf"/api/datasources/proxy/uid/([A-Za-z0-9_-]{{1,40}})/api/v1/{READ_PATH}")
+DIRECT = re.compile(rf"/api/v1/{READ_PATH}")  # a Prometheus URL given without Grafana
 DS_PATH = re.compile(r"/api/datasources/(?:uid/[A-Za-z0-9_-]{1,40}|name/[A-Za-z0-9 _.()-]{1,100})")
 SERIES_MATCH = re.compile(r'\{__name__="[A-Za-z_:][A-Za-z0-9_:]{0,200}"\}')
 DIGITS = re.compile(r"[0-9]{1,10}")
@@ -158,12 +159,12 @@ def metric_names(path: Path) -> set[str]:
 def _allowed(path: str, params: dict[str, str]) -> bool:
     if DS_PATH.fullmatch(path):
         return not params
-    found = PROXY.fullmatch(path)
+    found = PROXY.fullmatch(path) or DIRECT.fullmatch(path)
     if found is None:
         return False
-    if found[2] == "label/__name__/values":
+    if found["kind"] == "label/__name__/values":
         return not params
-    if found[2] == "metadata":
+    if found["kind"] == "metadata":
         return set(params) <= {"limit"} and all(DIGITS.fullmatch(v) for v in params.values())
     return "match[]" in params and all(
         k in PARAMS and PARAMS[k].fullmatch(v) for k, v in params.items()
@@ -201,6 +202,35 @@ def hint_getter(
             if requests > max_requests:
                 raise HintsError(f"more than {max_requests} requests; stopped")
             return get_json(client, base + path, params, token, HintsError, SERVICE, budget)
+
+        yield get
+
+
+@contextmanager
+def direct_hint_getter(
+    url: str, transport: httpx.BaseTransport | None = None, allow_host: str | None = None
+) -> Iterator[Getter]:
+    """A GET-only Getter for a Prometheus URL (loopback, or https plus `allow_host`)."""
+    try:
+        base = check_direct(url, allow_host)
+    except SourceError as exc:
+        raise HintsError(str(exc)) from None
+    budget = ReadBudget()
+    budget.bytes_left = MAX_RUN_BYTES
+    requests = 0
+    with httpx.Client(
+        timeout=60, headers={"Accept": "application/json"}, transport=transport,
+        follow_redirects=False,
+    ) as client:  # fmt: skip
+
+        def get(path: str, params: dict[str, str]) -> Any:
+            nonlocal requests
+            if not DIRECT.fullmatch(path) or not _allowed(path, params):
+                raise HintsError("this path is not on the allow-list of read-only calls")
+            requests += 1
+            if requests > MAX_REQUESTS:
+                raise HintsError(f"more than {MAX_REQUESTS} requests; stopped")
+            return get_json(client, base + path, params, "", HintsError, "Prometheus", budget)
 
         yield get
 
@@ -317,14 +347,17 @@ def _warn(hints: Hints, text: str) -> None:
         hints.warnings.append(text)
 
 
-def read_hints(get: Getter, uid: str, wanted: set[str], now: float | None = None) -> Hints:
-    """Types and series keys for the metrics in `wanted`, read through the data source proxy."""
+def read_hints(get: Getter, uid: str | None, wanted: set[str], now: float | None = None) -> Hints:
+    """Types and series keys for the metrics in `wanted`.
+
+    Read through the data source proxy of `uid`, or straight from Prometheus when `uid` is None.
+    """
     hints = Hints()
     names = sorted(wanted)
     if len(names) > MAX_METRICS:
         hints.skipped = len(names) - MAX_METRICS
         names = names[:MAX_METRICS]
-    base = f"/api/datasources/proxy/uid/{uid}/api/v1"
+    base = "/api/v1" if uid is None else f"/api/datasources/proxy/uid/{uid}/api/v1"
     meta = _metadata_types(get(f"{base}/metadata", {"limit": str(MAX_METADATA)}))
     hints.requested += 1
     present: set[str] = set()
