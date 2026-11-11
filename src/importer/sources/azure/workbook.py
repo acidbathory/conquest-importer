@@ -586,7 +586,9 @@ def _query(item: dict[str, Any], content: dict[str, Any], state: State, page: st
 def _kql_query(
     item: dict[str, Any], content: dict[str, Any], text: str, state: State, page: str | None
 ) -> None:
-    found = dashboard_kql.translate_kql(text, tuple(state.variables))
+    times = [n for n, p in state.params.items() if p.kind == TIME_PARAM]
+    extra = {"time_params": times} if times else {}  # only passed when there is one to resolve
+    found = dashboard_kql.translate_kql(text, tuple(state.variables), **extra)
     if isinstance(found, str):
         _fail_widget(state, item, page, [found])
         return

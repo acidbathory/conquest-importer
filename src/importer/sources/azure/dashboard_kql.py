@@ -29,6 +29,7 @@ UNITS = ((86400, "day"), (3600, "hour"), (60, "minute"), (1, "second"))
 MAX_AGGREGATES = 6
 PARAMETER = re.compile(r"\{[A-Za-z_][^{}]{0,80}\}")  # a workbook parameter: {Name}, {Name:label}
 COUNT_LIKE = ("count", "countif")
+AUTO = "AUTO"  # the TIMESERIES size New Relic picks from the time picker (the workbook's grain)
 
 
 @dataclass(frozen=True)
@@ -101,7 +102,39 @@ def _notes(query: Query, names: _Names, table_path: str, azure_filter: bool) -> 
     return notes
 
 
-def _nrql(query: Query, names: _Names, azure_filter: bool) -> tuple[str, bool]:
+def _time_filter(names: Collection[str]) -> re.Pattern[str]:
+    """`| where TimeGenerated {Name}` (or `{Name:value}`) as a whole stage."""
+    alt = "|".join(re.escape(n) for n in sorted(names))
+    return re.compile(
+        rf"\|\s*where\s+(?:TimeGenerated|timestamp)\s*\{{(?:{alt})(?::value)?\}}\s*(?=\||$)",
+        re.IGNORECASE,
+    )
+
+
+def _time_grain(names: Collection[str]) -> re.Pattern[str]:
+    alt = "|".join(re.escape(n) for n in sorted(names))
+    return re.compile(rf"\bbin\(\s*TimeGenerated\s*,\s*\{{(?:{alt}):grain\}}\s*\)")
+
+
+def resolve_time(query: str, names: Collection[str]) -> tuple[str, bool]:
+    """The query without the time-range filter, and whether its bin is the workbook's grain.
+
+    A workbook time-range parameter fills `where TimeGenerated {Name}` with the range the reader
+    picked; a New Relic widget takes its range from the dashboard time picker, so that stage is
+    dropped. `bin(TimeGenerated, {Name:grain})` is the size the workbook derives from the range;
+    the bin is kept at a placeholder size that `_nrql` replaces with TIMESERIES AUTO. Any other
+    use of the parameter (`:start`, `:end`, in a `let`) is left in place and refused later.
+    """
+    if not names:
+        return query, False
+    query = _time_filter(names).sub(" ", query)
+    query, grains = _time_grain(names).subn("bin(TimeGenerated, 1m)", query)
+    return query, bool(grains)
+
+
+def _nrql(
+    query: Query, names: _Names, azure_filter: bool, auto_grain: bool = False
+) -> tuple[str, bool]:
     selects = [f"{aggregate_sql(a, names, [])} AS {quote_string(_alias(a))}" for a in query.aggs]
     where = [f"{ref(FORWARDED[0])} = {quote_string(FORWARDED[1])}"] if azure_filter else []
     if query.rows:
@@ -118,19 +151,30 @@ def _nrql(query: Query, names: _Names, azure_filter: bool) -> tuple[str, bool]:
         raise ValueError("the summarize has more than one bin size")
     if bins:
         (size,) = bins
-        text += f" TIMESERIES {_span(int(size or 60))}"
+        text += f" TIMESERIES {AUTO if auto_grain else _span(int(size or 60))}"
     return text, bool(bins)
 
 
-def translate_kql(query: str, variables: Collection[str]) -> KqlNrql | str:  # noqa: ARG001
+def translate_kql(
+    query: str,
+    variables: Collection[str],  # noqa: ARG001
+    time_params: Collection[str] = (),
+) -> KqlNrql | str:
     """NRQL for a workbook or dashboard KQL query, or the reason it cannot be converted.
 
     `variables` are the names of New Relic dashboard variables this dashboard defines. The
-    subset has no way to read a workbook parameter written in braces inside a query, so such a
-    query stays a placeholder and no variable is used.
+    subset has no way to read a workbook parameter written in braces inside a query, except the
+    time-range parameters in `time_params` (see `resolve_time`); any other use stays a placeholder
+    that names the parameters, and no variable is used.
     """
-    if PARAMETER.search(query):
-        return f"{DR.QUERY_KQL}: the query uses a workbook parameter written in braces"
+    query, auto_grain = resolve_time(query, time_params)
+    left = list(dict.fromkeys(PARAMETER.findall(query)))
+    if left:
+        shown = ", ".join(R.shown(p, 40) for p in left[:3])
+        return (
+            f"{DR.QUERY_KQL}: the query uses workbook parameter {shown} in its text; "
+            "only a time-range filter and a time-range grain are converted"
+        )
     try:
         parsed = parse(query)
     except (KqlSyntax, KqlUnsupported) as exc:
@@ -149,7 +193,7 @@ def translate_kql(query: str, variables: Collection[str]) -> KqlNrql | str:  # n
         )
     names = _Names(parsed.table)
     try:
-        nrql, timeseries = _nrql(parsed, names, info.azure_filter)
+        nrql, timeseries = _nrql(parsed, names, info.azure_filter, auto_grain)
     except ValueError as exc:
         return f"{DR.QUERY_KQL}: {R.shown(exc, 150)}"
     return KqlNrql(
