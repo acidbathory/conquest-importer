@@ -36,17 +36,7 @@ def _hash_outputs(source: str, out: Path) -> dict[str, str]:
     }
 
 
-PENDING_REVIEW = pytest.mark.xfail(
-    strict=True,
-    reason="GCP dashboard output changed on purpose: see "
-    "docs/improvement/proposals/2026-11-11-gcp-dashboards-and-channels.md; regenerate the hashes "
-    "after a human review and remove this marker",
-)
-
-
-@pytest.mark.parametrize(
-    "source", [pytest.param("cloudwatch"), pytest.param("gcp", marks=PENDING_REVIEW)]
-)
+@pytest.mark.parametrize("source", [pytest.param("cloudwatch"), pytest.param("gcp")])
 def test_every_output_file_is_byte_identical_to_the_recorded_hash(
     source: str, tmp_path: Path
 ) -> None:

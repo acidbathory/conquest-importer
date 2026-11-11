@@ -87,15 +87,7 @@ def test_every_output_set_is_pinned(produced: dict[str, dict[str, str]]) -> None
         *(f"convert/{f}" for f in ALERT_SOURCES),
         "notifications/aws",
         "notifications/dynatrace",
-        pytest.param(
-            "notifications/gcp",
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="GCP notification plans changed on purpose: see "
-                "docs/improvement/proposals/2026-11-11-gcp-dashboards-and-channels.md; "
-                "regenerate the hashes after a human review and remove this marker",
-            ),
-        ),
+        "notifications/gcp",
     ],
 )
 def test_output_bytes_are_unchanged(produced: dict[str, dict[str, str]], group: str) -> None:
