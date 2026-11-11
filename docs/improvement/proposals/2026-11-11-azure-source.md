@@ -18,7 +18,7 @@ Branch `improve/azure-source`. Nothing pinned was regenerated. The owner decides
 ## What to approve
 
 1. Record the Azure line in `docs/improvement/baseline.json` with
-   `importer improve-measure --update-baseline` (or the loop's usual command). Expected content,
+   `importer improve-measure --out docs/improvement/baseline.json` after reading the result. Expected content,
    from [the baseline note](../../research/azure-baseline.md): official examples only, 61 distinct
    alert rules, 6 converted, 48 manual, 7 unsupported. The measure also reads the 18 hostile
    synthetic files in the same folder, so its own counts are higher than the note's; the note

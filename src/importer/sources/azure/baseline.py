@@ -65,11 +65,11 @@ def render(rows: list[Row]) -> str:
         "| Alert type | Rules | Converted (approximate or better) | Manual | Unsupported |",
         "|---|---|---|---|---|",
     ]
-    for r in rows:
-        lines.append(
-            f"| {r.label} | {r.total} | {r.converted} | {r.count(Confidence.MANUAL)} | "
-            f"{r.count(Confidence.UNSUPPORTED)} |"
-        )
+    lines.extend(
+        f"| {r.label} | {r.total} | {r.converted} | {r.count(Confidence.MANUAL)} | "
+        f"{r.count(Confidence.UNSUPPORTED)} |"
+        for r in rows
+    )
     total = sum(r.total for r in rows)
     done = sum(r.converted for r in rows)
     manual = sum(r.count(Confidence.MANUAL) for r in rows)

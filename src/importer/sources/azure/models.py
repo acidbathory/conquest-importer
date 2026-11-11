@@ -113,7 +113,7 @@ class AzureAlert(BaseModel):
     def _object(cls, value: object) -> dict[str, Any]:
         return value if isinstance(value, dict) else {}
 
-    def model_post_init(self, __context: object) -> None:
+    def model_post_init(self, _context: object) -> None:
         if not self.name and self.id:
             self.name = self.id.rstrip("/").rsplit("/", 1)[-1]
         if not self.family:

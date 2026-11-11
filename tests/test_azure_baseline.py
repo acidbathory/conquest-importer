@@ -16,7 +16,7 @@ def test_the_table_in_the_baseline_document_is_what_the_code_measures() -> None:
 
 def test_only_alert_rules_with_a_resource_body_are_counted() -> None:
     rows = measure(ROOT / "tests" / "fixtures" / "azure")
-    assert [r.label for r in rows][0] == "Metric alerts"
+    assert next(r.label for r in rows) == "Metric alerts"
     assert all(r.total > 0 for r in rows)
     for r in rows:  # every rule is exactly one of converted, manual or unsupported
         assert r.total == r.converted + r.count(Confidence.MANUAL, Confidence.UNSUPPORTED)

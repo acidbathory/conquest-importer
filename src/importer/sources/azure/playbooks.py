@@ -4,6 +4,7 @@ All text is fixed; none of it comes from an export. Effort figures are rough pla
 """
 
 from importer.core.playbook import Playbook, register_playbook
+from importer.core.playbooks import links as L
 
 
 def _reg(title: str, **fields: object) -> None:
@@ -29,6 +30,7 @@ _reg(
     differs="The rule can now fire on one criterion without the others.",
     effort_minutes=30,
     no_equivalent=True,
+    links=(L.CONDITION,),
 )
 _reg(
     "Azure dynamic threshold",
@@ -42,6 +44,10 @@ _reg(
     ),
     differs="Different model; the learning period and seasonality handling are not the same.",
     effort_minutes=30,
+    links=(
+        L.ANOMALY,
+        L.CONDITION,
+    ),
 )
 _reg(
     "Azure availability test alert",
@@ -53,6 +59,7 @@ _reg(
     ),
     differs="Check scheduling and location names differ.",
     effort_minutes=45,
+    links=(L.CONDITION,),
 )
 _reg(
     "Azure rule of an unknown type",
@@ -61,6 +68,7 @@ _reg(
     steps=("Read the rule in the portal.", CREATE),
     differs="Unknown.",
     effort_minutes=30,
+    links=(L.CONDITION,),
 )
 _reg(
     "Azure data that the integration does not collect",
@@ -73,6 +81,7 @@ _reg(
     ),
     differs="The names and attributes differ from anything the importer can derive.",
     effort_minutes=60,
+    links=(L.OTLP,),
 )
 _reg(
     "Azure rule field the importer cannot read",
@@ -81,6 +90,7 @@ _reg(
     steps=("Open the rule and check the value named in the reason.", CREATE),
     differs="Depends on the field.",
     effort_minutes=20,
+    links=(L.CONDITION,),
 )
 _reg(
     "Azure window outside the supported range",
@@ -92,6 +102,10 @@ _reg(
     ),
     differs="One long window is not the same as many short ones that must all breach.",
     effort_minutes=20,
+    links=(
+        L.STREAMING,
+        L.ALERT_LIMITS,
+    ),
 )
 _reg(
     "Azure scope that one condition cannot cover",
@@ -100,6 +114,7 @@ _reg(
     steps=("Create one condition for each prefix listed in the report.", CREATE),
     differs="Several conditions replace one rule.",
     effort_minutes=15,
+    links=(L.CONDITION,),
 )
 _reg(
     "Azure KQL query",
@@ -114,6 +129,10 @@ _reg(
     differs="KQL operators such as join, let and regular expressions have no NRQL form.",
     effort_minutes=45,
     template="SELECT count(*) FROM Log WHERE plugin.type = 'azure'",
+    links=(
+        L.NRQL,
+        L.CONDITION,
+    ),
 )
 _reg(
     "Azure log table from an agent or service",
@@ -126,6 +145,7 @@ _reg(
     ),
     differs="Different agent, different attribute names.",
     effort_minutes=60,
+    links=(L.CONDITION,),
 )
 _reg(
     "Azure log alert shape",
@@ -134,6 +154,7 @@ _reg(
     steps=("Split the rule into single-condition queries.", CREATE),
     differs="Several conditions replace one rule.",
     effort_minutes=30,
+    links=(L.CONDITION,),
 )
 _reg(
     "Azure activity log alert",
@@ -147,6 +168,10 @@ _reg(
     differs="Events arrive minutes late and the attribute names are not confirmed.",
     effort_minutes=60,
     no_equivalent=True,
+    links=(
+        L.NRQL,
+        L.CONDITION,
+    ),
 )
 _reg(
     "Azure smart detector rule",
@@ -156,6 +181,7 @@ _reg(
     differs="Different model.",
     effort_minutes=45,
     no_equivalent=True,
+    links=(L.ANOMALY,),
 )
 _reg(
     "Azure rule group without alerts",
@@ -165,6 +191,7 @@ _reg(
     differs="No stored recording rules.",
     effort_minutes=10,
     no_equivalent=True,
+    links=(L.PROMQL_TRANSLATE,),
 )
 _reg(
     "Azure Prometheus rule that could not be read",
@@ -173,4 +200,5 @@ _reg(
     steps=("Fix the rule in Azure and export again.",),
     differs="None once fixed.",
     effort_minutes=10,
+    links=(L.PROMQL_SUPPORTED,),
 )
