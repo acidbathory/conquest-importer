@@ -22,7 +22,7 @@ def git(repo: Path, *args: str) -> None:
 
 
 def run(repo: Path, env: Path, ids: Path) -> int:
-    return scan.main(["--repo", str(repo), "--env", str(env), "--identities", str(ids)])
+    return int(scan.main(["--repo", str(repo), "--env", str(env), "--identities", str(ids)]))
 
 
 @pytest.fixture
