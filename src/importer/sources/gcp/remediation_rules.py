@@ -101,7 +101,9 @@ RULES: list[Rule] = [
             "check as a New Relic Synthetics monitor (a ping monitor for a URL, a scripted API "
             "monitor for a request with assertions), choosing the same locations.",
             "Then add an alert condition on the monitor's failures, which Synthetics offers "
-            "when you create it.",
+            "when you create it, or write the NRQL condition `SELECT count(*) FROM "
+            "SyntheticCheck WHERE monitorName = '<monitor>' AND result = 'FAILED'` (above 0 "
+            "for the number of failed runs you want to tolerate).",
         ],
     ),
     (
@@ -201,13 +203,62 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^google_chat channel"),
+        "Google Chat channel",
+        [
+            "Create a webhook destination in New Relic with the Chat space's incoming webhook "
+            "URL (Space settings, Apps and integrations, Webhooks; the URL holds a key, which "
+            "Google does not export) and a custom payload shaped as a Google Chat message.",
+            "Then add it to the workflow listed in the notification report.",
+        ],
+    ),
+    (
+        re.compile(r"^(hipchat|campfire) channel \(deprecated\)"),
+        "Deprecated channel type",
+        [
+            "Google marks this channel type deprecated and says not to create new channels of "
+            "it, and the chat service it posted to is no longer a target to migrate to. Decide "
+            "who should be told now (email, Slack, PagerDuty or a webhook), create that "
+            "destination and add it to the workflow listed in the notification report. If "
+            "nobody reads the channel, leave it out.",
+        ],
+    ),
+    (
+        re.compile(r"^sms channel"),
+        "SMS channel",
+        [
+            "New Relic has no SMS destination. Reach the same people through a mobile push "
+            "destination (the New Relic mobile app), PagerDuty or another on-call tool that "
+            "sends SMS, or a webhook to an SMS service. Take the phone numbers from the Google "
+            "channel; it returns them only in part.",
+        ],
+    ),
+    (
+        re.compile(r"^pubsub channel"),
+        "Pub/Sub channel",
+        [
+            "New Relic cannot publish to Pub/Sub. Create a webhook destination that calls a "
+            "small receiver (a Cloud Function or Cloud Run service) which publishes to the "
+            "topic, then add it to the workflow listed in the notification report.",
+        ],
+    ),
+    (
+        re.compile(r"^mobile channel \(unverified type\)"),
+        "Mobile app channel",
+        [
+            "Google does not list this type in its channel descriptors, so check in Cloud "
+            "Monitoring what the channel is. If it notifies the Google Cloud Mobile App, create "
+            "a mobile push destination in New Relic for each person (they install the New "
+            "Relic mobile app and sign in) and add it to the workflow.",
+        ],
+    ),
+    (
         re.compile(r"^channel type has no new relic destination"),
         "Channel type without a New Relic destination",
         [
-            "New Relic has no destination for this kind of channel (SMS, Pub/Sub, Google mobile "
-            "app and the retired chat tools). Choose email, Slack, PagerDuty or a webhook that "
-            "reaches the same people, and add it to the workflow listed in the notification "
-            "report. A webhook can call a small receiver that forwards to Pub/Sub or SMS.",
+            "New Relic has no destination for this kind of channel. Choose email, Slack, "
+            "PagerDuty or a webhook that reaches the same people, and add it to the workflow "
+            "listed in the notification report.",
         ],
     ),
     (

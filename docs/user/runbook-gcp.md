@@ -12,7 +12,7 @@ seen working on a live system.
 | Asset | What happens | Honest status |
 |---|---|---|
 | Alert policies | Metric threshold conditions (including percentile series), metric-absence conditions and plain log-match conditions become NRQL conditions, created disabled. | Approximate. 59% of our synthetic sample policies convert (3 of 4 in the shipped fixture). In a sandbox, five conditions converted from real policies ran against live data and returned the expected values. No customer data. |
-| Dashboards | Chart and scorecard widgets over a plain time series filter, and text widgets, become widgets in private dashboards. Everything else is a visible "Not migrated" placeholder. | Built and tested on hand-made fixtures. Never run on a real export. |
+| Dashboards | Chart, scorecard, table, pie, logs and text widgets, section headers and PromQL charts become widgets in private dashboards; collapsible and single-view groups become pages. Incident lists, alert charts, error reporting panels and MQL or ratio queries are visible "Not migrated" placeholders with steps. | Built and tested on hand-made fixtures. Never run on a real export. |
 | Notification channels | One section per set of channels, listing the policies that used it, with steps per channel type. | Manual steps only. The export deliberately holds no addresses, URLs or tokens, so nothing is created. |
 | Uptime checks | A list: each check with its path, period, and the New Relic monitor to create. | A list only. The host is not exported. Uptime-check alerts stay manual. |
 | Metric data | Terraform links your project to New Relic, for only the services your alerts use. | Verified in a sandbox: first data about 4 minutes after linking. A person runs `terraform apply`. |
@@ -206,6 +206,19 @@ fires. Run `check-gcp-data`. Custom, Ops Agent and log-based metrics have no doc
   logs is not confirmed.
 - Dashboards: stacked bars show as area charts. Counters are charted as the sum of 5-minute changes, not
   as a rate. Overlapping widgets are moved down.
+- Dashboard widgets: a `collapsibleGroup` or `singleViewGroup` tile becomes a page and the tiles below it
+  (until the next group) go on that page, a guess from the layout because Google stores no parent. A
+  `sectionHeader` is a markdown heading. A `timeSeriesTable` is a table (column settings are lost), a
+  `pieChart` a pie, a `logsPanel` a table over `Log` (a filter with OR or parentheses is dropped and the
+  note says so). PromQL queries go through the Prometheus translator; `${Cluster}`-style template
+  variables become New Relic variables. Metrics from the Ops Agent, custom metrics and log-based metrics
+  stay placeholders, because New Relic does not collect them from Google Cloud.
+- Notification channel types: `email`, `webhook_tokenauth`, `webhook_basicauth`, `slack`, `pagerduty`,
+  `google_chat` (webhook), `sms`, `pubsub` (webhook to a receiver), `hipchat` and `campfire` (deprecated by
+  Google, nothing to migrate to). `mobile` is not in Google's descriptor list, so it is unverified and
+  manual. Secrets Google obfuscates (Slack `auth_token`, webhook password, PagerDuty `service_key`) are
+  named in the plan as `GCP_SLACK_AUTH_TOKEN`, `GCP_WEBHOOK_PASSWORD`, `GCP_PAGERDUTY_SERVICE_KEY`; you enter
+  the value in New Relic yourself.
 - Names that look like addresses, URLs or tokens are replaced by the resource id in outputs. Other names
   are kept as written, so do not put secrets in names.
 
