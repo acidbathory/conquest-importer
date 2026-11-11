@@ -37,7 +37,11 @@ API_AG, API_MA, API_SQR, API_ALA, API_APR = (
 API_STORAGE, API_WORKSPACE = "2023-05-01", "2022-10-01"
 EMAIL = "ckg-test@example.invalid"
 HOOK = "https://example.invalid/hook"
-SAFE_GROUPS = ("ckg-ag-email", "ckg-ag-webhook")
+SAFE_GROUPS = ("ckg-ag-email", "ckg-ag-email2")
+# Live 2026-11-11: the Action Group API answers 400 <Type>UriBlocked for a receiver URL on
+# example.invalid, so these five receiver types cannot be created with an unroutable host. They
+# stay in the plan only behind --include-blocked (a different host needs the owner's decision).
+BLOCKED_RECEIVERS = ("webhook", "securewebhook", "logicapp", "function", "runbook")
 
 
 @dataclass
@@ -68,6 +72,11 @@ def _ag_receivers(sub: str, rg: str, tenant: str) -> dict[str, dict[str, Any]]:
         "email": {
             "emailReceivers": [
                 {"name": "ckg-email", "emailAddress": EMAIL, "useCommonAlertSchema": True}
+            ]
+        },
+        "email2": {
+            "emailReceivers": [
+                {"name": "ckg-email-legacy", "emailAddress": EMAIL, "useCommonAlertSchema": False}
             ]
         },
         "webhook": {
@@ -222,7 +231,7 @@ def _metric_alerts(scope: str, ag: Callable[[str], str]) -> list[tuple[str, dict
             **extra,
         }
 
-    hook = {"actionGroupId": ag("webhook"), "webHookProperties": {"ckg": "test"}}
+    hook = {"actionGroupId": ag("email2"), "webHookProperties": {"ckg": "test"}}
     return [
         (
             "ckg-ma-static-txn",
@@ -258,7 +267,7 @@ def _metric_alerts(scope: str, ag: Callable[[str], str]) -> list[tuple[str, dict
                     _crit("egress", "Egress", "Total", "GreaterThanOrEqual", 1e9),
                 ],
                 True,
-                "webhook",
+                "email2",
             ),
         ),
         (
@@ -297,7 +306,7 @@ def _metric_alerts(scope: str, ag: Callable[[str], str]) -> list[tuple[str, dict
                 SINGLE,
                 [_crit("lat", "SuccessE2ELatency", "Maximum", "GreaterThan", 5000)],
                 False,
-                "webhook",
+                "email2",
             ),
         ),
         (
@@ -320,7 +329,7 @@ def _metric_alerts(scope: str, ag: Callable[[str], str]) -> list[tuple[str, dict
                 MULTI,
                 [_dyn("davail", "Availability", "Average", "LessThan", "High", 4, 4)],
                 True,
-                "webhook",
+                "email2",
             ),
         ),
         (
@@ -330,7 +339,7 @@ def _metric_alerts(scope: str, ag: Callable[[str], str]) -> list[tuple[str, dict
                 "PT1H",
                 "PT6H",
                 SINGLE,
-                [_crit("cap", "UsedCapacity", "Minimum", "LessThan", 1)],
+                [_crit("cap", "UsedCapacity", "Average", "LessThan", 1)],
                 True,
             ),
         ),
@@ -415,6 +424,7 @@ def _sqr(ws: str, ag: Callable[[str], str]) -> list[tuple[str, dict[str, Any]]]:
                     dimensions=[{"name": "DataType", "operator": "Include", "values": ["*"]}],
                 ),
                 muteActionsDuration="PT1H",
+                autoMitigate=False,
             ),
         ),
         (
@@ -440,7 +450,7 @@ def _sqr(ws: str, ag: Callable[[str], str]) -> list[tuple[str, dict[str, Any]]]:
                     3,
                     2,
                 ),
-                "webhook",
+                "email2",
                 muteActionsDuration="PT30M",
             ),
         ),
@@ -474,7 +484,7 @@ def _sqr(ws: str, ag: Callable[[str], str]) -> list[tuple[str, dict[str, Any]]]:
                     2,
                     metricMeasureColumn="Quantity",
                 ),
-                "webhook",
+                "email2",
                 resolveConfiguration={"autoResolved": True, "timeToResolve": "PT10M"},
             ),
         ),
@@ -483,7 +493,9 @@ def _sqr(ws: str, ag: Callable[[str], str]) -> list[tuple[str, dict[str, Any]]]:
     ]
 
 
-def build_plan(sub: str, rg: str, suffix: str, tenant: str) -> list[Item]:
+def build_plan(
+    sub: str, rg: str, suffix: str, tenant: str, include_blocked: bool = False
+) -> list[Item]:
     base = _rg(sub, rg)
     ins = f"{base}/providers/{INSIGHTS}"
     storage = f"ckgstore{suffix}"
@@ -527,6 +539,8 @@ def build_plan(sub: str, rg: str, suffix: str, tenant: str) -> list[Item]:
         ),
     ]
     for key, receivers in _ag_receivers(sub, rg, tenant).items():
+        if key in BLOCKED_RECEIVERS and not include_blocked:
+            continue
         name = f"ckg-ag-{key}"
         items.append(
             Item(
@@ -606,7 +620,7 @@ def build_plan(sub: str, rg: str, suffix: str, tenant: str) -> list[Item]:
                     ]
                 },
                 sub_scope,
-                "webhook",
+                "email2",
             ),
         ),
         (
@@ -784,6 +798,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--probe", action="store_true", help="also send the requests expected to be rejected"
     )
+    ap.add_argument(
+        "--include-blocked",
+        action="store_true",
+        help="also plan the receivers the API blocks on .invalid hosts",
+    )
     ap.add_argument("--rg", default=RG_DEFAULT)
     ap.add_argument("--env-file", type=Path, default=Path(".env"))
     ap.add_argument("--manifest", type=Path, default=MANIFEST)
@@ -793,7 +812,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         prior = json.loads(a.manifest.read_text()) if a.manifest.exists() else {}
         suffix = prior.get("storage_suffix") or random_suffix()
-        items = build_plan(arm.subscription, a.rg, suffix, env["AZURE_TENANT_ID"])
+        items = build_plan(
+            arm.subscription, a.rg, suffix, env["AZURE_TENANT_ID"], a.include_blocked
+        )
         if a.probe:
             items += probe_items(arm.subscription, a.rg)
         counts: dict[str, int] = {}

@@ -44,12 +44,19 @@ def test_counts_cover_every_object_class() -> None:
     for it in plan():
         kinds[it.kind] = kinds.get(it.kind, 0) + 1
     assert kinds["storage"] == 1 and kinds["workspace"] == 1
-    assert kinds["actionGroup"] >= 10
+    assert kinds["actionGroup"] == 6
     assert kinds["metricAlert"] >= 8
     assert kinds["scheduledQueryRule"] >= 6
     assert kinds["activityLogAlert"] == 3
     assert kinds["alertProcessingRule"] == 2
     assert sum(v for k, v in kinds.items() if k.endswith(("Alert", "Rule"))) >= 20
+
+
+def test_blocked_receiver_types_are_opt_in() -> None:
+    est = load("estate")
+    names = {i.name for i in est.build_plan(SUB, RG, "abc123", "t-1", include_blocked=True)}
+    assert {f"ckg-ag-{k}" for k in est.BLOCKED_RECEIVERS} <= names
+    assert not {f"ckg-ag-{k}" for k in est.BLOCKED_RECEIVERS} & {i.name for i in plan()}
 
 
 def test_creation_order_puts_dependencies_first() -> None:
@@ -63,7 +70,7 @@ def test_creation_order_puts_dependencies_first() -> None:
 
 
 def test_rules_are_disabled_and_only_use_safe_action_groups() -> None:
-    safe = {"ckg-ag-email", "ckg-ag-webhook"}
+    safe = {"ckg-ag-email", "ckg-ag-email2"}
     for it in plan():
         if it.kind in {
             "metricAlert",
@@ -134,11 +141,11 @@ def test_run_records_manifest_before_each_put(tmp_path: Path) -> None:
 def test_run_stops_on_permission_error_and_keeps_manifest(tmp_path: Path) -> None:
     est = load("estate")
     man = tmp_path / "m.json"
-    arm = fake_arm([], {"/actionGroups/ckg-ag-webhook": (403, "AuthorizationFailed")})
+    arm = fake_arm([], {"/actionGroups/ckg-ag-email2": (403, "AuthorizationFailed")})
     with pytest.raises(load("arm").ArmError):
         est.run(arm, plan(), man, sleep=lambda _s: None)
     names = [r["name"] for r in json.loads(man.read_text())["resources"]]
-    assert "ckg-ag-webhook" in names and not any(n.startswith("ckg-ma-") for n in names)
+    assert "ckg-ag-email2" in names and not any(n.startswith("ckg-ma-") for n in names)
 
 
 def test_run_records_validation_rejection_and_continues(tmp_path: Path) -> None:
