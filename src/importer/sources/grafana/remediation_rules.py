@@ -37,6 +37,20 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^promql counter function on a gauge"),
+        "PromQL rate of a gauge",
+        [
+            "The hints file says this metric is a gauge, so `rate()` or `increase()` of it is "
+            "usually a mistake: the gauge is stored as sampled values and a sum over the "
+            "window is not a rate. Decide what the rule means.",
+            "To alert on how fast a gauge changes, write the condition by hand: `SELECT "
+            "latest(metric) - earliest(metric) FROM Metric` over the window (delta), or a "
+            "NRQL baseline or `derivative(metric, 1 minute)` (deriv).",
+            'If the metric really is a counter, correct the hint: set `{"types": {"<metric>": '
+            '"counter"}}` in the name map (or remove the entry) and convert again.',
+        ],
+    ),
+    (
         re.compile(r"^promql counter function on a metric"),
         "PromQL counter name",
         [

@@ -168,6 +168,21 @@ ROWS: list[tuple[str, str, list[str], Category]] = [
         C.UNSUPPORTED_QUERY,
     ),
     (
+        r.C_RATE_OF_GAUGE,
+        "Dashboard rate of a gauge",
+        [
+            "The name map says this metric is a gauge, so `rate()`, `irate()` or `increase()` "
+            "of it is usually a mistake, and New Relic stores a gauge as sampled values, so "
+            "`rate(sum(x), 1 second)` would be wrong. Decide what the chart means.",
+            "To chart how fast a gauge changes, write the NRQL by hand: `SELECT "
+            "derivative(average(x), 1 minute) FROM Metric TIMESERIES`, or the change over the "
+            "window with `latest(x) - earliest(x)`.",
+            'If the metric really is a counter, correct the hint: set `{"types": {"<metric>": '
+            '"counter"}}` in the name map (or remove the entry) and convert again.',
+        ],
+        C.UNSUPPORTED_QUERY,
+    ),
+    (
         r.C_COUNTER_NAME,
         "Dashboard rate of a metric not stored as a counter",
         [
