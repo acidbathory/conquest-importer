@@ -35,13 +35,15 @@ PATTERNS: list[tuple[Category, str]] = [
         r"^(azure evaluates|azure severity|severity .* is not 0 to 4|automitigate"
         r"|resolveconfiguration|time aggregation (count|total)|the same metric can arrive"
         r"|targetresourceregion|dimension .* splits|the azure rule is disabled"
-        r"|muteactionsduration|kql contains|a count over an empty window|the count is wrapped"
+        r"|muteactionsduration|kql (contains|bin|negated|has|dcount|any|comparison|time filter"
+        r"|matches regex)|a count over an empty window|the count is wrapped"
         r"|\d+ failing periods|the azure metric name"
         r"|the rule group has)",
     ),
     (
         Category.MANUAL_FOLLOWUP,
-        r"^(the table .* has no counterpart|the logs must reach new relic)",
+        r"^(the table .* (has no counterpart|is filled by|is generated inside)"
+        r"|the logs must reach new relic|kql .* after the aggregation)",
     ),
 ]
 

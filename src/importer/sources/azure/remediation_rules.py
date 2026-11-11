@@ -102,12 +102,71 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^kql query cannot be converted: (join|lookup|union) has no"),
+        "Azure KQL join or union",
+        [
+            "A condition reads one event type, so a join, lookup or union of two tables has no "
+            "NRQL form. Decide what the join was for. A lookup against a short fixed list "
+            "becomes `IN ('a', 'b')`. A comparison of two data sets becomes two conditions, "
+            "or one condition on the data set that matters and a dashboard chart for the "
+            "other.",
+        ],
+    ),
+    (
+        re.compile(
+            r"^kql query cannot be converted: (mv-expand|mv-apply|parse|function extract\(\)"
+            r"|function [a-z_]+\(\) has no New Relic form \(in (extend|project)\))"
+        ),
+        "Azure KQL parsing or expansion",
+        [
+            "The query splits, parses or computes a column (`parse`, `extract` with regex "
+            "captures, `mv-expand`, or `extend` with a function). NRQL cannot create columns "
+            "inside a condition.",
+            "Parse the value at ingest: add a parsing rule to New Relic log parsing so the "
+            "captured value becomes an attribute, then write the condition on that attribute "
+            "(`SELECT count(*) FROM Log WHERE <attribute> = '<value>'`). For a plain match "
+            "`WHERE message RLIKE r'.*pattern.*'` works without parsing.",
+        ],
+    ),
+    (
+        re.compile(
+            r"^kql query cannot be converted: (make-series|series_\* function|evaluate|scan"
+            r"|absence check)"
+        ),
+        "Azure KQL time series or absence check",
+        [
+            "Series functions (`make-series`, `series_*`, `evaluate`) compute anomalies or "
+            "forecasts inside the query. Use a baseline condition on the underlying NRQL "
+            "aggregate instead, and tune the deviations against a week of history.",
+            "An absence check (`max(TimeGenerated)` compared with `ago()`) is a loss-of-signal "
+            "condition: `SELECT count(*) FROM Log WHERE <identifying filter> FACET <key>` "
+            "with the signal-loss duration set to the age in the query (10 minutes for "
+            "`ago(10m)`).",
+        ],
+    ),
+    (
+        re.compile(
+            r"^kql query cannot be converted: (cross-resource query|materialize|let that"
+            r"|statement|list)"
+        ),
+        "Azure KQL cross-resource query or function",
+        [
+            "A query over another workspace or resource (`workspace()`, `app()`, `adx()`), a "
+            "`let` that defines a table or function, or `materialize` cannot be one NRQL "
+            "condition.",
+            "Create one condition for each workspace or resource the query reads, with the "
+            "`let` body written in place, and send each workspace's logs to New Relic first.",
+        ],
+    ),
+    (
         re.compile(r"^kql query cannot be converted"),
         "Azure KQL query",
         [
-            "Only a table, simple where terms on columns, and a count or one aggregate of a "
-            "column are converted. Joins, let, regular expressions, parse, extend, arg_max "
-            "and other operators have no NRQL form (a condition cannot hold subqueries).",
+            "Converted: a table, where terms (comparisons, contains, has, startswith, in, "
+            "between, matches regex, isempty, and, or, not), and one aggregate (count, "
+            "countif, dcount, avg, sum, min, max, percentile, any), grouped by columns. "
+            "Other operators and functions (arg_max, make_set, let functions) have no NRQL "
+            "form: a condition cannot hold subqueries.",
             "Work out what the query counts, then write the NRQL by hand over the forwarded "
             "`Log` data, for example `SELECT count(*) FROM Log WHERE plugin.type = 'azure' "
             "AND <attribute> = '<value>'`. Inspect one forwarded record first; the attribute "

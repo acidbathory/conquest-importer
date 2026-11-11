@@ -1,14 +1,14 @@
 """Log based Azure alerts: scheduled query rules (KQL), activity log alerts, smart detectors.
 
-Scheduled query rules convert only the KQL patterns in `kql.py`: a table, `where` terms on
-columns, and a count or one aggregate of a column. The table has no counterpart in New Relic, so
-the condition counts or aggregates forwarded Azure logs (`plugin.type = 'azure'`) and the column
-names are used as attribute names, both UNVERIFIED (docs/research/azure-monitor-alerting.md 4.5).
+Scheduled query rules convert the KQL subset in `kql_parse.py` (lowered by `kql_lower.py`). The
+table has no counterpart in New Relic, so the condition reads the `Log` event: forwarded Azure
+logs (`plugin.type = 'azure'`) for diagnostic tables, and nothing documented for agent tables.
+`kql_tables.py` names the data path of each table (`IRMonitor.data_path`); the column names are
+used as attribute names and are UNVERIFIED (docs/research/azure-monitor-alerting.md 4.5).
 Activity log, service health and smart detector rules are manual (sections 4.6 and 4.8).
 """
 
 import math
-import re
 from typing import Any
 
 from importer.core.emit.nrql import build_nrql
@@ -40,7 +40,9 @@ from importer.sources.azure.common import (
     severity_level,
     timing,
 )
-from importer.sources.azure.kql import KqlError, Query, Term, parse
+from importer.sources.azure.kql_lex import KqlSyntax, KqlUnsupported
+from importer.sources.azure.kql_lower import Lowered, is_empty_sensitive, lower
+from importer.sources.azure.kql_parse import Query, parse
 from importer.sources.azure.models import AzureAlert, iso_seconds
 from importer.sources.azure.names import log_attribute
 
@@ -57,20 +59,7 @@ AGGREGATIONS = {
     "maximum": Aggregation.MAX,
     "total": Aggregation.SUM,
 }
-KQL_FUNCTIONS = {
-    "avg": Aggregation.AVG,
-    "min": Aggregation.MIN,
-    "max": Aggregation.MAX,
-    "sum": Aggregation.SUM,
-}
-# tables filled by an agent or service whose data New Relic does not receive from Azure
-AGENT_TABLES = re.compile(
-    r"(Perf|InsightsMetrics|Heartbeat|Event|Syslog|Update.*|ConfigurationData|Container.*|Kube.*"
-    r"|Alert|Usage|Operation|App[A-Z].*|AzureActivity|SigninLogs|AuditLogs|SecurityEvent"
-    r"|SecurityAlert|SecurityIncident|ADX.*|Windows.*)",
-)
 BAD_SCOPE_TYPES = ("microsoft.insights/components", "microsoft.kusto/clusters")
-MEASURE_NAMES = {"", "count_", "aggregatedvalue"}
 FORWARDED = ("plugin.type", "azure")  # the attribute New Relic's forwarder documents
 MAX_PERIODS = 24
 SERVICE_HEALTH_WORDS = ("servicehealth", "resourcehealth")
@@ -82,34 +71,6 @@ def _positive_int(value: object, default: int) -> int:
     if value is None:
         return default
     raise Fail(f"{R.M_LOG_RANGE}: failingPeriods is not a small whole number")
-
-
-def _filter_args(term: Term, attribute: str) -> dict[str, Any]:
-    if term.op == "in":
-        return {"key": attribute, "value": "", "values": list(term.values), "negate": term.negate}
-    text = term.values[0]
-    if term.op == "eq":
-        return {"key": attribute, "value": text, "negate": term.negate}
-    pattern = {
-        "contains": f"*{text}*",
-        "has": f"*{text}*",
-        "startswith": f"{text}*",
-        "endswith": f"*{text}",
-    }[term.op]
-    return {"key": attribute, "value": pattern, "wildcard": True, "negate": term.negate}
-
-
-def _columns(query: Query, alert: AzureAlert) -> tuple[dict[str, str], bool]:
-    """(column -> attribute, any name came from the map's absence)."""
-    found: dict[str, str] = {}
-    derived = False
-    for column in [t.column for t in query.terms]:
-        attr = log_attribute(alert.names, query.table, column)
-        if attr is None:
-            raise Fail(f"{R.M_KQL}: column {R.shown(column, 40)} is not a plain name")
-        found[column] = attr[0]
-        derived = derived or not attr[1]
-    return found, derived
 
 
 def _dimensions(
@@ -152,34 +113,8 @@ def _check_scopes(scopes: object) -> None:
             raise Fail(f"{R.M_LOG_SCOPE}: Application Insights or Azure Data Explorer")
 
 
-def _measure(
-    query: Query, cond: dict[str, Any], alert: AzureAlert
-) -> tuple[str, str | None, Aggregation | None]:
-    """('count' or 'column', attribute, aggregation) for what the rule measures."""
-    column = cond.get("metricMeasureColumn")
-    time_agg = str(cond.get("timeAggregation", "")).lower()
-    summary = query.summarize
-    if summary is None and not column and time_agg in ("count", ""):
-        return "count", None, None
-    if summary is not None and summary.function == "count":
-        if time_agg not in AGGREGATIONS or str(column or "").lower() not in MEASURE_NAMES:
-            raise Fail(f"{R.M_LOG_MEASURE}: count() with time aggregation {time_agg or 'none'}")
-        return "count", None, None
-    measured = summary.column if summary is not None else column
-    if not isinstance(measured, str) or time_agg not in AGGREGATIONS:
-        raise Fail(f"{R.M_LOG_MEASURE}: no column or time aggregation New Relic can take")
-    if summary is not None and summary.function in KQL_FUNCTIONS:
-        agg = KQL_FUNCTIONS[summary.function]
-    else:
-        agg = AGGREGATIONS[time_agg]
-    attr = log_attribute(alert.names, query.table, measured)
-    if attr is None:
-        raise Fail(f"{R.M_LOG_MEASURE}: column {R.shown(measured, 40)} is not a plain name")
-    return "column", attr[0], agg
-
-
 def _log_timing(
-    props: dict[str, Any], cond: dict[str, Any], query: Query, simple: bool
+    props: dict[str, Any], cond: dict[str, Any], simple: bool
 ) -> tuple[int, int, EmitOptions, list[str]]:
     """(aggregation window, breach duration, emit options, notes) of a log alert."""
     if simple:  # a SimpleLogAlert has no window: every matching record counts, over a minute
@@ -188,9 +123,6 @@ def _log_timing(
     override = iso_seconds(props.get("overrideQueryTimeRange"))
     if props.get("overrideQueryTimeRange") and override != timed.window:
         raise Fail(R.M_LOG_RANGE)
-    summary = query.summarize
-    if summary is not None and summary.bin_seconds not in (None, timed.window):
-        raise Fail(f"{R.M_KQL}: the summarize bin size differs from the window")
     raw_failing = cond.get("failingPeriods")
     failing: dict[str, Any] = raw_failing if isinstance(raw_failing, dict) else {}
     n = _positive_int(failing.get("numberOfEvaluationPeriods"), 1)
@@ -203,6 +135,69 @@ def _log_timing(
     return timed.window, timed.window * m, timed.options, notes
 
 
+def _parse_query(text: str) -> Query:
+    try:
+        return parse(text)
+    except KqlUnsupported as exc:
+        raise Fail(f"{R.M_KQL}: {exc}") from None
+    except KqlSyntax as exc:
+        raise Fail(f"{R.M_KQL}: {exc}") from None
+
+
+def _signal(
+    low: Lowered,
+    filters: list[dict[str, Any]],
+    opts: EmitOptions,
+    operator: Operator,
+    value: float,
+    window: int,
+    window_seconds: int,
+    group_by: list[str],
+    name: str,
+) -> tuple[Signal, EmitOptions, list[str]]:
+    """The IR signal for a lowered query; a plain count keeps the filters as a CountSignal."""
+    notes: list[str] = []
+    if low.count:
+        signal = Signal(
+            kind=SignalKind.LOG,
+            raw_query=name,
+            window_seconds=window_seconds,
+            aggregation_window_seconds=window,
+            occurrences=Occurrences.ALL,
+            count=CountSignal(filters=[CountFilter(**f) for f in filters], group_by=group_by),
+        )
+        scope = [FORWARDED[0]] if low.info.azure_filter else []
+        inner = [f for f in filters if f["key"] not in scope]
+        if is_empty_sensitive(operator, value) and inner:
+            opts = opts.model_copy(update={"null_safe_count": True, "null_safe_scope": scope})
+            notes.append(R.N_LOG_NULL)
+        elif is_empty_sensitive(operator, value):
+            notes.append(R.N_LOG_NULL_OPEN)
+        return signal, opts, notes
+    if low.select is None and low.measured is None:
+        raise Fail(R.M_LOG_MEASURE)
+    target = NrTarget(event="Log", select=low.select, attribute=low.measured)
+    label = low.measured or low.select or ""
+    if low.needs_null_safe:
+        notes.append(R.N_LOG_NULL)
+    signal = Signal(
+        kind=SignalKind.METRIC,
+        raw_query=name,
+        window_seconds=window_seconds,
+        aggregation_window_seconds=window,
+        occurrences=Occurrences.ALL,
+        metric=MetricSignal(
+            terms={
+                "a": MetricTerm(metric=label, space_aggregation=low.aggregation, nr_target=target)
+            },
+            aggregation=low.aggregation,
+            scope=[TagFilter(**f) for f in filters],
+            group_by=group_by,
+        ),
+    )
+    return signal, opts, notes
+
+
 def _log_condition(
     alert: AzureAlert, cond: dict[str, Any], level: Level, simple: bool
 ) -> tuple[IRMonitor, list[str]]:
@@ -210,14 +205,7 @@ def _log_condition(
     base = base_fields(alert, key_of(alert), "log alert", alert.name)
     if cond.get("criterionType") == "DynamicThresholdCriterion":
         raise Fail(R.M_DYNAMIC)
-    text = str(cond.get("query", ""))
-    head = re.match(r"\s*([A-Za-z_]\w*)\s*(?:\||$)", text)
-    if head is not None and AGENT_TABLES.fullmatch(head[1]):  # said before any parse problem
-        raise Fail(f"{R.M_KQL_TABLE}: {R.shown(head[1], 40)}")
-    try:
-        query = parse(text)
-    except KqlError as exc:
-        raise Fail(f"{R.M_KQL}: {exc}") from None
+    query = _parse_query(str(cond.get("query", "")))
     _check_scopes(props.get("scopes"))
     operator, value = (
         _operator_and_value(cond)
@@ -227,70 +215,27 @@ def _log_condition(
             float(_positive_int(cond.get("minRecurrenceCount"), 1)),
         )
     )
-    window, window_seconds, opts, notes = _log_timing(props, cond, query, simple)
-    attrs, derived = _columns(query, alert)
-    dim_filters, facets = _dimensions(cond.get("dimensions"), alert, query.table)
-    for column in query.summarize.by if query.summarize else ():
-        mapped = log_attribute(alert.names, query.table, column)
-        if mapped is None or mapped[0] not in facets:
-            raise Fail(
-                f"{R.M_KQL}: the summarize groups by {R.shown(column, 40)}, "
-                "which is not a rule dimension"
-            )
-    group_by = facets
-    kind, measured, aggregation = _measure(query, cond, alert)
-    filters: list[dict[str, Any]] = [{"key": FORWARDED[0], "value": FORWARDED[1]}]
-    filters += [_filter_args(t, attrs[t.column]) for t in query.terms]
+    window, window_seconds, opts, notes = _log_timing(props, cond, simple)
+    dim_filters, rule_facets = _dimensions(cond.get("dimensions"), alert, query.table)
+    low = lower(query, cond, alert, rule_facets, window)
+    if low.threshold is not None:
+        operator, value = low.threshold
+    notes += low.notes
+    filters: list[dict[str, Any]] = (
+        [{"key": FORWARDED[0], "value": FORWARDED[1]}] if low.info.azure_filter else []
+    )
+    filters += low.filters
     filters += [{"key": a, "value": "", "values": v, "negate": neg} for a, v, neg in dim_filters]
-    names = sorted({*attrs.values(), *facets, *([measured] if measured else [])})
-    notes += [R.N_LOG_FORWARD, R.N_LOG_TABLE.format(table=R.shown(query.table, 40))]
-    if names and (derived or measured or facets):
-        notes.append(R.N_LOG_ATTRIBUTES.format(names=", ".join(names)))
-    if any(t.op in ("contains", "has") for t in query.terms):
+    if low.info.azure_filter:
+        notes += [R.N_LOG_FORWARD, R.N_LOG_TABLE.format(table=R.shown(query.table, 40))]
+    if low.attributes and (low.derived or low.measured or low.facets or low.select):
+        notes.append(R.N_LOG_ATTRIBUTES.format(names=", ".join(low.attributes)))
+    if any(f.get("wildcard") for f in low.filters):
         notes.append(R.N_FILTER_CASE)
     thresholds = [Threshold(severity=level.severity, operator=operator, value=value)]
-    if kind == "count":
-        signal = Signal(
-            kind=SignalKind.LOG,
-            raw_query=alert.name,
-            window_seconds=window_seconds,
-            aggregation_window_seconds=window,
-            occurrences=Occurrences.ALL,
-            count=CountSignal(filters=[CountFilter(**f) for f in filters], group_by=group_by),
-        )
-        empty_sensitive = operator in (
-            Operator.BELOW,
-            Operator.BELOW_OR_EQUALS,
-            Operator.EQUALS,
-        ) or (operator is Operator.ABOVE_OR_EQUALS and value <= 0)
-        if empty_sensitive and len(filters) > 1:
-            opts = opts.model_copy(
-                update={"null_safe_count": True, "null_safe_scope": [FORWARDED[0]]}
-            )
-            notes.append(R.N_LOG_NULL)
-        elif empty_sensitive:
-            notes.append(R.N_LOG_NULL_OPEN)
-    else:
-        if measured is None or aggregation is None:
-            raise Fail(R.M_LOG_MEASURE)
-        target = NrTarget(event="Log", attribute=measured)
-        signal = Signal(
-            kind=SignalKind.METRIC,
-            raw_query=alert.name,
-            window_seconds=window_seconds,
-            aggregation_window_seconds=window,
-            occurrences=Occurrences.ALL,
-            metric=MetricSignal(
-                terms={
-                    "a": MetricTerm(
-                        metric=measured, space_aggregation=aggregation, nr_target=target
-                    )
-                },
-                aggregation=aggregation,
-                scope=[TagFilter(**f) for f in filters],
-                group_by=group_by,
-            ),
-        )
+    signal, opts, more = _signal(
+        low, filters, opts, operator, value, window, window_seconds, low.facets, alert.name
+    )
     monitor = IRMonitor(
         **base,
         signal=signal,
@@ -298,9 +243,10 @@ def _log_condition(
         confidence=Confidence.APPROXIMATE,
         reasons=[],
         emit=opts if opts != EmitOptions() else None,
+        data_path=low.info.path,
     )
     build_nrql(monitor)  # a name the emitter would refuse becomes a manual reason here
-    return monitor, notes
+    return monitor, [*notes, *more]
 
 
 def translate_scheduled_query_rule(alert: AzureAlert) -> IRMonitor:

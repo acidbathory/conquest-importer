@@ -27,12 +27,14 @@ already read).
 | Alert type | Rules | Converted (approximate or better) | Manual | Unsupported |
 |---|---|---|---|---|
 | Metric alerts | 22 | 6 | 16 | 0 |
-| Scheduled query rules (KQL) | 15 | 0 | 15 | 0 |
+| Scheduled query rules (KQL) | 15 | 7 | 8 | 0 |
 | Activity log alerts | 10 | 0 | 10 | 0 |
 | Prometheus rule groups | 7 | 0 | 7 | 0 |
 | Smart detector rules | 7 | 0 | 0 | 7 |
-| All | 61 | 6 | 48 | 7 |
-Rules that differ only in fields the conversion ignores (descriptions, actions, tags) appear in
+| All | 61 | 13 | 41 | 7 |
+The scheduled query rule row is measured with the KQL subset translator (docs/research/azure-kql.md;
+before it the row was 15 rules, 0 converted, 15 manual, and the distinct-rule counts below were taken
+at that time). Rules that differ only in fields the conversion ignores (descriptions, actions, tags) appear in
 several example files. Counting each distinct criteria, query, condition or detector once gives 38
 rules, of which 4 convert (metric alerts 4 of 16, scheduled query rules 0 of 7, activity log alerts
 0 of 8, Prometheus alert rules 0 of 2, smart detector rules 0 of 5). The share is similar either way:
@@ -50,7 +52,7 @@ original Azure severity written into the description.
 | Alert type | Main blockers (count) | Why |
 |---|---|---|
 | Metric alerts | dynamic threshold (5); metric name not writable as a New Relic name (4); several resource groups in one scope (2); availability test (2); window over one hour (1); PromQL form not supported (2) | Azure learns a range with its own model and New Relic has no matching sensitivity; guest metrics such as `\Processor(_Total)\% Processor Time` are custom metrics the Azure Monitor integration does not collect; one New Relic condition matches one resource id prefix; availability tests belong to Synthetics; the importer accepts windows up to one hour |
-| Scheduled query rules (KQL) | table from an agent (13: Perf 7, Heartbeat 6); dynamic threshold (2) | Perf and Heartbeat are filled by the Azure Monitor agent, whose data New Relic does not read; the examples use no simple count over a resource log table |
+| Scheduled query rules (KQL) | bare Heartbeat count with no filter (6); dynamic threshold (2) | A count of `Heartbeat` rows with no filter cannot be told apart from other logs once the table name is gone; the 7 Perf rules convert with the data path `needs-agent` and UNVERIFIED names |
 | Activity log alerts | activity event (7); service health or resource health (3) | There is no source of Azure activity events in New Relic until the Event Hub forwarder is deployed and its attribute names are known; the rule is manual with the workaround listed |
 | Prometheus rule groups | PromQL the Grafana translator refuses (7) | The examples use recorded names with colons and `histogram_quantile`; managed Prometheus data has no documented export to New Relic |
 | Smart detector rules | machine-learning detector (7) | No New Relic equivalent (unsupported, with a baseline condition suggested as a replacement) |
