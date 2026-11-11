@@ -281,3 +281,37 @@ unverified. A logs panel is counted as a converted chart (a table over `Log`); 1
 A ratio of one metric to itself converts only with a summing aligner; without one it stays manual (an average of
 parts over an average of totals overstates a share), which is why one widget fewer converts than in a first run. Numbers: `uv run python
 scripts/analysis/gcp_estate_measure.py --json out.json` on tag `integrate/gcp-all`.
+
+## 10. After the remaining-blocker work (2026-11-11, branch `improve/gcp-remaining`)
+
+Same corpus and script as section 9 (`scripts/analysis/gcp_estate_measure.py`, offline). Placeholders never count.
+
+| | Section 9 | After |
+|---|---:|---:|
+| Whole corpus, alert conditions converted | 191 of 350 | **194 of 350 (55.4%)** |
+| Whole corpus, data widgets converted | 786 of 1,148 | **823 of 1,148 (71.7%)** |
+| Native slice, conditions (121) | 85 | **85** (3 gained, 1 turned manual because its old query was wrong) |
+| Native slice, widgets (305) | 257 | **280 (91.8%)** |
+| Scoreboard placeholders | 430 | 325 (68 empty titled text boxes are now headings) |
+
+What closed: second-stage aggregation merged into one stage when the numbers are the same (same period or no
+re-alignment, composable reducers: 3 conditions, 16 widgets); `ALIGN_NEXT_OLDER` and `ALIGN_INTERPOLATE`
+(polled value, or `latest()` over a longer window; 8 widgets and a synthetic condition); percentile across series
+after `ALIGN_RATE` (2 widgets); incident lists as a table over `NrAiIssue` (13); titled empty text boxes as headings (68
+placeholders); thresholds and units kept on scorecards and line charts; logs panel regular expressions as `RLIKE`.
+
+A correctness fix came with it: a reducer that differs from the aligner (`ALIGN_MEAN` then `REDUCE_SUM`) was written as
+the aligner's function, which gave the wrong number; it now keeps the reducer's function where one polled row per
+series makes that exact, and is manual with the reason where it is not (1 condition moved from converted to manual).
+
+What stays impossible or unproven in NRQL, with the reason in the report:
+
+- Second stage over a different period, or a reduction of a different reduction (mean of means, sum of maxima): needs a
+  nested query. Charts accept `FROM (SELECT ...)`, alert conditions do not.
+- `REDUCE_PERCENTILE_nn` after `ALIGN_DELTA` (about 30 widgets, 5 conditions): on a distribution (latency) metric Google
+  merges the per-series distributions and takes the percentile; New Relic keeps one percentile per series.
+- `ALIGN_COUNT_TRUE`, `_FALSE`, `FRACTION_TRUE` and the boolean reducers: New Relic documents no encoding for boolean
+  Google metrics, so a rewrite cannot be proved.
+- `ALIGN_PERCENT_CHANGE`, percentiles other than 50, 95 and 99, `metadata.system_labels.*` and user labels with
+  `/` in the key: no NRQL form or no confirmed attribute name.
+- Regular expressions in alert conditions need an IR field for RLIKE (not added: the shared IR is pinned); logs panels use it.

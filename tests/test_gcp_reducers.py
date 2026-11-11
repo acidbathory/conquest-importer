@@ -1,3 +1,4 @@
+# ruff: noqa: S608
 """Cross-series reducers and second-stage aggregations, checked against values worked out by hand.
 
 Google aligns each series on its own first and then reduces across series. New Relic polls a
@@ -6,10 +7,13 @@ reducer's own function over the rows is exactly Google's answer. Every expected 
 worked out on paper from two series.
 """
 
+from collections.abc import Callable
+
 import pytest
 
 from importer.core.emit.nrql import _metric_nrql
 from importer.core.ir import Confidence
+from importer.sources.gcp.stages import StageError, merge_stages
 from importer.sources.gcp.translate import Fail, metric_series, translate_policy
 from test_gcp import policy, threshold
 
@@ -19,7 +23,7 @@ NAME = "gcp.compute.instance.cpu.utilization"
 
 
 def query(metric: str, aligner: str, reducer: str, period: int) -> tuple[str, float, list[str]]:
-    agg = {"crossSeriesReducer": reducer, "perSeriesAligner": aligner}
+    agg: dict[str, object] = {"crossSeriesReducer": reducer, "perSeriesAligner": aligner}
     signal, _window, scale, notes = metric_series(metric, [], agg, aligner, period)
     return _metric_nrql(signal), scale, notes
 
@@ -90,23 +94,31 @@ def test_a_condition_with_a_sum_across_instances_sums() -> None:
 
 # --- second stage -------------------------------------------------------------------------
 
-REDUCE = {"REDUCE_SUM": sum, "REDUCE_MAX": max, "REDUCE_MIN": min}
+REDUCE: dict[str, Callable[[list[float]], float]] = {
+    "REDUCE_SUM": sum,
+    "REDUCE_MAX": max,
+    "REDUCE_MIN": min,
+}
 
 
-def google(rows: dict[tuple[str, str], float], stages: list[dict[str, object]]) -> dict[str, float]:
+def groups_of(stage: dict[str, object]) -> list[str]:
+    raw = stage.get("groupByFields")
+    return [str(g) for g in raw] if isinstance(raw, list) else []
+
+
+def google(rows: dict[tuple[str, ...], float], stages: list[dict[str, object]]) -> dict[str, float]:
     """Reference evaluation of reducer stages over one point per series, grouped as Google does.
 
     `rows` maps (instance, disk) to the series' aligned value; each stage reduces across the
     series that share the stage's group-by labels (instance is label 0, disk label 1).
     """
-    series = {k: v for k, v in rows.items()}
-    keyed: dict[tuple[str, ...], float] = {k: v for k, v in series.items()}
+    keyed = dict(rows)
     labels = ["instance", "disk"]
     for stage in stages:
         reducer = stage.get("crossSeriesReducer")
         if reducer in (None, "", "REDUCE_NONE"):
             continue
-        by = [labels.index(str(g)) for g in stage.get("groupByFields", [])]  # type: ignore[attr-defined]
+        by = [labels.index(str(g)) for g in groups_of(stage)]
         groups: dict[tuple[str, ...], list[float]] = {}
         for key, value in keyed.items():
             groups.setdefault(tuple(key[i] for i in by), []).append(value)
@@ -115,14 +127,16 @@ def google(rows: dict[tuple[str, str], float], stages: list[dict[str, object]]) 
     return {"/".join(k): v for k, v in keyed.items()}
 
 
-ROWS = {("i1", "a"): 3.0, ("i1", "b"): 5.0, ("i2", "a"): 7.0}  # per-series rates in the period
+ROWS: dict[tuple[str, ...], float] = {
+    ("i1", "a"): 3.0,
+    ("i1", "b"): 5.0,
+    ("i2", "a"): 7.0,
+}  # per-series rates in the period
 
 
 def test_a_reducer_after_no_reducer_is_one_reducer() -> None:
-    from importer.sources.gcp.stages import merge_stages
-
-    first = {"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_RATE"}
-    second = {
+    first: dict[str, object] = {"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_RATE"}
+    second: dict[str, object] = {
         "alignmentPeriod": "300s",
         "crossSeriesReducer": "REDUCE_SUM",
         "groupByFields": ["instance"],
@@ -139,10 +153,11 @@ def test_a_reducer_after_no_reducer_is_one_reducer() -> None:
 
 
 def test_the_same_reducer_over_coarser_groups_is_one_reducer() -> None:
-    from importer.sources.gcp.stages import merge_stages
-
-    first = {"crossSeriesReducer": "REDUCE_MAX", "groupByFields": ["instance", "disk"]}
-    second = {"crossSeriesReducer": "REDUCE_MAX", "groupByFields": ["instance"]}
+    first: dict[str, object] = {
+        "crossSeriesReducer": "REDUCE_MAX",
+        "groupByFields": ["instance", "disk"],
+    }
+    second: dict[str, object] = {"crossSeriesReducer": "REDUCE_MAX", "groupByFields": ["instance"]}
     merged, _ = merge_stages(first, second)
     assert merged["groupByFields"] == ["instance"]
     # max of maxima: i1 = max(3, 5) = 5, i2 = 7
@@ -150,19 +165,18 @@ def test_the_same_reducer_over_coarser_groups_is_one_reducer() -> None:
 
 
 def test_a_mean_of_means_cannot_be_merged() -> None:
-    from importer.sources.gcp.stages import StageError, merge_stages
-
-    first = {"crossSeriesReducer": "REDUCE_MEAN", "groupByFields": ["instance", "disk"]}
-    second = {"crossSeriesReducer": "REDUCE_MEAN", "groupByFields": ["instance"]}
+    first: dict[str, object] = {
+        "crossSeriesReducer": "REDUCE_MEAN",
+        "groupByFields": ["instance", "disk"],
+    }
+    second: dict[str, object] = {"crossSeriesReducer": "REDUCE_MEAN", "groupByFields": ["instance"]}
     with pytest.raises(StageError, match="nested query"):
         merge_stages(first, second)
 
 
 def test_a_second_stage_over_another_period_cannot_be_merged() -> None:
-    from importer.sources.gcp.stages import StageError, merge_stages
-
-    first = {"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_RATE"}
-    second = {
+    first: dict[str, object] = {"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_RATE"}
+    second: dict[str, object] = {
         "alignmentPeriod": "3600s",
         "perSeriesAligner": "ALIGN_MEAN",
         "crossSeriesReducer": "REDUCE_MAX",
@@ -172,10 +186,12 @@ def test_a_second_stage_over_another_period_cannot_be_merged() -> None:
 
 
 def test_a_second_stage_that_does_not_realign_keeps_the_first_period() -> None:
-    from importer.sources.gcp.stages import merge_stages
-
-    first = {"alignmentPeriod": "86400s", "perSeriesAligner": "ALIGN_DELTA"}
-    second = {"alignmentPeriod": "60s", "crossSeriesReducer": "REDUCE_SUM", "groupByFields": []}
+    first: dict[str, object] = {"alignmentPeriod": "86400s", "perSeriesAligner": "ALIGN_DELTA"}
+    second: dict[str, object] = {
+        "alignmentPeriod": "60s",
+        "crossSeriesReducer": "REDUCE_SUM",
+        "groupByFields": [],
+    }
     merged, _ = merge_stages(first, second)
     assert merged["alignmentPeriod"] == "86400s" and merged["crossSeriesReducer"] == "REDUCE_SUM"
 
