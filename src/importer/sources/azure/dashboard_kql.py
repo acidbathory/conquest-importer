@@ -106,7 +106,7 @@ def _time_filter(names: Collection[str]) -> re.Pattern[str]:
     """`| where TimeGenerated {Name}` (or `{Name:value}`) as a whole stage."""
     alt = "|".join(re.escape(n) for n in sorted(names))
     return re.compile(
-        rf"\|\s*where\s+(?:TimeGenerated|timestamp)\s*\{{(?:{alt})(?::value)?\}}\s*(?=\||$)",
+        rf"\|\s*where\s+(?:TimeGenerated|timestamp)\s*\{{(?:{alt})(?::value)?\}}\s*(?=[|;]|$)",
         re.IGNORECASE,
     )
 

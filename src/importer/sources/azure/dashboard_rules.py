@@ -96,6 +96,16 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^workbook query is KQL that cannot be converted: case-insensitive comp"),
+        "Azure workbook KQL case-insensitive comparison",
+        [
+            "`=~` compares text ignoring case; NRQL `=` and `LIKE` are case-sensitive, so the "
+            "importer does not guess. If the values have one known spelling, filter on that "
+            "spelling. Otherwise test an `RLIKE` with the `(?i)` flag in the query builder "
+            "before using it, and keep the rest of the query as converted.",
+        ],
+    ),
+    (
         re.compile(r"^workbook query is KQL"),
         "Azure workbook KQL query",
         [

@@ -57,6 +57,12 @@ BOOKS: dict[str, tuple[str, str, str, int]] = {
         "KQL and NRQL differ in joins, let statements and functions; logs must be forwarded.",
         45,
     ),
+    "Azure workbook KQL case-insensitive comparison": (
+        "A Kusto query that compares text with `=~`, which ignores case.",
+        "An NRQL chart that filters on the one spelling the data has, or on a tested RLIKE.",
+        "NRQL `=` is case-sensitive; a value in another case would be missed.",
+        30,
+    ),
     "Azure parameterised workbook query": (
         "A Kusto query that uses a workbook parameter written in braces.",
         "An NRQL chart; the time range follows the dashboard time picker and other parameters "

@@ -15,6 +15,7 @@ from importer.sources.azure.kql_parse import (
     Between,
     Cmp,
     Empty,
+    Expr,
     InList,
     Not,
     Or,
@@ -146,6 +147,20 @@ def where_sql(preds: list[Pred], name_of: NameOf) -> str:
     return " AND ".join(predicate_sql(p, name_of, "AND") for p in preds)
 
 
+def expression_sql(expr: Expr, name_of: NameOf) -> str:
+    """The arithmetic of an `extend`: columns through `name_of` and `ref`, numbers as written."""
+    out: list[str] = []
+    for kind, text in expr:
+        if kind == "col":
+            out.append(ref(name_of(text)))
+        elif kind == "num":
+            out.append(number(float(text)) if "." not in text else text)
+        else:
+            out.append(text)
+    glued = " ".join(out)
+    return glued.replace("( ", "(").replace(" )", ")")
+
+
 def aggregate_sql(agg: Agg, name_of: NameOf, rows: list[Pred]) -> str:
     """The NRQL aggregate; the rows filter and an `...if` condition go in filter(..., WHERE)."""
     preds = [*rows, *([agg.cond] if agg.cond is not None else [])]
@@ -153,6 +168,8 @@ def aggregate_sql(agg: Agg, name_of: NameOf, rows: list[Pred]) -> str:
         core = "count(*)"
     elif agg.fn == "percentile":
         core = f"percentile({ref(name_of(agg.column))}, {number(agg.arg or 0)})"
+    elif agg.expr:
+        core = f"{FUNCTIONS[agg.fn]}({expression_sql(agg.expr, name_of)})"
     else:
         core = f"{FUNCTIONS[agg.fn]}({ref(name_of(agg.column))})"
     return f"filter({core}, WHERE {where_sql(preds, name_of)})" if preds else core
