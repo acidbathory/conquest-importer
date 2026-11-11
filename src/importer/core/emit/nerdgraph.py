@@ -12,6 +12,7 @@ from importer.core.emit.common import (
     aggregation_window,
     condition_name,
     emittable_window,
+    expiration_actions,
     fill_settings,
     nrql_for,
     source_description,
@@ -94,6 +95,10 @@ def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
             for t in monitor.thresholds
         ],
     }
+    options = monitor.emit
+    if options is not None and options.predict_by_seconds is not None:
+        for term in condition["terms"]:
+            term["prediction"] = {"predictBy": options.predict_by_seconds}
     baseline = monitor.signal.baseline
     if baseline is not None:
         # A baseline condition has no value function; its terms are in standard deviations.
@@ -105,8 +110,8 @@ def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
     if monitor.no_data.notify and monitor.no_data.timeout_minutes:
         condition["expiration"] = {
             "expirationDuration": monitor.no_data.timeout_minutes * 60,
-            "openViolationOnExpiration": True,
-            "closeViolationsOnExpiration": False,
+            "openViolationOnExpiration": expiration_actions(monitor)[0],
+            "closeViolationsOnExpiration": expiration_actions(monitor)[1],
         }
         options = monitor.emit
         if options is not None and options.ignore_on_expected_termination is not None:

@@ -20,7 +20,7 @@ Source JSON -> source models -> [translate] -> IRMonitor -> [emit] -> NerdGraph 
 | `confidence` | `exact`, `approximate`, `manual`, `unsupported` |
 | `reasons` | Why the confidence is below exact. Every downgrade must add a reason |
 | `unmapped` | Source fields and options we did not translate. Kept so nothing is silently dropped |
-| `emit` | Optional New Relic condition settings, left out of the saved IR when unset: `aggregation_method` (EVENT_FLOW, EVENT_TIMER, CADENCE), `aggregation_timer_seconds`, `fill_option` and `fill_value`, `slide_by_seconds`, `violation_time_limit_seconds`, `title_template`, `runbook_url`, `ignore_on_expected_termination`, and `null_safe_count` with `null_safe_scope`. Unset means the emitter default in `core/emit/common.py` (`EmitDefaults`), which reproduces the earlier output byte for byte. Bounds are checked at emission and a value New Relic would reject becomes a "not emitted" reason |
+| `emit` | Optional New Relic condition settings, left out of the saved IR when unset: `aggregation_method` (EVENT_FLOW, EVENT_TIMER, CADENCE), `aggregation_timer_seconds`, `fill_option` and `fill_value`, `slide_by_seconds`, `violation_time_limit_seconds`, `title_template`, `runbook_url`, `ignore_on_expected_termination`, `null_safe_count` with `null_safe_scope`, `description_note` (text appended to the condition description, cut at 1000 characters), `predict_by_seconds` (the predict-future option) and `open_violation_on_expiration` / `close_violations_on_expiration` (loss-of-signal actions; unset keeps open and not close). Unset means the emitter default in `core/emit/common.py` (`EmitDefaults`), which reproduces the earlier output byte for byte. Bounds are checked at emission and a value New Relic would reject becomes a "not emitted" reason |
 
 ## Confidence rules
 - **exact:** converted with no caveats. Still subject to the global notes in the report.
@@ -51,7 +51,7 @@ Input is the JSON from `aws cloudwatch describe-alarms` (a file or folder); no A
 - `source_id` is a stable integer derived from the alarm ARN; the original is kept in `source_key`.
 
 ## Known gaps (prototype)
-Composite alarms, anomaly bands on metric math, Google forecast, MQL, PromQL and SQL conditions, SLOs, log rollups other than counts, OR in log filters, recovery thresholds, unit conversion inside formulas, and migration of notification channels for Google Cloud.
+Composite alarms, anomaly bands on metric math, MQL, PromQL and SQL conditions, SLOs, log rollups other than counts, OR in log filters, recovery thresholds, unit conversion inside formulas, and migration of notification channels for Google Cloud.
 
 Settings that are not migrated (priority, renotify, evaluation delay, ...) are listed per monitor and downgrade it to `approximate`. Defaults and record metadata are ignored.
 

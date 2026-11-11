@@ -50,6 +50,7 @@ class GcpAlertPolicy(BaseModel):
     notificationChannels: list[str] = []
     documentation: dict[str, Any] = {}
     alertStrategy: dict[str, Any] = {}
+    userLabels: dict[str, Any] = {}
 
 
 def _files(path: Path) -> list[Path]:
@@ -57,12 +58,16 @@ def _files(path: Path) -> list[Path]:
 
 
 def load_policies(path: Path) -> list[GcpAlertPolicy]:
-    """Read alert policies from a JSON list, an API response, or a folder of either."""
+    """Read alert policies from a JSON list, an API response, one policy, or a folder of those."""
     policies: list[GcpAlertPolicy] = []
     for file in _files(path):
         if file.stat().st_size > MAX_INPUT_BYTES:
             raise ValueError(f"{file} is larger than {MAX_INPUT_BYTES // (1024 * 1024)} MB")
         data = json.loads(file.read_text())
-        items = data.get("alertPolicies", []) if isinstance(data, dict) else data
+        if isinstance(data, dict):
+            # an API response, or one policy as the Google sample repository stores them
+            items = data.get("alertPolicies", [data] if "displayName" in data else [])
+        else:
+            items = data
         policies += [GcpAlertPolicy.model_validate(i) for i in items]
     return policies

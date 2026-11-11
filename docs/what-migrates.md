@@ -354,7 +354,7 @@ AWS CloudWatch is the supported platform. Google Cloud is in progress: `importer
   series reports. If the metric never arrives in New Relic (VM CPU utilization in our test), the
   condition fires as soon as it is enabled; the notes say so. An absence condition whose filter,
   aggregation or metric cannot be mapped stays manual.
-- **Manual, with steps:** MQL, PromQL, SQL, ratio and forecast conditions, filters with
+- **Manual, with steps:** MQL, PromQL, SQL and ratio conditions, filters with
   OR, regular expressions or functions, uptime-check alerts, and alerts on custom, Ops Agent,
   Prometheus or log-based metrics (New Relic does not document collecting those from Google
   Cloud, so a converted query would return nothing).

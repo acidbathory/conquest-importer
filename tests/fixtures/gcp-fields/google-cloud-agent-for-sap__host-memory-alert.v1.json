@@ -1,0 +1,26 @@
+{
+  "displayName": "Host Memory Alert",
+  "documentation": {
+    "content": "### ⚠️ Host Memory Error Detected — Risk of SAP HANA Crash\n\nAn uncorrectable host memory error occurred on VM instance: [${resource.label.instance_id}](https://console.cloud.google.com/compute/instancesDetail/zones/${resource.label.zone}/instances/${resource.label.instance_id}?project=${resource.label.project_id}) (Project: `${resource.label.project_id}`).\n\n#### 💥 Potential Impact & Consequences\n- **Imminent Crash Risk:** Although Compute Engine automatically migrates affected VMs to a healthy host, affected virtual memory pages remain poisoned and inaccessible.\n- **Delayed Failure on Reads:** The workload might appear to run normally, but as soon as SAP HANA attempts to **read** the affected 4kB memory page, the SAP HANA workload will immediately fail and crash. (Writes do not trigger a crash because they redirect/replace data without reading or verifying the data first).\n- **Automatic Restart / Relocation:** Following a crash, SAP HANA will automatically restart if the `Autostart` parameter is set (`Autostart = 1`), or in the case of a Pacemaker cluster, the SAP HANA resource will restart or relocate depending on the cluster configuration.\n- Leaving the VM running without intervention will lead to an unexpected, uncoordinated outage.\n\n---\n\n#### 🛠️ Recommended Remediation: Stop & Start Instance\nTo release the poisoned memory pages and prevent an unscheduled crash, performing a **stop and start** of the instance is the best option:\n\n1. **Initiate Failover:** If this VM is the active primary node in a Pacemaker HA cluster, initiate a manual failover to the secondary node.\n2. **Stop the Instance:** Stop the affected VM instance to release the corrupted virtual memory pages.\n3. **Start the Instance:** Start the VM instance and bring SAP HANA back online / resume replication.\n\n> **Alternative (VM Reboot) & Why Stop/Start is Preferred:**\n> Rebooting the VM also clears virtual memory and releases the poisoned pages, making it an acceptable alternative. However, a **stop/start** is strongly recommended because:\n> 1. If live migration hasn't completed yet, a reboot leaves the VM on the unhealthy host.\n> 2. Remaining on an unhealthy host risks additional memory errors (hardware faults often produce multiple errors).\n> 3. Stop/start forces relocation to a healthy host, as degraded hardware is marked for repair.\n> 4. Sole-tenant nodes do not automatically live migrate on memory errors; a stop/start is required.\n\n---\n\n#### 🔗 Reference & Links\n- [View VM Instance Details](https://console.cloud.google.com/compute/instancesDetail/zones/${resource.label.zone}/instances/${resource.label.instance_id}?project=${resource.label.project_id})\n- [Google Cloud SAP Documentation: Protect workloads from host errors](https://docs.cloud.google.com/sap/docs/manage-host-errors#protect_your_sap_workloads_from_host_errors)",
+    "mimeType": "text/markdown"
+  },
+  "userLabels": {},
+  "conditions": [
+    {
+      "displayName": "Log match condition",
+      "conditionMatchedLog": {
+        "filter": "jsonPayload.@type=\"type.googleapis.com/cloud_vmm_proto.HostMemoryAlert\""
+      }
+    }
+  ],
+  "alertStrategy": {
+    "notificationRateLimit": {
+      "period": "300s"
+    },
+    "autoClose": "604800s"
+  },
+  "combiner": "OR",
+  "enabled": true,
+  "notificationChannels": [],
+  "severity": "CRITICAL"
+}

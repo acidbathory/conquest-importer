@@ -45,6 +45,8 @@ class Aggregation(StrEnum):
     MIN = "min"
     MAX = "max"
     SUM = "sum"
+    COUNT = "count"
+    STDDEV = "stddev"
 
 
 class FilterBase(BaseModel):
@@ -209,6 +211,13 @@ class EmitOptions(BaseModel):
     # (docs/research/count-null-empty-window.md); None follows EmitDefaults.null_safe_count
     null_safe_count: bool | None = None
     null_safe_scope: list[str] = []  # filter keys that stay in the outer WHERE (the entity)
+    # untrusted text appended to the condition description (documentation, labels, notes)
+    description_note: str | None = None
+    # "predict future behavior": open the violation when the signal is predicted to breach
+    predict_by_seconds: int | None = None
+    # loss-of-signal behaviour; None keeps today's open=True, close=False
+    open_violation_on_expiration: bool | None = None
+    close_violations_on_expiration: bool | None = None
 
 
 class IRMonitor(BaseModel):

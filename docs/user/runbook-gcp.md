@@ -23,7 +23,7 @@ What you do NOT get:
   ratios of plain selectors, `_over_time`, joins, `offset`, subqueries, `topk` and `${NAME}` placeholders do
   not), each with the exact reason. A converted one assumes the metric reaches New Relic by Prometheus
   remote write under its Prometheus name; the notes say how the name was spelled.
-- MQL, SQL, ratio and forecast conditions, filters with OR, regular expressions or functions,
+- MQL, SQL and ratio conditions, filters with OR, regular expressions or functions,
   and uptime-check alerts stay manual. So do alerts on custom, Ops Agent, Prometheus and log-based
   metrics: New Relic does not document collecting those from Google Cloud, so a converted query would
   return nothing.
@@ -204,6 +204,20 @@ fires. Run `check-gcp-data`. Custom, Ops Agent and log-based metrics have no doc
 - Google Cloud is never changed by the importer.
 
 ## 8. Known limits and the remediation plan
+
+Alert fields beyond the query (threshold, absence and log-match conditions):
+
+| Google field | New Relic result |
+|---|---|
+| `severity` | `WARNING` is a warning term; `CRITICAL` and unset are critical; `ERROR` is critical with a note (New Relic has two levels). The Google severity is also kept as the tag `gcp-severity:...` and in the description. |
+| `alertStrategy.autoClose` | Violation time limit (5 minutes to 30 days); outside that range it is a note. |
+| `alertStrategy.notificationRateLimit` | Log alerts: the violation time limit is set to the period, so a violation that keeps matching re-notifies at most that often. Other conditions: a note. |
+| `notificationPrompts`, `notificationChannelStrategy` (renotify) | A note: set the workflow to notify on issue activated and closed; New Relic has no repeat reminder. |
+| `documentation` subject, format and links; `userLabels`; `labelExtractors` | Listed in the condition description (cut at 1000 characters). The first link without a `${...}` placeholder is the runbook URL. Labels are kept as IR tags. |
+| `evaluationMissingData` | `ACTIVE`: loss of signal opens a violation. `INACTIVE`: loss of signal closes open violations. `NO_OP`: nothing to set (noted). New Relic waits for the duration; Google reacts at once. |
+| `forecastOptions` | The predict-future option (beta), a different model from Google's. |
+| `trigger` | Absence: noted when it needs N series or P percent (New Relic fires when none report). Threshold: manual when several series must breach, unless the aggregation leaves one series. |
+| Aligners and reducers | Mean, max, min, sum, rate, delta, percentile 50/95/99 series, `REDUCE_PERCENTILE_50/95/99` and `REDUCE_STDDEV` (one point per series per window only) and `ALIGN_STDDEV` (period of 900 s or more) convert. `ALIGN_COUNT`, the boolean aligners, `ALIGN_PERCENT_CHANGE` and resampling aligners stay manual, each with its reason. |
 
 - Counters: windows are at least 300 seconds. The threshold is rescaled and the note says by how much.
 - Log severity: `severity>=ERROR` becomes `severity IN (...)`. The attribute name for forwarded Google
