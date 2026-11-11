@@ -756,4 +756,24 @@ name, enabled flag, profile id), so no secret, webhook URL or recipient is expor
   60 samples is 1 hour, inside both. The HTML report (`importer report`) has no
   profile for this source yet.
 
-Azure and other platforms are planned; see the [roadmap](../README.md#roadmap).
+## Azure Monitor (alert rules)
+
+Built offline from the official Azure examples; never run against a live subscription. Details and
+the measured share: [runbook-azure](user/runbook-azure.md), [baseline](research/azure-baseline.md).
+
+| Azure | New Relic | Status |
+|---|---|---|
+| Metric alert, one static criterion, platform metric | NRQL condition on `Metric` (`azure.<type>.<Metric>`), event timer, disabled | Approximate; metric name UNVERIFIED |
+| Metric alert with several criteria (all must be true) | None: no composite condition | Manual; each criterion shown alone |
+| Dynamic threshold | None that matches (baseline model differs) | Manual |
+| Availability test alert | Synthetics monitor | Manual |
+| Custom, guest and Application Insights metrics | Not collected by the Azure Monitor integration | Manual |
+| Scheduled query rule: table, simple `where`, count or one aggregate | Count over forwarded Azure logs | Approximate; log attributes UNVERIFIED |
+| Other KQL, agent tables (Perf, Heartbeat, Container, App*) | None | Manual |
+| `LogToMetric` rule, smart detector rule | None | Unsupported |
+| Activity log, service health, resource health alert | Count of forwarded activity logs, once forwarded | Manual |
+| Prometheus rule group alert rules | Grafana PromQL translator | Approximate where it converts; data must reach New Relic |
+| Severity 0 to 4 | Critical (0, 1) and warning (2 to 4); the Azure severity is kept in the description | Approximate |
+| Action groups, alert processing rules | Destinations, workflows, muting rules | Separate step, not covered here |
+
+Other platforms are planned; see the [roadmap](../README.md#roadmap).

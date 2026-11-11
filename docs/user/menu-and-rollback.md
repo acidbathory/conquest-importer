@@ -7,8 +7,11 @@ the keyboard: `importer menu` with piped input prints a one-line message and exi
 ```
 1 GCP   2 AWS   3 Grafana   4 Dynatrace
 5 Roll back a run   6 Check my setup   7 Try on sample data
-8 What did I just do?   9 Check my migration (parity)   0 Quit
+8 What did I just do?   9 Check my migration (parity)   10 Azure   0 Quit
 ```
+
+Azure is 10 because the numbers 5 to 9 were already in use. It runs the same flow as 1 to 4 for
+alert rules only (see [the Azure runbook](runbook-azure.md)).
 
 ## A source (1 to 4): everything in one pass
 

@@ -143,7 +143,16 @@ unless you give `--apply` and `--confirm-account <account-id>` and the account i
 | `importer plan-dynatrace-synthetics` | Maps monitors to New Relic monitor types. Creates nothing. | inventory | `report.md`, `plan.json` | No |
 | `importer plan-dynatrace-reinstrumentation` | Names the New Relic agent for each Dynatrace technology. Installs nothing. | inventory | `report.md`, `plan.json` | No |
 
-### Datadog and Azure
+### Azure
+
+| Command | What it does | Reads | Writes | NR write |
+|---|---|---|---|---|
+| `importer doctor --source azure` | Are the credentials set and plain text? Offline. | environment | prints | No |
+| `importer extract-azure` | Reads alert rules, action groups, alert processing rules, Prometheus rule groups. Drops secrets as it reads. | Azure Resource Manager (GET) | `--out` (private) | No |
+| `importer convert --source azure` | Metric alerts and simple KQL log counts to conditions; the rest manual. | extract folder | `--out` | No |
+| `importer check-azure-data` | Does the metric (or forwarded log) behind each converted condition arrive? Lists near names when not. Exit 2 if not. | New Relic (NRQL) | optional markdown | No |
+
+### Datadog
 
 No commands. See [runbook-datadog-and-azure.md](runbook-datadog-and-azure.md).
 
