@@ -414,36 +414,14 @@ def test_kql_literals_are_escaped_in_the_query() -> None:
 # --- activity log, smart detector, Prometheus ------------------------------------------------
 
 
-def test_activity_log_alerts_are_manual_with_the_condition_in_the_steps() -> None:
-    props = {
-        "scopes": [VM],
-        "condition": {
-            "allOf": [
-                {"field": "category", "equals": "Administrative"},
-                {
-                    "anyOf": [
-                        {"field": "level", "equals": "Error"},
-                        {"field": "level", "equals": "Critical"},
-                    ]
-                },
-            ]
-        },
-    }
-    m = one(make("activityLogAlerts", props))
-    assert m.confidence is Confidence.MANUAL and "activity log alert" in m.reasons[0]
-    assert (
-        "category = Administrative" in m.remediation[0]
-        and "level = Error or level = Critical" in m.remediation[0]
-    )
-
-
-def test_service_health_alerts_have_their_own_reason() -> None:
+def test_service_health_with_tenant_scope_stays_manual_and_says_so() -> None:
     props = {
         "condition": {"allOf": [{"field": "category", "equals": "ServiceHealth"}]},
         "tenantScope": "t",
     }
     m = one(make("activityLogAlerts", props))
-    assert "service health" in m.reasons[0] and "tenant" in m.reasons[0]
+    assert m.confidence is Confidence.MANUAL
+    assert "activity log alert" in m.reasons[0] and "tenant" in m.reasons[0]
 
 
 def test_smart_detector_rules_are_manual_and_name_the_detector() -> None:

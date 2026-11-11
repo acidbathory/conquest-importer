@@ -7,10 +7,10 @@ integration naming rule and are reported as UNVERIFIED (see `names.py`).
 
 from importer.core.ir import IRMonitor
 from importer.sources.azure import reasons as R
+from importer.sources.azure.activity import translate_activity_log_alert
 from importer.sources.azure.common import base_fields, common_notes, key_of, manual, severity_level
 from importer.sources.azure.links import add_links
 from importer.sources.azure.logs import (
-    translate_activity_log_alert,
     translate_scheduled_query_rule,
     translate_smart_detector,
 )

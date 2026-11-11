@@ -147,12 +147,17 @@ RULES: list[Rule] = [
         re.compile(r"^(activity log alert|service health or resource health)"),
         "Azure activity log alert",
         [
-            "Azure fires this rule for every matching activity event. New Relic has no source "
-            "for Azure activity events until they are forwarded as logs.",
+            "Azure fires this rule for every matching activity event. The importer converts a "
+            "condition of equals tests (one field may list several values) and a single "
+            "containsAny value into a count of forwarded activity log records; this rule has "
+            "something else (the reason says what): an OR across fields, several containsAny "
+            "values, several scope prefixes, a tenant scope, or a field the record does not "
+            "carry (resourceGroup, resourceType, caller).",
             "Option 1: deploy the Event Hub log forwarder with the matching "
             "`forward...AzureActivityLogs` flag, look at one forwarded record to learn its "
             "attribute names, then create `SELECT count(*) FROM Log WHERE plugin.type = "
-            "'azure' AND <attribute> = '<value>'` above 0 over a 60 second window.",
+            "'azure' AND <attribute> = '<value>'` at or above 1 over a 60 second window; use "
+            "one condition for each OR branch or scope prefix.",
             "Option 2: keep this rule in Azure Monitor and its action group; it needs no "
             "New Relic data. Service health and resource health events are Azure's own.",
         ],

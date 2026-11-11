@@ -62,6 +62,7 @@ M_ACTIVITY = (
     "activity log alert: Azure fires on every matching activity event and New Relic has no "
     "source for Azure activity events until they are forwarded as logs"
 )
+M_ACTIVITY_COND = "activity log alert condition cannot be converted"
 M_SERVICE_HEALTH = (
     "service health or resource health alert: the event comes from Azure and is not in New Relic"
 )
@@ -113,7 +114,7 @@ N_COMPOSITE = (
     "test, so a criterion with no data in the window is not counted as true"
 )
 N_DYNAMIC = (
-    "dynamic threshold {sensitivity} is written as an APPROXIMATE New Relic baseline condition "
+    "a baseline condition for the Azure dynamic threshold ({sensitivity}) is APPROXIMATE "
     "({direction}, {deviations} standard deviations); it is not equivalent: Azure's model, "
     "seasonality and history differ and no document maps Azure sensitivity to New Relic "
     "deviations, so the mapping High 2, Medium 3, Low 4 is this importer's choice and "
@@ -122,6 +123,30 @@ N_DYNAMIC = (
 N_IGNORE_BEFORE = (
     "ignoreDataBefore {value} was ignored (no setting): a baseline condition learns from the "
     "data it has, including the data Azure was told to ignore"
+)
+N_ACTIVITY_NO_SEVERITY = (
+    "Azure activity log alerts have no severity; the New Relic severity is assumed to be a warning"
+)
+N_ACTIVITY_FORWARD = (
+    "the activity log must reach New Relic through the Event Hub forwarder with {flags} set to "
+    "true; without them this condition never fires (data path needs-log-forwarding)"
+)
+N_ACTIVITY_ATTRIBUTES = (
+    "attribute names {names} are UNVERIFIED: they are the Azure activity log field names, or the "
+    "Event Hub record names for status and subStatus (resultType, resultSignature); inspect one "
+    "forwarded record or use name-map.json"
+)
+N_ACTIVITY_EVENTS = (
+    "Azure notifies for every matching event; New Relic opens a violation when at least one "
+    "matching record arrives in a 60 second window, and one violation covers a burst of events"
+)
+N_RESOURCE_ID_LOG = (
+    "resourceId is matched with the letter case written in the rule; the case of the forwarded "
+    "record is UNVERIFIED and a mismatch means no match"
+)
+N_ACTIVITY_HEALTH = (
+    "service health and resource health records carry nested properties; the property names "
+    "and values in the rule are used as they are and are UNVERIFIED"
 )
 N_SLIDE = (
     "Azure evaluates every {freq}s over a {window}s window; a sliding window of {freq}s is used, "
