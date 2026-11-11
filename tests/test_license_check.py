@@ -10,7 +10,7 @@ from script_helpers import ROOT, load_script
 
 lc = load_script("license_check")
 
-ELV2 = "Elastic" + " License"  # built in two parts so this file does not trip its own scan
+MARKER_TEXT = "Elastic" + " License"  # built in two parts so this file does not trip its own scan
 
 
 class FakeDist:
@@ -76,7 +76,7 @@ def test_allowed_licences(text: str) -> None:
         "MIT AND GPL-2.0-only",
         "Proprietary",
         "SSPL-1.0",
-        ELV2 + " 2.0",
+        MARKER_TEXT + " 2.0",
         "",
         "UNKNOWN",
     ],
@@ -165,11 +165,11 @@ def git(repo: Path, *args: str) -> None:
 def test_clean_room_scan_flags_marker_in_code_but_not_docs(tmp_path: Path) -> None:
     git(tmp_path, "init", "-q")
     (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "note.md").write_text(f"upstream is under the {ELV2} 2.0\n")
+    (tmp_path / "docs" / "note.md").write_text(f"upstream is under the {MARKER_TEXT} 2.0\n")
     (tmp_path / "ok.py").write_text("print('hi')\n")
     git(tmp_path, "add", ".")
     assert lc.check_clean_room(tmp_path) == []
-    (tmp_path / "copied.py").write_text(f"# Licensed under the {ELV2} 2.0\n")
+    (tmp_path / "copied.py").write_text(f"# Licensed under the {MARKER_TEXT} 2.0\n")
     (tmp_path / "SOURCES.md").write_text("see https://github.com/elastic/some-repo/blob/main/x\n")
     git(tmp_path, "add", ".")
     problems = lc.check_clean_room(tmp_path)
@@ -190,3 +190,9 @@ def test_gitleaks_allowlist_entries_are_documented() -> None:
         assert len(entry["description"]) > 20
         # Never a blanket path exclusion: every entry matches on the value.
         assert entry["regexes"]
+
+
+def test_sbom_tool_is_a_pinned_dev_only_dependency() -> None:
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    assert not any("cyclonedx" in d for d in project["project"]["dependencies"])
+    assert any(d.startswith("cyclonedx-bom==") for d in project["dependency-groups"]["dev"])

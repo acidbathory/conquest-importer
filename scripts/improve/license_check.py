@@ -169,9 +169,9 @@ def check_clean_room(root: Path) -> list[str]:
             continue
         text = path.read_bytes().decode("utf-8", errors="replace")
         if _MARKER.search(text):
-            problems.append(f"{name}: carries a marker of the Elastic licence")
+            problems.append(f"{name}: carries a marker of a source-available competitor licence")
         if path.name in {"SOURCES.md", "manifest.json"} and _UPSTREAM_URL.search(text):
-            problems.append(f"{name}: cites the Elastic repository as a source")
+            problems.append(f"{name}: cites a competitor repository as a source")
     return problems
 
 
