@@ -1,6 +1,12 @@
 """Azure Monitor source: alert rules to New Relic."""
 
-from importer.sources.azure import playbooks, remediation_rules, taxonomy  # noqa: F401
+from importer.sources.azure import (  # noqa: F401
+    dashboard_playbooks,
+    dashboard_rules,
+    playbooks,
+    remediation_rules,
+    taxonomy,
+)
 from importer.sources.azure.models import AzureAlert, load_alerts
 from importer.sources.azure.translate import translate
 from importer.sources.base import Source, import_subpackages, register, register_fixtures

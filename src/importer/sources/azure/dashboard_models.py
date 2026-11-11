@@ -38,7 +38,7 @@ NO_LENSES = "the dashboard has no lenses (no parts to read)"
 
 
 class AzureDashboard(BaseModel):
-    """One workbook or portal dashboard. `content` is the parsed workbook, or `{"lenses": [...]}`."""
+    """One workbook or portal dashboard; `content` is the parsed workbook or its lenses."""
 
     kind: Literal["workbook", "portal"]
     key: str  # the resource id, or the file name for a template
