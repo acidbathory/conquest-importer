@@ -235,6 +235,7 @@ def prompt_world(monkeypatch: pytest.MonkeyPatch) -> Created:
     created = Created()
     monkeypatch.setattr(ex, "run_boto3", DashboardsOnlyAws())
     monkeypatch.setattr(cli, "apply_dashboards_command", created)
+    monkeypatch.setattr(cli.webbrowser, "open", lambda *_a, **_k: True)  # never a real tab
     monkeypatch.setenv("NEW_RELIC_API_KEY", "k")
     monkeypatch.setenv("NEW_RELIC_ALLOWED_ACCOUNT_IDS", "7")
     return created
