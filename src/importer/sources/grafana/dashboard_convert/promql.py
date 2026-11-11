@@ -51,11 +51,13 @@ from importer.sources.grafana.dashboard_convert.reuse import (
 from importer.sources.grafana.dashboards.query_tier import (
     COUNT_AGG,
     HISTOGRAM,
+    NOT_PEELED,
     SUM_BY,
     TOPK,
     peel_math,
 )
 from importer.sources.grafana.dashboards.regex_matchers import PRESENT, RegexUse, mask
+from importer.sources.grafana.promql_normalize import normalize_promql
 
 MAX_NESTING = 20
 MAX_OPERANDS = 50
@@ -591,6 +593,8 @@ def convert_query(
     goes to the engine (promql_engine), which writes only rewrites it can prove and otherwise
     leaves the original refusal in place.
     """
+    if family == "prometheus":
+        expr = normalize_promql(expr)
     try:
         return convert_classic(expr, family, opts, legend, repeat_var)
     except Unconvertible:
@@ -615,7 +619,8 @@ def convert_classic(
     legend = legend or Legend(None, (), False)
     if len(expr) > MAX_EXPRESSION:
         raise Unconvertible(r.C_SHAPE)
-    function, expr = peel_math(expr) if family == "prometheus" else ("", expr)
+    peeled = peel_math(expr) if family == "prometheus" else NOT_PEELED
+    expr = peeled.inner or expr
     text, names = tokenize(" ".join(expr.split()), opts)
     text, regexes = mask(text) if family == "prometheus" else (text, {})
     parse = _Parse(opts, names, regexes)
@@ -640,8 +645,7 @@ def convert_classic(
     if not opts.timeseries and any(not leaf.core.startswith("latest(") for leaf in found):
         notes.append(r.N_INSTANT)
     select = strip_outer(render(node, common))
-    if function:
-        select = f"{function}({select})"
+    select = f"{peeled.prefix}{select}{peeled.suffix}"
     statement = _statement(select, first, common, labels, parse, legend)
     nrql = statement.render()
     try:

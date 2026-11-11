@@ -242,7 +242,15 @@ fields) are unverified until one dashboard is read back in a sandbox.
   `rate(sum(x), <window>)`, over `$__range` or a variable window `sum(x)`. `histogram_quantile`
   becomes `bucketPercentile(x_bucket, <100 q>)`. `topk(n, ...)` becomes `FACET ... LIMIT n`.
   Arithmetic between terms and numbers is written as one `SELECT` with `filter()` around a term
-  that has an extra filter; `count()` counts samples, not series. LogQL `count_over_time` is
+  that has an extra filter; `count()` counts samples, not series. One `round`, `ceil`, `floor`,
+  `abs`, `clamp_min` or `clamp_max` around a whole query is written with the same NRQL function:
+  `round(x, 1)` and `round(x, 0.1)`, `0.01`, ... become `round(x)`, `round(x, 1)`, `round(x, 2)`
+  (NRQL rounds to decimal places; a multiple such as 5 or 0.5 stays manual), and a clamp needs a
+  plain number as its bound (UNVERIFIED on live data: these forms were not run against New
+  Relic here). `delta()` and `time()` stay manual with their own reasons and steps. Comments
+  (`# ...`), single-quoted and backtick strings and upper-case aggregate names (`SUM(x) BY (a)`)
+  are read in dashboards and alert rules as Prometheus reads them; a function in the wrong case
+  (`RATE(`) stays refused. LogQL `count_over_time` is
   `count(*) FROM Log`, `rate` is `rate(count(*), 1 second)`, line filters become `LIKE` on
   `message`. A regex matcher is written only in the forms the plan accepts (`IN`, `LIKE`).
   `$__interval`, `$__rate_interval` and `$interval` mean the automatic bucket; a fixed
