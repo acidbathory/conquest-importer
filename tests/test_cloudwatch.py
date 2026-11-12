@@ -568,7 +568,6 @@ def test_ecs_service_alarms_use_the_by_service_suffix_confirmed_on_real_data() -
         ("AWS/Transcribe", "TotalRequestCount", "Operation", "aws.transcribe"),
         ("AWS/NatGateway", "ActiveConnectionCount", "NatGatewayId", "aws.natgateway"),
         ("AWS/CodeBuild", "FailedBuilds", "ProjectName", "aws.codebuild"),
-        ("AWS/Bedrock", "Invocations", "ModelId", "aws.bedrock"),
     ],
 )
 def test_more_aws_namespaces_follow_the_documented_lowercase_rule(

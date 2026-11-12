@@ -1,5 +1,5 @@
 {
-  "_comment": "CloudWatch namespace -> New Relic AWS Metric Streams metric prefix. Metrics are named <prefix>.<MetricName> and dimensions <prefix>.<DimensionName>. CONFIRMED on 2026-10-02 for AWS/DynamoDB (metric name, dimension attribute, value attribute); ASSUMED for the other services. Check more with: SELECT uniques(metricName) FROM Metric WHERE metricName LIKE 'aws.%' Added 2026-11-12, all UNVERIFIED against a live account: AWS/ES, AWS/Neptune, AWS/SES, AWS/States, AWS/Transcribe, AWS/NatGateway, AWS/CodeBuild, AWS/Bedrock follow the documented general rule (AWS/X becomes aws.x in lower case, metric and dimension case kept; https://docs.newrelic.com/docs/infrastructure/amazon-integrations/manage-aws-data/work-with-aws-metrics-data/). NatGateway, CodeBuild and Transcribe also have a Metric Streams page naming the aws.<service> prefix. ES, Neptune, SES, States and Bedrock have no Metric Streams page; the rule is applied by inference. ECS/ContainerInsights and AWS/CodeWhisperer are left unmapped: no documented New Relic name.",
+  "_comment": "CloudWatch namespace -> New Relic AWS Metric Streams metric prefix. Metrics are named <prefix>.<MetricName> and dimensions <prefix>.<DimensionName>. CONFIRMED on 2026-10-02 for AWS/DynamoDB (metric name, dimension attribute, value attribute); ASSUMED for the other services. Check more with: SELECT uniques(metricName) FROM Metric WHERE metricName LIKE 'aws.%' Added 2026-11-12, all UNVERIFIED against a live account: AWS/ES, AWS/Neptune, AWS/SES, AWS/States, AWS/Transcribe, AWS/NatGateway, AWS/CodeBuild follow the documented general rule (AWS/X becomes aws.x in lower case, metric and dimension case kept; https://docs.newrelic.com/docs/infrastructure/amazon-integrations/manage-aws-data/work-with-aws-metrics-data/). NatGateway, CodeBuild and Transcribe also have a Metric Streams page naming the aws.<service> prefix. ES, Neptune, SES and States have no Metric Streams page; the rule is applied by inference. ECS/ContainerInsights and AWS/CodeWhisperer are left unmapped: no documented New Relic name.",
   "AWS/EC2": "aws.ec2",
   "AWS/EBS": "aws.ebs",
   "AWS/RDS": "aws.rds",
@@ -21,6 +21,5 @@
   "AWS/States": "aws.states",
   "AWS/Transcribe": "aws.transcribe",
   "AWS/NatGateway": "aws.natgateway",
-  "AWS/CodeBuild": "aws.codebuild",
-  "AWS/Bedrock": "aws.bedrock"
+  "AWS/CodeBuild": "aws.codebuild"
 }
