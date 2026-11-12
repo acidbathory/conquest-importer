@@ -36,7 +36,13 @@ CHARTS = {
     "query_value": Visualization.BILLBOARD,
     "toplist": Visualization.BAR,
     "query_table": Visualization.TABLE,
+    "treemap": Visualization.BAR,
+    "sunburst": Visualization.PIE,
 }
+SHARE_NOTES = {"treemap": DR.N_TREEMAP, "sunburst": DR.N_SUNBURST}
+# https only, and none of the characters that end a markdown link or start HTML
+IMAGE_URL = re.compile(r"https://[A-Za-z0-9.\-]+(:\d+)?(/[A-Za-z0-9\-._~%/+=&?#@:,;!*]*)?")
+MAX_URL = 500
 MARKDOWN_TEXT_KEY = {"note": "content", "free_text": "text"}
 # a request key naming something that is not a metric query -> what to call it
 OTHER_SOURCES = {
@@ -260,6 +266,26 @@ def _markdown(definition: dict[str, Any], layout: Layout, kind: str, page: str |
     )
 
 
+def _image(definition: dict[str, Any], layout: Layout, page: str | None) -> IRWidget:
+    url = definition.get("url")
+    if not isinstance(url, str) or not url:
+        raise Fail(DR.W_IMAGE.format(why="no address"))
+    if len(url) > MAX_URL or IMAGE_URL.fullmatch(url) is None:
+        raise Fail(DR.W_IMAGE.format(why="not a plain secure address"))
+    title = title_of(definition, "image")
+    return _widget(
+        title,
+        layout,
+        "image",
+        Confidence.APPROXIMATE,
+        [DR.N_IMAGE],
+        page,
+        kind=WidgetKind.MARKDOWN,
+        visualization=Visualization.MARKDOWN,
+        text=f"![{md_cell(title, 80)}]({url})",
+    )
+
+
 def _label(spec: Spec, many: bool) -> str | None:
     """The legend name: the formula alias, used when it tells series apart or names a formula."""
     if spec.alias is None or not (many or spec.formula):
@@ -295,6 +321,8 @@ def _chart(
     if len(specs) > 1 and kind != "timeseries":
         raise Fail(DR.W_SEVERAL)
     notes = _display_notes(definition, request)
+    if kind in SHARE_NOTES:
+        notes.append(SHARE_NOTES[kind])
     viz = _visualization(kind, request, notes)
     timeseries = viz in (Visualization.LINE, Visualization.AREA)
     results = _convert_all(
@@ -304,6 +332,8 @@ def _chart(
         bool((r.series and r.series.signal.group_by) or (r.nrql and " FACET " in r.nrql))
         for r in results
     )
+    if kind in SHARE_NOTES and not grouped:
+        raise Fail(DR.W_SHARE_GROUP.format(kind=kind))
     if grouped and kind in ("timeseries", "query_table") and not all(r.limited for r in results):
         notes.append(DR.N_FACET_LIMIT)
     fields: dict[str, Any]
@@ -341,6 +371,8 @@ def translate_widget(
     try:
         if kind in MARKDOWN_TEXT_KEY:
             return _markdown(definition, layout, kind, page)
+        if kind == "image":
+            return _image(definition, layout, page)
         if kind not in CHARTS:
             raise Fail(f"{DR.W_TYPE}: {shown(kind, 40)}")
         return _chart(definition, layout, kind, page, ctx)

@@ -240,7 +240,7 @@ def test_widget_time_span_is_reported(tmp_path: Path) -> None:
         ),
         (widget("check_status", check="x"), "dashboard widget type"),
         (widget("heatmap", requests=[{"q": "avg:a.b{*}"}]), "dashboard widget type"),
-        (widget("image", url="https://x.invalid/a.png"), "dashboard widget type"),
+        (widget("hostmap"), "dashboard widget type"),
         (widget("timeseries", requests=[]), "dashboard widget has no query"),
         (ts("avg:a.b{host:$nope}"), "dashboard template variable is not defined"),
         (
@@ -874,7 +874,62 @@ def test_a_query_value_with_a_function_still_converts(tmp_path: Path) -> None:
 def test_the_real_dashboards_measure_is_pinned() -> None:
     """Data widgets exclude notes. Before this converter nothing converted (0 of 454)."""
     m = measure(DASHBOARD_REGISTRY["datadog"].convert(REAL))
-    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 259, 195)
+    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 264, 190)
     assert (m.notes, m.note_placeholders) == (62, 0)
     assert m.converted + m.placeholders == m.data_widgets
     assert sum(m.by_reason.values()) == m.placeholders
+
+
+# -- community corpus: image, treemap, sunburst -----------------------------------------------------
+def test_an_image_with_an_https_address_becomes_markdown_and_says_it_is_approximate(
+    tmp_path: Path,
+) -> None:
+    w = widget("image", url="https://example.com/logo.png")
+    _, item, _ = one(tmp_path, w)
+    assert item.kind is WidgetKind.MARKDOWN
+    assert item.confidence is Confidence.APPROXIMATE
+    assert item.text == "![w](https://example.com/logo.png)"
+    assert any(r.startswith("dashboard image") for r in item.reasons)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "/static/images/logo.png",
+        "http://example.com/a.png",
+        "javascript:alert(1)",
+        "https://example.com/a b.png",
+        "https://example.com/a).png",
+        "https://example.com/a<b>.png",
+        None,
+    ],
+)
+def test_an_image_without_a_safe_https_address_is_a_placeholder(
+    tmp_path: Path, url: str | None
+) -> None:
+    _, item, _ = one(tmp_path, widget("image", url=url))
+    assert item.kind is WidgetKind.UNSUPPORTED
+    assert steps_for(item.reasons)
+
+
+def test_a_treemap_is_a_bar_chart_over_a_facet_and_says_so(tmp_path: Path) -> None:
+    w = formula_widget("query1", ["avg:a.b{*} by {resource}"], kind="treemap")
+    _, item, queries = one(tmp_path, w)
+    assert item.visualization is Visualization.BAR
+    assert item.confidence is Confidence.APPROXIMATE
+    assert " FACET resource" in queries[0] and "TIMESERIES" not in queries[0]
+    assert any(r.startswith("dashboard treemap") for r in item.reasons)
+
+
+def test_a_sunburst_is_a_pie_chart_over_a_facet_and_says_so(tmp_path: Path) -> None:
+    w = formula_widget("query1", ["sum:a.b{*} by {resource}"], kind="sunburst")
+    _, item, queries = one(tmp_path, w)
+    assert item.visualization is Visualization.PIE
+    assert " FACET resource" in queries[0]
+    assert any(r.startswith("dashboard sunburst") for r in item.reasons)
+
+
+def test_a_treemap_without_a_group_is_a_placeholder(tmp_path: Path) -> None:
+    w = formula_widget("query1", ["avg:a.b{*}"], kind="treemap")
+    _, item, _ = one(tmp_path, w)
+    assert item.kind is WidgetKind.UNSUPPORTED
