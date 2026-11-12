@@ -10,7 +10,7 @@ write raises `Unconvertible`; a test keeps the two in step.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from decimal import Decimal
 
 from importer.core.dashboard_nrql import check_raw_nrql
@@ -96,6 +96,8 @@ class QueryOptions:
     bucket_seconds: int | None = None  # a fixed bucket the query or panel asked for
     intervals: frozenset[str] = frozenset()  # interval variables: a window the bucket replaces
     unavailable: frozenset[str] = frozenset()  # dashboard variables that did not convert
+    approx_series: bool = False  # write sum/count of a gauge as average * cardinality (set by
+    # convert_query for a dashboard widget after the exact paths have refused)
 
 
 @dataclass(frozen=True)
@@ -367,10 +369,14 @@ class _Parse:
         event, metric = self.metric(name)
         func = NR_AGGREGATE[agg or "avg"]
         if agg == "count":  # counts samples, not series
-            raise Unconvertible(r.C_GAUGE_SERIES)
+            if not self.opts.approx_series:
+                raise Unconvertible(r.C_GAUGE_SERIES)
+            return self.series_leaf(agg, labels, body, event, metric)
         if agg == "sum":  # a New Relic sum() would add every sample, not the value Grafana shows
             if not self.one_series(name, labels, body):
-                raise Unconvertible(r.C_GAUGE_SERIES)
+                if not self.opts.approx_series:
+                    raise Unconvertible(r.C_GAUGE_SERIES)
+                return self.series_leaf(agg, labels, body, event, metric)
             self.note(r.N_SUM_GAUGE)
             func = "average" if self.opts.timeseries else "latest"
         if agg is None:
@@ -381,6 +387,29 @@ class _Parse:
             facet=self.facet(labels),
             event=event,
             kept=agg is None,
+        )
+
+    def series_leaf(self, agg: str, labels: list[str], body: str, event: str, metric: str) -> Leaf:
+        """Dashboards only: sum is average * cardinality, count is cardinality (approximate).
+
+        Charts only. A single value would have to be read over `SINCE 5 minutes ago`, which the
+        dashboard query check rejects (the time picker owns the window), so it stays refused.
+        """
+        if not self.opts.timeseries:
+            raise Unconvertible(r.C_GAUGE_SERIES)
+        if agg == "sum":
+            core, filterable = f"(average({metric}) * cardinality({metric}))", False
+            self.note(r.N_SUM_CARDINALITY)
+        else:
+            core, filterable = f"cardinality({metric})", True
+            self.note(r.N_COUNT_CARDINALITY)
+        return Leaf(
+            core,
+            where=self.where(body),
+            facet=self.facet(labels),
+            event=event,
+            filterable=filterable,
+            approx=True,
         )
 
     def check_stored_type(self, name: str) -> None:
@@ -597,15 +626,22 @@ def convert_query(
         expr = normalize_promql(expr)
     try:
         return convert_classic(expr, family, opts, legend, repeat_var)
-    except Unconvertible:
+    except Unconvertible as refused:
         if family != "prometheus":
             raise
         from importer.sources.grafana.dashboard_convert.promql_engine import convert_with_engine
 
         done = convert_with_engine(expr, opts, legend, repeat_var)
-        if done is None:
-            raise
-        return done
+        if done is not None:
+            return done
+        if refused.reason == r.C_GAUGE_SERIES and not opts.approx_series:
+            try:
+                return convert_classic(
+                    expr, family, replace(opts, approx_series=True), legend, repeat_var
+                )
+            except Unconvertible:
+                raise refused from None
+        raise
 
 
 def convert_classic(
@@ -644,6 +680,8 @@ def convert_classic(
         notes.append(r.N_NAME_MAP)
     if not opts.timeseries and any(not leaf.core.startswith("latest(") for leaf in found):
         notes.append(r.N_INSTANT)
+    if any(leaf.approx for leaf in found) and r.N_COUNT_CARDINALITY in notes:
+        notes = [n for n in notes if n != r.N_COUNT]
     select = strip_outer(render(node, common))
     select = f"{peeled.prefix}{select}{peeled.suffix}"
     statement = _statement(select, first, common, labels, parse, legend)

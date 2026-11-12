@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 
-from importer.sources.grafana.dashboard_convert import reasons as r
 from importer.sources.grafana.dashboard_convert.name_map import NameMap, NameMapError, load_name_map
 from importer.sources.grafana.dashboard_convert.promql import QueryOptions, convert_query
 from importer.sources.grafana.dashboard_convert.reuse import Unconvertible
@@ -62,9 +61,7 @@ def test_histogram_percentile_needs_a_bucket_type_when_hinted() -> None:
 def test_series_hint_unlocks_gauge_sum_as_before() -> None:
     names = NameMap(series={"node_load1": ["instance"]})
     assert "average(node_load1)" in nrql("sum by (instance) (node_load1)", names)
-    with pytest.raises(Unconvertible) as stop:
-        nrql("sum(node_load1)", names)
-    assert str(stop.value) == r.C_GAUGE_SERIES
+    assert "cardinality(node_load1)" in nrql("sum(node_load1)", names)
 
 
 def plan_reason(expr: str, names: NameMap) -> str:
