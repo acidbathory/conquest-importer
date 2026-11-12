@@ -283,8 +283,14 @@ fields) are unverified until one dashboard is read back in a sandbox.
 - **Approximations.** A stat shows the value over the whole time range, Grafana showed the latest
   point; the rate window becomes the bucket; `topk` ranks over the whole range; a gauge sum adds
   every sample in a bucket. Every widget is marked approximate.
-- **Gauge sums and the guided flow.** `sum()` or `count()` of a gauge converts only when the series
-  are known to be one. In the guided Grafana flow, give a Prometheus URL that runs on this machine (loopback only; the
+- **Gauge sums and the guided flow.** `sum()` or `count()` of a gauge converts exactly when the series
+  are known to be one. Without that, a chart (line or area) converts as `average(g) * cardinality(g)`
+  (`cardinality(g)` for `count`), faceted on the `by` labels. This is New Relic's own translation
+  form, and it is approximate: it is exact only when every series reports at the same interval with
+  steady values. Offline tests put it at under 0.1% off when steady, about 8% median and 15% worst
+  with mixed scrape intervals, and up to 50-60% off around series that start or stop in 1-minute
+  buckets. Each widget says so. Single-value widgets (stat, gauge, table) stay manual, and alerts
+  never use this form. Not yet run on New Relic. In the guided Grafana flow, give a Prometheus URL that runs on this machine (loopback only; the
   command alone also takes https with `--allow-host`) and the flow runs `grafana-prom-hints` read-only and hands the
   result to the dashboard conversion; without a URL the step is skipped and those panels stay
   manual. A series key means "one series seen in the last 7 days on that URL"; widgets stay
