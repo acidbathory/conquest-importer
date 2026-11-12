@@ -880,8 +880,8 @@ def test_the_real_dashboards_measure_is_pinned() -> None:
     assert sum(m.by_reason.values()) == m.placeholders
 
 
-# -- community corpus: image, treemap, sunburst -----------------------------------------------------
-def test_an_image_with_an_https_address_becomes_markdown_and_says_it_is_approximate(
+# -- community corpus: image, treemap, sunburst ----------------------------------------------
+def test_an_https_image_becomes_approximate_markdown(
     tmp_path: Path,
 ) -> None:
     w = widget("image", url="https://example.com/logo.png")

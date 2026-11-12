@@ -312,3 +312,25 @@ def test_translate_keeps_ids_distinct() -> None:
     a = DatadogMonitor(type="composite", query="1", source_key="same")
     out = translate([a, a])
     assert out[0].source_id != out[1].source_id
+
+
+def test_default_zero_on_a_plain_series_is_a_static_zero_fill_and_says_so() -> None:
+    m = mon("min(last_5m):default(avg:postgresql.locks{*} by {server}, 0) > 99")
+    assert m.confidence is Confidence.APPROXIMATE, m.reasons
+    assert nrql_for(m) == "SELECT min(postgresql.locks) FROM Metric FACET server"
+    assert m.emit is not None
+    assert (m.emit.fill_option, m.emit.fill_value) == ("STATIC", 0.0)
+    assert any(r.startswith("default(") and "approximate" in r for r in m.reasons), m.reasons
+
+
+@pytest.mark.parametrize(
+    "q",
+    [
+        "avg(last_5m):default(avg:m.x{*}, 1) > 3",
+        "avg(last_5m):default(avg:m.x{*}) > 3",
+        "avg(last_5m):default(diff(avg:m.x{*} by {n}) / diff(avg:m.y{*} by {n}), 0) > 3",
+        "avg(last_5m):default(avg:m.x{*}, 0) + default(avg:m.y{*}, 0) > 3",
+    ],
+)
+def test_other_default_forms_stay_manual(q: str) -> None:
+    assert mon(q).confidence is Confidence.MANUAL
