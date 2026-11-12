@@ -522,6 +522,11 @@ the ruler and `/apis` shapes are hand-made from the documentation.
     arrived, and it fires only when no matching series reports.
   - a Loki `count_over_time({k="v"} |= "text" [5m])`, optionally in `sum (by ...)`. It becomes a
     count of `Log` events with the labels and `message LIKE` filters. The range is the window.
+- **Migrated classic conditions:** a classic condition written by Grafana's legacy-alert migration as
+  `gt` or `lt` with `params: [value, 0]` is read as `value` (the trailing 0 is ignored by Grafana for
+  those two kinds; range kinds keep two parameters). Queries and expressions the rule's condition
+  never reads are ignored, and the rule says how many. Both are approximate. On a real estate of
+  5,039 rules this moved the converted count from 411 to 609 (8% to 12%); not yet run on New Relic.
 - **Rule-file rules:** a rule from a Prometheus rule file or the Mimir or Loki ruler (a query
   `expr` with a comparison against a number) goes through the same handlers. The comparison is the
   threshold, the query is read as an instant query, and the note says it is a rule-file rule. The

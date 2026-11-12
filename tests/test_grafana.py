@@ -752,7 +752,8 @@ def test_an_unused_node_is_ignored_with_a_note() -> None:
     rule.data.append(rule.data[0].model_copy(update={"refId": "Q"}))
     m = one(rule)
     assert m.confidence is Confidence.APPROXIMATE
-    assert "1 queries in the rule are not used by its condition and were ignored" in m.reasons
+    note = "queries or expressions in the rule that its condition does not read were ignored: 1"
+    assert note in m.reasons
 
 
 @pytest.mark.parametrize(

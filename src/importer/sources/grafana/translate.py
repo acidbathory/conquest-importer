@@ -345,7 +345,9 @@ N_CLASSIC = (
     "the classic condition was read as a reduce and a threshold on its one query; a classic "
     "condition drops labels, so it may differ when the query returns several series"
 )
-N_UNUSED_QUERIES = "{count} queries in the rule are not used by its condition and were ignored"
+N_UNUSED_QUERIES = (
+    "queries or expressions in the rule that its condition does not read were ignored: {count}"
+)
 N_RESAMPLE = (
     "a resample step was ignored: New Relic sets the step with the aggregation window, so the "
     "values may differ"
