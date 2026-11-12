@@ -6,7 +6,7 @@ Metric and tag names come from the name map and are UNVERIFIED unless the map sa
 (docs/research/datadog-verified.md section 13).
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal, cast
 
 from importer.core.emit.nrql import identifier
@@ -272,6 +272,22 @@ def _check_calls(query: MetricQuery) -> None:
         raise Fail(function_reason(query.expr.name))
 
 
+def zero_default(query: MetricQuery) -> Series | None:
+    """The series inside `default(<one series>, 0)`, the only default() form converted.
+
+    A New Relic signal can fill an empty window with a static value, which is what Datadog does
+    to a gap in one existing series. A formula inside default() is not converted: the fill would
+    have to apply before the arithmetic, and a signal fills only the whole query's result.
+    """
+    expr = query.expr
+    if not (isinstance(expr, Call) and expr.name == "default" and len(expr.args) == 2):
+        return None
+    inner, value = expr.args
+    if isinstance(inner, Series) and isinstance(value, QNum) and value.value == 0.0:
+        return inner
+    return None
+
+
 def classify_query(query: MetricQuery) -> tuple[Node, Window]:
     """The expression and window of a plain threshold query, or Fail naming the family."""
     if not query.ok or query.expr is None or query.window is None:
@@ -290,8 +306,9 @@ def classify_query(query: MetricQuery) -> tuple[Node, Window]:
     if not query.lossless:
         detail = query.diagnostics[0].message if query.diagnostics else ""
         raise Fail(f"{R.M_NOT_LOSSLESS}: {shown(detail, 100)}")
-    _check_calls(query)
-    return query.expr, query.window
+    inner = zero_default(query)
+    _check_calls(replace(query, expr=inner) if inner is not None else query)
+    return (inner if inner is not None else query.expr), query.window
 
 
 def _scaled(expr: Expr, scales: dict[str, float]) -> Expr:
@@ -312,6 +329,7 @@ class _Plan:
     single: bool
     scale: float
     window: int
+    fill_zero: bool = False
 
 
 def _plan(m: DatadogMonitor, query: MetricQuery) -> _Plan:
@@ -330,7 +348,9 @@ def _plan(m: DatadogMonitor, query: MetricQuery) -> _Plan:
     if query.threshold is None:
         raise Fail(R.M_THRESHOLD)
     limits = thresholds(m, query.op, query.threshold, scale, m.priority_level)
-    return _Plan(built, expr, timed, limits, single, scale, window.seconds)
+    return _Plan(
+        built, expr, timed, limits, single, scale, window.seconds, zero_default(query) is not None
+    )
 
 
 def translate_metric(m: DatadogMonitor) -> IRMonitor:
@@ -372,7 +392,11 @@ def translate_metric(m: DatadogMonitor) -> IRMonitor:
         confidence=Confidence.APPROXIMATE,
         reasons=_reasons(plan, options.notes, message_notes),
         unmapped={**options.unmapped, **priority_note(m.priority_level)},
-        emit=EmitOptions(slide_by_seconds=plan.timed.slide, description_note=description or None),
+        emit=EmitOptions(
+            slide_by_seconds=plan.timed.slide,
+            description_note=description or None,
+            **({"fill_option": "STATIC", "fill_value": 0.0} if plan.fill_zero else {}),
+        ),
         data_path="name-map" if all(built.from_map) else "datadog-same-names",
     )
 
@@ -380,6 +404,8 @@ def translate_metric(m: DatadogMonitor) -> IRMonitor:
 def _reasons(plan: _Plan, options: list[str], message: list[str]) -> list[str]:
     built = plan.built
     out: list[str] = list(built.notes)
+    if plan.fill_zero:
+        out.append(R.N_DEFAULT_ZERO)
     if len(built.terms) > 1:
         out.append(R.N_RATIO)
     out.append(R.N_NAMES_UNVERIFIED if not all(built.from_map) else R.N_NAMES_MAPPED)

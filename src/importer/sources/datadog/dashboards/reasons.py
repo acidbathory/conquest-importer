@@ -52,7 +52,25 @@ V_TAGS = "dashboard template variable stands for two different tags: {what}"
 V_DEFAULT = "dashboard template variable default is not a scope that can be converted: {name}"
 V_INVALID = "dashboard template variable is not accepted as a New Relic variable: {name}"
 
+W_IMAGE = "dashboard widget has no query: image without a plain secure web address ({why})"
+W_SHARE_GROUP = (
+    "dashboard widget has no query: a {kind} shows shares by group, and this one has no group by"
+)
+
 # -- notes on converted widgets --------------------------------------------------------------
+N_IMAGE = (
+    "dashboard image is a markdown image that New Relic loads from the original https address "
+    "(approximate: sizing and the dark-theme image are not carried over, and the address must "
+    "stay reachable from the browser)"
+)
+N_TREEMAP = (
+    "dashboard treemap is shown as a bar chart over a FACET (approximate: New Relic has no "
+    "treemap, so the area of each group becomes the length of a bar)"
+)
+N_SUNBURST = (
+    "dashboard sunburst is shown as a pie chart over one FACET (approximate: New Relic has no "
+    "sunburst, so only the first level of groups is kept)"
+)
 N_FORMULA = (
     "dashboard formula is written as one SELECT of window aggregates; Datadog combines the "
     "series point by point, so a ratio can differ (compare both on a day of data)"
@@ -93,6 +111,10 @@ N_FACET_LIMIT = (
 N_VAR_NO_TAG = (
     "dashboard template variable has no tag key, so it cannot be a New Relic variable: "
     "${name} is replaced by its default ({default})"
+)
+N_VAR_RENAMED = (
+    "dashboard template variable renamed: {old} is named {new} in New Relic, which does not accept "
+    "characters such as '-' in a variable name (approximate: only the name changed)"
 )
 N_FORMATS = "number formats, conditional formats, markers and colours are not carried over"
 N_NOTE_SYNTAX = (

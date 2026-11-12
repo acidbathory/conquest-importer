@@ -32,13 +32,35 @@ VALUES_LIMIT = 200
 
 @dataclass(frozen=True)
 class TemplateVar:
-    name: str
+    name: str  # the New Relic variable name (the export's name when it is already valid)
     prefix: str | None
     default: str
+    source_name: str = ""  # the name in the export, when it had to be changed
+
+
+def _valid_name(name: str, taken: set[str]) -> str:
+    """The name if New Relic accepts it, else the same with `_` for each other character."""
+    if re.fullmatch(VARIABLE_NAME, name) and name not in taken:
+        return name
+    base = re.sub(r"[^A-Za-z0-9_]", "_", name)
+    if not re.match(r"[A-Za-z_]", base):
+        base = "_" + base
+    base = base[:56]
+    chosen, n = base, 1
+    while chosen in taken:
+        n += 1
+        chosen = f"{base}_{n}"
+    return chosen
 
 
 def read_variables(raw: list[dict[str, Any]]) -> dict[str, TemplateVar]:
+    """The variables by their name in the export; a name New Relic rejects is renamed."""
     out: dict[str, TemplateVar] = {}
+    taken = {
+        i["name"]
+        for i in raw
+        if isinstance(i.get("name"), str) and re.fullmatch(VARIABLE_NAME, i["name"])
+    }
     for item in raw:
         name = item.get("name")
         if not isinstance(name, str) or not name:
@@ -48,10 +70,13 @@ def read_variables(raw: list[dict[str, Any]]) -> dict[str, TemplateVar]:
         defaults = item.get("defaults")
         if default is None and isinstance(defaults, list) and defaults:
             default = defaults[0]
+        nr_name = _valid_name(name, taken) if not re.fullmatch(VARIABLE_NAME, name) else name
+        taken.add(nr_name)
         out[name] = TemplateVar(
-            name,
+            nr_name,
             prefix if isinstance(prefix, str) and prefix else None,
             default if isinstance(default, str) else "*",
+            name if nr_name != name else "",
         )
     return out
 
@@ -151,8 +176,6 @@ class Resolver:
         var = self.variables.get(name)
         if var is None:
             raise Fail(DR.V_UNDEFINED.format(name=shown(name, 40)))
-        if not re.fullmatch(VARIABLE_NAME, name):
-            raise Fail(DR.V_NAME.format(name=shown(name, 40)))
         return var
 
     def _variable(self, var: TemplateVar, key: str, negate: bool, scope: Scope) -> None:
@@ -169,6 +192,10 @@ class Resolver:
         scope.variable_filters.append(
             TagFilter(key=attribute, value=mark_for(var.name), negate=negate)
         )
+        if var.source_name:
+            scope.notes.append(
+                DR.N_VAR_RENAMED.format(old=shown(var.source_name, 40), new=var.name)
+            )
 
     def _default(self, var: TemplateVar, item: Tag, scope: Scope) -> None:
         if item.negate:

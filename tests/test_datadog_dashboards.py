@@ -240,7 +240,7 @@ def test_widget_time_span_is_reported(tmp_path: Path) -> None:
         ),
         (widget("check_status", check="x"), "dashboard widget type"),
         (widget("heatmap", requests=[{"q": "avg:a.b{*}"}]), "dashboard widget type"),
-        (widget("image", url="https://x.invalid/a.png"), "dashboard widget type"),
+        (widget("hostmap"), "dashboard widget type"),
         (widget("timeseries", requests=[]), "dashboard widget has no query"),
         (ts("avg:a.b{host:$nope}"), "dashboard template variable is not defined"),
         (
@@ -385,11 +385,6 @@ def test_a_scope_variable_default_that_is_a_filter(tmp_path: Path) -> None:
             [{"name": "host", "prefix": "az bad", "default": "*"}],
             "tag cannot be written",
         ),
-        (
-            "avg:a.b{$we-ird}",
-            [{"name": "we-ird", "prefix": "host", "default": "*"}],
-            "dashboard template variable name",
-        ),
         ("avg:a.b{env:$host}", [HOST], "dashboard template variable stands for"),
         (
             "avg:a.b{$scope}",
@@ -406,6 +401,29 @@ def test_variable_forms_that_are_not_converted(
     assert item.reasons[0].lower().startswith(start.lower()), item.reasons
     assert d.variables == []
     assert steps_for(item.reasons)
+
+
+def test_a_variable_name_that_is_not_a_new_relic_name_is_renamed_and_says_so(
+    tmp_path: Path,
+) -> None:
+    v = {"name": "replica-set", "prefix": "replica_set", "default": "*"}
+    d, item, queries = one(tmp_path, ts("avg:a.b{$replica-set}"), variables=[v])
+    assert queries == [
+        "SELECT average(a.b) FROM Metric WHERE replica_set IN ({{replica_set}}) TIMESERIES AUTO"
+    ]
+    assert [x.name for x in d.variables] == ["replica_set"]
+    assert item.kind is WidgetKind.CHART
+    assert any("replica-set" in r and "replica_set" in r for r in item.reasons), item.reasons
+    nerdgraph_dashboard(d)
+
+
+def test_renamed_variables_that_would_collide_get_distinct_names(tmp_path: Path) -> None:
+    vs = [
+        {"name": "a-b", "prefix": "x", "default": "*"},
+        {"name": "a_b", "prefix": "y", "default": "*"},
+    ]
+    d = convert(tmp_path, [ts("avg:a.b{$a-b,$a_b}")], variables=vs)
+    assert len({x.name for x in d.variables}) == 2
 
 
 def test_a_variable_used_on_two_tags_is_refused(tmp_path: Path) -> None:
@@ -856,7 +874,62 @@ def test_a_query_value_with_a_function_still_converts(tmp_path: Path) -> None:
 def test_the_real_dashboards_measure_is_pinned() -> None:
     """Data widgets exclude notes. Before this converter nothing converted (0 of 454)."""
     m = measure(DASHBOARD_REGISTRY["datadog"].convert(REAL))
-    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 259, 195)
+    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 264, 190)
     assert (m.notes, m.note_placeholders) == (62, 0)
     assert m.converted + m.placeholders == m.data_widgets
     assert sum(m.by_reason.values()) == m.placeholders
+
+
+# -- community corpus: image, treemap, sunburst ----------------------------------------------
+def test_an_https_image_becomes_approximate_markdown(
+    tmp_path: Path,
+) -> None:
+    w = widget("image", url="https://example.com/logo.png")
+    _, item, _ = one(tmp_path, w)
+    assert item.kind is WidgetKind.MARKDOWN
+    assert item.confidence is Confidence.APPROXIMATE
+    assert item.text == "![w](https://example.com/logo.png)"
+    assert any(r.startswith("dashboard image") for r in item.reasons)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "/static/images/logo.png",
+        "http://example.com/a.png",
+        "javascript:alert(1)",
+        "https://example.com/a b.png",
+        "https://example.com/a).png",
+        "https://example.com/a<b>.png",
+        None,
+    ],
+)
+def test_an_image_without_a_safe_https_address_is_a_placeholder(
+    tmp_path: Path, url: str | None
+) -> None:
+    _, item, _ = one(tmp_path, widget("image", url=url))
+    assert item.kind is WidgetKind.UNSUPPORTED
+    assert steps_for(item.reasons)
+
+
+def test_a_treemap_is_a_bar_chart_over_a_facet_and_says_so(tmp_path: Path) -> None:
+    w = formula_widget("query1", ["avg:a.b{*} by {resource}"], kind="treemap")
+    _, item, queries = one(tmp_path, w)
+    assert item.visualization is Visualization.BAR
+    assert item.confidence is Confidence.APPROXIMATE
+    assert " FACET resource" in queries[0] and "TIMESERIES" not in queries[0]
+    assert any(r.startswith("dashboard treemap") for r in item.reasons)
+
+
+def test_a_sunburst_is_a_pie_chart_over_a_facet_and_says_so(tmp_path: Path) -> None:
+    w = formula_widget("query1", ["sum:a.b{*} by {resource}"], kind="sunburst")
+    _, item, queries = one(tmp_path, w)
+    assert item.visualization is Visualization.PIE
+    assert " FACET resource" in queries[0]
+    assert any(r.startswith("dashboard sunburst") for r in item.reasons)
+
+
+def test_a_treemap_without_a_group_is_a_placeholder(tmp_path: Path) -> None:
+    w = formula_widget("query1", ["avg:a.b{*}"], kind="treemap")
+    _, item, _ = one(tmp_path, w)
+    assert item.kind is WidgetKind.UNSUPPORTED

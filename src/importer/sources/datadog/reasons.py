@@ -221,3 +221,8 @@ N_MESSAGE_HANDLES = (
 )
 N_CRITICAL_DIFFERS = "critical threshold in options differs from the query; using the query"
 N_SCALE = "a unit scale of {scale} from name-map.json was applied to the threshold"
+
+N_DEFAULT_ZERO = (
+    "default(x, 0) is a static fill of 0 for empty windows of the signal (approximate: Datadog "
+    "fills gaps in its own evaluation points, New Relic in its aggregation windows)"
+)
