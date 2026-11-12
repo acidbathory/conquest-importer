@@ -315,6 +315,10 @@ N_RULE_FILE = (
     "this rule comes from a Prometheus-style rule file (Mimir or Loki ruler); the threshold is "
     "the comparison in its query, and the rule has no Grafana pipeline"
 )
+N_LONE_QUERY = (
+    "the rule's condition is its one query, which holds its own comparison; that comparison is "
+    "the threshold, as in a Prometheus rule file"
+)
 N_COUNTER = (
     "New Relic stores a Prometheus counter as the change in each interval (the type is guessed "
     "from a name ending _total, _count or _bucket), so sum() over the window is the increase over "
@@ -997,6 +1001,39 @@ def _rule_file_plan(rule: GrafanaRule) -> _Plan:
     return _Plan(kind, inferred, expr, Ctx("last", True, None, threshold, node=False), threshold)
 
 
+BOOL_COMPARISON = re.compile(
+    r"^(?P<query>.*?)\s*(?P<op>==|!=|>=|<=|>|<)\s*bool\s+(?P<value>[-+]?[0-9.]+(?:[eE][-+]?\d+)?)$",
+    re.DOTALL,
+)
+
+
+def _lone_query(rule: GrafanaRule) -> GfNode | None:
+    """The rule's only node when it is a data source query that the condition points at."""
+    if rule.datasource_managed or rule.expr or len(rule.data) != 1:
+        return None
+    node = rule.data[0]
+    return node if node.refId == rule.condition and not _expression_type(node) else None
+
+
+def _lone_query_plan(query: GfNode) -> _Plan:
+    """One query that holds its own comparison: the comparison is the threshold (rule-file way).
+
+    `x > bool 5` gives 1 where x > 5 and 0 elsewhere, and Grafana fires on a non-zero value, so
+    it fires on the same series as `x > 5`."""
+    kind, inferred = _datasource_type(query)
+    source = str(query.model.get("expr", ""))
+    if kind == "prometheus":
+        source = normalize_promql(source)
+        bare = BOOL_COMPARISON.match(source)
+        if bare:
+            source = f"{bare['query']} {bare['op']} {bare['value']}"
+    comparison = split_comparison(source) if kind == "prometheus" else None
+    expr = comparison.query if comparison else source
+    threshold = _make_threshold(comparison.operator, [comparison.value]) if comparison else None
+    ctx = Ctx("last", True, _range_seconds(query), threshold, node=False)
+    return _Plan(kind, inferred, expr, ctx, threshold, notes=[N_LONE_QUERY])
+
+
 def _built(plan: _Plan) -> Built:
     handler = HANDLERS.get(plan.kind)
     if handler is None:
@@ -1106,6 +1143,9 @@ def _plan(rule: GrafanaRule) -> _Plan:
         if not rule.expr:
             raise Fail(R_DS_MANAGED)
         return _rule_file_plan(rule)
+    lone = _lone_query(rule)
+    if lone is not None:
+        return _lone_query_plan(lone)
     return _grafana_plan(rule)
 
 
@@ -1160,7 +1200,7 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
     threshold = built.threshold or plan.threshold
     if threshold is None:
         raise Fail(R_NO_COMPARISON)
-    if rule.expr and built.per_series and built.metric:
+    if (rule.expr or N_LONE_QUERY in plan.notes) and built.per_series and built.metric:
         _any_series(built.metric, threshold)
         built.notes.append(N_ANY_SERIES)
     window, duration, window_notes = _windows(rule, built.window, built.minimum_duration)
