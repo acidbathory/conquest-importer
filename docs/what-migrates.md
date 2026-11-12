@@ -521,6 +521,11 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   threshold, the query is read as an instant query, and the note says it is a rule-file rule. The
   data source type is inferred from the query shape. A query with no comparison against a number
   is manual (no threshold), and a recording rule stays a recording rule.
+  A per-series test (`up == 0`, or a counter `rate(x_total[5m]) > n` without `sum`) becomes a faceted
+  condition grouped by the labels the rule's own summary or description names (`{{ $labels.instance }}`).
+  It is approximate, and the note lists the labels; series that differ only in other labels are
+  merged, which can hide a failing series. A rule that names no label stays manual. On 1,185 public
+  Prometheus rules this converts 493 (42%), up from 252; not yet run on New Relic.
 - **Aggregation layers:** Grafana aggregates across series (the PromQL `avg`, `sum`, `min`,
   `max`) and then reduces over time (the reduce node). One New Relic aggregation does both only
   when they are the same operation, so these convert: `avg` with reducer last or mean, `max` with
