@@ -16,6 +16,7 @@ from importer.core.report import md_cell
 from importer.core.text import printable
 from importer.sources.datadog.common import Fail
 from importer.sources.datadog.dashboards import reasons as DR
+from importer.sources.datadog.dashboards.logs_query import convert_log
 from importer.sources.datadog.dashboards.metric_query import (
     Converted,
     as_nrql,
@@ -27,6 +28,7 @@ from importer.sources.datadog.dashboards.reasons import shown
 from importer.sources.datadog.dashboards.variables import TemplateVar, UsedVariable
 from importer.sources.datadog.names import NameMap
 
+LOG_PATH = "needs-log-forwarding"
 MAX_TITLE = 200
 MAX_LABEL = 100
 MAX_TEXT = 6000
@@ -82,6 +84,7 @@ class Spec:
     formula: str = ""
     queries: dict[str, str] = field(default_factory=dict)
     alias: str | None = None
+    log: dict[str, Any] | None = None  # a data_source "logs" query, converted by logs_query
 
 
 MAX_SPECS = 12
@@ -98,10 +101,13 @@ def _new_style(request: dict[str, Any]) -> list[Spec]:
         for q in queries
         if q.get("data_source") == "metrics" and isinstance(q.get("query"), str)
     }
+    logs = {str(q.get("name")): q for q in queries if q.get("data_source") == "logs"}
     if not formulas:
         if len(queries) != 1:
             raise Fail(DR.W_SEVERAL)
         source = queries[0].get("data_source")
+        if source == "logs":
+            return [Spec(log=queries[0])]
         if source != "metrics":
             raise Fail(DR.W_DATA_SOURCE.format(source=shown(source, 40)))
         return [Spec(text=texts[next(iter(texts))])] if texts else _no_query()
@@ -112,6 +118,10 @@ def _new_style(request: dict[str, Any]) -> list[Spec]:
             raise Fail(DR.W_FORMULA)
         if not isinstance(text, str):
             raise Fail(DR.W_NO_QUERY)
+        if text in logs:  # a formula that only names its log query
+            alias = f.get("alias")
+            out.append(Spec(log=logs[text], alias=alias if isinstance(alias, str) else None))
+            continue
         for name in _NAME.findall(text):
             if name in sources and sources[name] != "metrics":
                 raise Fail(DR.W_DATA_SOURCE.format(source=shown(sources[name], 40)))
@@ -300,7 +310,9 @@ def _convert_all(
     seen = dict(ctx.used)  # variables used by earlier series of this widget count as committed
     for spec in specs:
         label = _label(spec, len(specs) > 1)
-        if spec.formula:
+        if spec.log is not None:
+            one = convert_log(spec.log, timeseries, grouped, ctx.names, ctx.variables, seen)
+        elif spec.formula:
             one = convert_formula(
                 spec.formula, spec.queries, time_aggr, timeseries, grouped, ctx.names,
                 ctx.variables, seen, label,
@@ -312,6 +324,12 @@ def _convert_all(
         seen.update(one.variables)
         done.append(one)
     return done
+
+
+def _data_path(results: list[Converted]) -> str:
+    if any(r.data_path == LOG_PATH for r in results):
+        return LOG_PATH
+    return "name-map" if all(r.data_path == "name-map" for r in results) else "datadog-same-names"
 
 
 def _chart(
@@ -351,9 +369,7 @@ def _chart(
         page,
         kind=WidgetKind.CHART,
         visualization=viz,
-        data_path=(
-            "name-map" if all(r.data_path == "name-map" for r in results) else "datadog-same-names"
-        ),
+        data_path=_data_path(results),
         **fields,
     )
     for r in results:  # only once the widget exists, so a refused one adds none
