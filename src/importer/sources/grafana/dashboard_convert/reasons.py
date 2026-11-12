@@ -61,6 +61,16 @@ N_SUM_GAUGE = (
     f"{NOTE} sum() of a gauge became latest() or average() because the name map says the "
     "group holds one series (hints: seen in 7 days)"
 )
+N_SUM_CARDINALITY = (
+    f"{NOTE} Approximate: the sum over series is computed as average(g) * cardinality(g). It is "
+    "exact only when all series report at the same interval with steady values. Mixed scrape "
+    "intervals, values that move within a bucket, and series that start or stop will show "
+    "differences from Prometheus."
+)
+N_COUNT_CARDINALITY = (
+    f"{NOTE} Approximate: count() of series is cardinality(g); it differs around series that "
+    "start or stop"
+)
 
 
 def n_type_override(name: str, want: str) -> str:

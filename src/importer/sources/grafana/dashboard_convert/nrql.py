@@ -29,6 +29,7 @@ class Leaf:
     event: str = "Metric"
     kept: bool = False  # the query does not aggregate, so every label is still there
     filterable: bool = True  # filter() can wrap it
+    approx: bool = False  # sum or count of the series of a gauge written with cardinality()
 
 
 @dataclass(frozen=True)

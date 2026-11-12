@@ -63,7 +63,7 @@ def hinted(**series: list[str]) -> list[QueryOptions]:
     ]
 
 
-@pytest.mark.parametrize("opts", [LINE, STAT])
+@pytest.mark.parametrize("opts", [STAT])  # a chart now converts as average * cardinality
 @pytest.mark.parametrize(
     "expr",
     [
@@ -101,18 +101,16 @@ def test_with_a_hint_equality_matchers_count_as_naming_the_series() -> None:
         "sum(node_load1)",
         'sum by (job) (node_load1{instance=~"a|b"})',
         'sum by (job) (node_load1{instance!="a"})',
-    ):
-        with pytest.raises(Unconvertible) as stop:
-            convert_query(expr, "prometheus", chart)
-        assert stop.value.reason == r.C_GAUGE_SERIES
+    ):  # not proven one series: the approximate form, never the exact one
+        out = convert_query(expr, "prometheus", chart)
+        assert "cardinality(node_load1)" in out.nrql and r.N_SUM_CARDINALITY in out.notes
 
 
 def test_a_dashboard_variable_may_hold_several_values_so_it_does_not_pin_a_series() -> None:
     names = NameMap(series={"node_load1": ["instance"]})
     opts = QueryOptions(variables={"instance": None}, name_map=names, timeseries=True)
-    with pytest.raises(Unconvertible) as stop:
-        convert_query('sum(node_load1{instance="$instance"})', "prometheus", opts)
-    assert stop.value.reason == r.C_GAUGE_SERIES
+    out = convert_query('sum(node_load1{instance="$instance"})', "prometheus", opts)
+    assert "cardinality(node_load1)" in out.nrql and r.N_SUM_GAUGE not in out.notes
 
 
 def test_a_hint_with_no_labels_says_the_metric_has_exactly_one_series() -> None:
@@ -125,14 +123,16 @@ def test_a_hint_with_no_labels_says_the_metric_has_exactly_one_series() -> None:
 def test_a_hint_for_another_metric_or_a_missing_label_does_not_help() -> None:
     chart, _ = hinted(node_load1=["instance"])
     for expr in ("sum(node_load5)", "sum by (job) (node_load1)"):
-        with pytest.raises(Unconvertible):
-            convert_query(expr, "prometheus", chart)
+        out = convert_query(expr, "prometheus", chart)
+        assert "cardinality" in out.nrql and r.N_SUM_GAUGE not in out.notes
 
 
 def test_a_count_stays_manual_even_with_a_hint() -> None:
-    chart, _ = hinted(up=["instance"])
+    chart, stat = hinted(up=["instance"])
+    out = convert_query("count by (instance) (up)", "prometheus", chart)
+    assert out.nrql.startswith("SELECT cardinality(up)") and r.N_COUNT_CARDINALITY in out.notes
     with pytest.raises(Unconvertible) as stop:
-        convert_query("count by (instance) (up)", "prometheus", chart)
+        convert_query("count by (instance) (up)", "prometheus", stat)
     assert stop.value.reason == r.C_GAUGE_SERIES
 
 

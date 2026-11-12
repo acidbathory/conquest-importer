@@ -57,7 +57,9 @@ def test_every_pattern_is_anchored_at_the_converter_wording() -> None:
 
 def test_reasons_and_notes_are_short_fixed_sentences_with_no_placeholders() -> None:
     for text in [*REASONS.values(), *NOTES.values()]:
-        assert "{" not in text and text.isprintable() and len(text) < 160, text
+        # the approximation note for a sum over series is longer by design: it names all the facts
+        limit = 330 if text == r.N_SUM_CARDINALITY else 160
+        assert "{" not in text and text.isprintable() and len(text) < limit, text
 
 
 def test_the_planner_keeps_its_own_wording_and_rules() -> None:
