@@ -556,3 +556,39 @@ def test_ecs_service_alarms_use_the_by_service_suffix_confirmed_on_real_data() -
         EvaluationPeriods=1,
     )
     assert nrql_for(ir).startswith("SELECT average(aws.ecs.CPUUtilization.byService) FROM Metric")
+
+
+@pytest.mark.parametrize(
+    ("namespace", "metric", "dim", "attribute"),
+    [
+        ("AWS/ES", "ClusterStatus.red", "DomainName", "aws.es"),
+        ("AWS/Neptune", "GremlinRequestsPerSec", "DBClusterIdentifier", "aws.neptune"),
+        ("AWS/SES", "Reputation.BounceRate", "Region", "aws.ses"),
+        ("AWS/States", "ExecutionsFailed", "StateMachineArn", "aws.states"),
+        ("AWS/Transcribe", "TotalRequestCount", "Operation", "aws.transcribe"),
+        ("AWS/NatGateway", "ActiveConnectionCount", "NatGatewayId", "aws.natgateway"),
+        ("AWS/CodeBuild", "FailedBuilds", "ProjectName", "aws.codebuild"),
+        ("AWS/Bedrock", "Invocations", "ModelId", "aws.bedrock"),
+    ],
+)
+def test_more_aws_namespaces_follow_the_documented_lowercase_rule(
+    namespace: str, metric: str, dim: str, attribute: str
+) -> None:
+    # UNVERIFIED against a live account: the name follows the documented general rule
+    # (docs.newrelic.com "Work with AWS metrics data": AWS/X -> aws.x, metric case kept).
+    ir = alarm(
+        Namespace=namespace,
+        MetricName=metric,
+        Statistic="Sum",
+        Dimensions=[{"Name": dim, "Value": "v"}],
+    )
+    assert ir.confidence == Confidence.APPROXIMATE
+    where = attribute + "." + dim
+    expected = "SELECT sum(" + attribute + "." + metric + ") FROM Metric WHERE " + where + " = 'v'"  # noqa: S608 - test constants
+    assert nrql_for(ir) == expected
+
+
+@pytest.mark.parametrize("namespace", ["ECS/ContainerInsights", "AWS/CodeWhisperer"])
+def test_namespaces_without_a_documented_name_stay_manual(namespace: str) -> None:
+    ir = alarm(Namespace=namespace, MetricName="M", Statistic="Sum")
+    assert ir.confidence == Confidence.MANUAL
