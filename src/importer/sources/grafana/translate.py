@@ -239,6 +239,10 @@ N_NEGATION = (
     "a != or !~ matcher also matches series without that label in Prometheus; the New Relic "
     "query may differ for rows without the attribute"
 )
+N_DOT_LITERAL = (
+    "a . in a label matcher regex matches any character; it was read as a literal dot, so a "
+    "series whose value differs only at that character no longer matches"
+)
 N_LAST = (
     "Grafana takes the last sample of each series; New Relic averages the samples in each "
     "window, which differs from it"
@@ -406,6 +410,7 @@ class Match:
     kind: str  # eq, in, like or absent
     values: tuple[str, ...]
     negate: bool = False
+    dots: bool = False  # a bare . in a word was read as a literal dot (a regex dot is any char)
 
 
 def _unescape(value: str) -> str:
@@ -426,20 +431,82 @@ def _regex(value: str, fail: str) -> tuple[str, tuple[str, ...]]:
     raise Fail(fail)
 
 
-def _match(key: str, op: str, value: str, fail: str, *, absent_ok: bool) -> Match:
+# A word that may hold dots: `\.` is a literal dot; a bare `.` is any character in a regex and
+# is read as a literal dot here (noted on the rule) only between letters or digits, as in host
+# names and addresses; 5.. or a. stay refused.
+DOT_WORD = re.compile(r"(?:[A-Za-z0-9_:/ -]|\\\.|\.)+")
+DOT_PREFIX = re.compile(r"(.+)\.\*")
+DOT_SUFFIX = re.compile(r"\.\*(.+)")
+DOT_BOTH = re.compile(r"\.\*(.+)\.\*")
+
+
+def _dot_word(word: str) -> tuple[str, bool] | None:
+    """The literal text of a word and whether it holds a bare dot; None if it is not a word."""
+    if not DOT_WORD.fullmatch(word) or not re.search(r"[A-Za-z0-9_:/ -]", word):
+        return None
+    bare = word.replace("\\.", "\0")
+    if re.search(r"(?<![A-Za-z0-9])\.|\.(?![A-Za-z0-9])", bare):
+        return None  # a dot not between letters or digits (5.., a., .1) looks like a wildcard
+    return word.replace("\\.", "."), "." in bare
+
+
+def _regex_loose(value: str, fail: str) -> tuple[str, tuple[str, ...], bool]:
+    """Like `_regex`, plus words with dots. The third value is true when a bare dot was read
+    as a literal dot."""
+    parts = value.split("|")
+    if len(parts) <= MAX_ALTERNATIVES:
+        words = [_dot_word(p) for p in parts]
+        if all(w is not None for w in words):
+            literal = tuple(dict.fromkeys(w[0] for w in words if w))
+            approx = any(w[1] for w in words if w)
+            return ("in" if len(parts) > 1 else "eq"), literal, approx
+    for pattern, wrap in ((DOT_BOTH, "*{}*"), (DOT_PREFIX, "{}*"), (DOT_SUFFIX, "*{}")):
+        found = pattern.fullmatch(value)
+        word = _dot_word(found[1]) if found else None
+        if word:
+            return "like", (wrap.format(word[0]),), word[1]
+    raise Fail(fail)
+
+
+def _match(
+    key: str, op: str, value: str, fail: str, *, absent_ok: bool, loose: bool
+) -> list[Match]:
     if key == "__name__":
         raise Fail(fail)
     if op in ("=", "!="):
         if value == "":
             if op == "=" and absent_ok:
-                return Match(key, "absent", ())
+                return [Match(key, "absent", ())]
             raise Fail(fail)
-        return Match(key, "eq", (value,), negate=op == "!=")
-    kind, values = _regex(value, fail)
-    return Match(key, kind, values, negate=op == "!~")
+        return [Match(key, "eq", (value,), negate=op == "!=")]
+    negate = op == "!~"
+    if not loose:  # the dashboard converter keeps its own forms
+        kind, values = _regex(value, fail)
+        return [Match(key, kind, values, negate=negate)]
+    if value == ".*":  # matches every series, a missing label too; !~ matches none
+        if negate:
+            raise Fail(fail)
+        return []
+    if value == ".+":  # a label that is set (Prometheus has no empty-valued labels)
+        if not absent_ok:
+            raise Fail(fail)
+        return [Match(key, "absent", (), negate=not negate)]
+    pieces = value.split("|")
+    if "" in pieces:
+        # an empty alternative: `!~ "|w"` is neither empty nor w; `=~ "w|"` also matches a
+        # missing label, which is an OR the filter list cannot hold
+        words = [p for p in pieces if p]
+        if not (negate and absent_ok and words):
+            raise Fail(fail)
+        kind, values, dots = _regex_loose("|".join(words), fail)
+        return [Match(key, kind, values, negate=True, dots=dots), Match(key, "absent", (), True)]
+    kind, values, dots = _regex_loose(value, fail)
+    return [Match(key, kind, values, negate=negate, dots=dots)]
 
 
-def parse_matchers(body: str, fail: str, not_simple: str, *, absent_ok: bool) -> list[Match]:
+def parse_matchers(
+    body: str, fail: str, not_simple: str, *, absent_ok: bool, loose: bool = True
+) -> list[Match]:
     found: list[Match] = []
     position = 0
     while body[position:].strip():
@@ -449,16 +516,24 @@ def parse_matchers(body: str, fail: str, not_simple: str, *, absent_ok: bool) ->
         key, op, raw, _ = item.groups()
         if not STRICT_VALUE.fullmatch(raw):
             raise Fail(fail)
-        found.append(_match(key, op, _unescape(raw), fail, absent_ok=absent_ok))
+        found += _match(key, op, _unescape(raw), fail, absent_ok=absent_ok, loose=loose)
         position = item.end()
     return found
+
+
+def matcher_notes(matches: list[Match]) -> list[str]:
+    """The notes a set of label matchers needs."""
+    notes = [N_NEGATION] if any(m.negate for m in matches) else []
+    if any(m.dots for m in matches):
+        notes.append(N_DOT_LITERAL)
+    return notes
 
 
 def tag_filter(m: Match) -> TagFilter:
     if m.key in RESERVED_ATTRIBUTES:
         raise Fail(PROM_RESERVED)
     if m.kind == "absent":
-        return TagFilter(key=m.key, absent=True)
+        return TagFilter(key=m.key, absent=True, negate=m.negate)
     if m.kind == "in":
         return TagFilter(key=m.key, values=list(m.values), negate=m.negate)
     return TagFilter(key=m.key, value=m.values[0], negate=m.negate, wildcard=m.kind == "like")
@@ -666,8 +741,7 @@ def _prometheus_classic(expr: str, ctx: Ctx) -> Built:
             notes.append(N_LAST)
     fixed, window_notes = time_window(ctx, reducer)
     notes += window_notes
-    if any(m.negate for m in matches):
-        notes.append(N_NEGATION)
+    notes += matcher_notes(matches)
     term = MetricTerm(
         metric=attribute,
         space_aggregation=aggregation,
@@ -742,8 +816,7 @@ def _loki(expr: str, ctx: Ctx) -> Built:
     notes = [N_LOGS]
     if not aggregator:
         notes.append(N_PER_SERIES)
-    if any(m.negate for m in matches):
-        notes.append(N_NEGATION)
+    notes += matcher_notes(matches)
     seconds = int(count[3]) * RANGE_SECONDS[count[4]]
     signal = CountSignal(filters=filters, group_by=[nrql_attribute(g) for g in group_by])
     return Built(SignalKind.LOG, seconds, count=signal, notes=notes)
