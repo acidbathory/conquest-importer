@@ -144,6 +144,12 @@ N_TOPK = (
     "{function}({k}) is dropped: the condition tests every series, so it opens one incident per "
     "series that passes the bound, where Prometheus reports at most {k}"
 )
+N_COUNTER_MEAN = (
+    "the rule averages the query over its {seconds}s range, which is read as the change over the "
+    "whole range: the mean of the per-step values is the total change divided by the number of "
+    "steps, so sum() over {seconds}s is scaled to match; the edges of the range and a mean of "
+    "ratios (not a ratio of totals) differ a little"
+)
 N_ARITH_SCOPE = (
     "the operands have different label filters, so each aggregate carries its own filter(); a "
     "series that matches neither filter is ignored in both"
@@ -164,6 +170,7 @@ class Leaf:
     aggregation: Aggregation
     note: str = ""
     without: bool = False
+    scale: float = 1.0  # factor on an increase() read over a longer range (mean reducer)
 
 
 def _hints() -> NameMap:
@@ -344,6 +351,8 @@ class _Terms:
         ref: Expr = Ref(name=self.keys[key])
         if leaf.function == "rate":
             ref = BinOp(op="/", left=ref, right=Num(value=float(leaf.seconds or 1)))
+        elif leaf.scale != 1.0:
+            ref = BinOp(op="*", left=ref, right=Num(value=leaf.scale))
         return ref
 
 
@@ -370,11 +379,25 @@ def _shared_matches(leaves: list[Leaf]) -> tuple[Match, ...]:
     return tuple(m for m in first if all(m in leaf.matches for leaf in leaves[1:]))
 
 
-def _check_counter_window(seconds: int, ctx: Ctx) -> None:
-    if looked_back(ctx) != "last":
+def _check_counter_window(seconds: int, ctx: Ctx, *, mean_ok: bool = False) -> None:
+    if looked_back(ctx) not in ("last", "mean") or (looked_back(ctx) == "mean" and not mean_ok):
         raise Fail(R_COUNTER_REDUCER.format(reducer=looked_back(ctx)))
     if seconds < MIN_RANGE or seconds % 60:
         raise Fail(PROM_NOT_SIMPLE)
+
+
+def _mean_range(leaves: list[Leaf], ctx: Ctx) -> int | None:
+    """The rule's query range when a counter is averaged over it, else None (reducer last).
+
+    The mean of a rate or increase over the points of the range is read as the change over the
+    whole range: the window is the range, a rate divides by it and an increase by range / window."""
+    if looked_back(ctx) != "mean":
+        return None
+    span = ctx.range_seconds
+    seconds = leaves[0].seconds or 0
+    if span is None or span % 60 or span < seconds:
+        raise Fail(R_COUNTER_REDUCER.format(reducer="mean"))
+    return span
 
 
 def _window_plan(leaves: list[Leaf], ctx: Ctx) -> tuple[Aggregation, int | None, bool, list[str]]:
@@ -382,14 +405,17 @@ def _window_plan(leaves: list[Leaf], ctx: Ctx) -> tuple[Aggregation, int | None,
     first = leaves[0]
     notes = [N_METRIC]
     if first.kind in ("counter", "over_time"):
-        _check_counter_window(first.seconds or 0, ctx)
+        _check_counter_window(first.seconds or 0, ctx, mean_ok=first.kind == "counter")
     if first.kind == "counter":
+        span = _mean_range(leaves, ctx)
+        if span is not None:
+            notes.append(N_COUNTER_MEAN.format(seconds=span))
         notes += [N_COUNTER, N_RATE_SAMPLES]
         if ctx.threshold is not None and ctx.threshold.operator in EMPTY_SENSITIVE:
             notes.append(N_COUNTER_EMPTY)
         if any(leaf.function == "rate" for leaf in leaves):
-            notes.append(N_RATE_DIVISION.format(seconds=first.seconds))
-        return first.aggregation, first.seconds, False, notes
+            notes.append(N_RATE_DIVISION.format(seconds=span or first.seconds))
+        return first.aggregation, span or first.seconds, False, notes
     if first.kind == "over_time":
         notes.append(
             N_OVER_TIME.format(function=first.function, aggregation=first.aggregation.value)
@@ -491,6 +517,13 @@ def _arith_form(expr: str, ctx: Ctx) -> Built | None:
         raise Fail(R_MIX)
     first = leaves[0]
     aggregation, fixed, slide, notes = _window_plan(leaves, ctx)
+    if first.kind == "counter" and fixed != first.seconds:  # a mean over the rule's range
+        leaves = [
+            replace(leaf, seconds=fixed)
+            if leaf.function == "rate"
+            else replace(leaf, scale=(leaf.seconds or 1) / (fixed or 1))
+            for leaf in leaves
+        ]
     notes += [leaf.note for leaf in leaves if leaf.note]
     if any(leaf.without for leaf in leaves):
         notes.append(N_WITHOUT)
