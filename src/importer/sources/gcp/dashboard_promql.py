@@ -27,6 +27,14 @@ DATA_NOTE = (
 WHOLE_MATCHER = re.compile(r"(?<=[{,])\s*\$\{(\w+)\}\s*(?=[,}])")
 
 
+VALUE_REFERENCE = re.compile(r"\$\{(\w+)\.value\}")
+
+
+def _plain_references(expr: str, variables: dict[str, str]) -> str:
+    """`${Name.value}` of a known dashboard variable is the same variable as `${Name}`."""
+    return VALUE_REFERENCE.sub(lambda m: f"${{{m[1]}}}" if m[1] in variables else m[0], expr)
+
+
 def expand_matchers(expr: str, variables: dict[str, str]) -> str:
     """A variable that is a whole matcher, `{${Cluster}}`, written as `cluster="${Cluster}"`.
 
@@ -39,7 +47,7 @@ def expand_matchers(expr: str, variables: dict[str, str]) -> str:
         label = variables.get(name)
         return f'{label}="${{{name}}}"' if label else match[0]
 
-    return WHOLE_MATCHER.sub(one, expr)
+    return WHOLE_MATCHER.sub(one, _plain_references(expr, variables))
 
 
 def _plain(text: str) -> str:

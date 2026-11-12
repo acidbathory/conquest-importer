@@ -229,3 +229,26 @@ def test_a_logs_panel_regex_with_a_placeholder_is_not_a_real_pattern() -> None:
 def test_a_logs_panel_label_that_starts_with_a_dot_is_backtick_quoted() -> None:
     w = one({"title": "l", "logsPanel": {"filter": 'labels.".serviceId"="appfabric"'}})
     assert "WHERE `labels..serviceId` = 'appfabric'" in w.raw_series[0].nrql
+
+
+def test_dot_value_matcher_on_known_variable_maps_to_dashboard_variable() -> None:
+    from importer.sources.gcp.dashboard_promql import promql_nrql
+
+    done = promql_nrql(
+        'ray_node_mem_used{cluster=~"${Cluster.value}",namespace=~"${Namespace.value}"}',
+        timeseries=True,
+        bucket_seconds=None,
+        variables={"Cluster": "cluster", "Namespace": "namespace"},
+    )
+    assert not isinstance(done, str), done
+    nrql, _notes, used = done
+    assert "cluster IN ({{Cluster}})" in nrql
+    assert "namespace IN ({{Namespace}})" in nrql
+    assert used == ["Cluster", "Namespace"]
+
+
+def test_dot_value_matcher_on_unknown_variable_is_not_rewritten() -> None:
+    from importer.sources.gcp.dashboard_promql import expand_matchers
+
+    expr = 'm{cluster=~"${Other.value}"}'
+    assert expand_matchers(expr, {"Cluster": "cluster"}) == expr
