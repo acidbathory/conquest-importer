@@ -1,0 +1,29 @@
+name: Prometheus hints result
+description: You ran grafana-prom-hints against a real Prometheus, Mimir or Grafana Cloud stack.
+labels: [hints]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share counts only. Do not paste metric names, label values, URLs or tokens.
+  - type: input
+    id: stack
+    attributes:
+      label: What kind of stack was it?
+      placeholder: "Prometheus 2.x, Mimir, Grafana Cloud, Thanos, ..."
+    validations:
+      required: true
+  - type: textarea
+    id: counts
+    attributes:
+      label: How many metrics were found, and how many got an exact type or series labels?
+      description: The summary lines the command prints.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: effect
+    attributes:
+      label: Did converting with the hints file change the converted count?
+      description: Output of `importer scoreboard` before and after, counts only.
+      render: text

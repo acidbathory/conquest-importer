@@ -33,4 +33,4 @@ The project is pre-1.0 (`0.1.0`). Only the latest commit on `main` is supported.
 ## Checks in this repository
 
 Secret scanning (gitleaks, in pre-commit and CI), a dependency licence gate, a clean-room scan,
-`pip-audit`, and a CycloneDX software bill of materials built in CI. See `docs/dev/hygiene.md`.
+`pip-audit`, and a CycloneDX software bill of materials built in CI.

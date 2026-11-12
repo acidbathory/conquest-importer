@@ -1,0 +1,26 @@
+name: NRQL review
+description: You know a correct New Relic form for something the importer refuses to convert.
+labels: [nrql]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the shape, not your data. Use made-up metric names.
+  - type: input
+    id: shape
+    attributes:
+      label: What the importer refuses
+      placeholder: "e.g. alert condition comparing to the previous hour"
+    validations:
+      required: true
+  - type: textarea
+    id: nrql
+    attributes:
+      label: The correct NRQL or condition setup, with made-up names
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: caveats
+    attributes:
+      label: Where it differs from the source tool, or fails

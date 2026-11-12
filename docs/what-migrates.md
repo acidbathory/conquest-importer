@@ -854,7 +854,7 @@ blocked on the project's network). Details and the measured share: [runbook-data
 `importer convert-dashboards --source datadog --in <folder of dashboard JSON> --out <folder>`. Offline;
 reads the body `GET /api/v1/dashboard/{id}` returns (or a list of them) and the same `name-map.json` as
 the monitors. Measured on the 30 public integration dashboards in the repository: 454 data widgets
-(notes excluded), 264 converted (58%), 190 placeholders; 62 notes. Every converted chart is approximate and the
+(notes excluded), 286 converted (63%), 168 placeholders; 62 notes. Every converted chart is approximate and the
 data path is `datadog-same-names` (or `name-map`): data arrives only if the metric reaches New Relic under
 that name. The plan is in the feasibility note `docs/research/datadog-dashboard-feasibility.md` (branch `research/dd-dash-measure`).
 
@@ -874,6 +874,7 @@ that name. The plan is in the feasibility note `docs/research/datadog-dashboard-
 | `image` | A markdown image (plain https addresses only; other addresses stay placeholders) | Approximate |
 | `treemap`, `sunburst` with a group by | A bar chart, a pie chart, over a `FACET` | Approximate; the layout differs |
 | Template variable name New Relic rejects (`replica-set`) | Renamed (`replica_set`) in the variable and every reference | Approximate, noted on the widget |
+| Log widgets (count, avg, sum, min, max, uniqueCount) | `FROM Log SELECT ... WHERE ... FACET ... TIMESERIES AUTO`; a template variable in the search becomes `attr IN ({{var}})` | Approximate; the logs must be forwarded to New Relic, and log attribute names are unverified |
 | `weighted()`, `derivative()`, `timeshift()`, `autosmooth()`, `ewma`, `default_zero`, `abs` | None | Placeholder with a reason and manual steps |
 | Logs, RUM, cost, network, process data; check status, list, flame graph, heatmap and other widget types | None yet | Placeholder |
 | Widget time range, conditional formats, markers, number formats | None | Noted on the widget as not carried over |

@@ -1,0 +1,28 @@
+name: Live check in a New Relic sandbox
+description: You ran validate or a check-*-data command against a New Relic account that receives your data.
+labels: [live-check]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use a sandbox. Do not paste account ids, query text with real names, or keys.
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      options: [Datadog, Grafana, Dynatrace, Azure Monitor, Google Cloud, AWS CloudWatch]
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: How many checked items had data, no data, or a wrong name?
+      description: Counts from the command output.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: names
+    attributes:
+      label: Metric or attribute naming patterns that were wrong (pattern only, no real names)
+      placeholder: "e.g. Datadog dots became underscores in New Relic"

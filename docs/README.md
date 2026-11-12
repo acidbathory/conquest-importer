@@ -17,3 +17,4 @@
 
 **Contributing and design**
 - [Intermediate format](ir-spec.md), [Threat model](threat-model.md)
+- [Help us make progress](user/contribute.md): the four things that would move coverage most

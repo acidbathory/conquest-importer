@@ -4,6 +4,9 @@ This is a prototype, so the most useful contribution is a real failure: somethin
 convert when you expected it to, or a conversion that returned wrong numbers.
 Use the [feedback template](../../issues/new/choose).
 
+The four contributions that help most are described in [Help us make progress](docs/user/contribute.md):
+scrubbed exports, a Prometheus read, a live check in a New Relic sandbox, and an NRQL review.
+
 ## Fork and open a pull request
 
 1. Fork the repository on GitHub and clone your fork.
@@ -20,7 +23,7 @@ uv run pytest
 
 ## Before you open a pull request
 
-CI runs all of these; run them locally first (details in [docs/dev/linting.md](docs/dev/linting.md)):
+CI runs all of these; run them locally first:
 
 ```sh
 uv run ruff check . && uv run ruff format --check .
@@ -34,7 +37,7 @@ uv run pip-audit
 - Ruff is the only Python linter and formatter, and `mypy --strict` stays green.
 - Untrusted text (alarm names, queries, messages) may reach output only through the escaping
   helpers: `quote_string` / `identifier` (NRQL), `hcl_string` (Terraform), GraphQL variables,
-  `md_cell` (Markdown) and `e()` (HTML report). See [docs/dev/dry-guidelines.md](docs/dev/dry-guidelines.md).
+  `md_cell` (Markdown) and `e()` (HTML report).
 - A person reviews golden files (`tests/golden/`) before they are regenerated.
 - Never put secrets in the repo. Keys come from the environment.
 - Write docs and messages in plain language: say the point directly, skip decorative bold and
@@ -52,11 +55,11 @@ src/importer/
   sources/<source>/          one folder per source (cloudwatch, gcp, grafana, dynatrace):
                              reader, converters, data-path files
 tests/                       unit tests, fixtures, golden files
-docs/                        user docs; docs/dev has contributor docs
+docs/                        user docs and research notes
 ```
 
 To add a source platform, create one folder under `sources/` with `load()` and `translate()`, as
-the existing ones do (see [adding a source](docs/dev/adding-a-source.md)). See the [roadmap](README.md#roadmap).
+the existing ones do. See the [roadmap](README.md#roadmap).
 
 ## License
 
