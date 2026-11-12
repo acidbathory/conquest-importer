@@ -874,7 +874,7 @@ def test_a_query_value_with_a_function_still_converts(tmp_path: Path) -> None:
 def test_the_real_dashboards_measure_is_pinned() -> None:
     """Data widgets exclude notes. Before this converter nothing converted (0 of 454)."""
     m = measure(DASHBOARD_REGISTRY["datadog"].convert(REAL))
-    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 264, 190)
+    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 286, 168)
     assert (m.notes, m.note_placeholders) == (62, 0)
     assert m.converted + m.placeholders == m.data_widgets
     assert sum(m.by_reason.values()) == m.placeholders

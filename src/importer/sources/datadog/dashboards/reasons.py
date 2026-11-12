@@ -41,6 +41,7 @@ W_AGGREGATOR = (
     "dashboard query_value aggregator {name} is not converted: New Relic has no value that is "
     "the last point of a series combined across hosts"
 )
+W_LOGS = "dashboard widget reads logs, not converted: {why}"
 W_REJECTED = "dashboard widget was refused by the New Relic dashboard model: {why}"
 W_QV_GROUP = "dashboard query_value groups by a tag, which a single value cannot show"
 
@@ -99,6 +100,14 @@ N_SUM_GAUGE = (
     "dashboard sum adds every data point in a bucket, where Datadog adds one value per series; "
     "if the metric reports more than once per bucket the New Relic values are larger (set the "
     "metric kind to count in name-map.json when it is a count)"
+)
+N_LOG_FORWARD = (
+    "this widget reads logs: the logs must be forwarded to New Relic for it to show data "
+    "(data path: log forwarding)"
+)
+N_LOG_ASC = (
+    "the Datadog group order is ascending; New Relic shows the largest groups first, so the "
+    "groups shown may differ"
 )
 N_LIVE_SPAN = (
     "dashboard widget has its own time range ({span}); New Relic uses the dashboard time picker"
