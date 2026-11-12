@@ -6,6 +6,7 @@ bucketPercentile().
 Storage follows docs/research/telemetry-rig-results.md: names ending `_total`, `_count`, `_sum`,
 `_bucket` arrive as delta counts per sample (a reset stores the new value), everything else as a
 gauge holding the sample. The query is evaluated for the single window that ends at `end`.
+cardinality(metric) is modelled too, see `_cardinality` for the assumptions (UNVERIFIED live).
 Sub-queries, `if()`, `SLIDE BY` effects and unknown functions raise `Unmodelled`.
 """
 
@@ -16,7 +17,7 @@ from importer.parity.diff_promql import quantile_from_buckets
 from importer.parity.diff_series import Labels, Series, Unmodelled, Vector, delta_stored
 
 UNIT = {"second": 1, "seconds": 1, "minute": 60, "minutes": 60, "hour": 3600, "hours": 3600}
-AGG = {"sum", "average", "max", "min", "latest", "count"}
+AGG = {"sum", "average", "max", "min", "latest", "count", "cardinality"}
 TOKEN = re.compile(
     r"""\s*(?:(?P<id>`[^`]+`|[A-Za-z_][\w.:]*)|(?P<num>\d+(?:\.\d+)?)|(?P<str>'(?:[^'\\]|\\.)*')
     |(?P<op>>=|<=|!=|=|<|>|[-+*/(),]))""",
@@ -266,6 +267,22 @@ def _test(cond: Cond | None, row: Row) -> bool:
     return not hit if cond.op.startswith("NOT ") else hit
 
 
+def _cardinality(rows: list[Row]) -> float:
+    """cardinality(metric): the number of distinct dimension combinations among the rows.
+
+    Source: docs.newrelic.com NRQL reference, "cardinality()", raw page
+    https://raw.githubusercontent.com/newrelic/docs-website/develop/src/content/docs/nrql/nrql-syntax-clauses-functions.mdx
+    which says only: "obtain the number of combinations of all the dimensions (attributes) on a
+    metric". UNVERIFIED against a live account. Assumptions, all ours:
+    1. It is evaluated over the rows of each FACET group and each TIMESERIES bucket (the rows that
+       reported in that slice), so a series with no sample in the bucket is not counted.
+    2. A dimension combination is the full label set of the series, so one combination is one
+       series; a label that is not in the FACET still separates combinations.
+    3. Samples are not weighted: a series counts once however many samples it has.
+    """
+    return float(len({tuple(sorted(r.attrs.items())) for r in rows}))
+
+
 def _call(e: Expr, rows: list[Row], window: int) -> float | None:
     if e.name == "filter":
         return _call(e.args[0], [r for r in rows if _test(e.where, r)], window)
@@ -283,6 +300,8 @@ def _call(e: Expr, rows: list[Row], window: int) -> float | None:
     if not mine:
         return None
     vals = [r.value for r in mine]
+    if e.name == "cardinality":
+        return _cardinality(mine)
     if e.name == "count":
         return float(len(mine))
     if e.name == "latest":
@@ -328,6 +347,13 @@ def run_nrql(query: Query, data: list[Series], end: float, window: int) -> Vecto
         if got is not None:
             out[key] = got
     return out
+
+
+def run_nrql_buckets(
+    query: Query, data: list[Series], start: int, end: int, bucket: int
+) -> dict[int, Vector]:
+    """TIMESERIES: one Vector per bucket (t - bucket, t] for each bucket end t in (start, end]."""
+    return {t: run_nrql(query, data, t, bucket) for t in range(start + bucket, end + 1, bucket)}
 
 
 def facet_names(query: Query) -> list[str]:
