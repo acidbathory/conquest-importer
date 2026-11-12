@@ -94,6 +94,10 @@ N_VAR_NO_TAG = (
     "dashboard template variable has no tag key, so it cannot be a New Relic variable: "
     "${name} is replaced by its default ({default})"
 )
+N_VAR_RENAMED = (
+    "dashboard template variable {old} is named {new} in New Relic, which does not accept "
+    "characters such as '-' in a variable name (approximate: only the name changed)"
+)
 N_FORMATS = "number formats, conditional formats, markers and colours are not carried over"
 N_NOTE_SYNTAX = (
     "dashboard note text is copied as written; Datadog template variables, HTML and links in it "

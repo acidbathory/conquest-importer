@@ -385,11 +385,6 @@ def test_a_scope_variable_default_that_is_a_filter(tmp_path: Path) -> None:
             [{"name": "host", "prefix": "az bad", "default": "*"}],
             "tag cannot be written",
         ),
-        (
-            "avg:a.b{$we-ird}",
-            [{"name": "we-ird", "prefix": "host", "default": "*"}],
-            "dashboard template variable name",
-        ),
         ("avg:a.b{env:$host}", [HOST], "dashboard template variable stands for"),
         (
             "avg:a.b{$scope}",
@@ -406,6 +401,29 @@ def test_variable_forms_that_are_not_converted(
     assert item.reasons[0].lower().startswith(start.lower()), item.reasons
     assert d.variables == []
     assert steps_for(item.reasons)
+
+
+def test_a_variable_name_that_is_not_a_new_relic_name_is_renamed_and_says_so(
+    tmp_path: Path,
+) -> None:
+    v = {"name": "replica-set", "prefix": "replica_set", "default": "*"}
+    d, item, queries = one(tmp_path, ts("avg:a.b{$replica-set}"), variables=[v])
+    assert queries == [
+        "SELECT average(a.b) FROM Metric WHERE replica_set IN ({{replica_set}}) TIMESERIES AUTO"
+    ]
+    assert [x.name for x in d.variables] == ["replica_set"]
+    assert item.kind is WidgetKind.CHART
+    assert any("replica-set" in r and "replica_set" in r for r in item.reasons), item.reasons
+    nerdgraph_dashboard(d)
+
+
+def test_renamed_variables_that_would_collide_get_distinct_names(tmp_path: Path) -> None:
+    vs = [
+        {"name": "a-b", "prefix": "x", "default": "*"},
+        {"name": "a_b", "prefix": "y", "default": "*"},
+    ]
+    d = convert(tmp_path, [ts("avg:a.b{$a-b,$a_b}")], variables=vs)
+    assert len({x.name for x in d.variables}) == 2
 
 
 def test_a_variable_used_on_two_tags_is_refused(tmp_path: Path) -> None:
