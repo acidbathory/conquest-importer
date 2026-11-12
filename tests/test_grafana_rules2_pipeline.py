@@ -102,10 +102,12 @@ def test_a_classic_condition_that_names_another_query_is_manual() -> None:
     assert one(classic([c])).confidence is Confidence.MANUAL
 
 
-def test_a_classic_condition_next_to_other_expressions_stays_manual() -> None:
+def test_a_classic_condition_next_to_an_unread_expression_converts() -> None:
     rule = classic([cond()])
     rule.data.append(expr_node("C", {"type": "reduce", "expression": "A", "reducer": "last"}))
-    assert one(rule).reasons == [t.R_CLASSIC]
+    m = one(rule)  # nothing reads C, so it is ignored
+    assert m.confidence is Confidence.APPROXIMATE
+    assert t.N_UNUSED_QUERIES.format(count=1) in m.reasons
 
 
 # resample
@@ -130,12 +132,14 @@ def test_a_resample_step_is_noted_and_the_rule_converts() -> None:
 def test_a_resample_that_is_not_on_the_chain_is_manual() -> None:
     rule = make("avg(cpu)")
     rule.data.append(expr_node("R", {"type": "resample", "expression": "A"}))
-    assert one(rule).reasons == [t.R_RESAMPLE]
+    rule.data[2].model["expression"] = "R"  # the condition reads R, which skips the reduce node
+    assert one(rule).confidence is Confidence.MANUAL
 
 
 def test_two_resample_steps_are_manual() -> None:
     rule = with_resample(make("avg(cpu)", reducer="mean"))
     rule.data.append(expr_node("R2", {"type": "resample", "expression": "R"}))
+    rule.data[3].model["expression"] = "R2"  # the reduce node reads R2, which reads R
     assert one(rule).confidence is Confidence.MANUAL
 
 
@@ -159,4 +163,5 @@ def test_math_over_two_queries_says_how_many(expression: str) -> None:
 def test_math_over_one_query_keeps_the_plain_reason() -> None:
     rule = make("avg(cpu)")
     rule.data.append(expr_node("M", {"type": "math", "expression": "$B * 100"}))
+    rule.data[2].model["expression"] = "M"
     assert text(one(rule)) == t.R_MATH

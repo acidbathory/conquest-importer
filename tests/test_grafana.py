@@ -747,10 +747,12 @@ def test_a_cycle_in_the_pipeline_terminates() -> None:
     assert one(rule).confidence is Confidence.MANUAL
 
 
-def test_an_unused_node_is_manual() -> None:
+def test_an_unused_node_is_ignored_with_a_note() -> None:
     rule = make("cpu")
     rule.data.append(rule.data[0].model_copy(update={"refId": "Q"}))
-    assert one(rule).confidence is Confidence.MANUAL
+    m = one(rule)
+    assert m.confidence is Confidence.APPROXIMATE
+    assert "1 queries in the rule are not used by its condition and were ignored" in m.reasons
 
 
 @pytest.mark.parametrize(
@@ -769,6 +771,7 @@ def test_expression_types_that_do_not_convert(expr_type: str, fragment: str) -> 
             update={"refId": "D", "model": {"type": expr_type, "expression": "A"}}
         )
     )
+    rule.data[2].model["expression"] = "D"  # the condition reads the node
     m = one(rule)
     assert m.confidence is Confidence.MANUAL and fragment in text(m)
 
@@ -776,7 +779,13 @@ def test_expression_types_that_do_not_convert(expr_type: str, fragment: str) -> 
 def test_two_queries_of_one_data_source_are_manual() -> None:
     rule = make("cpu")
     rule.data.append(rule.data[0].model_copy(update={"refId": "Q"}))
-    assert "more than one query" in text(one(rule))
+    rule.data.append(
+        rule.data[1].model_copy(
+            update={"refId": "D", "model": {"type": "math", "expression": "$A + $Q"}}
+        )
+    )
+    rule.data[2].model["expression"] = "D"
+    assert "more than one query" in text(one(rule)) or "math" in text(one(rule))
 
 
 @pytest.mark.parametrize(

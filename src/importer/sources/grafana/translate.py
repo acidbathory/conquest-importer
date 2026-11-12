@@ -345,6 +345,7 @@ N_CLASSIC = (
     "the classic condition was read as a reduce and a threshold on its one query; a classic "
     "condition drops labels, so it may differ when the query returns several series"
 )
+N_UNUSED_QUERIES = "{count} queries in the rule are not used by its condition and were ignored"
 N_RESAMPLE = (
     "a resample step was ignored: New Relic sets the step with the aggregation window, so the "
     "values may differ"
@@ -845,7 +846,7 @@ def _classic(
     if reducer not in REDUCERS:
         raise Fail(R_REDUCER)
     evaluator = _mapping(test.get("evaluator"))
-    threshold = _make_threshold(evaluator.get("type"), evaluator.get("params"))
+    threshold = _make_threshold(evaluator.get("type"), evaluator.get("params"), classic=True)
     return query, reducer, threshold, [N_CLASSIC]
 
 
@@ -866,8 +867,49 @@ def _check_resample(node: GfNode, reducer: str) -> None:
         raise Fail(R_RESAMPLE_MODE)
 
 
+def _reads(node: GfNode) -> list[str]:
+    """The refIds that one server-side node takes its input from."""
+    kind = _expression_type(node)
+    if kind == "classic_conditions":
+        tests = node.model.get("conditions")
+        found = [
+            _mapping(_mapping(test).get("query")).get("params")
+            for test in (tests if isinstance(tests, list) else [])
+        ]
+        return [str(p[0]) for p in found if isinstance(p, list) and p]
+    if kind == "math":
+        return re.findall(r"\$\{?(\w+)\}?", str(node.model.get("expression", "")))
+    if kind in ("reduce", "threshold", "resample"):
+        return [str(node.model.get("expression"))]
+    return []
+
+
+def _drop_unread(rule: GrafanaRule) -> tuple[GrafanaRule, int]:
+    """The rule without the nodes its condition never reaches, and how many were dropped."""
+    nodes = {n.refId: n for n in rule.data}
+    reached: set[str] = set()
+    todo = [rule.condition]
+    while todo:
+        ref = todo.pop()
+        if ref in reached or ref not in nodes:
+            continue
+        reached.add(ref)
+        todo.extend(_reads(nodes[ref]))
+    kept = [n for n in rule.data if n.refId in reached]
+    if rule.condition not in nodes or len(kept) == len(rule.data):
+        return rule, 0
+    return rule.model_copy(update={"data": kept}), len(rule.data) - len(kept)
+
+
 def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, Threshold, bool, list[str]]:
     """Query, reducer, threshold, recovery flag and notes of the rule's pipeline."""
+    rule, unread = _drop_unread(rule)
+    note = [N_UNUSED_QUERIES.format(count=unread)] if unread else []
+    query, reducer, threshold, recovery, notes = _read_pipeline(rule)
+    return query, reducer, threshold, recovery, [*notes, *note]
+
+
+def _read_pipeline(rule: GrafanaRule) -> tuple[GfNode, str, Threshold, bool, list[str]]:
     _check_expressions(rule)
     nodes = {n.refId: n for n in rule.data}
     condition = nodes.get(rule.condition)
@@ -899,8 +941,21 @@ def _pipeline(rule: GrafanaRule) -> tuple[GfNode, str, Threshold, bool, list[str
     return step, reducer, threshold, recovery, notes
 
 
-def _make_threshold(kind: object, params: object) -> Threshold:
-    """The critical threshold for an evaluator type and its parameters."""
+def _make_threshold(kind: object, params: object, *, classic: bool = False) -> Threshold:
+    """The critical threshold for an evaluator type and its parameters.
+
+    Grafana's legacy-alert migration writes a classic gt or lt as [value, 0]; the second parameter
+    only matters for the range kinds, so a classic gt or lt reads the first."""
+    if (
+        classic
+        and kind in ("gt", "lt")
+        and isinstance(params, list)
+        and len(params) == 2
+        and params[1] == 0
+        and isinstance(params[1], int | float)
+        and not isinstance(params[1], bool)
+    ):
+        params = params[:1]
     if kind in RANGE_KINDS:
         raise Fail(R_RANGE)
     if not isinstance(kind, str) or kind not in OPERATORS:
