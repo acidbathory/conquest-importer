@@ -37,6 +37,7 @@ from importer.sources.grafana.translate import (
     N_ABSENT,
     N_COUNTER,
     N_COUNTER_EMPTY,
+    N_FACET_IDENTITY,
     N_METRIC,
     N_NEGATION,
     N_RATE_DIVISION,
@@ -147,11 +148,13 @@ def _in_name(masked: str, index: int) -> bool:
 # --- counters ---
 
 
-def _check_counter(operand: _Operand, ctx: Ctx) -> int:
-    """The range in seconds of a counter operand that converts; else raise the reason."""
-    if operand.aggregator is None:
+def _check_counter(operand: _Operand, ctx: Ctx, facet: bool = False) -> int:
+    """The range in seconds of a counter operand that converts; else raise the reason.
+
+    `facet`: a rate with no sum() may convert when the rule names the labels to group by."""
+    if operand.aggregator is None and not (facet and ctx.labels):
         raise Fail(R_COUNTER_UNAGG)
-    if operand.aggregator != "sum":
+    if operand.aggregator not in (None, "sum"):
         raise Fail(R_COUNTER_AGG.format(agg=operand.aggregator))
     if hinted_gauge(operand.name):
         raise Fail(R_RATE_OF_GAUGE)
@@ -190,7 +193,7 @@ def _counter_form(expr: str, ctx: Ctx) -> Built | None:
     operand = _operand(expr)
     if parts is None or parts[1] or operand is None or operand.function is None:
         return None
-    seconds = _check_counter(operand, ctx)
+    seconds = _check_counter(operand, ctx, facet=True)
     term = _term(operand.name)
     division: Expr | None = None
     notes = [N_METRIC, N_COUNTER]
@@ -200,12 +203,16 @@ def _counter_form(expr: str, ctx: Ctx) -> Built | None:
     notes += _counter_notes(ctx)
     if any(m.negate for m in operand.matches):
         notes.append(N_NEGATION)
+    group_by = list(operand.group_by)
+    if operand.aggregator is None:
+        group_by = list(ctx.labels)
+        notes.append(N_FACET_IDENTITY.format(labels=", ".join(group_by)))
     metric = MetricSignal(
         terms={"a": term},
         expression=division,
         aggregation=Aggregation.SUM,
         scope=[tag_filter(m) for m in operand.matches],
-        group_by=[nrql_attribute(g) for g in operand.group_by],
+        group_by=[nrql_attribute(g) for g in group_by],
     )
     return Built(SignalKind.METRIC, seconds, metric=metric, notes=notes)
 

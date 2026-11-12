@@ -353,6 +353,12 @@ N_ANY_SERIES = (
     "the rule fires when any series crosses the threshold; the maximum (or minimum) of all "
     "series over the window is used for that, so it may differ"
 )
+N_FACET_IDENTITY = (
+    "Prometheus tests each series on its own; the condition groups by {labels}, the labels the "
+    "rule's own message names, and each group is tested separately. Series that differ only in "
+    "other labels are merged into one group, which can hide a failing series, so check these "
+    "labels identify a series"
+)
 N_COUNTER_EMPTY = (
     "if no row arrives in a window the condition is not evaluated, so a counter that has "
     "stopped may not fire a below or equal test; use loss of signal for that, it may differ"
@@ -540,6 +546,7 @@ class Ctx:
     range_seconds: int | None  # relativeTimeRange.from, when it is a positive whole number
     threshold: Threshold | None = None  # the rule's own test, for forms that fix the value (absent)
     node: bool = True  # the rule has a threshold node (a Grafana rule); a rule-file rule has none
+    labels: tuple[str, ...] = ()  # series labels the rule's own message names (rule files only)
 
 
 # the dashboard planner imports these under their old names
@@ -998,7 +1005,9 @@ def _rule_file_plan(rule: GrafanaRule) -> _Plan:
     comparison = split_comparison(source)
     expr = comparison.query if comparison else source
     threshold = _make_threshold(comparison.operator, [comparison.value]) if comparison else None
-    return _Plan(kind, inferred, expr, Ctx("last", True, None, threshold, node=False), threshold)
+    labels = tuple(identity_labels(rule.annotations))
+    ctx = Ctx("last", True, None, threshold, node=False, labels=labels)
+    return _Plan(kind, inferred, expr, ctx, threshold)
 
 
 BOOL_COMPARISON = re.compile(
@@ -1157,14 +1166,36 @@ ANY_SERIES = {
 }
 
 
-def _any_series(metric: MetricSignal, threshold: Threshold) -> None:
-    """A rule-file test on a bare selector fires when any series crosses: max() or min()."""
+LABEL_REFERENCE = re.compile(r"\{\{[^{}]*?\$labels\.([A-Za-z_][A-Za-z0-9_]{0,63})\b(?![-.(\[])")
+MAX_IDENTITY_LABELS = 6
+
+
+def identity_labels(annotations: dict[str, Any]) -> list[str]:
+    """Plain label names the rule's own message refers to as `$labels.<name>`, in order."""
+    found: list[str] = []
+    for key in ("summary", "description"):
+        for name in LABEL_REFERENCE.findall(_text(annotations.get(key))):
+            if not name.startswith("__") and name not in found:
+                found.append(name)
+    return found[:MAX_IDENTITY_LABELS]
+
+
+def _any_series(metric: MetricSignal, threshold: Threshold, labels: list[str]) -> bool:
+    """A rule-file test on a bare selector fires when any series crosses: max() or min().
+
+    An equality test has no such extreme, so it groups by the labels the rule's message names
+    (returns True); with none it is refused.
+    """
     aggregation = ANY_SERIES.get(threshold.operator)
     if aggregation is None:
-        raise Fail(R_PER_SERIES_TEST)
+        if not labels:
+            raise Fail(R_PER_SERIES_TEST)
+        metric.group_by = [nrql_attribute(label) for label in labels]
+        return True
     metric.aggregation = aggregation
     for term in metric.terms.values():
         term.space_aggregation = aggregation
+    return False
 
 
 def _rule_notes(rule: GrafanaRule, plan: _Plan) -> list[str]:
@@ -1201,8 +1232,11 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
     if threshold is None:
         raise Fail(R_NO_COMPARISON)
     if (rule.expr or N_LONE_QUERY in plan.notes) and built.per_series and built.metric:
-        _any_series(built.metric, threshold)
-        built.notes.append(N_ANY_SERIES)
+        labels = identity_labels(rule.annotations)
+        if _any_series(built.metric, threshold, labels):
+            built.notes.append(N_FACET_IDENTITY.format(labels=", ".join(labels)))
+        else:
+            built.notes.append(N_ANY_SERIES)
     window, duration, window_notes = _windows(rule, built.window, built.minimum_duration)
     slide, slide_notes = _slide(rule, window) if built.slide_by else (None, [])
     window_notes += slide_notes
