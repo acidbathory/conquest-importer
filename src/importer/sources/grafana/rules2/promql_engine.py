@@ -22,6 +22,7 @@ Anything else returns None (or raises `Fail`) and the older refusal keeps its re
 """
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from importer.core.ir import (
@@ -414,10 +415,63 @@ def _read(expr: str) -> Node | None:
         return None
 
 
+def _constant(node: Node) -> float | None:
+    """The value of a tree of numbers joined by `*` and `/`, else None."""
+    node = _unwrap(node)
+    if isinstance(node, Number):
+        return float(node.text)
+    if isinstance(node, Binary) and node.op in ("*", "/") and node.matching is None:
+        left, right = _constant(node.lhs), _constant(node.rhs)
+        if left is None or right is None or (node.op == "/" and right == 0):
+            return None
+        return left * right if node.op == "*" else left / right
+    return None
+
+
+def _peel(node: Node) -> tuple[Node, float, Callable[[Node], Node]] | None:
+    """Split `x * 60`, `60 * x` or `x / 2` (and chains of them) into the operand x, the net
+    factor, and a function that puts the constants back around a new operand."""
+    node = _unwrap(node)
+    if not isinstance(node, Binary) or node.op not in ("*", "/") or node.bool_modifier:
+        return None
+    if node.matching is not None:
+        return None
+    left, right = _constant(node.lhs), _constant(node.rhs)
+    if right is not None and left is None:
+        inner = _peel(node.lhs)
+        core, factor, rebuild = inner if inner else (node.lhs, 1.0, lambda x: x)
+        by = right if node.op == "*" else 1 / right
+        return core, factor * by, lambda x: replace(node, lhs=rebuild(x))
+    if left is not None and right is None and node.op == "*":
+        inner = _peel(node.rhs)
+        core, factor, rebuild = inner if inner else (node.rhs, 1.0, lambda x: x)
+        return core, factor * left, lambda x: replace(node, rhs=rebuild(x))
+    return None
+
+
+def _hoist_constants(node: Node) -> Node:
+    """`sum(f(x) * 60)` is `sum(f(x)) * 60`: a constant factor leaves sum() and avg(), and min() or
+    max() when it is positive. Applied bottom-up, so nothing else in the tree changes."""
+    if isinstance(node, Paren):
+        return replace(node, expr=_hoist_constants(node.expr))
+    if isinstance(node, Unary):
+        return replace(node, expr=_hoist_constants(node.expr))
+    if isinstance(node, Binary):
+        return replace(node, lhs=_hoist_constants(node.lhs), rhs=_hoist_constants(node.rhs))
+    if isinstance(node, Aggregate) and node.param is None and node.op in GAUGE_AGGREGATORS:
+        peeled = _peel(node.expr)
+        if peeled is not None:
+            core, factor, rebuild = peeled
+            if factor > 0 or node.op in ("sum", "avg"):
+                return rebuild(replace(node, expr=core))
+    return node
+
+
 def _arith_form(expr: str, ctx: Ctx) -> Built | None:
     tree = _read(expr)
     if tree is None:
         return None
+    tree = _hoist_constants(tree)
     if variables_in(expr) or any(isinstance(n, Selector) and n.variables for n in walk(tree)):
         return None
     if isinstance(tree, (Number, Selector)) or (isinstance(tree, Aggregate) and tree.param):
