@@ -1024,3 +1024,44 @@ def test_a_formula_limit_on_an_arithmetic_formula_is_refused(tmp_path: Path) -> 
     _, item, _ = one(tmp_path, w)
     assert item.kind is WidgetKind.UNSUPPORTED
     assert "limit" in item.reasons[0]
+
+
+def log_limited_widget(limit: Any, group_by: Any, kind: str = "toplist") -> dict[str, Any]:
+    query: dict[str, Any] = {
+        "data_source": "logs",
+        "name": "query1",
+        "search": {"query": "status:error"},
+        "compute": {"aggregation": "count"},
+    }
+    if group_by is not None:
+        query["group_by"] = group_by
+    return widget(
+        kind,
+        requests=[{"queries": [query], "formulas": [{"formula": "query1", "limit": limit}]}],
+    )
+
+
+@pytest.mark.parametrize(
+    ("limit", "tail"),
+    [
+        ({"count": 5, "order": "desc"}, "FACET service LIMIT 5"),
+        ({"count": 4}, "FACET service LIMIT 4"),
+        ({"count": 3, "order": "asc"}, "FACET service ORDER BY count(*) ASC LIMIT 3"),
+    ],
+)
+def test_a_formula_limit_on_a_log_query_with_a_group_by(
+    tmp_path: Path, limit: dict[str, Any], tail: str
+) -> None:
+    w = log_limited_widget(limit, [{"facet": "service", "limit": 50}])
+    _, item, queries = one(tmp_path, w)
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert queries[0].endswith(tail)
+    assert "LIMIT 50" not in queries[0]
+    assert any("ranks the series" in n or "ranks" in n for n in item.reasons)
+    assert any("forwarded" in n for n in item.reasons)
+
+
+def test_a_formula_limit_on_a_log_query_without_a_group_by_is_refused(tmp_path: Path) -> None:
+    _, item, _ = one(tmp_path, log_limited_widget({"count": 5}, None))
+    assert item.kind is WidgetKind.UNSUPPORTED
+    assert "needs a group by" in item.reasons[0]

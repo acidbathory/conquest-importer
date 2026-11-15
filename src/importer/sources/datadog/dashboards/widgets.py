@@ -132,7 +132,7 @@ def _new_style(request: dict[str, Any]) -> list[Spec]:
         if not isinstance(text, str):
             raise Fail(DR.W_NO_QUERY)
         limit = _limit(f.get("limit")) if "limit" in f else None
-        if limit is not None and text not in texts:
+        if limit is not None and text not in texts and text not in logs:
             raise Fail(
                 DR.W_FORMULA_LIMIT.format(
                     why="is read only on a formula that names one metric query"
@@ -140,7 +140,9 @@ def _new_style(request: dict[str, Any]) -> list[Spec]:
             )
         if text in logs:  # a formula that only names its log query
             alias = f.get("alias")
-            out.append(Spec(log=logs[text], alias=alias if isinstance(alias, str) else None))
+            out.append(
+                Spec(log=logs[text], alias=alias if isinstance(alias, str) else None, limit=limit)
+            )
             continue
         for name in _NAME.findall(text):
             if name in sources and sources[name] != "metrics":
@@ -353,7 +355,9 @@ def _convert_all(
     for spec in specs:
         label = _label(spec, len(specs) > 1)
         if spec.log is not None:
-            one = convert_log(spec.log, timeseries, grouped, ctx.names, ctx.variables, seen)
+            one = convert_log(
+                spec.log, timeseries, grouped, ctx.names, ctx.variables, seen, spec.limit
+            )
         elif spec.formula:
             one = convert_formula(
                 spec.formula, spec.queries, time_aggr, timeseries, grouped, ctx.names,

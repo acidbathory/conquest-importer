@@ -62,9 +62,18 @@ def _select(compute: Any, names: NameMap, attrs: list[str]) -> str:
     return f"{MEASURES[aggregation]}({key})"
 
 
-def _facets(group_by: Any, names: NameMap, attrs: list[str]) -> tuple[str, bool, list[str]]:
-    """The FACET (and LIMIT) text, whether a limit was set, and any note."""
+def _facets(
+    group_by: Any,
+    names: NameMap,
+    attrs: list[str],
+    select: str,
+    ranked: tuple[int, str] | None,
+) -> tuple[str, bool, list[str]]:
+    """The FACET (and LIMIT) text, whether a limit was set, and any note. A formula limit
+    `ranked` (count, order) replaces the group by's own limit and sort."""
     if not group_by:
+        if ranked is not None:
+            raise Fail(DR.W_FORMULA_LIMIT.format(why="needs a group by to rank"))
         return "", False, []
     if not isinstance(group_by, list) or not all(isinstance(g, dict) for g in group_by):
         raise _fail("group by is not readable")
@@ -77,6 +86,11 @@ def _facets(group_by: Any, names: NameMap, attrs: list[str]) -> tuple[str, bool,
     attrs.extend(keys)
     notes: list[str] = []
     text = " FACET " + ", ".join(identifier(k) for k in keys)
+    if ranked is not None:
+        count, order = ranked
+        if order == "asc":
+            text += f" ORDER BY {select} ASC"
+        return text + f" LIMIT {count}", True, [DR.N_TOP]
     limit = group_by[0].get("limit")
     limited = isinstance(limit, int) and not isinstance(limit, bool) and 0 < limit <= MAX_LIMIT
     if limited:
@@ -145,10 +159,12 @@ def convert_log(
     names: NameMap,
     variables: dict[str, TemplateVar] | None = None,
     seen: dict[str, UsedVariable] | None = None,
+    ranked: tuple[int, str] | None = None,
 ) -> Converted:
-    """`grouped` is False for a single value, which cannot show groups."""
+    """`grouped` is False for a single value, which cannot show groups. `ranked` is a formula
+    limit: the top (desc) or bottom (asc) N groups."""
     try:
-        return _convert(query, timeseries, grouped, names, variables or {}, seen or {})
+        return _convert(query, timeseries, grouped, names, variables or {}, seen or {}, ranked)
     except Fail as fail:  # the monitor translator's reasons get the dashboard prefix
         if fail.reason.startswith(DR.W_LOGS.split("{")[0]):
             raise
@@ -164,6 +180,7 @@ def _convert(
     names: NameMap,
     variables: dict[str, TemplateVar],
     seen: dict[str, UsedVariable],
+    ranked: tuple[int, str] | None = None,
 ) -> Converted:
     search = query.get("search")
     text = search.get("query") if isinstance(search, dict) else None
@@ -179,7 +196,7 @@ def _convert(
     filters = search_filters(parsed.node, names)
     attrs = [f.key for f in filters]
     select = _select(query.get("compute"), names, attrs)
-    facet, limited, notes = _facets(query.get("group_by"), names, attrs)
+    facet, limited, notes = _facets(query.get("group_by"), names, attrs, select, ranked)
     if facet and not grouped:
         raise _fail("a single value cannot show groups")
     nrql = f"SELECT {select} FROM Log"  # noqa: S608 - constant select and event names
