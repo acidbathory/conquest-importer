@@ -21,6 +21,7 @@ W_FORMULA = "dashboard widget uses a formula over its queries, which is not conv
 W_FORMULA_FUNC = (
     "dashboard widget uses a formula with the function {name}(), which has no single-SELECT form"
 )
+W_FORMULA_LIMIT = "dashboard widget uses a formula with a limit that {why}"
 W_FORMULA_NAME = "dashboard widget uses a formula that names a query that does not exist: {name}"
 W_FORMULA_UNREADABLE = "dashboard widget uses a formula that could not be read: {why}"
 W_FORMULA_GROUP = (
