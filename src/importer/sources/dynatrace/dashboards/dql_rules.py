@@ -237,7 +237,7 @@ def _option(option: Scanned, function: str, a: Analysis) -> None:
         return
     key, value = named.group(1).lower(), named.group(2).strip()
     if key == "scalar":
-        a.block(r.SCALAR)
+        a.draft(r.D_SCALAR)
     elif key == "rate":
         a.draft(r.D_RATE if RATE_VALUE.match(value) else r.D_OPTION)
     else:

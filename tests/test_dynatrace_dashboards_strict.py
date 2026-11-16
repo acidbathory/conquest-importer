@@ -32,7 +32,7 @@ def classify(query: str) -> tuple[Verdict, list[str]]:
         ("timeseries avg(cpu), union: true", Verdict.MANUAL, reasons.PARAMETER),
         ("timeseries avg(m, rate: 1m)", Verdict.DRAFT, reasons.D_RATE),
         ("timeseries avg(m, rate: weird)", Verdict.DRAFT, reasons.D_OPTION),
-        ("timeseries avg(m, scalar: true)", Verdict.MANUAL, reasons.SCALAR),
+        ("timeseries avg(m, scalar: true)", Verdict.DRAFT, reasons.D_SCALAR),
         ("timeseries sum(m, default: 0)", Verdict.DRAFT, reasons.D_OPTION),
         ("timeseries avg(m, 5)", Verdict.MANUAL, reasons.AGGREGATION),
         ("timeseries percentile(m, 95)", Verdict.EXACT, None),
@@ -196,3 +196,18 @@ def test_many_operands_collect_variables_in_linear_time() -> None:
     started = time.monotonic()
     a = analyse(query)
     assert time.monotonic() - started < 2.0 and len(a.variables) == 4000
+
+
+def test_a_builder_scalar_companion_is_read_as_a_presentation_hint() -> None:
+    with_scalar = analyse("timeseries { sum(m), value.A = avg(m, scalar: true) }, by: { h }")
+    without = analyse("timeseries { sum(m) }, by: { h }")
+    assert without.metrics == ["m"]
+    assert with_scalar.metrics == without.metrics
+    assert with_scalar.blockers == []
+    assert with_scalar.drafts == [reasons.D_SCALAR]
+
+
+def test_scalar_does_not_hide_another_blocker() -> None:
+    a = analyse("timeseries { sum(m), value.A = avg(m, scalar: true) }, shift: -1h")
+    assert reasons.SHIFT in a.blockers
+    assert reasons.D_SCALAR not in a.blockers

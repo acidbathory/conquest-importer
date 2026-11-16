@@ -31,7 +31,6 @@ AGGREGATION = f"{QUERY} an aggregation has no NRQL function"
 COMMAND = f"{QUERY} the query uses a command the planner does not read"
 PARAMETER = f"{QUERY} the query uses a timeseries option the planner does not read"
 LIMIT = f"{QUERY} the limit is neither a number nor a dashboard variable"
-SCALAR = f"{QUERY} the query asks for a single value (the scalar option) instead of a series"
 REORDER = (
     f"{QUERY} a command after limit would run before the limit in NRQL, which has a fixed order"
 )
@@ -68,6 +67,11 @@ D_TIMEFRAME = (
     f"{NOTE} a time range written in the query was dropped; the dashboard time picker applies"
 )
 D_RATE = f"{NOTE} the rate option becomes rate() over the same interval; the result is unverified"
+D_SCALAR = (
+    f"{NOTE} the builder's scalar flag was read as a presentation hint: the series is kept; "
+    "for a single value or table tile, one aggregated number per group needs a query "
+    "without TIMESERIES"
+)
 D_OPTION = f"{NOTE} an option of an aggregation (such as default) was dropped"
 D_MATCH = (
     f"{NOTE} matchesValue, contains, startsWith and endsWith differ from LIKE in case and wildcard "
@@ -122,7 +126,6 @@ BLOCKERS = (
     COMMAND,
     PARAMETER,
     LIMIT,
-    SCALAR,
     REORDER,
     SORT_EXPR,
     TILE_VIZ,
@@ -145,6 +148,7 @@ NOTES = (
     D_TIMEFRAME,
     D_RATE,
     D_OPTION,
+    D_SCALAR,
     D_MATCH,
     D_SORT_SERIES,
     D_TILE_TIMEFRAME,
