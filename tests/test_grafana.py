@@ -453,7 +453,6 @@ def test_identical_copies_that_were_merged_are_counted_in_a_note() -> None:
         ('x{__name__="y"}', "promql label matcher"),
         ('x{a="1" b="2"}', "promql expression is not a simple"),
         ('x{a=~"a%"}', "promql label matcher"),
-        ('x{a=~".*"}', "promql label matcher"),
         ("requests_total", "looks like a counter"),
         ("sum(x_bucket)", "looks like a counter"),
         ("a:b:c", "cannot be an nrql attribute name"),

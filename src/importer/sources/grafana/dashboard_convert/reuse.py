@@ -79,7 +79,7 @@ def selector(inner: str, fail: str) -> tuple[str, str]:
 def prom_conditions(body: str, fail: str) -> list[Cond]:
     """Label matchers of a metric selector, in the forms the alert translator reads."""
     try:
-        found = parse_matchers(body, PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True)
+        found = parse_matchers(body, PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True, loose=False)
     except _Fail:
         raise Unconvertible(fail) from None
     return [Cond(m.key, m.kind, m.values, m.negate) for m in found]
