@@ -553,3 +553,55 @@ def test_a_dropdown_parameter_in_a_query_is_not_guessed() -> None:
     w = only(wb(params(time_param(), pick), query(q)))
     assert w.kind is WidgetKind.UNSUPPORTED and "{Pick}" in w.reasons[0]
     assert steps_for(w.reasons)
+
+
+def test_repeated_dropdown_values_are_merged_keeping_the_first_label(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake(q: str, variables: Any) -> KqlNrql:
+        return KqlNrql(
+            nrql="SELECT count(*) FROM Log WHERE host IN ({{Pick}})", variables=("Pick",)
+        )
+
+    monkeypatch.setattr(dashboard_kql, "translate_kql", fake)
+    options = [
+        {"value": "a", "label": "First A"},
+        {"value": "b", "label": "B"},
+        {"value": "a", "label": "Second A"},
+        {"value": "a", "label": "Third A"},
+    ]
+    d = wb(
+        params({"name": "Pick", "type": 2, "jsonData": json.dumps(options)}),
+        query("data | where host == '{Pick}'"),
+    )
+    (var,) = d.variables
+    assert [(i.value, i.title) for i in var.items] == [("a", "First A"), ("b", "B")]
+    assert "2 duplicate dropdown values were merged" in d.reasons
+    assert d.confidence is Confidence.APPROXIMATE
+
+
+def test_a_workbook_that_cannot_be_translated_becomes_one_unsupported_entry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from importer.sources.azure import dashboards
+
+    real = translate_workbook
+
+    def flaky(dash: AzureDashboard) -> IRDashboard:
+        if dash.key == "bad" and dash.content is not None:
+            raise ValueError("boom " + "x" * 500)
+        return real(dash)
+
+    monkeypatch.setattr(dashboards, "translate_workbook", flaky)
+    content = {"version": "Notebook/1.0", "items": [text()]}
+    made = [
+        AzureDashboard(kind="workbook", key=k, name=k, content=content) for k in ("a", "bad", "c")
+    ]
+    out = dashboards.translate_dashboards(made)
+    assert [d.source_key for d in out] == ["a", "bad", "c"]
+    bad = out[1]
+    assert bad.confidence is Confidence.MANUAL
+    assert len(bad.widgets) == 1 and bad.widgets[0].kind is WidgetKind.UNSUPPORTED
+    assert bad.reasons[0].startswith("workbook content could not be read")
+    assert "boom" in bad.reasons[0] and len(bad.reasons[0]) < 300
+    assert out[0].widgets[0].kind is not WidgetKind.UNSUPPORTED
