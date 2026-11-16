@@ -5,9 +5,15 @@ Threshold values in the IR are already in New Relic units (metric scale applied)
 """
 
 from enum import StrEnum
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Self
 
-from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_serializer
+from pydantic import (
+    BaseModel,
+    Field,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 
 class Confidence(StrEnum):
@@ -57,6 +63,13 @@ class FilterBase(BaseModel):
     negate: bool = False  # != , NOT IN or NOT LIKE instead of = , IN or LIKE
     wildcard: bool = False  # value contains * which becomes a LIKE match
     values: list[str] = []  # when set, the match is IN (values) and `value` is ignored
+    regex: bool = False  # value is an RE2 pattern matched in full (RLIKE); not with wildcard/values
+
+    @model_validator(mode="after")
+    def _regex_is_exclusive(self) -> Self:
+        if self.regex and (self.wildcard or self.values):
+            raise ValueError("regex cannot be combined with wildcard or values")
+        return self
 
 
 class TagFilter(FilterBase):
@@ -67,7 +80,12 @@ class TagFilter(FilterBase):
     def _omit_defaults(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
         """Saved IR keeps its old shape: the match fields appear only when they are used."""
         data: dict[str, Any] = handler(self)
-        for name, default in (("negate", False), ("wildcard", False), ("values", [])):
+        for name, default in (
+            ("negate", False),
+            ("wildcard", False),
+            ("values", []),
+            ("regex", False),
+        ):
             if data.get(name) == default:
                 data.pop(name, None)
         return data
@@ -146,6 +164,8 @@ class CountFilter(FilterBase):
         data: dict[str, Any] = handler(self)
         if data.get("compare") is None:
             data.pop("compare", None)
+        if data.get("regex") is False:
+            data.pop("regex", None)
         return data
 
 

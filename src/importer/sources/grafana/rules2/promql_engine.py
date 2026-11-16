@@ -85,6 +85,7 @@ from importer.sources.grafana.translate import (
     looked_back,
     nrql_attribute,
     parse_matchers,
+    regex_notes,
     register_prom_fallback,
     tag_filter,
     time_window,
@@ -537,6 +538,7 @@ def _arith_form(expr: str, ctx: Ctx) -> Built | None:
         notes.append(N_ARITH_SCOPE)
     if any(m.negate for leaf in leaves for m in leaf.matches):
         notes.append(N_NEGATION)
+    notes += regex_notes(m for leaf in leaves for m in leaf.matches)
     group_by = list(first.group_by)
     per_series = first.aggregator is None
     if per_series:
