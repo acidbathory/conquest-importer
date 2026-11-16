@@ -111,7 +111,8 @@ class Param:
     query_type: int | None
     multi: bool
     types: list[str]
-    options: list[tuple[str, str]]  # a static list: (value, label)
+    options: list[tuple[str, str]]  # a static list: (value, label), values unique
+    merged: int = 0  # repeated option values dropped (the first one and its label are kept)
 
 
 @dataclass
@@ -163,8 +164,12 @@ def _items(content: dict[str, Any]) -> list[dict[str, Any]]:
 # -- parameters ----------------------------------------------------------------------------------
 
 
-def _static_options(param: dict[str, Any]) -> list[tuple[str, str]]:
-    """The fixed list of a dropdown: `jsonData`, or a JSON-provider query holding an array."""
+def _static_options(param: dict[str, Any]) -> tuple[list[tuple[str, str]], int]:
+    """The fixed list of a dropdown: `jsonData`, or a JSON-provider query holding an array.
+
+    A value that repeats (after the cut to 200 characters a variable item keeps) is dropped; the
+    first one and its label stay. Also returns how many were dropped.
+    """
     raw = param.get("jsonData")
     if not isinstance(raw, str) and param.get("queryType") == JSON_QUERY:
         try:
@@ -175,13 +180,19 @@ def _static_options(param: dict[str, Any]) -> list[tuple[str, str]]:
         rows = json.loads(raw) if isinstance(raw, str) else []
     except (ValueError, RecursionError):
         rows = []
-    options = []
+    options: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    merged = 0
     for row in _list(rows):
         fields = _dict(row)
         value = fields.get("value", fields.get("id"))
         if isinstance(value, str) and value and "{" not in value:
+            if value[:200] in seen:
+                merged += 1
+                continue
+            seen.add(value[:200])
             options.append((value, _str(fields.get("label")) or value))
-    return options[:200]
+    return options[:200], merged
 
 
 def _read_param(raw: object) -> Param | None:
@@ -190,6 +201,7 @@ def _read_param(raw: object) -> Param | None:
     if not name:
         return None
     types = _dict(_dict(p.get("typeSettings")).get("resourceTypeFilter"))
+    options, merged = _static_options(p)
     return Param(
         name=name,
         label=_str(p.get("label")) or name,
@@ -198,7 +210,8 @@ def _read_param(raw: object) -> Param | None:
         query_type=_int(p.get("queryType")),
         multi=bool(p.get("multiSelect")),
         types=[t for t in types if isinstance(t, str)],
-        options=_static_options(p),
+        options=options,
+        merged=merged,
     )
 
 
@@ -660,6 +673,9 @@ def translate_workbook(dash: AzureDashboard) -> IRDashboard:
     widgets, dropped = _cap(state.widgets)
     variables = [state.variables[n] for n in sorted(state.used) if n in state.variables]
     reasons = [DR.N_LAYOUT, *dash.notes, *sorted(state.notes)]
+    merged = sum(state.params[n].merged for n in state.used if n in state.variables)
+    if merged:
+        reasons.append(f"{merged} duplicate dropdown values were merged")
     converted = [w for w in widgets if w.kind is not WidgetKind.UNSUPPORTED]
     if not widgets:
         confidence, reasons = Confidence.UNSUPPORTED, [DR.NO_ITEMS]
