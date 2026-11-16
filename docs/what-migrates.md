@@ -342,10 +342,12 @@ the plans say what could be, with what confidence, and what a person must do. Re
   events, entities, Smartscape, Davis) is marked "no New Relic data source"; `cloud.aws.*` and
   `cloud.azure.*` metrics are not, because the research lists documented counterparts. Variables
   are classed the same way, and a default of `*` (or a UUID and `*`) is read as select-all. On the
-  four ready-made Dynatrace dashboards in the fixtures it gives 59 data tiles: 5 exact, 21 draft,
-  33 manual; 34 markdown tiles; 18 variables: 1 exact, 4 draft, 13 manual. The earlier, more
-  optimistic reading gave 10, 22 and 27; the five tiles that moved to manual all use
-  `scalar: true`. All 5 exact tiles read Dynatrace security events, which New Relic does not have.
+  four ready-made Dynatrace dashboards in the fixtures it gives 59 data tiles: 5 exact, 27 draft,
+  27 manual; 34 markdown tiles; 18 variables: 1 exact, 4 draft, 13 manual. Tiles that use the tile
+  builder's `scalar: true` option (a single value instead of a series) are drafts: the series is
+  kept and the note says that one number per group needs a query without TIMESERIES. They were
+  manual in an earlier, stricter reading. On 38 public Gen3 dashboards this moved 20 tiles from
+  manual to draft. All 5 exact tiles read Dynatrace security events, which New Relic does not have.
   Exact copies of a dashboard (same content, any name or id) are read once and listed.
 - **Classic dashboards:** markdown and header tiles convert; metric charts are manual until a
   metric name map exists; every other tile type and every management zone filter is manual.
@@ -845,6 +847,11 @@ never counted as converted.
 | Portal metrics chart part (`MetricsChartPart`, `MonitorChartPart`) | Chart over `Metric` | Approximate |
 | Portal logs part | NRQL through the KQL translator | Placeholder until connected |
 | Resource cards, health, maps, video, buttons | None | Placeholder |
+
+A dropdown parameter that repeats a value is merged (the first value and its label are kept) and the
+dashboard says so. A workbook that cannot be translated becomes one manual entry with the reason, and
+the rest of the folder still converts; before, one such workbook (about 3% of public workbooks)
+stopped the whole run.
 
 The live `Microsoft.Portal/dashboards` API answered 502 for every version on the owner's
 subscription. `extract-azure --dashboards` then reports it as "not available" and still writes the
