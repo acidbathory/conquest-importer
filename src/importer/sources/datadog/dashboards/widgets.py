@@ -59,7 +59,19 @@ OTHER_SOURCES = {
     "profile_metrics_query": "profiles",
 }
 # keys of a formula that only change how the value is shown; any other key changes the value
-FORMULA_KEYS = {"formula", "alias", "number_format", "cell_display_mode", "conditional_formats"}
+FORMULA_KEYS = {
+    "formula",
+    "alias",
+    "number_format",
+    "cell_display_mode",
+    "conditional_formats",
+    "style",
+    "limit",
+}
+# a formula key that is read for its value (top or bottom N) and is not a display setting
+FORMULA_VALUE_KEYS = {"formula", "alias", "limit"}
+LIMIT_MAX = 5000
+SPACE_AGGR = re.compile(r"\s*(avg|sum|min|max):")
 SYNTAX_MARKS = ("{{", "<", "$")
 
 
@@ -85,6 +97,7 @@ class Spec:
     queries: dict[str, str] = field(default_factory=dict)
     alias: str | None = None
     log: dict[str, Any] | None = None  # a data_source "logs" query, converted by logs_query
+    limit: tuple[int, str] | None = None  # top or bottom N series: (count, "desc" or "asc")
 
 
 MAX_SPECS = 12
@@ -118,9 +131,18 @@ def _new_style(request: dict[str, Any]) -> list[Spec]:
             raise Fail(DR.W_FORMULA)
         if not isinstance(text, str):
             raise Fail(DR.W_NO_QUERY)
+        limit = _limit(f.get("limit")) if "limit" in f else None
+        if limit is not None and text not in texts and text not in logs:
+            raise Fail(
+                DR.W_FORMULA_LIMIT.format(
+                    why="is read only on a formula that names one metric query"
+                )
+            )
         if text in logs:  # a formula that only names its log query
             alias = f.get("alias")
-            out.append(Spec(log=logs[text], alias=alias if isinstance(alias, str) else None))
+            out.append(
+                Spec(log=logs[text], alias=alias if isinstance(alias, str) else None, limit=limit)
+            )
             continue
         for name in _NAME.findall(text):
             if name in sources and sources[name] != "metrics":
@@ -128,10 +150,32 @@ def _new_style(request: dict[str, Any]) -> list[Spec]:
         alias = f.get("alias")
         label = alias if isinstance(alias, str) else None
         if text in texts:  # a formula that only names its query
-            out.append(Spec(text=texts[text], alias=label))
+            out.append(Spec(text=texts[text], alias=label, limit=limit))
         else:
             out.append(Spec(formula=text, queries=texts, alias=label))
     return out
+
+
+def _limit(value: Any) -> tuple[int, str]:
+    """`{count, order}` of a formula limit, or Fail with what is wrong."""
+    if not isinstance(value, dict) or set(value) - {"count", "order"}:
+        raise Fail(DR.W_FORMULA_LIMIT.format(why="is not a count and an order"))
+    count, order = value.get("count"), value.get("order", "desc")
+    if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= LIMIT_MAX:
+        raise Fail(DR.W_FORMULA_LIMIT.format(why=f"has no whole count from 1 to {LIMIT_MAX}"))
+    if order not in ("asc", "desc"):
+        raise Fail(DR.W_FORMULA_LIMIT.format(why="has an order that is not asc or desc"))
+    return count, str(order)
+
+
+def _ranked(spec: Spec) -> str:
+    """The query text of a limited series, written as top(), which ranks by its own aggregate."""
+    if spec.limit is None:
+        return spec.text
+    count, order = spec.limit
+    found = SPACE_AGGR.match(spec.text)
+    by = {"avg": "mean"}.get(found[1], found[1]) if found else "mean"
+    return f"top({spec.text}, {count}, '{by}', '{order}')"
 
 
 def _no_query() -> list[Spec]:
@@ -189,7 +233,7 @@ def _display_notes(definition: dict[str, Any], request: dict[str, Any]) -> list[
     if isinstance(span, str):
         notes.append(DR.N_LIVE_SPAN.format(span=shown(span, 20)))
     formulas = _dicts(request.get("formulas"))
-    shown_differently = any(set(f) - {"formula", "alias"} for f in formulas)
+    shown_differently = any(set(f) - FORMULA_VALUE_KEYS for f in formulas)
     if request.get("conditional_formats") or definition.get("markers") or shown_differently:
         notes.append(DR.N_FORMATS)
     return notes
@@ -311,7 +355,9 @@ def _convert_all(
     for spec in specs:
         label = _label(spec, len(specs) > 1)
         if spec.log is not None:
-            one = convert_log(spec.log, timeseries, grouped, ctx.names, ctx.variables, seen)
+            one = convert_log(
+                spec.log, timeseries, grouped, ctx.names, ctx.variables, seen, spec.limit
+            )
         elif spec.formula:
             one = convert_formula(
                 spec.formula, spec.queries, time_aggr, timeseries, grouped, ctx.names,
@@ -319,7 +365,7 @@ def _convert_all(
             )  # fmt: skip
         else:
             one = convert_series(
-                spec.text, time_aggr, timeseries, grouped, ctx.names, ctx.variables, seen, label
+                _ranked(spec), time_aggr, timeseries, grouped, ctx.names, ctx.variables, seen, label
             )
         seen.update(one.variables)
         done.append(one)

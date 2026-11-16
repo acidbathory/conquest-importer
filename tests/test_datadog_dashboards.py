@@ -874,7 +874,7 @@ def test_a_query_value_with_a_function_still_converts(tmp_path: Path) -> None:
 def test_the_real_dashboards_measure_is_pinned() -> None:
     """Data widgets exclude notes. Before this converter nothing converted (0 of 454)."""
     m = measure(DASHBOARD_REGISTRY["datadog"].convert(REAL))
-    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 286, 168)
+    assert (m.dashboards, m.data_widgets, m.converted, m.placeholders) == (30, 454, 288, 166)
     assert (m.notes, m.note_placeholders) == (62, 0)
     assert m.converted + m.placeholders == m.data_widgets
     assert sum(m.by_reason.values()) == m.placeholders
@@ -933,3 +933,135 @@ def test_a_treemap_without_a_group_is_a_placeholder(tmp_path: Path) -> None:
     w = formula_widget("query1", ["avg:a.b{*}"], kind="treemap")
     _, item, _ = one(tmp_path, w)
     assert item.kind is WidgetKind.UNSUPPORTED
+
+
+def limited_widget(formula: dict[str, Any], query: str, kind: str = "timeseries") -> dict[str, Any]:
+    return widget(
+        kind,
+        requests=[
+            {
+                "queries": [{"data_source": "metrics", "name": "query1", "query": query}],
+                "formulas": [{"formula": "query1", **formula}],
+            }
+        ],
+    )
+
+
+def test_a_formula_style_is_carried_as_not_carried_over(tmp_path: Path) -> None:
+    w = limited_widget({"style": {"palette": "warm", "line_width": "thick"}}, "avg:a.b{*} by {h}")
+    _, item, queries = one(tmp_path, w)
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert queries == ["SELECT average(a.b) FROM Metric FACET h TIMESERIES AUTO"]
+    assert any("not carried over" in n for n in item.reasons)
+
+
+@pytest.mark.parametrize(
+    ("limit", "query", "nrql"),
+    [
+        (
+            {"count": 5, "order": "desc"},
+            "avg:a.b{*} by {h}",
+            "SELECT average(a.b) FROM Metric FACET h LIMIT 5 TIMESERIES AUTO",
+        ),
+        (
+            {"count": 3},
+            "max:a.b{*} by {h}",
+            "SELECT max(a.b) FROM Metric FACET h LIMIT 3 TIMESERIES AUTO",
+        ),
+        (
+            {"count": 10, "order": "asc"},
+            "avg:a.b{*} by {h}",
+            "SELECT average(a.b) FROM Metric FACET h ORDER BY average(a.b) ASC LIMIT 10 "
+            "TIMESERIES AUTO",
+        ),
+    ],
+)
+def test_a_formula_limit_is_a_facet_limit(
+    tmp_path: Path, limit: dict[str, Any], query: str, nrql: str
+) -> None:
+    _, item, queries = one(tmp_path, limited_widget({"limit": limit}, query))
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert queries == [nrql]
+    assert any("ranks the series over" in n or "ranks" in n for n in item.reasons)
+
+
+def test_a_formula_limit_on_a_toplist(tmp_path: Path) -> None:
+    w = limited_widget(
+        {"limit": {"count": 7, "order": "desc"}, "style": {}}, "sum:a.b{*} by {h}", "toplist"
+    )
+    _, item, queries = one(tmp_path, w)
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert " FACET h " in queries[0]
+    assert queries[0].endswith("LIMIT 7")
+
+
+@pytest.mark.parametrize(
+    "limit",
+    [
+        {"count": 0},
+        {"count": "5"},
+        {"count": 5, "order": "sideways"},
+        {"order": "desc"},
+        [5],
+        {"count": 5, "x": 1},
+    ],
+)
+def test_a_formula_limit_that_cannot_be_read_is_refused(tmp_path: Path, limit: Any) -> None:
+    _, item, _ = one(tmp_path, limited_widget({"limit": limit}, "avg:a.b{*} by {h}"))
+    assert item.kind is WidgetKind.UNSUPPORTED
+    assert "limit" in item.reasons[0]
+
+
+def test_a_formula_limit_without_a_group_by_is_refused(tmp_path: Path) -> None:
+    _, item, _ = one(tmp_path, limited_widget({"limit": {"count": 5}}, "avg:a.b{*}"))
+    assert item.kind is WidgetKind.UNSUPPORTED
+    assert "needs a group by" in item.reasons[0]
+
+
+def test_a_formula_limit_on_an_arithmetic_formula_is_refused(tmp_path: Path) -> None:
+    w = formula_widget("query1 / query2", ["sum:a.b{*} by {h}", "sum:a.c{*} by {h}"])
+    w["definition"]["requests"][0]["formulas"][0]["limit"] = {"count": 5}
+    _, item, _ = one(tmp_path, w)
+    assert item.kind is WidgetKind.UNSUPPORTED
+    assert "limit" in item.reasons[0]
+
+
+def log_limited_widget(limit: Any, group_by: Any, kind: str = "toplist") -> dict[str, Any]:
+    query: dict[str, Any] = {
+        "data_source": "logs",
+        "name": "query1",
+        "search": {"query": "status:error"},
+        "compute": {"aggregation": "count"},
+    }
+    if group_by is not None:
+        query["group_by"] = group_by
+    return widget(
+        kind,
+        requests=[{"queries": [query], "formulas": [{"formula": "query1", "limit": limit}]}],
+    )
+
+
+@pytest.mark.parametrize(
+    ("limit", "tail"),
+    [
+        ({"count": 5, "order": "desc"}, "FACET service LIMIT 5"),
+        ({"count": 4}, "FACET service LIMIT 4"),
+        ({"count": 3, "order": "asc"}, "FACET service ORDER BY count(*) ASC LIMIT 3"),
+    ],
+)
+def test_a_formula_limit_on_a_log_query_with_a_group_by(
+    tmp_path: Path, limit: dict[str, Any], tail: str
+) -> None:
+    w = log_limited_widget(limit, [{"facet": "service", "limit": 50}])
+    _, item, queries = one(tmp_path, w)
+    assert item.kind is WidgetKind.CHART, item.reasons
+    assert queries[0].endswith(tail)
+    assert "LIMIT 50" not in queries[0]
+    assert any("ranks the series" in n or "ranks" in n for n in item.reasons)
+    assert any("forwarded" in n for n in item.reasons)
+
+
+def test_a_formula_limit_on_a_log_query_without_a_group_by_is_refused(tmp_path: Path) -> None:
+    _, item, _ = one(tmp_path, log_limited_widget({"count": 5}, None))
+    assert item.kind is WidgetKind.UNSUPPORTED
+    assert "needs a group by" in item.reasons[0]
