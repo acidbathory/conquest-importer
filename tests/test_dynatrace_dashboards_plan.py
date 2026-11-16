@@ -20,10 +20,10 @@ from importer.sources.dynatrace.dashboards.tiles import layout_plan
 FIXTURES = Path(__file__).parent / "fixtures" / "dynatrace-dashboards"
 # stem -> data tiles, exact, draft, manual, markdown
 TILE_COUNTS = {
-    "aws-firehose": (8, 0, 5, 3, 4),
+    "aws-firehose": (8, 0, 6, 2, 4),
     "azure-app-service-plan": (19, 0, 14, 5, 8),
     "host-vulnerability": (22, 5, 2, 15, 15),
-    "kubernetes-statistics": (10, 0, 0, 10, 7),
+    "kubernetes-statistics": (10, 0, 5, 5, 7),
 }
 EXACT = {
     "aws-firehose": set(),
@@ -32,7 +32,7 @@ EXACT = {
     "kubernetes-statistics": set(),
 }
 DRAFT = {
-    "aws-firehose": {"1", "3", "4", "5", "6"},
+    "aws-firehose": {"1", "3", "4", "5", "6", "14"},
     "azure-app-service-plan": {
         *(f"kpi-{k}" for k in ("cpu", "memory", "disk-queue", "http-queue")),
         *(f"chart-{c}" for c in ("cpu", "memory", "disk-queue", "http-queue", "bytes-in")),
@@ -40,7 +40,7 @@ DRAFT = {
         *(f"chart-{c}" for c in ("socket-overview", "socket-outbound")),
     },
     "host-vulnerability": {"2", "58"},
-    "kubernetes-statistics": set(),
+    "kubernetes-statistics": {"1", "4", "5", "6", "8"},
 }
 # stem -> variables exact, draft, manual
 VARIABLE_COUNTS = {
@@ -73,7 +73,7 @@ def test_each_real_dashboard_reproduces_the_research_counts(
 def test_the_four_dashboards_total_93_tiles_and_18_variables() -> None:
     plans = platform_plans()
     t = plans.totals
-    assert (t.data, t.exact, t.draft, t.manual, t.markdown) == (59, 5, 21, 33, 34)
+    assert (t.data, t.exact, t.draft, t.manual, t.markdown) == (59, 5, 27, 27, 34)
     assert t.data + t.markdown == 93 and not any(d.unreadable_tiles for d in plans.dashboards)
     assert (t.variables_exact, t.variables_draft, t.variables_manual) == (1, 4, 13)
 

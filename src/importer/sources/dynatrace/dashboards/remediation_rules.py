@@ -160,14 +160,6 @@ _TABLE: list[tuple[str, str, list[str]]] = [
         ],
     ),
     (
-        r.SCALAR,
-        "Dashboard query asks for a scalar",
-        [
-            "The scalar option returns one number per group, used to rank or colour. Write an "
-            "NRQL query without TIMESERIES (a plain aggregation with FACET) for that value.",
-        ],
-    ),
-    (
         r.REORDER,
         "Dashboard command after limit",
         [
@@ -284,6 +276,14 @@ _TABLE: list[tuple[str, str, list[str]]] = [
         r.D_RATE,
         "Rate option mapped to rate()",
         ["Check that the metric is a counter in New Relic. " + REVIEW],
+    ),
+    (
+        r.D_SCALAR,
+        "Builder scalar flag read as a presentation hint",
+        [
+            "The series is kept. If the tile is a single value or a table that should show one "
+            "number per group, write the NRQL query without TIMESERIES. " + REVIEW,
+        ],
     ),
     (
         r.D_OPTION,
