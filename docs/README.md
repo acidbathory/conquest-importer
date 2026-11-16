@@ -18,3 +18,4 @@
 **Contributing and design**
 - [Intermediate format](ir-spec.md), [Threat model](threat-model.md)
 - [Help us make progress](user/contribute.md): the four things that would move coverage most
+- [Research notes](research/): per-vendor source inspections with pinned commits, the New Relic capability audit, ingestion-path rules, PromQL prior art and message-template findings (facts only, public sources)

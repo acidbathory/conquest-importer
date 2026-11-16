@@ -18,6 +18,44 @@ and missing-data rules are approximated, so every conversion carries that caveat
 If New Relic refuses to create something, the report counts it as not migrated and shows New
 Relic's reason, even though the conversion itself succeeded.
 
+## What "converted" does not prove
+
+A converted item is a query we believe is correct. It is not proof that the data arrives or that the
+numbers match. Three things can still make a converted item return nothing or the wrong thing:
+
+- **The data may not reach New Relic under the name we wrote.** Google Cloud: in a public sample only
+  about 26% of converted widgets and 20% of converted alerts read metrics New Relic's Google integration
+  collects natively; the rest need the Ops Agent, OpenTelemetry or Prometheus remote write, and only
+  Workload Identity Federation was verified. Azure, Datadog and Dynatrace names have never been seen in
+  stored data (Dynatrace has no documented route into New Relic at all). AWS names follow a documented
+  rule and some are confirmed on live streams; the `.byX` suffixes the docs call retired still appear.
+- **The ingestion path changes the shape of the data.** Documented in New Relic's docs and not yet
+  tested live: a Prometheus histogram sent over OTLP is stored as one distribution metric under its base
+  name, with no `_bucket`, `_count` or `_sum` series, so `bucketPercentile(x_bucket, ...)` and
+  `rate(x_count)` return nothing on that path (remote write keeps the series). The histogram bucket
+  label is documented as `histogram.bucket.le`, not `le`. Remote write stores `_sum` as type
+  `summary`, and the docs do not say whether it is a delta. A counter without `_total` is a count when
+  scraped by `nri-prometheus` but a gauge on remote write, and we model only remote write. Datadog count
+  and rate types sent through the OpenTelemetry receiver become a non-monotonic delta sum, which New
+  Relic documents as not supported, so they are probably dropped.
+- **Query semantics differ.** New Relic converts counters to deltas, so `rate` and `increase` on the
+  wrong metric type give wrong answers (we refuse `rate` on gauges for that reason). New Relic's own
+  PromQL translation looks back 1 minute for an instant query, not the 5 minutes Prometheus uses. A
+  `sum` over series of a gauge is written as `average(x) * cardinality(x)` for dashboards (approximate;
+  see below), and `cardinality()` is not supported in alert conditions. A converted faceted condition
+  raises one violation per facet, where a Grafana classic condition gives one instance.
+
+New Relic cannot do these at all, so they stay manual: joins and set operators between series, subqueries
+and `COMPARE WITH` in alert conditions (nested aggregation over a faceted inner query is allowed in
+conditions and not yet used), `label_replace`, and percentile statistics from CloudWatch Metric Streams
+unless the stream is configured for them. Alert text is not carried yet: summaries, descriptions and
+rule labels are read from the source and dropped, and every converted condition says only "Imported from
+<source>".
+
+Run `importer validate` and the `check-*-data` commands against a New Relic account that receives your
+data before trusting any converted item. Public-sample percentages are in the
+[research notes](research/); none is a customer result.
+
 ## Alarms
 
 An alarm migrates when it meets all of these:
