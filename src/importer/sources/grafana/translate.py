@@ -146,6 +146,24 @@ R_COUNTER_AGG = (
 R_COUNTER_REDUCER = (
     "promql counter rate reduced over time by {reducer}; only the last value converts"
 )
+R_EXTREME_TEST = (
+    "promql counter rate reduced over time by {reducer} with an equality test; only an above or "
+    "below test converts"
+)
+R_EXTREME_RANGE = (
+    "promql counter rate reduced over time by {reducer}, but the rule's query range is missing or "
+    "not a whole number of minutes"
+)
+R_EXTREME_PENDING = (
+    "promql counter rate reduced over time by {reducer} converts to at-least-once occurrences "
+    "over the query range, and the pending period of {seconds}s is longer than that range, which "
+    "would need the breach to repeat"
+)
+N_EXTREME = (
+    "Grafana reduces the rate over its range with {reducer}; New Relic evaluates each aggregation "
+    "window and uses occurrences {occurrences} over the same duration; the rate window is "
+    "smoothed differently"
+)
 R_COUNTER_RANGE = (
     "promql counter range of {seconds}s is not a whole number of minutes, so it cannot be one "
     "New Relic aggregation window"
@@ -726,11 +744,30 @@ class Built:
     silence_seconds: int = 0  # how long a heartbeat is silent before the pending period
     per_series: bool = False  # a bare selector: Prometheus tests each series on its own
     slide_by: bool = False  # a range function: the window slides by the evaluation interval
+    occurrences: Occurrences = Occurrences.ALL  # max or min over the range: at least once or all
 
 
 def looked_back(ctx: Ctx) -> str:
     """The reducer that really applies: an instant query has one point, so it is `last`."""
     return "last" if ctx.instant else ctx.reducer
+
+
+def extreme_plan(ctx: Ctx, reducer: str) -> tuple[Occurrences, int, str]:
+    """Occurrences, the range (the threshold duration) and the note for a max or min reducer.
+
+    The extreme of the values over the range passes an above bound when one value does (max) or
+    all do (min); a below bound is the reverse. An equality test has no such reading."""
+    threshold = ctx.threshold
+    if threshold is None or threshold.operator in (Operator.EQUALS, Operator.NOT_EQUALS):
+        raise Fail(R_EXTREME_TEST.format(reducer=reducer))
+    seconds = ctx.range_seconds
+    if seconds is None or seconds < 60 or seconds % 60:
+        raise Fail(R_EXTREME_RANGE.format(reducer=reducer))
+    above = threshold.operator in (Operator.ABOVE, Operator.ABOVE_OR_EQUALS)
+    once = (reducer == "max") == above
+    occurrences = Occurrences.AT_LEAST_ONCE if once else Occurrences.ALL
+    note = N_EXTREME.format(reducer=reducer, occurrences=occurrences.value.upper())
+    return occurrences, seconds, note
 
 
 # Query forms beyond the plain selector (counters, ratios, absent). Each returns None when the
@@ -1444,6 +1481,8 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
             built.notes.append(N_FACET_IDENTITY.format(labels=", ".join(labels)))
         else:
             built.notes.append(N_ANY_SERIES)
+    if built.occurrences is Occurrences.AT_LEAST_ONCE and rule.for_seconds > built.minimum_duration:
+        raise Fail(R_EXTREME_PENDING.format(reducer=plan.ctx.reducer, seconds=rule.for_seconds))
     window, duration, window_notes = _windows(rule, built.window, built.minimum_duration)
     slide, slide_notes = _slide(rule, window) if built.slide_by else (None, [])
     window_notes += slide_notes
@@ -1469,7 +1508,7 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
         raw_query=monitor.name,
         window_seconds=duration,
         aggregation_window_seconds=window,
-        occurrences=Occurrences.ALL,
+        occurrences=built.occurrences,
         metric=built.metric,
         count=built.count,
         heartbeat=built.heartbeat,
