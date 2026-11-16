@@ -62,9 +62,10 @@ NRQL_READ = (
     "query($accountId: Int!, $nrql: Nrql!) { actor { account(id: $accountId) {"
     " nrql(query: $nrql) { results } } } }"
 )
-CONDITION_DELETE = (
-    "mutation($accountId: Int!, $id: ID!) {"
-    " alertsNrqlConditionDelete(accountId: $accountId, id: $id) { id } }"
+LEFTOVERS = (
+    "query($a: Int!) { actor { account(id: $a) { alerts {"
+    ' nrqlConditionsSearch(searchCriteria: {queryLike: "ckg-cap"}) { nrqlConditions { id name } }'
+    ' policiesSearch(searchCriteria: {name: "ckg-cap-policy"}) { policies { id } } } } } }'
 )
 POLICY_DELETE = (
     "mutation($accountId: Int!, $id: ID!) { alertsPolicyDelete(accountId: $accountId, id: $id) {"
@@ -458,27 +459,42 @@ def apply(client: NewRelicClient, account_id: int) -> None:
 
 
 def cleanup(client: NewRelicClient, account_id: int) -> None:
+    """Delete the dashboard and the policy (deleting a policy removes its conditions: seen live),
+    then search for leftovers. The manifest is kept unless the search comes back clean."""
     if not MANIFEST.exists():
         raise SystemExit("no manifest: nothing recorded to delete")
     manifest = json.loads(MANIFEST.read_text())
     if manifest.get("account") != account_id:
         raise SystemExit("the manifest belongs to another account; refusing")
-    for c in manifest["conditions"]:
-        if not c["name"].startswith(PREFIX):
-            raise SystemExit(f"refusing to delete a non-probe object: {c['name']}")
-        ok, data = attempt(client, CONDITION_DELETE, {"accountId": account_id, "id": c["id"]}, True)
-        print(f"delete condition {c['name']}: {'ok' if ok else data}")
+    for item in [*manifest["conditions"], *manifest["dashboards"]]:
+        if not item["name"].startswith(PREFIX):
+            raise SystemExit(f"refusing to delete a non-probe object: {item['name']}")
+    clean = True
     for d in manifest["dashboards"]:
-        if not d["name"].startswith(PREFIX):
-            raise SystemExit(f"refusing to delete a non-probe object: {d['name']}")
         ok, data = attempt(client, DASHBOARD_DELETE, {"guid": d["guid"]}, True)
         print(f"delete dashboard {d['name']}: {'ok' if ok else data}")
+        clean = clean and ok
     if manifest.get("policy"):
         ok, data = attempt(
             client, POLICY_DELETE, {"accountId": account_id, "id": manifest["policy"]}, True
         )
-        print(f"delete policy {POLICY_NAME}: {'ok' if ok else data}")
-    MANIFEST.unlink()
+        print(f"delete policy {POLICY_NAME} (and its conditions): {'ok' if ok else data}")
+        clean = clean and ok
+    ok, data = attempt(client, LEFTOVERS, {"a": account_id}, False)
+    if ok:
+        alerts = data["actor"]["account"]["alerts"]
+        left = alerts["nrqlConditionsSearch"]["nrqlConditions"]
+        pols = alerts["policiesSearch"]["policies"]
+        print(f"leftover {PREFIX} conditions: {len(left)}; policies: {len(pols)}")
+        clean = clean and not left and not pols
+    else:
+        print(f"could not check for leftovers: {data}")
+        clean = False
+    if clean:
+        MANIFEST.unlink()
+        print("cleanup complete; manifest removed")
+    else:
+        print("cleanup NOT complete; manifest kept so it can be run again")
 
 
 def main() -> None:
