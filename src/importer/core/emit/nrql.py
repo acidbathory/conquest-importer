@@ -133,8 +133,15 @@ def _compare_clause(attr: str, f: CountFilter) -> str | None:
     return None
 
 
+MAX_PATTERN = 500
+
+
 def _match_clause(attr: str, f: FilterBase) -> str:
     """One WHERE term for a filter; `attr` is already a validated identifier."""
+    if f.regex:
+        if len(f.value) > MAX_PATTERN or "\0" in f.value:
+            raise ValueError("a regex pattern is limited to 500 characters and cannot hold a NUL")
+        return f"{attr} {'NOT RLIKE' if f.negate else 'RLIKE'} {quote_string(f.value)}"
     if f.values:
         items = ", ".join(quote_string(v) for v in f.values)
         return f"{attr} {'NOT IN' if f.negate else 'IN'} ({items})"

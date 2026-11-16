@@ -43,6 +43,7 @@ from importer.sources.grafana.translate import (
     N_RATE_DIVISION,
     N_RATE_SAMPLES,
     N_RATIO_ZERO,
+    N_REGEX,
     PROM_COUNTER,
     PROM_MATCHER,
     PROM_NOT_SIMPLE,
@@ -203,6 +204,8 @@ def _counter_form(expr: str, ctx: Ctx) -> Built | None:
     notes += _counter_notes(ctx)
     if any(m.negate for m in operand.matches):
         notes.append(N_NEGATION)
+    if any(m.regex for m in operand.matches):
+        notes.append(N_REGEX)
     group_by = list(operand.group_by)
     if operand.aggregator is None:
         group_by = list(ctx.labels)
@@ -291,6 +294,8 @@ def _ratio_form(expr: str, ctx: Ctx) -> Built | None:
     notes = [N_METRIC, *notes, N_RATIO_ZERO]
     if any(m.negate for m in left.matches):
         notes.append(N_NEGATION)
+    if any(m.regex for m in left.matches):
+        notes.append(N_REGEX)
     return Built(SignalKind.METRIC, fixed, metric=metric, notes=notes)
 
 
@@ -329,6 +334,8 @@ def _absent_form(expr: str, ctx: Ctx) -> Built | None:
     notes = [N_METRIC, N_ABSENT]
     if any(m.negate for m in matches):
         notes.append(N_NEGATION)
+    if any(m.regex for m in matches):
+        notes.append(N_REGEX)
     return Built(
         SignalKind.HEARTBEAT,
         None,

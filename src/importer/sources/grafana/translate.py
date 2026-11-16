@@ -16,7 +16,7 @@ so every conversion is approximate and says so.
 
 import math
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -243,6 +243,10 @@ N_DOT_LITERAL = (
     "a . in a label matcher regex matches any character; it was read as a literal dot, so a "
     "series whose value differs only at that character no longer matches"
 )
+N_REGEX = (
+    "regular expression matched in full with RLIKE; a missing label is NULL in New Relic, not "
+    "an empty string; not yet checked against data"
+)
 N_LAST = (
     "Grafana takes the last sample of each series; New Relic averages the samples in each "
     "window, which differs from it"
@@ -411,6 +415,7 @@ class Match:
     values: tuple[str, ...]
     negate: bool = False
     dots: bool = False  # a bare . in a word was read as a literal dot (a regex dot is any char)
+    regex: bool = False  # kind "like"/"eq" does not apply: values[0] is an RE2 pattern (RLIKE)
 
 
 def _unescape(value: str) -> str:
@@ -468,6 +473,64 @@ def _regex_loose(value: str, fail: str) -> tuple[str, tuple[str, ...], bool]:
     raise Fail(fail)
 
 
+MAX_PATTERN = 500
+_REPEAT = re.compile(r"\{\d{1,3}(?:,\d{0,3})?\}")
+_VARIABLE = re.compile(r"\$[A-Za-z0-9_{\[(]|\[\[")
+_SAFE_ESCAPES = frozenset("dDwWsS")
+
+
+def _re2_pattern(value: str) -> bool:
+    """True when `value` is a regex that Prometheus (RE2) and New Relic RLIKE read the same way
+    and that cannot match the empty string (a missing label is "" in Prometheus, NULL here).
+
+    A conservative whitelist: groups only as (...) or (?:...), escapes only of punctuation or
+    d D w W s S, repeats only as {n}, {n,} or {n,m}, no lookaround, flags, backreferences,
+    possessive quantifiers, POSIX classes, variables or non-ASCII text."""
+    if not value or len(value) > MAX_PATTERN or not value.isascii() or "%" in value:
+        return False
+    if _VARIABLE.search(value) or "[:" in value:
+        return False
+    in_class = False
+    i = 0
+    while i < len(value):
+        c = value[i]
+        if c == "\\":
+            nxt = value[i + 1 : i + 2]
+            if not nxt or (nxt.isalnum() and nxt not in _SAFE_ESCAPES):
+                return False
+            i += 2
+            continue
+        if in_class:
+            in_class = c != "]"
+        elif c == "[":
+            in_class = True
+            if value[i + 1 : i + 2] == "]" or value[i + 1 : i + 3] == "^]":
+                return False  # a leading ] means different things in Python and RE2
+        elif c == "(" and value[i + 1 : i + 2] == "?" and value[i + 1 : i + 3] != "?:":
+            return False  # flags, lookaround, atomic groups, named groups
+        elif c == "{":
+            found = _REPEAT.match(value, i)
+            if not found or value[found.end() : found.end() + 1] == "+":
+                return False
+            i = found.end() - 1
+        elif c in "*+?}" and value[i + 1 : i + 2] == "+":
+            return False  # possessive quantifier
+        i += 1
+    if in_class:
+        return False
+    try:
+        compiled = re.compile(value)
+    except (re.error, RecursionError, OverflowError):
+        return False
+    return compiled.fullmatch("") is None
+
+
+def _regex_match(key: str, value: str, negate: bool, fail: str) -> list[Match]:
+    if not _re2_pattern(value):
+        raise Fail(fail)
+    return [Match(key, "regex", (value,), negate=negate, regex=True)]
+
+
 def _match(
     key: str, op: str, value: str, fail: str, *, absent_ok: bool, loose: bool
 ) -> list[Match]:
@@ -500,7 +563,10 @@ def _match(
             raise Fail(fail)
         kind, values, dots = _regex_loose("|".join(words), fail)
         return [Match(key, kind, values, negate=True, dots=dots), Match(key, "absent", (), True)]
-    kind, values, dots = _regex_loose(value, fail)
+    try:
+        kind, values, dots = _regex_loose(value, fail)
+    except Fail:
+        return _regex_match(key, value, negate, fail)
     return [Match(key, kind, values, negate=negate, dots=dots)]
 
 
@@ -526,7 +592,14 @@ def matcher_notes(matches: list[Match]) -> list[str]:
     notes = [N_NEGATION] if any(m.negate for m in matches) else []
     if any(m.dots for m in matches):
         notes.append(N_DOT_LITERAL)
+    if any(m.regex for m in matches):
+        notes.append(N_REGEX)
     return notes
+
+
+def regex_notes(matches: Iterable[Match]) -> list[str]:
+    """The regex note, once, when any matcher became an RLIKE filter."""
+    return [N_REGEX] if any(m.regex for m in matches) else []
 
 
 def tag_filter(m: Match) -> TagFilter:
@@ -536,13 +609,17 @@ def tag_filter(m: Match) -> TagFilter:
         return TagFilter(key=m.key, absent=True, negate=m.negate)
     if m.kind == "in":
         return TagFilter(key=m.key, values=list(m.values), negate=m.negate)
-    return TagFilter(key=m.key, value=m.values[0], negate=m.negate, wildcard=m.kind == "like")
+    return TagFilter(
+        key=m.key, value=m.values[0], negate=m.negate, wildcard=m.kind == "like", regex=m.regex
+    )
 
 
 def _count_filter(m: Match) -> CountFilter:
     if m.kind == "in":
         return CountFilter(key=m.key, value="", values=list(m.values), negate=m.negate)
-    return CountFilter(key=m.key, value=m.values[0], negate=m.negate, wildcard=m.kind == "like")
+    return CountFilter(
+        key=m.key, value=m.values[0], negate=m.negate, wildcard=m.kind == "like", regex=m.regex
+    )
 
 
 # --- shared parsing helpers ---
