@@ -25,6 +25,7 @@ from importer.core.ir import (
     MetricTerm,
     NrTarget,
     Num,
+    Occurrences,
     Operator,
     Ref,
     Severity,
@@ -67,6 +68,7 @@ from importer.sources.grafana.translate import (
     Ctx,
     Fail,
     Match,
+    extreme_plan,
     looked_back,
     nrql_attribute,
     parse_matchers,
@@ -165,12 +167,22 @@ def _check_counter(operand: _Operand, ctx: Ctx, facet: bool = False) -> int:
     if not operand.name.endswith(COUNT_SUFFIXES):
         raise Fail(R_COUNTER_NAME)
     reducer = looked_back(ctx)
-    if reducer != "last":
+    if reducer not in ("last", "max", "min"):
         raise Fail(R_COUNTER_REDUCER.format(reducer=reducer))
     seconds = operand.seconds or 0
     if seconds < MIN_RANGE or seconds % 60:
         raise Fail(R_COUNTER_RANGE.format(seconds=seconds))
     return seconds
+
+
+def _extremes(ctx: Ctx) -> tuple[Occurrences, int, list[str]]:
+    """Occurrences, minimum threshold duration and notes for the reducer: max and min over the
+    rule's range become occurrences over that range; last needs nothing."""
+    reducer = looked_back(ctx)
+    if reducer not in ("max", "min"):
+        return Occurrences.ALL, 0, []
+    occurrences, seconds, note = extreme_plan(ctx, reducer)
+    return occurrences, seconds, [note]
 
 
 def _counter_notes(ctx: Ctx) -> list[str]:
@@ -205,6 +217,8 @@ def _counter_form(expr: str, ctx: Ctx) -> Built | None:
         division = BinOp(op="/", left=Ref(name="a"), right=Num(value=float(seconds)))
         notes.append(N_RATE_DIVISION.format(seconds=seconds))
     notes += _counter_notes(ctx)
+    occurrences, minimum, extreme_notes = _extremes(ctx)
+    notes += extreme_notes
     if any(m.negate for m in operand.matches):
         notes.append(N_NEGATION)
     if any(m.regex for m in operand.matches):
@@ -220,7 +234,14 @@ def _counter_form(expr: str, ctx: Ctx) -> Built | None:
         scope=[tag_filter(m) for m in operand.matches],
         group_by=[nrql_attribute(g) for g in group_by],
     )
-    return Built(SignalKind.METRIC, seconds, metric=metric, notes=notes)
+    return Built(
+        SignalKind.METRIC,
+        seconds,
+        metric=metric,
+        notes=notes,
+        minimum_duration=minimum,
+        occurrences=occurrences,
+    )
 
 
 # --- ratios ---
@@ -299,7 +320,16 @@ def _ratio_form(expr: str, ctx: Ctx) -> Built | None:
         notes.append(N_NEGATION)
     if any(m.regex for m in left.matches):
         notes.append(N_REGEX)
-    return Built(SignalKind.METRIC, fixed, metric=metric, notes=notes)
+    occurrences, minimum, extreme_notes = _extremes(ctx)
+    notes += extreme_notes
+    return Built(
+        SignalKind.METRIC,
+        fixed,
+        metric=metric,
+        notes=notes,
+        minimum_duration=minimum,
+        occurrences=occurrences,
+    )
 
 
 # --- absence ---
@@ -467,7 +497,7 @@ def _histogram_form(expr: str, ctx: Ctx) -> Built | None:
     if not MIN_PERCENT <= percent <= MAX_PERCENT:
         raise Fail(R_HIST_QUANTILE)
     reducer = looked_back(ctx)
-    if reducer != "last":
+    if reducer not in ("last", "max", "min"):
         raise Fail(R_COUNTER_REDUCER.format(reducer=reducer))
     threshold = None
     if factor is not None:
@@ -493,7 +523,17 @@ def _histogram_form(expr: str, ctx: Ctx) -> Built | None:
     if any(m.negate for m in matches):
         notes.append(N_NEGATION)
     notes.append(N_HIST_UNCHECKED)
-    return Built(SignalKind.METRIC, None, metric=metric, notes=notes, threshold=threshold)
+    occurrences, minimum, extreme_notes = _extremes(ctx)
+    notes += extreme_notes
+    return Built(
+        SignalKind.METRIC,
+        None,
+        metric=metric,
+        notes=notes,
+        threshold=threshold,
+        minimum_duration=minimum,
+        occurrences=occurrences,
+    )
 
 
 for _form in (_absent_form, _counter_form, _ratio_form, _histogram_form):

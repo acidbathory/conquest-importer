@@ -33,6 +33,7 @@ from importer.core.ir import (
     MetricTerm,
     NrTarget,
     Num,
+    Occurrences,
     Operator,
     Ref,
     SignalKind,
@@ -82,6 +83,7 @@ from importer.sources.grafana.translate import (
     Ctx,
     Fail,
     Match,
+    extreme_plan,
     looked_back,
     nrql_attribute,
     parse_matchers,
@@ -382,8 +384,10 @@ def _shared_matches(leaves: list[Leaf]) -> tuple[Match, ...]:
 
 
 def _check_counter_window(seconds: int, ctx: Ctx, *, mean_ok: bool = False) -> None:
-    if looked_back(ctx) not in ("last", "mean") or (looked_back(ctx) == "mean" and not mean_ok):
-        raise Fail(R_COUNTER_REDUCER.format(reducer=looked_back(ctx)))
+    reducer = looked_back(ctx)
+    allowed = ("last", "mean", "max", "min") if mean_ok else ("last",)  # only a counter has more
+    if reducer not in allowed:
+        raise Fail(R_COUNTER_REDUCER.format(reducer=reducer))
     if seconds < MIN_RANGE or seconds % 60:
         raise Fail(PROM_NOT_SIMPLE)
 
@@ -400,6 +404,14 @@ def _mean_range(leaves: list[Leaf], ctx: Ctx) -> int | None:
     if span is None or span % 60 or span < seconds:
         raise Fail(R_COUNTER_REDUCER.format(reducer="mean"))
     return span
+
+
+def _extremes(first: Leaf, ctx: Ctx) -> tuple[Occurrences, int, list[str]]:
+    """Occurrences, minimum duration and notes of a max or min over the range of a counter."""
+    if first.kind != "counter" or looked_back(ctx) not in ("max", "min"):
+        return Occurrences.ALL, 0, []
+    occurrences, seconds, note = extreme_plan(ctx, looked_back(ctx))
+    return occurrences, seconds, [note]
 
 
 def _window_plan(leaves: list[Leaf], ctx: Ctx) -> tuple[Aggregation, int | None, bool, list[str]]:
@@ -519,6 +531,8 @@ def _arith_form(expr: str, ctx: Ctx) -> Built | None:
         raise Fail(R_MIX)
     first = leaves[0]
     aggregation, fixed, slide, notes = _window_plan(leaves, ctx)
+    occurrences, minimum, extreme_notes = _extremes(first, ctx)
+    notes += extreme_notes
     if first.kind == "counter" and fixed != first.seconds:  # a mean over the rule's range
         leaves = [
             replace(leaf, seconds=fixed)
@@ -556,7 +570,14 @@ def _arith_form(expr: str, ctx: Ctx) -> Built | None:
         group_by=[nrql_attribute(g) for g in group_by],
     )
     return Built(
-        SignalKind.METRIC, fixed, metric=metric, notes=notes, per_series=per_series, slide_by=slide
+        SignalKind.METRIC,
+        fixed,
+        metric=metric,
+        notes=notes,
+        per_series=per_series,
+        slide_by=slide,
+        minimum_duration=minimum,
+        occurrences=occurrences,
     )
 
 
