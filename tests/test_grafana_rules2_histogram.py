@@ -105,11 +105,12 @@ def test_everything_else_stays_refused(expr: str) -> None:
     assert "interpolates" not in text(m)
 
 
-def test_a_reducer_that_looks_back_is_refused() -> None:
+def test_a_mean_of_a_percentile_is_refused() -> None:
+    # a mean of per-step percentiles is not the percentile of the window; max and min convert
     m = one(
         make(
             "histogram_quantile(0.95, sum(rate(demo_latency_bucket[5m])) by (le))",
-            reducer="max",
+            reducer="mean",
         )
     )
     assert m.confidence is Confidence.MANUAL

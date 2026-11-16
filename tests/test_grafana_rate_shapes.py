@@ -85,10 +85,13 @@ def test_the_mean_of_a_ratio_of_counters_is_the_ratio_of_totals() -> None:
     assert evaluate(nrql_for(m), rows) == {(): 5.0}
 
 
-def test_max_and_min_of_a_counter_stay_manual() -> None:
-    for reducer in ("max", "min", "sum"):
+def test_max_and_min_of_a_counter_convert_and_sum_stays_manual() -> None:
+    # max and min become threshold occurrences (see test_grafana_rules2_extremes.py)
+    for reducer in ("max", "min"):
         m = one(make("sum(rate(orders_total[1m]))", reducer=reducer, time_range=600, params=[5]))
-        assert m.confidence is Confidence.MANUAL, reducer
+        assert m.confidence is Confidence.APPROXIMATE, reducer
+    m = one(make("sum(rate(orders_total[1m]))", reducer="sum", time_range=600, params=[5]))
+    assert m.confidence is Confidence.MANUAL
 
 
 def test_a_mean_without_a_whole_minute_range_stays_manual() -> None:

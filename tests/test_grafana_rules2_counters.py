@@ -87,9 +87,10 @@ def test_only_sum_of_a_rate_converts(agg: str) -> None:
     assert m.reasons == [t.R_COUNTER_AGG.format(agg=agg)]
 
 
-def test_a_reducer_that_looks_back_over_the_rate_series_is_manual() -> None:
-    m = one(make("sum(rate(x_total[5m]))", reducer="max"))
-    assert m.reasons == [t.R_COUNTER_REDUCER.format(reducer="max")]
+def test_a_sum_over_the_rate_series_is_manual() -> None:
+    # max and min convert as threshold occurrences; a sum over time has no New Relic form
+    m = one(make("sum(rate(x_total[5m]))", reducer="sum"))
+    assert m.reasons == [t.R_COUNTER_REDUCER.format(reducer="sum")]
 
 
 @pytest.mark.parametrize("window", ["30s", "90s", "2m30s"])

@@ -15,9 +15,12 @@ rest.
 
 ## Supported sources
 
+What changed recently is in the [changelog](CHANGELOG.md). Conversion shares by vendor, measured on public sample
+content, are in [what migrates](docs/what-migrates.md); none is a customer result.
+
 | Source | State | Tested live | Not proven |
 |---|---|---|---|
-| [Grafana](docs/user/runbook-grafana.md) | Early. Alert rules on plain Prometheus selectors and Loki `count_over_time` convert; many dashboards convert in part | An alert firing test and metric round trips in a sandbox | Notifications (offline plans only), customer data |
+| [Grafana](docs/user/runbook-grafana.md) | Early. Alert rules on Prometheus selectors (including regular expressions, counter rates and `histogram_quantile`) and Loki `count_over_time` convert; many dashboards convert in part | An alert firing test, metric round trips, and a data round for the NRQL forms (regex, nested sums, `bucketPercentile`) in a sandbox | Notifications (offline plans only), OTLP-sent histograms, customer data |
 | [Dynatrace](docs/user/runbook-dynatrace.md) | Least proven. Scheduled DQL log-count workflows convert; Davis problem workflows, SLOs and dashboards are plans with manual steps | A read-only check of one Platform tenant; test objects created and removed in a sandbox | Any converted item firing in New Relic; no automatic data path |
 | [AWS CloudWatch](docs/user/runbook-aws-cloudwatch.md) | Most tested. Alarms, dashboards, SNS notifications, Metric Streams Terraform | A real AWS account, end to end with data | Metric names outside the verified list |
 | [Google Cloud Monitoring](docs/user/runbook-gcp.md) | Alert policies and dashboards convert | A sandbox project, including the data link | VM CPU data does not arrive; no firing test |
