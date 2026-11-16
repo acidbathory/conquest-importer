@@ -34,6 +34,7 @@ NRQL_FUNCTIONS = {
     Aggregation.SUM: "sum",
     Aggregation.COUNT: "count",
     Aggregation.STDDEV: "stddev",
+    Aggregation.BUCKET_PERCENTILE: "bucketPercentile",
 }
 COUNT_EVENTS = {SignalKind.LOG: "Log", SignalKind.APM: "Transaction"}
 PRECEDENCE = {"+": 1, "-": 1, "*": 2, "/": 2}
@@ -93,11 +94,27 @@ def _target_sql(target: NrTarget, func: str) -> str:
     return f"{func}({identifier(target.attribute)})"
 
 
+def _plain_number(value: float) -> str:
+    """A whole number without a decimal point, anything else as its shortest exact text."""
+    return str(int(value)) if value.is_integer() else repr(float(value))
+
+
+def _bucket_percentile_sql(term: MetricTerm) -> str:
+    """bucketPercentile(<attribute>, <percentile>); only typed fields reach the text."""
+    if term.nr_target is None or term.nr_target.attribute is None or term.percentile is None:
+        raise ValueError("a bucket percentile term needs an attribute and a percentile")
+    name = identifier(term.nr_target.attribute)
+    return f"bucketPercentile({name}, {_plain_number(term.percentile)})"
+
+
 def _term_sql(term: MetricTerm, func: str) -> str:
     """The term's aggregate; a term with its own scope is wrapped in filter(..., WHERE ...)."""
     if term.nr_target is None:
         raise ValueError("term has no New Relic target")
-    select = _target_sql(term.nr_target, func)
+    if term.space_aggregation is Aggregation.BUCKET_PERCENTILE:
+        select = _bucket_percentile_sql(term)
+    else:
+        select = _target_sql(term.nr_target, func)
     if not term.scope:
         return select
     return f"filter({select}, WHERE " + " AND ".join(_tag_clause(f) for f in term.scope) + ")"
