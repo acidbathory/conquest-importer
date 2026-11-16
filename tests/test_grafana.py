@@ -19,6 +19,8 @@ CONVERTED = {
     "ckg-loki-errors",
     "ckg-expr-keeplast-nodata",
     "ckg-prom-absent",
+    "ckg-prom-5xx-rate",  # a regular expression matcher, now a regex filter
+    "ckg-prom-p95",  # histogram_quantile, now bucketPercentile
 }
 
 
@@ -133,18 +135,31 @@ def test_every_unconverted_sample_rule_has_one_specific_reason_and_steps() -> No
         ("ckg-expr-multi-ds-manual", "more than one data source"),
         ("ckg-expr-within-range", "threshold range"),
         ("ckg-loki-latency", "parser stage or unwrap"),
-        ("ckg-prom-5xx-rate", "promql label matcher"),
         ("ckg-prom-disk-fill", "promql uses rate"),
         ("ckg-prom-join-manual", "promql uses vector matching"),
         ("ckg-prom-mem-ratio", "promql uses an _over_time"),
         ("ckg-prom-offset-manual", "promql uses offset"),
-        ("ckg-prom-p95", "promql uses histogram_quantile"),
         ("ckg-prom-topk-manual", "promql uses topk"),
         ("ckg-prom-up-zero", "can never fire"),
     ],
 )
 def test_each_unconverted_sample_rule_says_why(title: str, fragment: str) -> None:
     assert fragment in text(by_title()[title])
+
+
+def test_the_5xx_rate_uses_a_regex_filter_and_the_p95_uses_bucketpercentile() -> None:
+    rate = by_title()["ckg-prom-5xx-rate"]
+    assert (
+        nrql_for(rate)
+        == "SELECT sum(http_requests_total) / 300 FROM Metric WHERE code RLIKE '5..' FACET service"
+    )
+    p95 = by_title()["ckg-prom-p95"]
+    assert (
+        nrql_for(p95)
+        == "SELECT bucketPercentile(req_duration_seconds_bucket, 95) FROM Metric FACET route"
+    )
+    assert (p95.thresholds[0].operator, p95.thresholds[0].value) == (Operator.ABOVE, 1.5)
+    assert rate.confidence is p95.confidence is Confidence.APPROXIMATE
 
 
 def test_the_cpu_gauge_becomes_an_average_by_instance() -> None:
@@ -447,8 +462,6 @@ def test_identical_copies_that_were_merged_are_counted_in_a_note() -> None:
         ('{__name__="x"}', "promql expression is not a simple"),
         ("(x)", "promql expression is not a simple"),
         ('x{a="\\n"}', "promql label matcher"),
-        ('x{a=~"a.+"}', "promql label matcher"),
-        ('x{a=~"(a|b)"}', "promql label matcher"),
         ('x{a!=""}', "promql label matcher"),
         ('x{__name__="y"}', "promql label matcher"),
         ('x{a="1" b="2"}', "promql expression is not a simple"),

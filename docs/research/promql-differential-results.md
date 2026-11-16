@@ -32,10 +32,10 @@ shifts; HIGH is suggested only when every scenario is within tolerance.
 |---|---|
 | IDENTICAL | 1 |
 | EQUAL_WITHIN_TOLERANCE | 9 |
-| DIFFERS_AT_EDGES | 25 |
+| DIFFERS_AT_EDGES | 26 |
 | WRONG | 1 |
 | NOT_MODELLED | 7 |
-| REFUSED | 16 |
+| REFUSED | 15 |
 
 ## Cases
 
@@ -97,7 +97,7 @@ Columns after the verdict are the worst relative divergence per scenario.
 | DIFF-RATE-A03 | DIFF-RATE | DIFFERS_AT_EDGES | 0.0006 | 0.0017 | 0.7908 | 0.0256 | 0.0013 | MEDIUM |  |
 | DIFF-RATE-A04 | DIFF-RATE | DIFFERS_AT_EDGES | 0.0003 | 0.0011 | 0.6335 | 0.0160 | 0.0009 | MEDIUM |  |
 | DIFF-RATE-A05 | DIFF-RATE | REFUSED |  |  |  |  |  |  | promql counter function on a metric whose name does not end in _total, _count or _bucket, so New Relic may not store it as a delta count |
-| DIFF-HIST-A01 | DIFF-HIST | REFUSED |  |  |  |  |  |  | promql uses histogram_quantile |
+| DIFF-HIST-A01 | DIFF-HIST | DIFFERS_AT_EDGES | 0.0000 | 0.0000 | 0.0000 +M | 0.0000 | 0.0000 | MEDIUM |  |
 | DIFF-GAUGE-A01 | DIFF-GAUGE | DIFFERS_AT_EDGES | 0.0007 | 0.0007 | 0.0007 +M | 0.8528 | 0.0022 | MEDIUM |  |
 | DIFF-GAUGE-A02 | DIFF-GAUGE | EQUAL_WITHIN_TOLERANCE | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0015 | HIGH |  |
 | DIFF-GAUGE-A03 | DIFF-GAUGE | REFUSED |  |  |  |  |  |  | promql uses an _over_time function |

@@ -46,13 +46,6 @@ def test_a_bare_dot_is_read_as_a_literal_dot_and_says_so() -> None:
         'cpu{a!~".*"}',  # matches nothing
         'cpu{a=~"x|"}',  # matches a missing label too: an OR the filter list cannot hold
         'cpu{a!~"|"}',
-        'cpu{a=~"x[0-9]"}',
-        'cpu{a=~"(x|y)"}',
-        'cpu{a=~"^x$"}',
-        'cpu{a=~"x+"}',
-        'cpu{a=~"x.y.*z"}',
-        'cpu{a=~"."}',
-        'cpu{a=~".."}',
     ],
 )
 def test_forms_that_would_change_which_series_match_stay_refused(expr: str) -> None:
@@ -61,7 +54,29 @@ def test_forms_that_would_change_which_series_match_stay_refused(expr: str) -> N
     assert any("promql label matcher" in r for r in m.reasons)
 
 
-@pytest.mark.parametrize("value", ["5..", "a.", ".a", "a..b", "5.\\\\.", "5.|x"])
-def test_a_dot_that_looks_like_a_wildcard_stays_refused(value: str) -> None:
-    m = one(make(f'cpu{{a=~"{value}"}}'))
-    assert m.confidence is Confidence.MANUAL
+@pytest.mark.parametrize(
+    ("expr", "where"),
+    [
+        ('cpu{a=~"x[0-9]"}', " WHERE a RLIKE 'x[0-9]'"),
+        ('cpu{a=~"(x|y)"}', " WHERE a RLIKE '(x|y)'"),
+        ('cpu{a=~"^x$"}', " WHERE a RLIKE '^x$'"),
+        ('cpu{a=~"x+"}', " WHERE a RLIKE 'x+'"),
+        ('cpu{a=~"a.+"}', " WHERE a RLIKE 'a.+'"),
+        ('cpu{a=~"x.y.*z"}', " WHERE a RLIKE 'x.y.*z'"),
+        ('cpu{a=~"."}', " WHERE a RLIKE '.'"),
+        ('cpu{a=~".."}', " WHERE a RLIKE '..'"),
+        ('cpu{a!~"x[0-9]"}', " WHERE a NOT RLIKE 'x[0-9]'"),
+        # a bare dot is a regular expression dot (any character): exact with RLIKE
+        ('cpu{a=~"5.."}', " WHERE a RLIKE '5..'"),
+        ('cpu{a=~"a."}', " WHERE a RLIKE 'a.'"),
+        ('cpu{a=~".a"}', " WHERE a RLIKE '.a'"),
+        ('cpu{a=~"a..b"}', " WHERE a RLIKE 'a..b'"),
+        ('cpu{a=~"5.\\\\."}', " WHERE a RLIKE '5.\\\\.'"),
+        ('cpu{a=~"5.|x"}', " WHERE a RLIKE '5.|x'"),
+    ],
+)
+def test_real_regular_expressions_convert_with_rlike(expr: str, where: str) -> None:
+    m = one(make(expr))
+    assert m.confidence is Confidence.APPROXIMATE, m.reasons
+    assert nrql_for(m) == SELECT + where
+    assert any("RLIKE" in r and "missing label" in r for r in m.reasons)

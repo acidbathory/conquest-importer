@@ -194,6 +194,8 @@ def test_the_command_exits_0_when_all_data_arrives(
         {
             "queue_depth": {"count": 4, "keys": ["env", "queue"], "servers": ["p"]},
             "node_cpu_busy": {"count": 4, "keys": ["job", "env", "instance"], "servers": ["p"]},
+            "http_requests_total": {"count": 4, "keys": ["code", "service"], "servers": ["p"]},
+            "req_duration_seconds_bucket": {"count": 4, "keys": ["route"], "servers": ["p"]},
         },
         logs=3,
         log_keys=["env", "app", "message"],

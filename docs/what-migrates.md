@@ -574,6 +574,19 @@ the ruler and `/apis` shapes are hand-made from the documentation.
 - **Label matchers:** `.*` is dropped (Prometheus also matches a missing label), `.+` becomes `IS NOT NULL`, `!~ "|word"` becomes
   not-word and not-empty, and words containing dots (hostnames) convert; a bare `.` between letters or digits is read as a
   literal dot and the rule says so. Real regexes (classes, groups, anchors, quantifiers) stay manual. Approximate.
+- **Regular expression matchers:** a real regex in `=~` or `!~` (character classes, groups, anchors, quantifiers,
+  and bare dots such as `5..`) becomes `attr RLIKE '...'` (`NOT RLIKE` for `!~`). Prometheus matchers are fully
+  anchored RE2 and New Relic documents `RLIKE` as a full-string RE2 match. A pattern that can match the empty
+  string, or uses lookaround, flags, backreferences, possessive quantifiers, non-ASCII text or a Grafana variable,
+  stays manual. A missing label is NULL in New Relic and an empty string in Prometheus, so series without the label
+  can differ; the rule says so. Alerts only; dashboards keep the stricter reading. On a real estate of 5,039 rules
+  this moved 866 to 1,127 converted. Approximate; accepted by New Relic at creation, not yet checked against data.
+- **`histogram_quantile` in alerts:** `histogram_quantile(q, sum by (le, ...) (rate(x_bucket[w])))` becomes
+  `bucketPercentile(x_bucket, 100*q)`, faceted on the other labels; a multiplier after it moves onto the threshold only
+  when it divides exactly. The rate window is dropped (bucketPercentile reads the buckets over the condition's
+  window). It needs the `_bucket` series: a histogram sent over OTLP is stored as one distribution metric, so the
+  condition would match nothing on that path. Nested aggregation, vector matching, offsets and a mean, min or max
+  reducer stay manual. On the same estate this moved 866 to 1,043 (1,323 with the regex change). Approximate.
 - **Rule-file rules:** a rule from a Prometheus rule file or the Mimir or Loki ruler (a query
   `expr` with a comparison against a number) goes through the same handlers. The comparison is the
   threshold, the query is read as an instant query, and the note says it is a rule-file rule. The

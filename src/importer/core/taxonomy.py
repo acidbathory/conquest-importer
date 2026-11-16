@@ -45,7 +45,7 @@ _RULES: list[tuple[Category, re.Pattern[str]]] = [
         Category.UNVERIFIED_NAMES,
         re.compile(
             r"unverified|convention|not yet confirmed|check the rest|not confirmed|never arrived"
-            r"|not others"
+            r"|not others|not yet checked against data|the histogram must arrive as"
         ),
     ),
     (

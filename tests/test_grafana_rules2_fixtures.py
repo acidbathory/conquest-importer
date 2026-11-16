@@ -43,6 +43,7 @@ CONVERTED = {
     "QueueDeep": (
         "SELECT average(queue_depth) FROM Metric WHERE queue IN ('orders', 'billing') FACET queue"
     ),
+    "LatencyP95": "SELECT bucketPercentile(req_duration_seconds_bucket, 95) FROM Metric",
 }
 MANUAL = {
     "r2-up-compared-in-query": t.R_COMPARE_NEVER.format(query='up{job="payments"}', value=0.0),
@@ -51,7 +52,6 @@ MANUAL = {
     "r2-classic-two-conditions": t.R_CLASSIC,
     "ApiLatencyFromLogs": t.LOKI_PARSER,
     "app:error_lines:rate5m": t.R_RECORD,
-    "LatencyP95": "promql uses histogram_quantile",
     "job:payments_errors:rate5m": t.R_RECORD,
 }
 

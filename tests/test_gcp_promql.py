@@ -125,12 +125,13 @@ def real(m: IRMonitor) -> bool:
 
 def test_sample_policies_before_and_after() -> None:
     """Before the adapter 0 of the 84 samples converted; with it 2; the engine adds 3 more (a
-    ratio of one metric under two filters, twice, and a ratio with its own grouping).
+    ratio of one metric under two filters, twice, and a ratio with its own grouping), and one
+    more for a histogram 95th percentile (bucketPercentile).
     The rest stay manual with a reason; a placeholder never counts."""
     monitors = load_fixtures()
     assert len(monitors) == 84
     converted = [m for m in monitors if real(m)]
-    assert len(converted) == 5
+    assert len(converted) == 6
     for m in monitors:
         if not real(m):
             assert m.confidence is Confidence.MANUAL
