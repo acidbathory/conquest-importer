@@ -566,7 +566,7 @@ def test_ecs_service_alarms_use_the_by_service_suffix_confirmed_on_real_data() -
         ("AWS/SES", "Reputation.BounceRate", "Region", "aws.ses"),
         ("AWS/States", "ExecutionsFailed", "StateMachineArn", "aws.states"),
         ("AWS/Transcribe", "TotalRequestCount", "Operation", "aws.transcribe"),
-        ("AWS/NatGateway", "ActiveConnectionCount", "NatGatewayId", "aws.natgateway"),
+        ("AWS/NATGateway", "ActiveConnectionCount", "NatGatewayId", "aws.natgateway"),
         ("AWS/CodeBuild", "FailedBuilds", "ProjectName", "aws.codebuild"),
     ],
 )
