@@ -147,8 +147,9 @@ N_TOPK = (
 N_COUNTER_MEAN = (
     "the rule averages the query over its {seconds}s range, which is read as the change over the "
     "whole range: the mean of the per-step values is the total change divided by the number of "
-    "steps, so sum() over {seconds}s is scaled to match; the edges of the range and a mean of "
-    "ratios (not a ratio of totals) differ a little"
+    "steps, so sum() over {seconds}s is scaled to match; the edges of the range differ, and a mean "
+    "of ratios is read as a ratio of totals, which can differ noticeably when the denominator "
+    "varies"
 )
 N_ARITH_SCOPE = (
     "the operands have different label filters, so each aggregate carries its own filter(); a "

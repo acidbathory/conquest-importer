@@ -527,6 +527,13 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   those two kinds; range kinds keep two parameters). Queries and expressions the rule's condition
   never reads are ignored, and the rule says how many. Both are approximate. On a real estate of
   5,039 rules this moved the converted count from 411 to 609 (8% to 12%); not yet run on New Relic.
+- **Counter rates in Grafana alerts:** a constant factor inside `sum()` or `avg()` of a counter (`sum(rate(x[5m]) * 60)`) is
+  moved outside it, which is exact. A Grafana `mean` reducer over a counter is read as the total change over the rule's range;
+  a mean of ratios is read as a ratio of totals and can differ noticeably when the denominator varies. `irate`, `delta`,
+  `max`/`min` reducers, `$__rate_interval` windows and counters without a counter-style name stay manual. Approximate.
+- **Label matchers:** `.*` is dropped (Prometheus also matches a missing label), `.+` becomes `IS NOT NULL`, `!~ "|word"` becomes
+  not-word and not-empty, and words containing dots (hostnames) convert; a bare `.` between letters or digits is read as a
+  literal dot and the rule says so. Real regexes (classes, groups, anchors, quantifiers) stay manual. Approximate.
 - **Rule-file rules:** a rule from a Prometheus rule file or the Mimir or Loki ruler (a query
   `expr` with a comparison against a number) goes through the same handlers. The comparison is the
   threshold, the query is read as an instant query, and the note says it is a rule-file rule. The
@@ -870,7 +877,7 @@ blocked on the project's network). Details and the measured share: [runbook-data
 `importer convert-dashboards --source datadog --in <folder of dashboard JSON> --out <folder>`. Offline;
 reads the body `GET /api/v1/dashboard/{id}` returns (or a list of them) and the same `name-map.json` as
 the monitors. Measured on the 30 public integration dashboards in the repository: 454 data widgets
-(notes excluded), 286 converted (63%), 168 placeholders; 62 notes. Every converted chart is approximate and the
+(notes excluded), 288 converted (63%), 166 placeholders; 62 notes. Every converted chart is approximate and the
 data path is `datadog-same-names` (or `name-map`): data arrives only if the metric reaches New Relic under
 that name. The plan is in the feasibility note `docs/research/datadog-dashboard-feasibility.md` (branch `research/dd-dash-measure`).
 
@@ -890,6 +897,7 @@ that name. The plan is in the feasibility note `docs/research/datadog-dashboard-
 | `image` | A markdown image (plain https addresses only; other addresses stay placeholders) | Approximate |
 | `treemap`, `sunburst` with a group by | A bar chart, a pie chart, over a `FACET` | Approximate; the layout differs |
 | Template variable name New Relic rejects (`replica-set`) | Renamed (`replica_set`) in the variable and every reference | Approximate, noted on the widget |
+| Formula `style` and `limit {count, order}` | `style` is ignored with a note; `limit` on one metric or one log query becomes `FACET ... LIMIT n` (ORDER BY ASC when asked), ranking over the whole window | Approximate; a limit without a group-by or on arithmetic stays a placeholder |
 | Log widgets (count, avg, sum, min, max, uniqueCount) | `FROM Log SELECT ... WHERE ... FACET ... TIMESERIES AUTO`; a template variable in the search becomes `attr IN ({{var}})` | Approximate; the logs must be forwarded to New Relic, and log attribute names are unverified |
 | `weighted()`, `derivative()`, `timeshift()`, `autosmooth()`, `ewma`, `default_zero`, `abs` | None | Placeholder with a reason and manual steps |
 | Logs, RUM, cost, network, process data; check status, list, flame graph, heatmap and other widget types | None yet | Placeholder |
