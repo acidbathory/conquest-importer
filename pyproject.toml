@@ -61,8 +61,8 @@ max-complexity = 15
 # Throwaway analysis and live-test scripts: wide data tables and plain urllib calls to fixed
 # https hosts. They are not shipped code and are not imported by the package.
 "scripts/analysis/**" = ["E501", "PERF401", "C901", "C416", "RUF007"]
-# NRQL probe text is built with f-strings; it is not SQL.
-"scripts/live-test/capability-check/**" = ["S608"]
+# NRQL probe text is built with f-strings (not SQL); live-test scripts print wide plan tables.
+"scripts/live-test/capability-check/**" = ["S608", "E501", "PERF401"]
 "scripts/live-test/grafana-sandbox/**" = [
   "E501", "S310", "SIM115", "ARG001", "ARG005", "PERF401", "C901", "C416", "RUF007",
 ]

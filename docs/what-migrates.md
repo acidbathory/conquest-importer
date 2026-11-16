@@ -29,15 +29,18 @@ numbers match. Three things can still make a converted item return nothing or th
   Workload Identity Federation was verified. Azure, Datadog and Dynatrace names have never been seen in
   stored data (Dynatrace has no documented route into New Relic at all). AWS names follow a documented
   rule and some are confirmed on live streams; the `.byX` suffixes the docs call retired still appear.
-- **The ingestion path changes the shape of the data.** Documented in New Relic's docs and not yet
-  tested live: a Prometheus histogram sent over OTLP is stored as one distribution metric under its base
-  name, with no `_bucket`, `_count` or `_sum` series, so `bucketPercentile(x_bucket, ...)` and
-  `rate(x_count)` return nothing on that path (remote write keeps the series). The histogram bucket
-  label is documented as `histogram.bucket.le`, not `le`. Remote write stores `_sum` as type
-  `summary`, and the docs do not say whether it is a delta. A counter without `_total` is a count when
-  scraped by `nri-prometheus` but a gauge on remote write, and we model only remote write. Datadog count
-  and rate types sent through the OpenTelemetry receiver become a non-monotonic delta sum, which New
-  Relic documents as not supported, so they are probably dropped.
+- **The ingestion path changes the shape of the data.** Verified live over Prometheus remote write
+  (the telemetry rig, [results](research/telemetry-rig-results.md)): `_total`, `_count` and `_bucket` series
+  arrive as delta counts, `_bucket` keeps its `le` label, `_sum` arrives as a `summary`, and
+  `bucketPercentile(x_bucket, ...)` and `rate(sum(x_sum), 1 second)` matched Prometheus. A counter without
+  `_total` arrives as a gauge holding the running value, so `rate` of it is wrong (we refuse it). Documented in
+  New Relic's docs and not yet tested live: a Prometheus histogram sent over OTLP is stored as one
+  distribution metric under its base name, with no `_bucket`, `_count` or `_sum` series, so
+  `bucketPercentile(x_bucket, ...)` and `rate(x_count)` return nothing on that path, and its bucket label
+  is documented as `histogram.bucket.le`. A counter without `_total` is a count when scraped by
+  `nri-prometheus` but a gauge on remote write, and we model only remote write. Datadog count and rate
+  types sent through the OpenTelemetry receiver become a non-monotonic delta sum, which New Relic
+  documents as not supported, so they are probably dropped.
 - **Query semantics differ.** New Relic converts counters to deltas, so `rate` and `increase` on the
   wrong metric type give wrong answers (we refuse `rate` on gauges for that reason). New Relic's own
   PromQL translation looks back 1 minute for an instant query, not the 5 minutes Prometheus uses. A
@@ -328,7 +331,9 @@ fields) are unverified until one dashboard is read back in a sandbox.
   steady values. Offline tests put it at under 0.1% off when steady, about 8% median and 15% worst
   with mixed scrape intervals, and up to 50-60% off around series that start or stop in 1-minute
   buckets. Each widget says so. Single-value widgets (stat, gauge, table) stay manual, and alerts
-  never use this form. Not yet run on New Relic. In the guided Grafana flow, give a Prometheus URL that runs on this machine (loopback only; the
+  never use this form. Measured live on uneven series: 14% low over 5 minutes and 52% low over 1 minute when
+  series were slow or had stopped (the nested sum of the latest value per series was exact, but needs the series
+  dimensions). In the guided Grafana flow, give a Prometheus URL that runs on this machine (loopback only; the
   command alone also takes https with `--allow-host`) and the flow runs `grafana-prom-hints` read-only and hands the
   result to the dashboard conversion; without a URL the step is skipped and those panels stay
   manual. A series key means "one series seen in the last 7 days on that URL"; widgets stay
@@ -578,8 +583,9 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   and bare dots such as `5..`) becomes `attr RLIKE '...'` (`NOT RLIKE` for `!~`). Prometheus matchers are fully
   anchored RE2 and New Relic documents `RLIKE` as a full-string RE2 match. A pattern that can match the empty
   string, or uses lookaround, flags, backreferences, possessive quantifiers, non-ASCII text or a Grafana variable,
-  stays manual. A missing label is NULL in New Relic and an empty string in Prometheus, so series without the label
-  can differ; the rule says so. Alerts only; dashboards keep the stricter reading. On a real estate of 5,039 rules
+  stays manual. Verified live: RLIKE is a full-string match, RLIKE excludes rows where the attribute is missing and
+  NOT RLIKE keeps them, which is what Prometheus does for a pattern that cannot match the empty string; the note on
+  each rule is more cautious than needed for these shapes. Alerts only; dashboards keep the stricter reading. On a real estate of 5,039 rules
   this moved 866 to 1,127 converted. Approximate; accepted by New Relic at creation, not yet checked against data.
 - **`histogram_quantile` in alerts:** `histogram_quantile(q, sum by (le, ...) (rate(x_bucket[w])))` becomes
   `bucketPercentile(x_bucket, 100*q)`, faceted on the other labels; a multiplier after it moves onto the threshold only

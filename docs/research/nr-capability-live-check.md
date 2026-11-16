@@ -55,3 +55,40 @@ as intended, because no data existed and nothing was enabled or viewed.
   once someone confirms the setting works when rendered.
 - Still unknown: whether `derivative` works in a condition (retry as `derivative(x, 1 minute)`), and everything that
   needs data to evaluate.
+
+## Data round (sandbox, 2026-11-16): the forms evaluated on real data
+
+`scripts/live-test/capability-check/data_round.py` sent 91 synthetic gauge points (two `ckg_cap_*` metrics) and ran
+read-only NRQL over them, comparing each result with the value computed from the same series (the PromQL answer).
+Over Prometheus remote write the rig had already shown that `_bucket` keeps `le`, `_sum` is a `summary`, and
+`bucketPercentile` and `rate(sum(x_sum), 1 second)` match Prometheus ([rig results](telemetry-rig-results.md));
+these probes cover what the rig did not.
+
+| Probe | Expected | Got | Result |
+|---|---|---|---|
+| `ckg_host RLIKE 'web-.'` over `web-1`, `web-10`, `xweb-1`, `web-` | `web-1` only (full-string match) | `web-1` | **match: RLIKE is a full-string match** |
+| `ckg_host NOT RLIKE 'web-.'` | the other three hosts | the other three hosts | match |
+| rows with the attribute missing (`IS NULL`) | 3 | 3 | match |
+| `NOT RLIKE 'zzz'` over 15 rows (12 with the attribute, 3 without) | 15 if rows without the attribute are kept | 15 | **NOT RLIKE keeps rows with a missing attribute** |
+| `RLIKE '.*'` over the same rows | 12 if rows without the attribute are excluded | 12 | **RLIKE excludes rows with a missing attribute** |
+| `average(x) * cardinality(x)`, 5 minute window, series at 15 s, 60 s and one that stopped | 210 (true sum) | 180 | 14% low (within the 15% bound) |
+| the same form, 1 minute window | 210 | 100 | **52% low** (the slow and the stopped series are missing from the window) |
+| `SELECT sum(v) FROM (SELECT latest(x) AS v ... FACET host)` | 210 | 210 | **exact** |
+| `clamp_min(average(x), 100)` | 100 | 100 | match |
+| `if(average(x) > 25, 1, 0)` | 1 | 1 | match |
+
+(The first run labelled the two NULL rows "differs" because the script expected 9 and 12 where 12 and 15 were right;
+the script is corrected. The data is as in the table.)
+
+What this changes:
+- **Regex matchers are exact for patterns that cannot match the empty string.** Prometheus treats a missing label
+  as an empty string: `=~` with such a pattern does not select the series, `!~` does. New Relic does the same
+  (RLIKE excludes the missing attribute, NOT RLIKE keeps it). Our regex whitelist already refuses patterns that can
+  match the empty string. The note on converted regex rules ("a missing label is NULL ...") is therefore more
+  cautious than needed for the shapes we convert.
+- **The nested sum of the latest value per series is exact**, including a series that stopped inside the window. It
+  needs the dimensions that name one series; nothing supplies them today.
+- **`average(x) * cardinality(x)` is only a rough sum**: 14% low with mixed scrape intervals over 5 minutes and 52% low
+  over 1 minute when series are slow or stopped. This confirms the harness and the note on dashboard widgets; it must
+  stay dashboards-only and approximate.
+- `clamp_min` and `if()` evaluate correctly, so proposal 3 (clamp functions) is valid as a form.
