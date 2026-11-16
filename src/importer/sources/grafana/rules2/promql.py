@@ -7,11 +7,14 @@ except through the shared matcher parsing and `nrql_attribute`, which validate n
 What the evidence allows (docs/research/newrelic-notifications-and-nrql-reference.md, 2.3):
 `sum()` and arithmetic over aggregates are usable in alert conditions; `rate()`, `derivative()`
 and `bucketPercentile()` are not documented as usable, so counters become `sum(x)` over the
-range, divided by the range for a rate, and `histogram_quantile` stays manual.
+range, divided by the range for a rate. `bucketPercentile()` was proven only to be accepted in a
+static condition (docs/research/nr-capability-live-check.md), so `histogram_quantile` converts
+for the one plain shape below, as approximate and unchecked against data.
 """
 
 import re
 from dataclasses import dataclass
+from decimal import Decimal, Inexact, localcontext
 
 from importer.core.ir import (
     Aggregation,
@@ -347,5 +350,151 @@ def _absent_form(expr: str, ctx: Ctx) -> Built | None:
     )
 
 
-for _form in (_absent_form, _counter_form, _ratio_form):
+# --- histogram_quantile ---
+
+N_HIST_APPROX = "bucketPercentile interpolates inside the buckets, so the value is approximate"
+N_HIST_OTLP = (
+    "the histogram must arrive as `_bucket` series (Prometheus remote write or scrape); data sent "
+    "over OTLP is stored as one distribution metric without `_bucket` series, so this condition "
+    "would match nothing on that path"
+)
+N_HIST_UNCHECKED = "not yet checked against data"
+N_HIST_WINDOW = (
+    "the window of the rate or increase is dropped: bucketPercentile reads the buckets over the "
+    "condition's own window"
+)
+N_HIST_SCALE = "the multiplier after histogram_quantile was moved to the threshold (divided out)"
+R_HIST_MULTIPLIER = (
+    "histogram_quantile is multiplied by a number that cannot be moved to the threshold exactly "
+    "(it must be positive and divide the threshold with no rounding)"
+)
+R_HIST_QUANTILE = (
+    "histogram_quantile gives a percentile outside 1 to 99.99, which bucketPercentile does not take"
+)
+R_HIST_LE = "a label matcher on le cannot be kept in a bucketPercentile query"
+
+HISTOGRAM_CALL = re.compile(r"\s*histogram_quantile\s*\(")
+QUANTILE = re.compile(r"\s*(0?\.\d+)\s*")
+BUCKET_RATE = re.compile(
+    rf"\s*(?:rate|irate|increase)\s*\(\s*{SELECTOR}\s*\[\s*\d+\s*[smhdw]\s*\]\s*\)\s*"
+)
+MULTIPLIER = re.compile(r"\s*(\d+(?:\.\d+)?)\s*")
+MIN_PERCENT, MAX_PERCENT = Decimal(1), Decimal("99.99")
+
+
+def _closing(masked: str, start: int) -> int | None:
+    """The index of the bracket that closes the one just before `start`, or None."""
+    depth = 1
+    for index in range(start, len(masked)):
+        if masked[index] in "([{":
+            depth += 1
+        elif masked[index] in ")]}":
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def _hist_parts(expr: str) -> tuple[Decimal, str, str | None] | None:
+    """(quantile, inner text, multiplier text) of `histogram_quantile(q, inner)` with an optional
+    `* N` or `N *` around it; None when the expression is anything else."""
+    masked = re.sub(QUOTED, lambda m: "x" * len(m[0]), expr)
+    head = re.match(r"\s*(?:(-?\d+(?:\.\d+)?)\s*\*\s*)?histogram_quantile\s*\(", masked)
+    if head is None:
+        return None
+    end = _closing(masked, head.end())
+    if end is None:
+        return None
+    tail = masked[end + 1 :]
+    factor = head[1]
+    after = re.fullmatch(r"\s*\*\s*(-?\d+(?:\.\d+)?)\s*", tail)
+    if after and factor is None:
+        factor = after[1]
+    elif tail.strip() or (after and factor is not None):
+        return None
+    inside = expr[head.end() : end]
+    comma = masked[head.end() : end].find(",")
+    if comma < 0:
+        return None
+    quantile = QUANTILE.fullmatch(inside[:comma])
+    if quantile is None or not 0 < Decimal(quantile[1]) < 1:
+        return None
+    return Decimal(quantile[1]), inside[comma + 1 :], factor
+
+
+def _scaled(threshold: Threshold, factor: str) -> Threshold:
+    """The threshold on the bare percentile for `percentile * factor OP value`; exact or Fail.
+
+    For a positive factor every operator keeps its meaning when both sides are divided by it."""
+    number = Decimal(factor)
+    if number <= 0:
+        raise Fail(R_HIST_MULTIPLIER)
+    with localcontext() as context:
+        context.traps[Inexact] = True
+        try:
+            quotient = Decimal(repr(threshold.value)) / number
+        except ArithmeticError:
+            raise Fail(R_HIST_MULTIPLIER) from None
+    value = float(quotient)
+    if Decimal(repr(value)) != quotient:
+        raise Fail(R_HIST_MULTIPLIER)
+    return Threshold(severity=threshold.severity, operator=threshold.operator, value=value)
+
+
+def _histogram_form(expr: str, ctx: Ctx) -> Built | None:
+    if "histogram_quantile" not in expr:
+        return None
+    parts = _hist_parts(expr)
+    if parts is None:
+        return None
+    quantile, inner, factor = parts
+    try:
+        aggregator, group_by, call_text = split_outer(inner, "sum")
+    except Fail:
+        return None
+    call = BUCKET_RATE.fullmatch(call_text)
+    if aggregator != "sum" or "le" not in group_by or call is None:
+        return None
+    name, body = call[1], call[2]
+    if not name.endswith("_bucket"):
+        return None
+    if hinted_gauge(name):
+        raise Fail(R_RATE_OF_GAUGE)
+    matches = parse_matchers(body or "", PROM_MATCHER, PROM_NOT_SIMPLE, absent_ok=True)
+    if any(m.key == "le" for m in matches):
+        raise Fail(R_HIST_LE)
+    percent = quantile * 100
+    if not MIN_PERCENT <= percent <= MAX_PERCENT:
+        raise Fail(R_HIST_QUANTILE)
+    reducer = looked_back(ctx)
+    if reducer != "last":
+        raise Fail(R_COUNTER_REDUCER.format(reducer=reducer))
+    threshold = None
+    if factor is not None:
+        if ctx.threshold is None:
+            raise Fail(R_HIST_MULTIPLIER)
+        threshold = _scaled(ctx.threshold, factor)
+    attribute = nrql_attribute(name)
+    term = MetricTerm(
+        metric=attribute,
+        space_aggregation=Aggregation.BUCKET_PERCENTILE,
+        percentile=float(percent.normalize()),
+        nr_target=NrTarget(event="Metric", attribute=attribute),
+    )
+    metric = MetricSignal(
+        terms={"a": term},
+        aggregation=Aggregation.BUCKET_PERCENTILE,
+        scope=[tag_filter(m) for m in matches],
+        group_by=[nrql_attribute(g) for g in group_by if g != "le"],
+    )
+    notes = [N_METRIC, N_HIST_APPROX, N_HIST_OTLP, N_HIST_WINDOW]
+    if threshold is not None:
+        notes.append(N_HIST_SCALE)
+    if any(m.negate for m in matches):
+        notes.append(N_NEGATION)
+    notes.append(N_HIST_UNCHECKED)
+    return Built(SignalKind.METRIC, None, metric=metric, notes=notes, threshold=threshold)
+
+
+for _form in (_absent_form, _counter_form, _ratio_form, _histogram_form):
     register_prom_form(_form)

@@ -53,6 +53,7 @@ class Aggregation(StrEnum):
     SUM = "sum"
     COUNT = "count"
     STDDEV = "stddev"
+    BUCKET_PERCENTILE = "bucket_percentile"  # bucketPercentile(<metric>_bucket, p)
 
 
 class FilterBase(BaseModel):
@@ -110,13 +111,25 @@ class MetricTerm(BaseModel):
     scope: list[
         TagFilter
     ] = []  # restricts this term only (emitted as filter(), on top of the signal's)
+    percentile: float | None = None  # 1 to 99.99, exactly when the aggregation is BUCKET_PERCENTILE
+
+    @model_validator(mode="after")
+    def _percentile_matches_aggregation(self) -> "MetricTerm":
+        if self.space_aggregation is Aggregation.BUCKET_PERCENTILE:
+            if self.percentile is None or not 1 <= self.percentile <= 99.99:
+                raise ValueError("a bucket percentile term needs a percentile from 1 to 99.99")
+        elif self.percentile is not None:
+            raise ValueError("percentile is only for the bucket percentile aggregation")
+        return self
 
     @model_serializer(mode="wrap")
     def _omit_empty_scope(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
-        """Saved IR keeps its old shape: `scope` appears only when a term has its own."""
+        """Saved IR keeps its old shape: `scope` and `percentile` appear only when set."""
         data: dict[str, Any] = handler(self)
         if not data.get("scope"):
             data.pop("scope", None)
+        if data.get("percentile") is None:
+            data.pop("percentile", None)
         return data
 
 
