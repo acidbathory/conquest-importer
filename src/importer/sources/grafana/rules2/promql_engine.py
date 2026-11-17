@@ -59,6 +59,7 @@ from importer.sources.grafana.promql_ast import (
     walk,
 )
 from importer.sources.grafana.translate import (
+    COUNT_SUFFIXES,
     COUNTER_SUFFIXES,
     EMPTY_SENSITIVE,
     EXACT_AGGREGATES,
@@ -83,6 +84,7 @@ from importer.sources.grafana.translate import (
     Ctx,
     Fail,
     Match,
+    counter_suffix_notes,
     extreme_plan,
     looked_back,
     nrql_attribute,
@@ -95,7 +97,6 @@ from importer.sources.grafana.translate import (
 
 MIN_RANGE = 60
 MAX_FACETS = 5
-COUNT_SUFFIXES = ("_total", "_count", "_bucket")  # what New Relic stores as a delta count
 SIMPLE_RANGE = re.compile(r"(\d+)([smh])")
 ARITH_OPS = frozenset({"+", "-", "*", "/"})
 COUNTER_FUNCTIONS = frozenset({"rate", "increase"})
@@ -425,6 +426,7 @@ def _window_plan(leaves: list[Leaf], ctx: Ctx) -> tuple[Aggregation, int | None,
         if span is not None:
             notes.append(N_COUNTER_MEAN.format(seconds=span))
         notes += [N_COUNTER, N_RATE_SAMPLES]
+        notes += counter_suffix_notes([leaf.name for leaf in leaves], _hints().types)
         if ctx.threshold is not None and ctx.threshold.operator in EMPTY_SENSITIVE:
             notes.append(N_COUNTER_EMPTY)
         if any(leaf.function == "rate" for leaf in leaves):

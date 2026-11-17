@@ -32,9 +32,14 @@ from importer.core.ir import (
     SignalKind,
     Threshold,
 )
-from importer.sources.grafana.dashboard_convert.name_map import hinted_gauge
+from importer.sources.grafana.dashboard_convert.name_map import (
+    NameMapError,
+    active_name_map,
+    hinted_gauge,
+)
 from importer.sources.grafana.translate import (
     BODY,
+    COUNT_SUFFIXES,
     COUNTER_SUFFIXES,
     EMPTY_SENSITIVE,
     EXACT_AGGREGATES,
@@ -68,6 +73,7 @@ from importer.sources.grafana.translate import (
     Ctx,
     Fail,
     Match,
+    counter_suffix_notes,
     extreme_plan,
     looked_back,
     nrql_attribute,
@@ -78,7 +84,6 @@ from importer.sources.grafana.translate import (
     time_window,
 )
 
-COUNT_SUFFIXES = ("_total", "_count", "_bucket")  # what New Relic stores as a delta count
 SELECTOR = rf"([A-Za-z_:][A-Za-z0-9_:]*)\s*(?:\{{({BODY})\}})?"
 RANGE = r"\[\s*(\d+)\s*([smh])\s*\]"
 COUNTER_CALL = re.compile(rf"\s*(rate|increase)\s*\(\s*{SELECTOR}\s*{RANGE}\s*\)\s*")
@@ -154,6 +159,14 @@ def _in_name(masked: str, index: int) -> bool:
 # --- counters ---
 
 
+def _suffix_notes(*names: str) -> list[str]:
+    try:
+        types = active_name_map().types
+    except NameMapError:
+        types = {}
+    return counter_suffix_notes(names, types)
+
+
 def _check_counter(operand: _Operand, ctx: Ctx, facet: bool = False) -> int:
     """The range in seconds of a counter operand that converts; else raise the reason.
 
@@ -212,7 +225,7 @@ def _counter_form(expr: str, ctx: Ctx) -> Built | None:
     seconds = _check_counter(operand, ctx, facet=True)
     term = _term(operand.name)
     division: Expr | None = None
-    notes = [N_METRIC, N_COUNTER]
+    notes = [N_METRIC, N_COUNTER, *_suffix_notes(operand.name)]
     if operand.function == "rate":
         division = BinOp(op="/", left=Ref(name="a"), right=Num(value=float(seconds)))
         notes.append(N_RATE_DIVISION.format(seconds=seconds))
@@ -280,7 +293,8 @@ def _ratio_window(
     if left.function:
         seconds = _check_counter(left, ctx)
         _check_counter(right, ctx)
-        return Aggregation.SUM, seconds, [N_COUNTER, *_counter_notes(ctx)]
+        suffix = _suffix_notes(left.name, right.name)
+        return Aggregation.SUM, seconds, [N_COUNTER, *suffix, *_counter_notes(ctx)]
     if any(side.name.endswith(COUNTER_SUFFIXES) for side in (left, right)):
         raise Fail(PROM_COUNTER)
     if left.aggregator in ("min", "max"):
