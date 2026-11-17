@@ -10,6 +10,7 @@ customer results. See [what migrates](docs/what-migrates.md), including "What co
 ## Unreleased (November 2026)
 
 ### Added
+- **Grafana alerts: `_counter` names.** A metric whose name ends `_counter` is treated as a counter in `rate`, `increase` and their ratios, as approximate, with a note that the type was assumed from the suffix; a `gauge` type in the name map still wins. On one real estate this converts 134 more rules and changes none that already converted. Dashboards are unchanged.
 - **Datadog dashboards.** A reader and converter for dashboard JSON (`importer convert-dashboards --source
   datadog`): timeseries, query value, toplist, table, markdown and group widgets; template variables as New Relic
   variables; formulas over metric queries; the common functions (`top`, `as_count`, `as_rate`, `per_second`,

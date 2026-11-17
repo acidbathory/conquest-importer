@@ -16,7 +16,7 @@ so every conversion is approximate and says so.
 
 import math
 import re
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -81,6 +81,10 @@ PROM_AGGREGATIONS = {
     "max": Aggregation.MAX,
 }
 COUNTER_SUFFIXES = ("_total", "_count", "_sum", "_bucket")
+# what New Relic stores as a delta count (a rate or increase converts); `_counter` is a guess
+# from the name, so it carries a note and a type hint still wins
+ASSUMED_COUNT_SUFFIX = "_counter"
+COUNT_SUFFIXES = ("_total", "_count", "_bucket", ASSUMED_COUNT_SUFFIX)
 # data source types that are known and not converted -> the word shown in the reason
 OTHER_DATASOURCES = {
     "cloudwatch": "cloudwatch",
@@ -350,6 +354,11 @@ N_COUNTER = (
     "from a name ending _total, _count or _bucket), so sum() over the window is the increase over "
     "that window; Prometheus extrapolates rate() and increase() to the ends of the range, so the "
     "values may differ a little"
+)
+N_COUNTER_SUFFIX = (
+    "{names} assumed to be a counter from its name suffix _counter (New Relic only stores it "
+    "as a delta count if the metric type is set to counter on remote write); a gauge in the "
+    "name map overrides this"
 )
 N_RATE_DIVISION = (
     "the rate is sum() divided by the {seconds}s window, written as arithmetic because rate() is "
@@ -1555,3 +1564,9 @@ def translate(rules: list[GrafanaRule]) -> list[IRMonitor]:
         seen[base] = seen.get(base, 0) + 1
         monitors.append(translate_rule(rule, base if seen[base] == 1 else f"{base}#{seen[base]}"))
     return monitors
+
+
+def counter_suffix_notes(names: Iterable[str], types: Mapping[str, str]) -> list[str]:
+    """The note for metrics assumed to be counters only from a `_counter` name (no type hint)."""
+    guessed = sorted({n for n in names if n.endswith(ASSUMED_COUNT_SUFFIX) and n not in types})
+    return [N_COUNTER_SUFFIX.format(names=", ".join(guessed))] if guessed else []

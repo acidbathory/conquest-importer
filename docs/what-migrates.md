@@ -29,6 +29,10 @@ numbers match. Three things can still make a converted item return nothing or th
   Workload Identity Federation was verified. Azure, Datadog and Dynatrace names have never been seen in
   stored data (Dynatrace has no documented route into New Relic at all). AWS names follow a documented
   rule and some are confirmed on live streams; the `.byX` suffixes the docs call retired still appear.
+- **Grafana alert names ending `_counter`.** `rate`, `increase` and ratios of them over a metric named `x_counter`
+  convert as approximate, with a note that the counter type was assumed from the suffix (it is a guess: New
+  Relic stores it as a delta count only if the type is set to counter on remote write). A `gauge` entry in the
+  name map keeps it manual. Dashboards still refuse such a name unless it is typed `counter`.
 - **The ingestion path changes the shape of the data.** Verified live over Prometheus remote write
   (the telemetry rig, [results](research/telemetry-rig-results.md)): `_total`, `_count` and `_bucket` series
   arrive as delta counts, `_bucket` keeps its `le` label, `_sum` arrives as a `summary`, and
