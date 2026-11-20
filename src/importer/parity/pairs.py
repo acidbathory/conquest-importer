@@ -23,7 +23,7 @@ from importer.sources.grafana.dashboard_convert.reuse import Unconvertible
 from importer.sources.grafana.dashboard_convert.translate import draft_panels, load_items
 from importer.sources.grafana.dashboards.datasources import resolve_target
 from importer.sources.grafana.models import load_rules
-from importer.sources.grafana.translate import Fail, _plan, translate
+from importer.sources.grafana.translate import Fail, _plan, translate_pairs
 
 COMPARISON = re.compile(r"(?:==|!=|>=|<=|>|<)")
 QUOTED = re.compile(r'"(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'|`[^`]*`')
@@ -144,7 +144,7 @@ def alert_pairs(folder: Path, export: Path) -> list[Pair]:
     on_disk = {m.source_key: m for m in converted_monitors(folder)}
     rules = load_rules(export)
     pairs: list[Pair] = []
-    for rule, monitor in zip(rules, translate(rules), strict=True):
+    for rule, monitor in translate_pairs(rules):  # an OR rule gives one pair per query
         disk = on_disk.get(monitor.source_key)
         if disk is None or disk.signal.kind not in (SignalKind.METRIC, SignalKind.LOG):
             continue

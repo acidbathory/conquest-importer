@@ -264,6 +264,18 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^grafana pipeline has \d+ queries combined with or"),
+        "Grafana rule with OR-combined queries",
+        [
+            "Grafana fires the rule when any of its queries crosses its threshold. The converter "
+            "makes one New Relic condition per query in the same policy, but only when every "
+            "query converts on its own. The second reason says why the named query did not.",
+            "Fix that query by its own steps (below), or write its condition by hand in the same "
+            "policy and convert the other queries. Name the conditions after the rule so they "
+            "read as one alert.",
+        ],
+    ),
+    (
         re.compile(r"^grafana pipeline (?:queries more than one|has more than one query)"),
         "Grafana rule with several queries",
         [

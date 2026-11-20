@@ -576,6 +576,14 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   those two kinds; range kinds keep two parameters). Queries and expressions the rule's condition
   never reads are ignored, and the rule says how many. Both are approximate. On a real estate of
   5,039 rules this moved the converted count from 411 to 609 (8% to 12%); not yet run on New Relic.
+- **Queries combined with OR in Grafana alerts:** a classic condition whose 2 to 5 tests each read a
+  different query of one data source, joined by OR (Grafana ignores the first test's operator and reads
+  a missing one as AND), becomes one condition per query in the same policy, named `<title> (<refId>)`.
+  Grafana fires one alert when any query crosses its threshold; New Relic can open an issue per query,
+  and the rule resolves only when every condition resolves. Approximate, and only when every query
+  converts on its own; otherwise the rule is manual and names which query failed and its reason. Any
+  AND, more than 5 queries and mixed data sources stay manual. On a real estate of 5,039 rules this
+  converted 83 more rules (200 conditions); not yet run on New Relic.
 - **Counter rates in Grafana alerts:** a constant factor inside `sum()` or `avg()` of a counter (`sum(rate(x[5m]) * 60)`) is
   moved outside it, which is exact. A Grafana `mean` reducer over a counter is read as the total change over the rule's range;
   a mean of ratios is read as a ratio of totals and can differ noticeably when the denominator varies. `irate`, `delta`,
@@ -645,8 +653,8 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   dropped. The `description` or `summary` annotation is kept in the IR, but the emitters do not
   write it yet. Contact points and notification policies are not converted.
 - **Manual, with steps:** longer expression chains, math across queries (the reason says how many
-  queries it combines), classic conditions with more than one test, SQL expressions, mixed data
-  sources or several queries, recording rules, range thresholds (`within_range`,
+  queries it combines), classic conditions with more than one test on one query, classic tests joined by AND,
+  SQL expressions, mixed data sources or several queries, recording rules, range thresholds (`within_range`,
   `outside_range`), reducers `count` and `median`, other data source types (CloudWatch, Azure
   Monitor, Elasticsearch, SQL and so on), PromQL with `offset`, subqueries, `group_left`, `topk`,
   `histogram_quantile` (`bucketPercentile` is not documented as usable in a condition), `irate`

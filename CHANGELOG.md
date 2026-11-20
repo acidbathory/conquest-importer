@@ -10,6 +10,7 @@ customer results. See [what migrates](docs/what-migrates.md), including "What co
 ## Unreleased (November 2026)
 
 ### Added
+- **Grafana alerts: queries combined with OR.** A classic condition whose 2 to 5 tests each read a different query of one data source, joined by OR, becomes one New Relic condition per query in the same policy, each named `<title> (<refId>)`, as approximate, with a note: Grafana fires one alert when any query crosses its threshold, New Relic can open an issue per query, and the rule resolves when every condition resolves. It converts only when every query converts on its own; otherwise the rule stays manual and says which query failed and why. Any AND, more than 5 queries or mixed data sources stay manual. On one real estate this converts 83 more rules (200 more conditions) and changes none that already converted. Dashboards are unchanged.
 - **Grafana alerts: `max()` of a counter rate above 0.** `max(rate(x[w]))` and `max(increase(x[w]))`, grouped or not and with a positive constant factor, convert as the `sum()` form when the rule fires above 0, as approximate, with a note: a rate or increase is never negative, so the maximum and the sum are above 0 at the same time. Any other threshold, and `min`, `avg` or arithmetic between aggregates, stay manual. On one real estate this converts 65 more rules and changes none that already converted. Dashboards are unchanged.
 - **Grafana alerts: `_counter` names.** A metric whose name ends `_counter` is treated as a counter in `rate`, `increase` and their ratios, as approximate, with a note that the type was assumed from the suffix; a `gauge` type in the name map still wins. On one real estate this converts 134 more rules and changes none that already converted. Dashboards are unchanged.
 - **Datadog dashboards.** A reader and converter for dashboard JSON (`importer convert-dashboards --source
@@ -53,7 +54,7 @@ customer results. See [what migrates](docs/what-migrates.md), including "What co
 ### Measured (2026-11-16; counts only)
 - Public sample content, converted share of alerts and dashboard widgets together: Google Cloud 75%, Datadog 63%
   (a fresh, reproducible sample), Grafana 37%, AWS 35%, Azure 25%, Dynatrace 2%.
-- One real Grafana alert estate (5,039 rules): 8% at the start of this period, now 39% (1,953 rules). One real dashboard: 42%.
+- One real Grafana alert estate (5,039 rules): 8% at the start of this period, now 40% (2,036 rules). One real dashboard: 42%.
 - Verified on data in a sandbox: `RLIKE` is a full-string match; a missing attribute is excluded by `RLIKE` and
   kept by `NOT RLIKE`; the nested sum of the latest value per series is exact; `average(x) * cardinality(x)` is
   14% low with mixed scrape intervals over 5 minutes and 52% low over 1 minute; `clamp_min` and `if()` evaluate

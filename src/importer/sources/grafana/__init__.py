@@ -29,6 +29,7 @@ register_taxonomy(
 )
 register_taxonomy(Category.MANUAL_FOLLOWUP, r"^grafana origin:")
 register_taxonomy(Category.APPROXIMATION, r"^this rule comes from a prometheus-style rule file")
+register_taxonomy(Category.APPROXIMATION, r"^grafana fires one alert when any of the")
 
 # Feature sub-packages (src/importer/sources/grafana/<feature>/) load themselves; see
 # docs/dev/parallel-work.md.

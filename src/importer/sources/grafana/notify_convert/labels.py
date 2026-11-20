@@ -88,7 +88,7 @@ def rule_labels(monitor: IRMonitor, rule: GrafanaRule | None, wanted: set[str]) 
     own = _own_route(settings)
     receiver = own.receiver if own is not None else None
     return RuleLabels(
-        name=monitor.name,
+        name=rule.title or monitor.name,  # alertname is the title, also for a leg "<title> (B)"
         labels=labels,
         folder=rule.folder if titled else "",
         by_labels=by,

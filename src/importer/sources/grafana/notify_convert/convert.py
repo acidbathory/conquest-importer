@@ -28,6 +28,7 @@ from importer.sources.grafana.notify_convert.labels import (
 )
 from importer.sources.grafana.notify_convert.plans import RouteOutcome, build_plans
 from importer.sources.grafana.notify_convert.routes import RouteSet, collect_routes
+from importer.sources.grafana.translate import rule_key
 
 
 @dataclass(frozen=True)
@@ -91,6 +92,11 @@ def _rule_for(inputs: Inputs) -> dict[str, GrafanaRule]:
     return dict(zip(rule_keys(inputs.rules), inputs.rules, strict=True))
 
 
+def _rule_of(by_key: dict[str, GrafanaRule], key: str) -> GrafanaRule | None:
+    """The rule of a monitor; one query of an OR rule routes as its rule."""
+    return by_key.get(key) or by_key.get(rule_key(key))
+
+
 def _routes(inputs: Inputs, names: dict[int, str]) -> tuple[RouteSet, int]:
     """The routes of the converted rules, and how many rules did not convert."""
     converted = [m for m in inputs.monitors if m.source_id in names]
@@ -103,7 +109,8 @@ def _routes(inputs: Inputs, names: dict[int, str]) -> tuple[RouteSet, int]:
     by_key = _rule_for(inputs)
     wanted = policy_label_names(tree)
     labeled = [
-        (rule_labels(m, by_key.get(m.source_key), wanted), names[m.source_id]) for m in converted
+        (rule_labels(m, _rule_of(by_key, m.source_key), wanted), names[m.source_id])
+        for m in converted
     ]
     return collect_routes(tree, labeled), not_converted
 

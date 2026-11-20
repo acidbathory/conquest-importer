@@ -1,14 +1,15 @@
 """Grafana alert rules to IR.
 
-One IR monitor per rule. A rule is a query, an optional resample and reduce, and one threshold
-(or one classic condition), or a rule-file rule whose query holds the comparison. The query
-converts when it is a plain Prometheus selector with one optional aggregation, a counter in
-`rate`/`increase`, a ratio, `absent`, or a plain Loki `count_over_time`. The extra PromQL forms
-live in `rules2/promql.py` and register in `PROM_FORMS`. Everything else is manual with a fixed
-reason. Reasons never contain text from the rule: they name fixed vocabulary and parsed numbers
-only, except one note that lists the folder, group and labels when each is short, plain and not
-secret-looking (`rules2/fields.py`). Text that reaches the NRQL does so through the IR and the
-shared escaping. `translate` never raises.
+One IR monitor per rule, except a classic condition whose tests read different queries combined
+with OR, which gives one monitor per query (`_or_legs`). A rule is a query, an optional resample
+and reduce, and one threshold (or one classic condition), or a rule-file rule whose query holds the
+comparison. The query converts when it is a plain Prometheus selector with one optional
+aggregation, a counter in `rate`/`increase`, a ratio, `absent`, or a plain Loki `count_over_time`.
+The extra PromQL forms live in `rules2/promql.py` and register in `PROM_FORMS`. Everything else is
+manual with a fixed reason. Reasons never contain text from the rule: they name fixed vocabulary
+and parsed numbers only, except one note that lists the folder, group and labels when each is
+short, plain and not secret-looking (`rules2/fields.py`). Text that reaches the NRQL does so
+through the IR and the shared escaping. `translate` never raises.
 
 Neither the New Relic metric names nor the label attribute names are confirmed against live data,
 so every conversion is approximate and says so.
@@ -20,7 +21,11 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from importer.core.emit.common import MAX_AGGREGATION_WINDOW_SECONDS, MAX_DURATION_SECONDS
+from importer.core.emit.common import (
+    MAX_AGGREGATION_WINDOW_SECONDS,
+    MAX_DURATION_SECONDS,
+    MAX_NAME_LENGTH,
+)
 from importer.core.emit.nrql import identifier
 from importer.core.ids import source_id
 from importer.core.ir import (
@@ -205,6 +210,10 @@ R_SQL = "grafana pipeline has an SQL expression"
 R_RESAMPLE = "grafana pipeline has a resample expression"
 R_MIXED = "grafana pipeline queries more than one data source"
 R_MULTI = "grafana pipeline has more than one query"
+R_OR_LEG = (
+    "grafana pipeline has {count} queries combined with or, and query {position} of them did not "
+    "convert; its own reason follows"
+)
 R_RANGE = "grafana threshold range (within or outside) has no single New Relic threshold"
 R_OPERATOR = "grafana threshold operator is not supported"
 R_VALUE = "grafana threshold value is not one finite number"
@@ -419,6 +428,11 @@ N_ABSENT_NODATA = (
     "absent() returns nothing while the series exists, so Grafana puts the rule in its no-data "
     "state then, and the rule's no-data state is not OK; the New Relic condition fires only "
     "when the series is absent, so it may differ"
+)
+N_OR_SPLIT = (
+    "grafana fires one alert when any of the {count} queries crosses its threshold; New Relic "
+    "gets one condition per query in the same policy, so it can open an issue per query, and the "
+    "rule resolves when every condition resolves"
 )
 N_ROUTING = "notifications (contact points and notification policies) must be configured manually"
 
@@ -1580,15 +1594,105 @@ def translate_rule(rule: GrafanaRule, key: str | None = None) -> IRMonitor:
         return _monitor(rule, key, Confidence.MANUAL, [fail.reason])
 
 
-def translate(rules: list[GrafanaRule]) -> list[IRMonitor]:
-    """One monitor per rule; a repeated key gets an index so ids stay distinct."""
+# --- several queries combined with OR ---
+
+MAX_OR_LEGS = 5  # more queries than this stay refused: that many conditions is a design choice
+MAX_LEG_REF = 32  # a longer refId would crowd the condition name
+OR_LEG = "/or-"  # joins the rule key and the refId in the key of one leg
+
+
+def _operator(test: object) -> str:
+    """The operator joining a classic test to the ones before it; Grafana reads none as and."""
+    return str(_mapping(_mapping(test).get("operator")).get("type") or "and").lower()
+
+
+def _or_tests(rule: GrafanaRule) -> list[tuple[str, Any]]:
+    """(refId, test) of a classic condition whose 2 to 5 tests each read a different query of one
+    data source, joined by OR; [] for any other rule."""
+    if rule.unreadable or rule.record is not None or rule.datasource_managed or rule.expr:
+        return []
+    read, _ = _drop_unread(rule)
+    condition = next((n for n in read.data if n.refId == rule.condition), None)
+    if condition is None or _expression_type(condition) != "classic_conditions":
+        return []
+    tests = condition.model.get("conditions")
+    if not isinstance(tests, list) or not 2 <= len(tests) <= MAX_OR_LEGS:
+        return []
+    queries = [n for n in read.data if n is not condition]
+    refs = _reads(condition)
+    if (
+        len(refs) != len(tests)
+        or len(set(refs)) != len(refs)
+        or sorted(refs) != sorted(q.refId for q in queries)
+        or any(_expression_type(q) for q in queries)
+        or len({q.datasourceUid for q in queries}) != 1
+        or any(_operator(test) != "or" for test in tests[1:])
+        or any(len(ref) > MAX_LEG_REF or not ref.isprintable() for ref in refs)
+    ):
+        return []
+    return list(zip(refs, tests, strict=True))
+
+
+def _or_legs(rule: GrafanaRule) -> list[tuple[str, GrafanaRule]]:
+    """Each OR test as a rule of its own: its query and a classic condition with that one test.
+
+    Nodes the condition never read stay, so the leg notes them as the whole rule would."""
+    tests = _or_tests(rule)
+    legs: list[tuple[str, GrafanaRule]] = []
+    for ref, test in tests:
+        others = {other for other, _ in tests} - {ref}
+        own = {"conditions": [test]}
+        data = [
+            n.model_copy(update={"model": {**n.model, **own}}) if n.refId == rule.condition else n
+            for n in rule.data
+            if n.refId not in others
+        ]
+        suffix = f" ({ref})"
+        title = (rule.title or "(untitled rule)")[: MAX_NAME_LENGTH - len(suffix)] + suffix
+        legs.append((ref, rule.model_copy(update={"data": data, "title": title})))
+    return legs
+
+
+def _translate_or(
+    rule: GrafanaRule, key: str, legs: list[tuple[str, GrafanaRule]]
+) -> list[tuple[GrafanaRule, IRMonitor]]:
+    """One approximate monitor per leg, or one manual monitor for the rule if any leg fails."""
+    note = N_OR_SPLIT.format(count=len(legs))
+    found: list[tuple[GrafanaRule, IRMonitor]] = []
+    for position, (ref, leg) in enumerate(legs, start=1):
+        monitor = translate_rule(leg, f"{key}{OR_LEG}{ref}")
+        if monitor.confidence is Confidence.MANUAL:
+            reason = R_OR_LEG.format(count=len(legs), position=position)
+            return [(rule, _monitor(rule, key, Confidence.MANUAL, [reason, *monitor.reasons[:1]]))]
+        monitor.confidence = Confidence.APPROXIMATE
+        monitor.reasons.insert(0, note)
+        found.append((leg, monitor))
+    return found
+
+
+def rule_key(source_key: str) -> str:
+    """The key of the rule a monitor came from: an OR leg's key without its `/or-<refId>`."""
+    return source_key.rpartition(OR_LEG)[0] or source_key
+
+
+def translate_pairs(rules: list[GrafanaRule]) -> list[tuple[GrafanaRule, IRMonitor]]:
+    """Each monitor with the rule it was made from (for an OR leg, the leg's own rule).
+
+    A repeated key gets an index so ids stay distinct."""
     seen: dict[str, int] = {}
-    monitors: list[IRMonitor] = []
+    found: list[tuple[GrafanaRule, IRMonitor]] = []
     for rule in rules:
         base = rule.uid or f"{rule.folder}/{rule.group}/{rule.title}"
         seen[base] = seen.get(base, 0) + 1
-        monitors.append(translate_rule(rule, base if seen[base] == 1 else f"{base}#{seen[base]}"))
-    return monitors
+        key = base if seen[base] == 1 else f"{base}#{seen[base]}"
+        legs = _or_legs(rule)
+        found += _translate_or(rule, key, legs) if legs else [(rule, translate_rule(rule, key))]
+    return found
+
+
+def translate(rules: list[GrafanaRule]) -> list[IRMonitor]:
+    """One monitor per rule, or per query of a rule whose queries are combined with OR."""
+    return [monitor for _, monitor in translate_pairs(rules)]
 
 
 def counter_suffix_notes(names: Iterable[str], types: Mapping[str, str]) -> list[str]:
