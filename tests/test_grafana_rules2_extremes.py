@@ -68,3 +68,16 @@ def test_sum_and_count_stay_refused() -> None:
 
 def test_mean_over_a_histogram_stays_refused() -> None:
     assert one(make(HIST, reducer="mean", params=[2])).confidence is Confidence.MANUAL
+
+
+def test_a_range_longer_than_a_day_is_named_in_the_reason_not_the_pending_period() -> None:
+    # max over a two-day range needs a two-day threshold duration; the pending period is 300 s
+    m = one(make("sum(rate(x_total[1m]))", reducer="max", time_range=172800, for_=300, params=[1]))
+    assert m.confidence is Confidence.MANUAL
+    assert m.reasons == [t.R_DURATION.format(seconds=172800, limit=86400)]
+    assert "pending period 300s" not in " ".join(m.reasons)
+
+
+def test_a_pending_period_longer_than_a_day_keeps_its_own_reason() -> None:
+    m = one(make("cpu", for_=90000))
+    assert m.reasons == [t.R_PENDING.format(seconds=90000, limit=86400)]

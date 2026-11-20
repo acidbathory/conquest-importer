@@ -56,6 +56,7 @@ MANUAL_REASONS = [
     (t.R_DATASOURCE.format(label="cloudwatch"), "Data source not supported"),
     (t.R_AGG_WINDOW.format(seconds=7200, limit=3600), "Grafana window too long"),
     (t.R_PENDING.format(seconds=90000, limit=86400), "Grafana pending period too long"),
+    (t.R_DURATION.format(seconds=172800, limit=86400), "Grafana pending period too long"),
     ("promql uses rate, increase or another range function", "PromQL rate or over-time function"),
     ("promql uses an _over_time function", "PromQL rate or over-time function"),
     ("promql uses absent()", "PromQL absent()"),

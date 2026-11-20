@@ -472,12 +472,12 @@ RULES: list[Rule] = [
         ],
     ),
     (
-        re.compile(r"^grafana pending period"),
+        re.compile(r"^grafana (pending period|threshold duration)"),
         "Grafana pending period too long",
         [
-            "The pending period is longer than the 24 hours New Relic allows as a threshold "
-            "duration. Shorten it, or create the condition by hand with the longest "
-            "duration and review its behaviour.",
+            "The threshold duration (the pending period, or the query range a max, min or "
+            "mean reducer reads) is longer than the 24 hours New Relic allows. Shorten it, "
+            "or create the condition by hand with the longest duration and review its behaviour.",
         ],
     ),
     (

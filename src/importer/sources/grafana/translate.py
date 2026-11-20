@@ -214,6 +214,10 @@ R_AGG_WINDOW = (
     "grafana aggregation window {seconds}s is longer than the {limit}s New Relic evaluates"
 )
 R_PENDING = "grafana pending period {seconds}s is longer than the {limit}s New Relic allows"
+R_DURATION = (
+    "grafana threshold duration {seconds}s (the longest of the pending period, the query range a "
+    "reducer reads and the window) is longer than the {limit}s New Relic allows"
+)
 PROM_NOT_SIMPLE = (
     "promql expression is not a simple metric selector with one optional avg, sum, min or max"
 )
@@ -1332,7 +1336,9 @@ def _windows(rule: GrafanaRule, fixed: int | None, minimum: int = 0) -> tuple[in
     duration = max(rule.for_seconds, window, minimum)
     duration = -(-duration // window) * window
     if duration > MAX_DURATION_SECONDS:
-        raise Fail(R_PENDING.format(seconds=rule.for_seconds, limit=MAX_DURATION_SECONDS))
+        if rule.for_seconds > MAX_DURATION_SECONDS:
+            raise Fail(R_PENDING.format(seconds=rule.for_seconds, limit=MAX_DURATION_SECONDS))
+        raise Fail(R_DURATION.format(seconds=duration, limit=MAX_DURATION_SECONDS))
     if rule.for_seconds:
         notes.append(N_PENDING)
         if duration != rule.for_seconds:
