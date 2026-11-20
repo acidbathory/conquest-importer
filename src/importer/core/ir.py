@@ -4,6 +4,7 @@ Every extractor produces IR and every emitter consumes it. See docs/ir-spec.md.
 Threshold values in the IR are already in New Relic units (metric scale applied).
 """
 
+import re
 from enum import StrEnum
 from typing import Annotated, Any, Literal, Self
 
@@ -273,6 +274,66 @@ class EmitOptions(BaseModel):
     close_violations_on_expiration: bool | None = None
 
 
+COMPOUND_ALIASES = "ABCDE"  # New Relic accepts only these five capital letters (seen live)
+MAX_TRIGGER_LENGTH = 200
+COMPOUND_TOKEN = re.compile(r"\s*(\(|\)|AND\b|OR\b|NOT\b|[A-Z]\b)")
+
+
+class CompoundSpec(BaseModel):
+    """A New Relic compound condition: a boolean expression over 2 to 5 other monitors.
+
+    `components` holds the source keys of the component monitors in alias order: the first is
+    alias A, the second B, and so on. `trigger` combines the aliases with AND, OR, NOT and
+    parentheses, and must use every alias it has a component for. The components must be created
+    first (enabled, as New Relic requires) and their ids filled in; see core/apply.py. Facets are
+    ignored and the threshold duration is New Relic's default: each component carries its own.
+    """
+
+    trigger: str
+    components: list[str]
+
+    @model_validator(mode="after")
+    def _valid_expression(self) -> Self:
+        if not 2 <= len(self.components) <= len(COMPOUND_ALIASES):
+            raise ValueError("a compound condition has 2 to 5 components")
+        if len(set(self.components)) != len(self.components):
+            raise ValueError("a compound condition names each component once")
+        if len(self.trigger) > MAX_TRIGGER_LENGTH:
+            raise ValueError(f"the trigger is longer than {MAX_TRIGGER_LENGTH} characters")
+        tokens = _compound_tokens(self.trigger)
+        used = {t for t in tokens if len(t) == 1 and t.isalpha()}
+        if used != set(COMPOUND_ALIASES[: len(self.components)]):
+            raise ValueError("the trigger must use exactly one alias per component, from A")
+        return self
+
+
+def _compound_tokens(trigger: str) -> list[str]:
+    """The tokens of a well-formed trigger expression, or ValueError."""
+    tokens: list[str] = []
+    at, end = 0, len(trigger.rstrip())
+    while at < end:
+        found = COMPOUND_TOKEN.match(trigger, at)
+        if found is None:
+            raise ValueError("the trigger may use only A to E, AND, OR, NOT and parentheses")
+        tokens.append(found[1])
+        at = found.end()
+    depth, operand = 0, True  # operand: the next token must start an operand
+    for part in tokens:
+        if operand and part in ("NOT", "("):
+            depth += part == "("
+        elif operand and len(part) == 1 and part.isalpha():
+            operand = False
+        elif not operand and part in ("AND", "OR"):
+            operand = True
+        elif not operand and part == ")" and depth:
+            depth -= 1
+        else:
+            raise ValueError("the trigger is not a well-formed expression")
+    if operand or depth:
+        raise ValueError("the trigger is not a well-formed expression")
+    return tokens
+
+
 class IRMonitor(BaseModel):
     source_system: str
     source_id: int
@@ -292,13 +353,18 @@ class IRMonitor(BaseModel):
     # What must be in place for the converted query to return data (GCP: native, needs-...).
     # None = not stated; "native" = nothing beyond the platform link, left out of saved IR.
     data_path: str | None = None
+    # Set only on a compound monitor (signal kind COMPOSITE), which combines other monitors;
+    # see CompoundSpec. Left out of saved IR when None, so every other monitor keeps its shape.
+    compound: CompoundSpec | None = None
 
     @model_serializer(mode="wrap")
     def _omit_unset_emit(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
-        """Saved IR keeps its old shape: `emit` appears only when options were set."""
+        """Saved IR keeps its old shape: `emit` and `compound` appear only when set."""
         data: dict[str, Any] = handler(self)
         if data.get("emit") is None:
             data.pop("emit", None)
+        if data.get("compound") is None:
+            data.pop("compound", None)
         if data.get("data_path") in (None, "native"):
             data.pop("data_path", None)
         return data

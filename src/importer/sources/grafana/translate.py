@@ -30,7 +30,9 @@ from importer.core.emit.common import (
 from importer.core.emit.nrql import identifier
 from importer.core.ids import source_id
 from importer.core.ir import (
+    COMPOUND_ALIASES,
     Aggregation,
+    CompoundSpec,
     Confidence,
     CountFilter,
     CountSignal,
@@ -214,6 +216,14 @@ R_MULTI = "grafana pipeline has more than one query"
 R_OR_LEG = (
     "grafana pipeline has {count} queries combined with or, and query {position} of them did not "
     "convert; its own reason follows"
+)
+R_AND_LEG = (
+    "grafana pipeline has {count} queries combined with and, and query {position} of them did not "
+    "convert; its own reason follows"
+)
+R_AND_OPERATOR = (
+    "grafana pipeline has {count} queries combined with an operator other than and or or "
+    "(logic-or, or none), which a compound condition does not reproduce"
 )
 R_RANGE = "grafana threshold range (within or outside) has no single New Relic threshold"
 R_OPERATOR = "grafana threshold operator is not supported"
@@ -444,6 +454,26 @@ N_OR_SPLIT = (
     "grafana fires one alert when any of the {count} queries crosses its threshold; New Relic "
     "gets one condition per query in the same policy, so it can open an issue per query, and the "
     "rule resolves when every condition resolves"
+)
+N_AND_PART = (
+    "this condition is part {alias} of a compound condition that combines the rule's queries as "
+    "the classic condition does; New Relic needs it enabled, so apply puts it in a policy of its "
+    "own with no workflow and only the compound condition notifies"
+)
+N_COMPOUND = (
+    "grafana tests all the queries at once on one evaluation; New Relic evaluates each part on "
+    "its own schedule and combines their open or closed states, so the timing can differ; each "
+    "part waits for the pending period, and the compound condition ignores facets, as the classic "
+    "condition drops labels; how a compound condition fires was not tested live"
+)
+N_COMPOUND_POLICY = (
+    "apply creates the parts enabled (New Relic requires it) in a policy named like the main one "
+    'plus " (compound parts)", which has no workflow, and this compound condition, disabled, in '
+    "the main policy, where the rule's notifications are routed"
+)
+N_COMPOUND_TERRAFORM = (
+    "Terraform output does not include compound conditions yet: main.tf leaves out this "
+    "condition and its parts; use the NerdGraph payloads or apply"
 )
 N_ROUTING = "notifications (contact points and notification policies) must be configured manually"
 
@@ -1581,8 +1611,6 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
         notes.insert(0, N_PAUSED_UNKNOWN if rule.paused_unknown else N_PAUSED)
     runbook, refused = fields.runbook(rule.annotations)
     notes += _tail_notes(rule, refused)
-    annotations = rule.annotations
-    message = _text(annotations.get("description")) or _text(annotations.get("summary"))
     monitor = _monitor(rule, key, Confidence.APPROXIMATE, notes)
     monitor.signal = Signal(
         kind=built.kind,
@@ -1596,10 +1624,15 @@ def _convert(rule: GrafanaRule, key: str) -> IRMonitor:
     )
     monitor.thresholds = [threshold]
     monitor.no_data = no_data
-    monitor.notification = Notification(message_template=message)
+    monitor.notification = Notification(message_template=_message(rule))
     if runbook or slide:
         monitor.emit = EmitOptions(runbook_url=runbook, slide_by_seconds=slide)
     return monitor
+
+
+def _message(rule: GrafanaRule) -> str:
+    annotations = rule.annotations
+    return _text(annotations.get("description")) or _text(annotations.get("summary"))
 
 
 def _monitor(rule: GrafanaRule, key: str, confidence: Confidence, reasons: list[str]) -> IRMonitor:
@@ -1627,21 +1660,24 @@ def translate_rule(rule: GrafanaRule, key: str | None = None) -> IRMonitor:
         return _monitor(rule, key, Confidence.MANUAL, [fail.reason])
 
 
-# --- several queries combined with OR ---
+# --- several queries combined with OR, or with AND (and a mix of the two) ---
 
 MAX_OR_LEGS = 5  # more queries than this stay refused: that many conditions is a design choice
 MAX_LEG_REF = 32  # a longer refId would crowd the condition name
 OR_LEG = "/or-"  # joins the rule key and the refId in the key of one leg
+AND_LEG = "/and-"  # joins the rule key and the refId in the key of one part of a compound
+AND_COMPOUND = "/and"  # ends the key of the compound condition of a rule
+SPLIT_KEY = re.compile(r"^(?P<rule>.+)(?:/(?:or|and)-.*|/and)$", re.DOTALL)
 
 
 def _operator(test: object) -> str:
-    """The operator joining a classic test to the ones before it; Grafana reads none as and."""
-    return str(_mapping(_mapping(test).get("operator")).get("type") or "and").lower()
+    """The operator joining a classic test to the ones before it; "" when it has none."""
+    return str(_mapping(_mapping(test).get("operator")).get("type") or "").lower()
 
 
-def _or_tests(rule: GrafanaRule) -> list[tuple[str, Any]]:
+def _classic_tests(rule: GrafanaRule) -> list[tuple[str, Any]]:
     """(refId, test) of a classic condition whose 2 to 5 tests each read a different query of one
-    data source, joined by OR; [] for any other rule."""
+    data source; [] for any other rule. The operators joining them are not checked here."""
     if rule.unreadable or rule.record is not None or rule.datasource_managed or rule.expr:
         return []
     read, _ = _drop_unread(rule)
@@ -1659,18 +1695,16 @@ def _or_tests(rule: GrafanaRule) -> list[tuple[str, Any]]:
         or sorted(refs) != sorted(q.refId for q in queries)
         or any(_expression_type(q) for q in queries)
         or len({q.datasourceUid for q in queries}) != 1
-        or any(_operator(test) != "or" for test in tests[1:])
         or any(len(ref) > MAX_LEG_REF or not ref.isprintable() for ref in refs)
     ):
         return []
     return list(zip(refs, tests, strict=True))
 
 
-def _or_legs(rule: GrafanaRule) -> list[tuple[str, GrafanaRule]]:
-    """Each OR test as a rule of its own: its query and a classic condition with that one test.
+def _legs(rule: GrafanaRule, tests: list[tuple[str, Any]]) -> list[tuple[str, GrafanaRule]]:
+    """Each test as a rule of its own: its query and a classic condition with that one test.
 
     Nodes the condition never read stay, so the leg notes them as the whole rule would."""
-    tests = _or_tests(rule)
     legs: list[tuple[str, GrafanaRule]] = []
     for ref, test in tests:
         others = {other for other, _ in tests} - {ref}
@@ -1686,30 +1720,88 @@ def _or_legs(rule: GrafanaRule) -> list[tuple[str, GrafanaRule]]:
     return legs
 
 
+def _translate_legs(
+    rule: GrafanaRule, key: str, legs: list[tuple[str, GrafanaRule]], mark: str, refusal: str
+) -> tuple[list[tuple[GrafanaRule, IRMonitor]], IRMonitor | None]:
+    """Each leg translated on its own and keyed `<key><mark><refId>`, all approximate; or, when one
+    does not convert, the manual monitor of the rule naming its position and its own reason."""
+    found: list[tuple[GrafanaRule, IRMonitor]] = []
+    for position, (ref, leg) in enumerate(legs, start=1):
+        monitor = translate_rule(leg, f"{key}{mark}{ref}")
+        if monitor.confidence is Confidence.MANUAL:
+            reason = refusal.format(count=len(legs), position=position)
+            return [], _monitor(rule, key, Confidence.MANUAL, [reason, *monitor.reasons[:1]])
+        monitor.confidence = Confidence.APPROXIMATE
+        found.append((leg, monitor))
+    return found, None
+
+
 def _translate_or(
     rule: GrafanaRule, key: str, legs: list[tuple[str, GrafanaRule]]
 ) -> list[tuple[GrafanaRule, IRMonitor]]:
     """One approximate monitor per leg, or one manual monitor for the rule if any leg fails."""
+    found, refused = _translate_legs(rule, key, legs, OR_LEG, R_OR_LEG)
+    if refused is not None:
+        return [(rule, refused)]
     note = N_OR_SPLIT.format(count=len(legs))
-    found: list[tuple[GrafanaRule, IRMonitor]] = []
-    for position, (ref, leg) in enumerate(legs, start=1):
-        monitor = translate_rule(leg, f"{key}{OR_LEG}{ref}")
-        if monitor.confidence is Confidence.MANUAL:
-            reason = R_OR_LEG.format(count=len(legs), position=position)
-            return [(rule, _monitor(rule, key, Confidence.MANUAL, [reason, *monitor.reasons[:1]]))]
-        monitor.confidence = Confidence.APPROXIMATE
+    for _, monitor in found:
         monitor.reasons.insert(0, note)
-        found.append((leg, monitor))
     return found
 
 
+def _trigger(ops: list[str]) -> str:
+    """The compound trigger over aliases A, B, ... in test order.
+
+    Grafana's classic evaluator starts from the first test's result and folds each later test in
+    with that test's own operator, left to right, ignoring the first test's operator
+    (grafana/grafana@0468ba706ff130a09e2b4b4e3bcb428c1e5228d0 pkg/expr/classic/classic.go lines
+    82-103, compareWithOperator at 229-235). Parentheses make that order explicit; a run of the
+    same operator shares one pair."""
+    expr, last = COMPOUND_ALIASES[0], ""
+    for alias, op in zip(COMPOUND_ALIASES[1:], ops, strict=False):
+        word = op.upper()
+        expr = f"{expr[:-1]} {word} {alias})" if word == last else f"({expr} {word} {alias})"
+        last = word
+    return expr
+
+
+def _compound(rule: GrafanaRule, key: str, parts: list[IRMonitor], ops: list[str]) -> IRMonitor:
+    """The compound monitor that combines the parts as the classic condition does."""
+    notes = [N_COMPOUND, N_COMPOUND_POLICY, N_COMPOUND_TERRAFORM]
+    if rule.is_paused:
+        notes.insert(0, N_PAUSED_UNKNOWN if rule.paused_unknown else N_PAUSED)
+    notes += _tail_notes(rule, fields.runbook(rule.annotations)[1])
+    monitor = _monitor(rule, f"{key}{AND_COMPOUND}", Confidence.APPROXIMATE, notes)
+    monitor.compound = CompoundSpec(trigger=_trigger(ops), components=[m.source_key for m in parts])
+    monitor.signal = Signal(kind=SignalKind.COMPOSITE, raw_query=monitor.compound.trigger)
+    monitor.notification = Notification(message_template=_message(rule))
+    return monitor
+
+
+def _translate_and(
+    rule: GrafanaRule, key: str, tests: list[tuple[str, Any]], ops: list[str]
+) -> list[tuple[GrafanaRule, IRMonitor]]:
+    """One approximate monitor per query plus the compound monitor, or one manual monitor."""
+    if any(op not in ("and", "or") for op in ops):
+        reason = R_AND_OPERATOR.format(count=len(tests))
+        return [(rule, _monitor(rule, key, Confidence.MANUAL, [reason]))]
+    found, refused = _translate_legs(rule, key, _legs(rule, tests), AND_LEG, R_AND_LEG)
+    if refused is not None:
+        return [(rule, refused)]
+    for alias, (_, monitor) in zip(COMPOUND_ALIASES, found, strict=False):
+        monitor.reasons.insert(0, N_AND_PART.format(alias=alias))
+    return [*found, (rule, _compound(rule, key, [m for _, m in found], ops))]
+
+
 def rule_key(source_key: str) -> str:
-    """The key of the rule a monitor came from: an OR leg's key without its `/or-<refId>`."""
-    return source_key.rpartition(OR_LEG)[0] or source_key
+    """The key of the rule a monitor came from: a leg's or compound's key without its last
+    `/or-<refId>`, `/and-<refId>` or `/and`."""
+    split = SPLIT_KEY.match(source_key)
+    return split["rule"] if split else source_key
 
 
 def translate_pairs(rules: list[GrafanaRule]) -> list[tuple[GrafanaRule, IRMonitor]]:
-    """Each monitor with the rule it was made from (for an OR leg, the leg's own rule).
+    """Each monitor with the rule it was made from (for a leg, the leg's own rule).
 
     A repeated key gets an index so ids stay distinct."""
     seen: dict[str, int] = {}
@@ -1718,13 +1810,20 @@ def translate_pairs(rules: list[GrafanaRule]) -> list[tuple[GrafanaRule, IRMonit
         base = rule.uid or f"{rule.folder}/{rule.group}/{rule.title}"
         seen[base] = seen.get(base, 0) + 1
         key = base if seen[base] == 1 else f"{base}#{seen[base]}"
-        legs = _or_legs(rule)
-        found += _translate_or(rule, key, legs) if legs else [(rule, translate_rule(rule, key))]
+        tests = _classic_tests(rule)
+        ops = [_operator(test) for _, test in tests[1:]]
+        if not tests:
+            found.append((rule, translate_rule(rule, key)))
+        elif all(op == "or" for op in ops):
+            found += _translate_or(rule, key, _legs(rule, tests))
+        else:
+            found += _translate_and(rule, key, tests, ops)
     return found
 
 
 def translate(rules: list[GrafanaRule]) -> list[IRMonitor]:
-    """One monitor per rule, or per query of a rule whose queries are combined with OR."""
+    """One monitor per rule; per query of a rule whose queries are combined with OR; per query
+    plus one compound monitor when they are combined with AND (or AND and OR)."""
     return [monitor for _, monitor in translate_pairs(rules)]
 
 

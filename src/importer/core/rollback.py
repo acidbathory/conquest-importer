@@ -26,6 +26,12 @@ READ: dict[str, tuple[str, str]] = {
         "{ policy(id: $id) { id name } } } } }",
         "actor.account.alerts.policy",
     ),
+    # the list read seen live (compound_check.py); the object is picked from it by id
+    "compound": (
+        "query($a: Int!) { actor { account(id: $a) { alerts "
+        "{ compoundConditions { items { id name } } } } } }",
+        "actor.account.alerts.compoundConditions.items",
+    ),
     "dashboard": (
         "query($g: EntityGuid!) { actor { entity(guid: $g) { guid name } } }",
         "actor.entity",
@@ -56,6 +62,11 @@ DELETE: dict[str, tuple[str, str]] = {
         "mutation($a: Int!, $id: ID!) { alertsPolicyDelete(accountId: $a, id: $id) { id } }",
         "id",
     ),
+    "compound": (
+        "mutation($a: Int!, $id: ID!) { alertsCompoundConditionDelete(accountId: $a, id: $id) "
+        "{ id } }",
+        "id",
+    ),
     "dashboard": (
         "mutation($g: EntityGuid!) { dashboardDelete(guid: $g) { status errors { description } } }",
         "g",
@@ -76,6 +87,7 @@ DELETE: dict[str, tuple[str, str]] = {
         "id",
     ),
 }
+LISTED = frozenset({"compound"})  # kinds read from a list of the account's objects, not by id
 POLICY_CONDITIONS = (
     "query($a: Int!, $p: ID!) { actor { account(id: $a) { alerts "
     "{ nrqlConditionsSearch(searchCriteria: {policyId: $p}) { nrqlConditions { id } } } } } }"
@@ -104,8 +116,15 @@ def current(client: NewRelicClient, account_id: int, obj: CreatedObject) -> dict
     variables: dict[str, Any] = {"a": account_id, "id": obj.id}
     if obj.kind == "dashboard":
         variables = {"g": obj.id}
+    if obj.kind in LISTED:
+        variables = {"a": account_id}
     try:
         found = _dig(client.run(query, variables, is_write=False), path)
+        if obj.kind in LISTED:
+            items = found if isinstance(found, list) else []
+            found = next(
+                (i for i in items if isinstance(i, dict) and str(i.get("id")) == obj.id), None
+            )
     except NewRelicAPIError as exc:
         # New Relic answers "Not Found" (not an empty result) for a condition or policy that has
         # been deleted. That means it is gone, which is what rollback wants to confirm.
@@ -204,6 +223,10 @@ def rollback(
                 continue
             still_there = _still_there(client, account_id, obj, sleep)
         except NewRelicAPIError as exc:
+            if obj.kind in LISTED and "not found" in str(exc).lower():
+                # deleting a policy deletes its compound conditions too (seen live)
+                result.skipped.append((obj, "already gone"))
+                continue
             result.failed.append((obj, str(exc)))
             continue
         if still_there:

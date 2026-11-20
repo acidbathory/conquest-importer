@@ -276,6 +276,30 @@ RULES: list[Rule] = [
         ],
     ),
     (
+        re.compile(r"^grafana pipeline has \d+ queries combined with and, and query \d+"),
+        "Grafana rule with AND-combined queries",
+        [
+            "Grafana fires the rule when its queries' tests, combined left to right with and "
+            "and or, hold at once. The converter makes one New Relic condition per query and a "
+            "compound condition that combines them, but only when every query converts on its "
+            "own. The second reason says why the named query did not.",
+            "Fix that query by its own steps (below), or write its condition by hand in a policy "
+            "with no workflow, then create the compound condition (Alerts > Alert conditions > "
+            "New alert condition > Compound) over it and the other parts, with the same trigger.",
+        ],
+    ),
+    (
+        re.compile(r"^grafana pipeline has \d+ queries combined with an operator other"),
+        "Grafana classic condition operator not converted",
+        [
+            "A test after the first is joined with logic-or, or with no operator. Grafana stops "
+            "at the first logic-or once the rule is firing, and refuses a missing operator, so "
+            "the converter does not guess the combination.",
+            "Set each operator to and or or in Grafana and convert again, or build one condition "
+            "per query and a compound condition with the trigger you mean.",
+        ],
+    ),
+    (
         re.compile(r"^grafana pipeline (?:queries more than one|has more than one query)"),
         "Grafana rule with several queries",
         [

@@ -144,7 +144,8 @@ def alert_pairs(folder: Path, export: Path) -> list[Pair]:
     on_disk = {m.source_key: m for m in converted_monitors(folder)}
     rules = load_rules(export)
     pairs: list[Pair] = []
-    for rule, monitor in translate_pairs(rules):  # an OR rule gives one pair per query
+    # an OR or AND rule gives one pair per query; its compound condition has no query (skipped)
+    for rule, monitor in translate_pairs(rules):
         disk = on_disk.get(monitor.source_key)
         if disk is None or disk.signal.kind not in (SignalKind.METRIC, SignalKind.LOG):
             continue

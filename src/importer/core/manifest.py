@@ -9,13 +9,14 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-Kind = Literal["policy", "condition", "dashboard", "destination", "channel", "workflow"]
-# Dependents first: a workflow uses channels, a channel uses a destination, conditions live in a
-# policy. Dashboards are independent.
+Kind = Literal["policy", "condition", "compound", "dashboard", "destination", "channel", "workflow"]
+# Dependents first: a workflow uses channels, a channel uses a destination, a compound condition
+# uses conditions, conditions live in a policy. Dashboards are independent.
 DELETE_ORDER: tuple[Kind, ...] = (
     "workflow",
     "channel",
     "destination",
+    "compound",
     "condition",
     "policy",
     "dashboard",

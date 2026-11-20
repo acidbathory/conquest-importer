@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 import httpx
 import pytest
@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 
 from importer.cli import app
 from importer.core.apply import NewRelicClient
-from importer.core.manifest import CreatedObject, Manifest, save_manifest
+from importer.core.manifest import CreatedObject, Kind, Manifest, save_manifest
 from importer.core.rollback import DELETE, READ, rollback
 
 ACCOUNT = 7
@@ -141,7 +141,8 @@ def test_only_listed_objects_are_touched() -> None:
 
 
 def test_every_kind_has_a_read_and_a_delete() -> None:
-    assert set(READ) == set(DELETE) == {k for k, _, _ in ALL}
+    # compound conditions are read from a list; tests/test_apply_compound.py covers them
+    assert set(READ) == set(DELETE) == {k for k, _, _ in ALL} | {"compound"} == set(get_args(Kind))
 
 
 def test_cli_dry_run_then_guards(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

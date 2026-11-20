@@ -24,6 +24,7 @@ from importer.core.apply import (
 )
 from importer.core.apply_dashboards import apply_dashboards, load_dashboard_plan
 from importer.core.apply_notifications import apply_notifications
+from importer.core.compound import parts_policy_name
 from importer.core.console import has_terminal
 from importer.core.dashboard_ir import IRDashboard
 from importer.core.dashboard_report import build_dashboard_report
@@ -375,6 +376,12 @@ def apply(
         f"\nCreated {len(result.created)}, already existed {len(result.skipped_existing)}, "
         f"failed {len(result.failed)}. Conditions are DISABLED: review, then enable."
     )
+    if result.enabled_parts:
+        typer.echo(
+            f"{len(result.enabled_parts)} parts of compound conditions were created ENABLED (New "
+            f"Relic requires it) in policy {printable(parts_policy_name(policy_name))!r}, which "
+            "has no workflow; the compound conditions themselves are disabled."
+        )
     for name, reason in result.failed:
         typer.echo(f"  FAILED {printable(name, 50)}: {printable(reason, 150)}", err=True)
     if result.failed:
