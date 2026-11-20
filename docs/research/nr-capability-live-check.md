@@ -92,3 +92,35 @@ What this changes:
   over 1 minute when series are slow or stopped. This confirms the harness and the note on dashboard widgets; it must
   stay dashboards-only and approximate.
 - `clamp_min` and `if()` evaluate correctly, so proposal 3 (clamp functions) is valid as a form.
+
+## Compound alert conditions (sandbox, 2026-11-20)
+
+Script: `scripts/live-test/capability-check/compound_check.py` (plan by default; `--apply` and `--cleanup`
+behind the account guard). 2 policies, 10 standard NRQL component conditions that can never reach their
+threshold (an event type nothing writes, threshold 1e12, no workflow), 13 compound probes. Everything was
+deleted afterwards and a search found no leftovers.
+
+API (read from the live NerdGraph schema): `alertsCompoundConditionCreate(accountId, policyId,
+compoundAlertCondition: {name, enabled, triggerExpression, facetMatchingBehavior, thresholdDuration,
+componentConditions: [{id, alias}], runbookUrl, ...})`, plus `...Update` and `...Delete` (the delete
+returns `{ id }`). Read back: `actor.account.alerts.compoundConditions { items { ... } }`.
+`facetMatchingBehavior` is `FACETS_IGNORED` or `FACETS_MATCH`.
+
+| Question | Answer (seen live) |
+|---|---|
+| Aliases | Only the capital letters `A` to `E`. Lower-case `a AND b` is rejected ("restrict aliases to A, B, C, D, E"), which is where the five-component limit comes from. |
+| `A AND B`, `A OR B`, `A AND NOT B`, `(A AND B) OR C`, five components | Accepted and stored as written. |
+| Six components | Rejected. |
+| A disabled component | Rejected: "All component conditions must be enabled for a compound alert". |
+| `FACETS_MATCH` with two components faceted the same way | Accepted. |
+| `FACETS_MATCH` with one faceted and one unfaceted component | Rejected: "No matching facets found across component conditions". |
+| No `thresholdDuration` | Accepted; stored as 60 seconds. |
+| A component from another policy | Accepted. |
+| The same component in two compound conditions | Accepted. |
+| Compound condition itself enabled | Accepted. |
+| Deleting a policy | Deletes its compound conditions too (the deletes that followed answered "not found"). |
+
+Not checked: how a compound condition evaluates or fires, what an incident from it looks like, and the
+Terraform resource. Consequence for a converter: the components must be enabled, so each one evaluates
+and can open its own incidents. Put the components in a policy without a workflow and route only the
+compound condition, or every leg notifies on its own.
