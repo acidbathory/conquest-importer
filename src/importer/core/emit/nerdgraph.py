@@ -7,6 +7,7 @@ variables, never formatted into the query text.
 from typing import Any
 
 from importer.core.emit.common import (
+    CannotEmit,
     aggregation_delay,
     aggregation_timer,
     aggregation_window,
@@ -19,7 +20,7 @@ from importer.core.emit.common import (
     source_description,
     streaming_method,
 )
-from importer.core.ir import IRMonitor
+from importer.core.ir import COMPOUND_ALIASES, Confidence, IRMonitor
 
 POLICY_PLACEHOLDER = "POLICY_ID_PLACEHOLDER"
 ACCOUNT_PLACEHOLDER = "ACCOUNT_ID_PLACEHOLDER"
@@ -40,6 +41,51 @@ BASELINE_MUTATION = (
     "accountId: $accountId, policyId: $policyId, condition: $condition) {\n"
     "    id\n    name\n  }\n}"
 )
+
+
+# Input shape read from the live NerdGraph schema and accepted in the sandbox
+# (scripts/live-test/capability-check/compound_check.py, docs/research/nr-capability-live-check.md).
+COMPOUND_MUTATION = (
+    "mutation CreateCompoundCondition("
+    "$accountId: Int!, $policyId: ID!, $condition: AlertsCompoundConditionInput!) {\n"
+    "  alertsCompoundConditionCreate("
+    "accountId: $accountId, policyId: $policyId, compoundAlertCondition: $condition) {\n"
+    "    id\n    name\n  }\n}"
+)
+
+
+def component_placeholder(alias: str) -> str:
+    """What stands for the id of the part with this alias until apply has created it."""
+    return f"COMPONENT_{alias}_ID_PLACEHOLDER"
+
+
+def compound_payload(monitor: IRMonitor) -> dict[str, Any]:
+    """The create mutation of a compound condition; apply fills in the ids of its parts."""
+    spec = monitor.compound
+    if spec is None:
+        raise CannotEmit("not a compound condition")
+    if monitor.confidence not in (Confidence.EXACT, Confidence.APPROXIMATE):
+        raise CannotEmit(f"confidence is {monitor.confidence.value}")
+    # No thresholdDuration: New Relic keeps its default (60s), as each part already waits for the
+    # source's pending period. Facets are ignored: a part's state is open when any facet is open.
+    condition: dict[str, Any] = {
+        "name": condition_name(monitor.name),
+        "enabled": False,  # imported disabled; a human enables after review
+        "triggerExpression": spec.trigger,
+        "facetMatchingBehavior": "FACETS_IGNORED",
+        "componentConditions": [
+            {"id": component_placeholder(alias), "alias": alias}
+            for alias, _ in zip(COMPOUND_ALIASES, spec.components, strict=False)
+        ],
+    }
+    return {
+        "query": COMPOUND_MUTATION,
+        "variables": {
+            "accountId": ACCOUNT_PLACEHOLDER,
+            "policyId": POLICY_PLACEHOLDER,
+            "condition": condition,
+        },
+    }
 
 
 def _signal(monitor: IRMonitor) -> dict[str, Any]:
@@ -77,6 +123,8 @@ def _text_settings(monitor: IRMonitor) -> dict[str, Any]:
 
 
 def nerdgraph_payload(monitor: IRMonitor) -> dict[str, Any]:
+    if monitor.compound is not None:
+        return compound_payload(monitor)
     window = emittable_window(monitor)
     condition: dict[str, Any] = {
         "name": condition_name(monitor.name),

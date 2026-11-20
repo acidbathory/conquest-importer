@@ -102,11 +102,13 @@ def test_a_rule_that_reads_everything_has_no_such_note() -> None:
     assert not any("not used by its condition" in r for r in m.reasons)
 
 
-def test_classic_reading_two_queries_stays_manual() -> None:
+def test_classic_reading_two_queries_joined_by_and_is_a_compound_condition() -> None:
     rule = classic([cond(), cond()])
     second_query(rule)
     rule.data[2].model["conditions"][1]["query"] = {"params": ["Q"]}
-    assert one(rule).reasons == [t.R_MULTI]
+    *parts, compound = t.translate([rule])  # tests/test_grafana_and_split.py has the details
+    assert len(parts) == 2
+    assert compound.compound is not None and compound.compound.trigger == "(A AND B)"
 
 
 def test_math_over_two_queries_stays_manual() -> None:

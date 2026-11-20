@@ -5,6 +5,7 @@ keys are written: the provider reads NEW_RELIC_API_KEY and NEW_RELIC_ACCOUNT_ID
 from the environment.
 """
 
+from importer.core.compound import part_keys
 from importer.core.emit.common import (
     RESOURCE_PREFIXES,
     aggregation_delay,
@@ -163,8 +164,30 @@ def _optional_lines(monitor: IRMonitor) -> list[str]:
     return ["", *hcl_attrs(pairs, "  ")] if pairs else []
 
 
+def _compound_comment(compounds: int, parts: int) -> str:
+    """Says what is left out: the newrelic_alert_compound_condition schema is not verified yet."""
+    if not compounds:
+        return ""
+    what = (
+        f"1 compound condition and its {parts} parts"
+        if compounds == 1
+        else f"{compounds} compound conditions and their {parts} parts"
+    )
+    return f"\n# {what} are not in this file; see report.md and the NerdGraph payloads.\n"
+
+
 def terraform_file(monitors: list[IRMonitor], incident_preference: str | None = None) -> str:
     """The provider, the policy and one condition per monitor. `incident_preference` falls back
-    to EmitDefaults.incident_preference, which is None (no preference written) today."""
+    to EmitDefaults.incident_preference, which is None (no preference written) today.
+
+    Compound monitors and their parts are left out (a comment counts them): a part alone would
+    fire on its own query, and the provider's compound resource has not been checked."""
     chosen = incident_preference or emit_defaults().incident_preference
-    return header(chosen) + "".join("\n" + resource_block(m) for m in monitors)
+    parts = part_keys(monitors)
+    kept = [m for m in monitors if m.compound is None and m.source_key not in parts]
+    compounds = sum(m.compound is not None for m in monitors)
+    return (
+        header(chosen)
+        + "".join("\n" + resource_block(m) for m in kept)
+        + _compound_comment(compounds, len(parts))
+    )

@@ -599,13 +599,29 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   numbers are ignored. A string, a boolean or an empty list stays manual. Exact for the threshold;
   36 more rules convert on the real estate.
 - **Queries combined with OR in Grafana alerts:** a classic condition whose 2 to 5 tests each read a
-  different query of one data source, joined by OR (Grafana ignores the first test's operator and reads
-  a missing one as AND), becomes one condition per query in the same policy, named `<title> (<refId>)`.
+  different query of one data source, joined by OR (Grafana ignores the first test's operator),
+  becomes one condition per query in the same policy, named `<title> (<refId>)`.
   Grafana fires one alert when any query crosses its threshold; New Relic can open an issue per query,
   and the rule resolves only when every condition resolves. Approximate, and only when every query
   converts on its own; otherwise the rule is manual and names which query failed and its reason. Any
-  AND, more than 5 queries and mixed data sources stay manual. On a real estate of 5,039 rules this
-  converted 83 more rules (200 conditions); not yet run on New Relic.
+  AND makes a compound condition (next entry); more than 5 queries and mixed data sources stay manual.
+  On a real estate of 5,039 rules this converted 83 more rules (200 conditions); not yet run on New
+  Relic.
+- **Queries combined with AND in Grafana alerts:** the same shape joined by AND, or by a mix of AND and
+  OR, becomes one condition per query (`<title> (<refId>)`) and one New Relic compound condition
+  named after the rule. Grafana's classic evaluator folds the tests left to right, each with its own
+  operator, and ignores the first test's operator (grafana/grafana 0468ba7,
+  `pkg/expr/classic/classic.go`); the trigger writes that order out, for example `((A AND B) OR C)`.
+  New Relic requires the parts enabled, so `apply` puts them in a policy named like the main one plus
+  " (compound parts)" with no workflow, and the compound condition, disabled, in the main policy where
+  notifications are routed. The compound condition ignores facets, as the classic condition drops
+  labels and fires on any series of each query, and keeps New Relic's default threshold duration
+  (60s), because each part already waits for the rule's pending period. Approximate: New Relic
+  evaluates each part on its own schedule, so the timing can differ; firing was not tested live.
+  `logic-or` or a missing operator (Grafana refuses the latter), more than 5 queries and a query that
+  does not convert stay manual, each with its own reason. Terraform output does not include compound
+  conditions or their parts yet. On a real estate of 5,039 rules this converted 31 more rules
+  (31 compound conditions over 77 parts); not yet run on New Relic.
 - **Counter rates in Grafana alerts:** a constant factor inside `sum()` or `avg()` of a counter (`sum(rate(x[5m]) * 60)`) is
   moved outside it, which is exact. A Grafana `mean` reducer over a counter is read as the total change over the rule's range;
   a mean of ratios is read as a ratio of totals and can differ noticeably when the denominator varies. `irate`, `delta`,

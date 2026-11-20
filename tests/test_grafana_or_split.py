@@ -107,14 +107,16 @@ def test_six_or_legs_stay_refused() -> None:
     [
         ["and", "and"],
         ["or", "and"],
-        ["and", None],  # Grafana reads a missing operator as and
+        ["and", None],  # Grafana refuses a missing operator after the first (classic.go)
         ["and", "or", "and"],
         ["or", "and", "or"],
     ],
 )
-def test_any_and_keeps_the_rule_refused(ops: list[str | None]) -> None:
-    (m,) = translate([or_rule(len(ops), ops)])
-    assert m.reasons == [t.R_MULTI]
+def test_any_and_is_not_split_as_or(ops: list[str | None]) -> None:
+    """AND rules become a compound condition (tests/test_grafana_and_split.py) or stay refused."""
+    monitors = translate([or_rule(len(ops), ops)])
+    assert not any(t.OR_LEG in m.source_key for m in monitors)
+    assert all(t.N_OR_SPLIT.format(count=len(ops)) not in m.reasons for m in monitors)
 
 
 @pytest.mark.parametrize("first", ["or", None, "and"])

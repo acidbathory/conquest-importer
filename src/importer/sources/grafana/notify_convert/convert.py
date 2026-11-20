@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date
 
+from importer.core.compound import part_keys
 from importer.core.emit.notifications import converted_condition_names
 from importer.core.ir import IRMonitor
 from importer.core.muting_ir import MutingRule
@@ -93,14 +94,20 @@ def _rule_for(inputs: Inputs) -> dict[str, GrafanaRule]:
 
 
 def _rule_of(by_key: dict[str, GrafanaRule], key: str) -> GrafanaRule | None:
-    """The rule of a monitor; one query of an OR rule routes as its rule."""
+    """The rule of a monitor; one query of an OR rule, or a compound condition, routes as its
+    rule."""
     return by_key.get(key) or by_key.get(rule_key(key))
 
 
 def _routes(inputs: Inputs, names: dict[int, str]) -> tuple[RouteSet, int]:
-    """The routes of the converted rules, and how many rules did not convert."""
-    converted = [m for m in inputs.monitors if m.source_id in names]
-    not_converted = len(inputs.monitors) - len(converted)
+    """The routes of the converted rules, and how many rules did not convert.
+
+    The parts of a compound condition are not routed: they sit in a policy with no workflow and
+    the compound condition notifies for them."""
+    parts = part_keys(inputs.monitors)
+    monitors = [m for m in inputs.monitors if m.source_key not in parts]
+    converted = [m for m in monitors if m.source_id in names]
+    not_converted = len(monitors) - len(converted)
     tree = inputs.export.policy
     if tree is None:
         return RouteSet(unrouted=[m.name for m in converted], reasons=[R.R_POLICY_NO_RECEIVER]), (

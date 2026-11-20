@@ -32,8 +32,9 @@ GOOD_VERDICTS = frozenset({"match", "matched", "verified", "pass", "passed"})
 # left out of the file for them). Other sources are not counted by data path at all.
 DEFAULT_DATA_PATH = {"gcp": "native"}
 # A Grafana rule whose queries are joined by OR becomes one condition per query, keyed
-# "<rule>/or-<query>"; the rule converts only when every one of its conditions does.
-SPLIT_MARK = {"grafana": "/or-"}
+# "<rule>/or-<query>"; joined by AND, one condition per query keyed "<rule>/and-<query>" plus a
+# compound condition keyed "<rule>/and". The rule converts only when every one of them does.
+SPLIT_KEY = {"grafana": re.compile(r"^(?P<rule>.+)(?:/(?:or|and)-.*|/and)$", re.DOTALL)}
 EVIDENCE_FIELDS = ("id", "source", "claim", "date", "method", "evidence")
 
 
@@ -91,8 +92,9 @@ def _rule_of(source: str, data: dict[str, Any], fallback: str) -> str:
     key = data.get("source_key")
     if not isinstance(key, str):
         return fallback
-    mark = SPLIT_MARK.get(source)
-    return key.rsplit(mark, 1)[0] if mark and mark in key else key
+    pattern = SPLIT_KEY.get(source)
+    split = pattern.match(key) if pattern else None
+    return split["rule"] if split else key
 
 
 def _count_rules(metrics: dict[str, int], rules: dict[tuple[str, str], list[bool]]) -> None:

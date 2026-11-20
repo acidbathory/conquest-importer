@@ -419,6 +419,22 @@ def test_a_rule_with_one_leg_not_converted_is_not_a_converted_rule(tmp_path: Pat
     assert m["out/grafana/rules_manual"] == 1
 
 
+@pytest.mark.parametrize(
+    ("compound", "part_b", "converted"),
+    [("approximate", "approximate", 1), ("manual", "approximate", 0), ("approximate", "manual", 0)],
+)
+def test_an_and_rule_converts_only_with_its_compound_and_every_part(
+    tmp_path: Path, compound: str, part_b: str, converted: int
+) -> None:
+    ir = tmp_path / "out" / "grafana" / "ir"
+    _keyed(ir, "1", "r1/and-A", "approximate")
+    _keyed(ir, "2", "r1/and-B", part_b)
+    _keyed(ir, "3", "r1/and", compound)
+    m = sb.gather([tmp_path / "out"], root=None, evidence=None, today="d")["metrics"]
+    assert m.get("out/grafana/rules_converted", 0) == converted
+    assert m.get("out/grafana/rules_manual", 0) == 1 - converted
+
+
 def test_a_folder_over_the_file_cap_says_so(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
