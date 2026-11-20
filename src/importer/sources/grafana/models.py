@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict
 
 from importer.core.ids import MAX_INPUT_BYTES
 from importer.core.json_depth import TooDeepError, check_depth
+from importer.core.safe_yaml import load_yaml
 
 MAX_FILES = 10_000
 MAX_RULES = 50_000
@@ -34,7 +35,9 @@ STATES = {  # lower case spelling -> the name Grafana documents
     "keeplast": "KeepLast",
     "error": "Error",
 }
-NESTING_ERROR = "a JSON file is nested too deeply to read; pass a smaller or flatter export"
+RULE_FILES = ("*.json", "*.yaml", "*.yml")  # YAML is what Alerting > Export writes by default
+YAML_SUFFIXES = (".yaml", ".yml")
+NESTING_ERROR = "a rule file is nested too deeply to read; pass a smaller or flatter export"
 SHAPE_ERROR = (
     "expected Grafana alert rules: a list of rules, an export with groups, a ruler response, "
     "or an /apis rule list"
@@ -294,10 +297,20 @@ def _files(path: Path) -> list[Path]:
     if not path.is_dir():
         return [path]
     # the files here and in the folder `extract-grafana` writes; not alerts/, which holds IR
-    found = sorted(f for folder in (path, path / "alert-rules") for f in folder.glob("*.json"))
+    folders = (path, path / "alert-rules")
+    found = sorted(f for folder in folders for pattern in RULE_FILES for f in folder.glob(pattern))
     if len(found) > MAX_FILES:
-        raise ValueError(f"{path} has more than {MAX_FILES} JSON files; pass a smaller folder")
+        raise ValueError(f"{path} has more than {MAX_FILES} rule files; pass a smaller folder")
     return found
+
+
+def _read(file: Path) -> Any:
+    """The parsed content of a JSON or YAML rule file (by its extension)."""
+    text = file.read_text()
+    if file.suffix.lower() in YAML_SUFFIXES:
+        return load_yaml(text, file.name)
+    check_depth(text)
+    return json.loads(text)
 
 
 def _content_key(rule: GrafanaRule) -> tuple[Any, ...]:
@@ -345,9 +358,7 @@ def load_rules(path: Path) -> list[GrafanaRule]:
         if file.stat().st_size > MAX_INPUT_BYTES:
             raise ValueError(f"{file} is larger than {MAX_INPUT_BYTES // (1024 * 1024)} MB")
         try:
-            text = file.read_text()
-            check_depth(text)
-            rules += _collect(json.loads(text))
+            rules += _collect(_read(file))
         except (TooDeepError, RecursionError):
             raise ValueError(NESTING_ERROR) from None
         if len(rules) > MAX_RULES:

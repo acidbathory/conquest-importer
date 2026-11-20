@@ -542,7 +542,10 @@ the converter was built from scrubbed copies of three real objects and a few han
 `importer extract-grafana --out <folder>` reads Grafana-managed alert rules from a Grafana Cloud
 stack (read-only; `GRAFANA_URL` and `GRAFANA_SA_TOKEN` in `.env`), and `--source grafana` converts
 them. The loader also reads a rule file or folder in any of the four shapes Grafana returns
-(provisioning list, export, ruler, `/apis`). Nothing here has been run against New Relic. The
+(provisioning list, export, ruler, `/apis`), as JSON or as YAML (`.yaml`, `.yml`: the default of
+Alerting > Export). YAML is read as YAML 1.2, as Grafana writes it: `1e+07` is a number, `yes`,
+`on` and `0755` stay text, and a quoted number stays text. A YAML file with anchors, aliases or
+explicit tags, or with more than one document, is refused. Nothing here has been run against New Relic. The
 provisioning and export shapes come from one sandbox stack (17 paused sample rules, Grafana 13.4);
 the ruler and `/apis` shapes are hand-made from the documentation.
 
