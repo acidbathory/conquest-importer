@@ -32,11 +32,21 @@ def test_classic_gt_lt_ignore_the_trailing_zero(kind: str, op: Operator) -> None
     assert (m.thresholds[0].operator, m.thresholds[0].value) == (op, 7)
 
 
+@pytest.mark.parametrize("params", [[7, 1], [7, 0, 0], [7.0, -2.5]])
+def test_classic_single_value_kinds_read_the_first_param_as_grafana_does(
+    params: list[float],
+) -> None:
+    # grafana/grafana 0468ba7 pkg/expr/classic/evaluator.go: newThresholdEvaluator uses Params[0]
+    m = one(classic([cond("gt", params)]))
+    assert m.thresholds[0].value == 7, m.reasons
+
+
 @pytest.mark.parametrize(
     ("kind", "params"),
-    [("gt", [7, 1]), ("gt", [7, 0, 0]), ("gt", ["7", 0]), ("gt", [7, "0"]), ("gt", [True, 0])],
+    [("gt", ["7", 0]), ("gt", [7, "0"]), ("gt", [True, 0]), ("gt", [])],
 )
 def test_classic_gt_lt_other_param_lists_stay_manual(kind: str, params: list[Any]) -> None:
+    # Grafana reads params as []float64, so a string or a bool is not a rule it would run
     assert one(classic([cond(kind, params)])).reasons == [t.R_VALUE]
 
 
@@ -44,8 +54,21 @@ def test_range_kinds_keep_their_two_params_refusal() -> None:
     assert one(classic([cond("within_range", [1, 2])])).reasons == [t.R_RANGE]
 
 
-def test_a_threshold_node_does_not_get_the_second_param() -> None:
-    assert one(make("avg(cpu)", params=[7, 0])).reasons == [t.R_VALUE]
+@pytest.mark.parametrize("kind", ["gt", "lt", "gte", "lte", "eq", "ne"])
+@pytest.mark.parametrize("params", [[7, 0], [7, 3], [7.5, 0, 0]])
+def test_a_threshold_node_reads_the_first_param_as_grafana_does(
+    kind: str, params: list[float]
+) -> None:
+    # grafana/grafana 0468ba7 pkg/expr/threshold.go: single-value kinds use conditions[0] only
+    m = one(make("avg(cpu)", kind=kind, params=params))
+    assert m.thresholds[0].value == params[0], m.reasons
+
+
+@pytest.mark.parametrize("params", [["7", 0], [True, 0], [7, "0"], [], [float("inf"), 0]])
+def test_a_threshold_node_with_a_value_grafana_cannot_read_stays_manual(
+    params: list[object],
+) -> None:
+    assert one(make("avg(cpu)", params=params)).reasons == [t.R_VALUE]
 
 
 def test_classic_with_an_unused_query_converts_with_a_note() -> None:

@@ -593,7 +593,6 @@ def test_range_thresholds_are_manual(kind: str, params: list[int]) -> None:
     ("kind", "params"),
     [
         ("gt", []),
-        ("gt", [1, 2]),
         ("gt", ["x"]),
         ("gt", [True]),
         ("gt", [float("inf")]),

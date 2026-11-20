@@ -1081,7 +1081,7 @@ def _classic(
     if reducer not in REDUCERS:
         raise Fail(R_REDUCER)
     evaluator = _mapping(test.get("evaluator"))
-    threshold = _make_threshold(evaluator.get("type"), evaluator.get("params"), classic=True)
+    threshold = _make_threshold(evaluator.get("type"), evaluator.get("params"))
     return query, reducer, threshold, [N_CLASSIC]
 
 
@@ -1176,19 +1176,18 @@ def _read_pipeline(rule: GrafanaRule) -> tuple[GfNode, str, Threshold, bool, lis
     return step, reducer, threshold, recovery, notes
 
 
-def _make_threshold(kind: object, params: object, *, classic: bool = False) -> Threshold:
+def _make_threshold(kind: object, params: object) -> Threshold:
     """The critical threshold for an evaluator type and its parameters.
 
-    Grafana's legacy-alert migration writes a classic gt or lt as [value, 0]; the second parameter
-    only matters for the range kinds, so a classic gt or lt reads the first."""
+    Grafana reads the parameters as numbers and, for every single-value kind (gt, lt, gte, lte, eq,
+    ne), uses only the first (grafana/grafana 0468ba7: pkg/expr/threshold.go NewThresholdCommand,
+    pkg/expr/classic/evaluator.go newThresholdEvaluator). The legacy-alert migration writes
+    [value, 0]; any further numbers are ignored the same way."""
     if (
-        classic
-        and kind in ("gt", "lt")
+        kind in OPERATORS
         and isinstance(params, list)
-        and len(params) == 2
-        and params[1] == 0
-        and isinstance(params[1], int | float)
-        and not isinstance(params[1], bool)
+        and params
+        and all(isinstance(p, int | float) and not isinstance(p, bool) for p in params)
     ):
         params = params[:1]
     if kind in RANGE_KINDS:

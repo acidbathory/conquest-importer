@@ -576,6 +576,11 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   those two kinds; range kinds keep two parameters). Queries and expressions the rule's condition
   never reads are ignored, and the rule says how many. Both are approximate. On a real estate of
   5,039 rules this moved the converted count from 411 to 609 (8% to 12%); not yet run on New Relic.
+- **Threshold parameters:** for every single-value kind (`gt`, `lt`, `gte`, `lte`, `eq`, `ne`), in a
+  threshold node or a classic condition, only the first number of `params` is read, as Grafana does
+  (grafana/grafana 0468ba7, `pkg/expr/threshold.go` and `pkg/expr/classic/evaluator.go`); further
+  numbers are ignored. A string, a boolean or an empty list stays manual. Exact for the threshold;
+  36 more rules convert on the real estate.
 - **Queries combined with OR in Grafana alerts:** a classic condition whose 2 to 5 tests each read a
   different query of one data source, joined by OR (Grafana ignores the first test's operator and reads
   a missing one as AND), becomes one condition per query in the same policy, named `<title> (<refId>)`.
