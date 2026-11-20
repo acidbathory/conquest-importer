@@ -346,8 +346,8 @@ def test_the_pending_period_is_whole_range_windows() -> None:
 @pytest.mark.parametrize(
     ("seconds", "fragment"),
     [
-        (7200, "grafana aggregation window"),
-        (3601, "grafana aggregation window"),
+        (43200, "grafana aggregation window"),  # up to 6 hours converts (live check 2026-11-11)
+        (21601, "grafana aggregation window"),
         (0, "grafana query time range"),
         (-60, "grafana query time range"),
         (None, "grafana query time range"),
@@ -647,7 +647,7 @@ def test_an_unknown_interval_and_a_rounded_duration_are_noted() -> None:
 @pytest.mark.parametrize(
     ("kwargs", "fragment"),
     [
-        ({"interval": 3660}, "grafana aggregation window"),
+        ({"interval": 21660}, "grafana aggregation window"),
         ({"for_": 86401}, "grafana pending period"),
     ],
 )
@@ -656,8 +656,8 @@ def test_a_window_over_the_new_relic_limit_is_manual(kwargs: dict[str, Any], fra
     assert m.confidence is Confidence.MANUAL and fragment in text(m)
 
 
-def test_a_loki_range_over_an_hour_is_manual() -> None:
-    m = one(make('sum(count_over_time({a="1"}[2h]))', dtype="loki"))
+def test_a_loki_range_over_six_hours_is_manual() -> None:
+    m = one(make('sum(count_over_time({a="1"}[12h]))', dtype="loki"))
     assert m.confidence is Confidence.MANUAL and "grafana aggregation window" in text(m)
 
 

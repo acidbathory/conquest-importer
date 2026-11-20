@@ -584,6 +584,11 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   a 0 can then never fire the rule, so New Relic, which skips missing values, fires the same. Other
   replacement values and other thresholds stay manual. The Grafana no-data state differs (the
   replaced values never reach it). Approximate; 121 more rules convert on the real estate.
+- **Windows from one to six hours:** a Grafana rule whose window (the query range a reducer reads, or
+  the interval) is longer than an hour converts with that window, up to 6 hours, the limit New Relic
+  accepted in a live check (2026-11-11, the Azure six-hour window). After creation or any edit the
+  condition opens nothing until one full window has passed; the rule says so. Longer windows stay
+  manual. Approximate; 88 more rules convert on the real estate.
 - **Threshold parameters:** for every single-value kind (`gt`, `lt`, `gte`, `lte`, `eq`, `ne`), in a
   threshold node or a classic condition, only the first number of `params` is read, as Grafana does
   (grafana/grafana 0468ba7, `pkg/expr/threshold.go` and `pkg/expr/classic/evaluator.go`); further

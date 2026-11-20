@@ -581,6 +581,6 @@ def test_other_sources_keep_the_one_hour_emit_limit() -> None:
     from importer.core.emit.common import CannotEmit
 
     m = one(metric_alert(windowSize="PT2H", evaluationFrequency="PT2H"))
-    other = m.model_copy(update={"source_system": "grafana"})
+    other = m.model_copy(update={"source_system": "cloudwatch"})
     with pytest.raises(CannotEmit, match="30s-1h"):
         nrql_for(other)

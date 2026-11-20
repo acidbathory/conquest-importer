@@ -101,7 +101,7 @@ def test_a_range_that_is_not_whole_minutes_is_manual(window: str) -> None:
 
 
 def test_a_range_over_the_longest_window_is_manual() -> None:
-    m = prom("sum(increase(x_total[2h]))")
+    m = prom("sum(increase(x_total[12h]))")  # windows up to 6 hours convert
     assert m.confidence is Confidence.MANUAL and "longer than" in text(m)
 
 

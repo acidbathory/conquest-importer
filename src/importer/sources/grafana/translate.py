@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from importer.core.emit.common import (
+    LONG_AGGREGATION_WINDOW_SECONDS,
     MAX_AGGREGATION_WINDOW_SECONDS,
     MAX_DURATION_SECONDS,
     MAX_NAME_LENGTH,
@@ -314,6 +315,11 @@ N_RANGE_IGNORED = (
 )
 N_DROPNN = (
     "the reduce mode drops non-numeric values; New Relic ignores empty values too, so it may differ"
+)
+N_LONG_WINDOW = (
+    "the {window}s window is longer than an hour: a New Relic condition collects one full window "
+    "before it can open, so after creation or any edit no alert opens until {window}s have passed "
+    "(windows up to 6 hours were accepted by New Relic in a live check on 2026-11-11)"
 )
 N_REPLACE_ZERO = (
     "the reduce mode replaces missing or non-numeric values with 0; under an above-threshold of 0 "
@@ -1383,8 +1389,10 @@ def _windows(rule: GrafanaRule, fixed: int | None, minimum: int = 0) -> tuple[in
         base = MIN_WINDOW_SECONDS
         notes.append(N_INTERVAL_UNKNOWN)
     window = _whole_minutes(base)
+    if window > LONG_AGGREGATION_WINDOW_SECONDS:
+        raise Fail(R_AGG_WINDOW.format(seconds=window, limit=LONG_AGGREGATION_WINDOW_SECONDS))
     if window > MAX_AGGREGATION_WINDOW_SECONDS:
-        raise Fail(R_AGG_WINDOW.format(seconds=window, limit=MAX_AGGREGATION_WINDOW_SECONDS))
+        notes.append(N_LONG_WINDOW.format(window=window))
     if window != base:
         notes.append(N_ROUNDED_WINDOW.format(seconds=base, window=window))
     if fixed is not None and rule.interval_seconds != fixed:

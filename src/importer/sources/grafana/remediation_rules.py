@@ -480,8 +480,8 @@ RULES: list[Rule] = [
         re.compile(r"^grafana aggregation window"),
         "Grafana window too long",
         [
-            "New Relic evaluates windows of up to one hour. Create the condition by hand "
-            "with a one hour window and a threshold scaled to match, and check the result "
+            "New Relic evaluates windows of up to six hours. Create the condition by hand "
+            "with a six hour window and a threshold scaled to match, and check the result "
             "means the same thing.",
         ],
     ),

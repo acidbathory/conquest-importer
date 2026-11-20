@@ -19,7 +19,7 @@ customer results. See [what migrates](docs/what-migrates.md), including "What co
   variables; formulas over metric queries; the common functions (`top`, `as_count`, `as_rate`, `per_second`,
   `rollup`, `fill`); `style` and `limit` on formulas; log widgets as `FROM Log` queries; image, treemap and sunburst
   widgets. On the committed fixtures 288 of 454 data widgets convert.
-- **Grafana alerts.** Threshold parameters read as Grafana reads them (the first number, in threshold nodes and classic conditions); the `replaceNN` reduce mode with 0 under an above-threshold of 0 or more; queries a condition never reads are ignored;
+- **Grafana alerts.** Threshold parameters read as Grafana reads them (the first number, in threshold nodes and classic conditions); the `replaceNN` reduce mode with 0 under an above-threshold of 0 or more; windows from one to six hours; queries a condition never reads are ignored;
   constants inside `sum()` and `avg()` of a counter; the `mean` reducer over a counter; faceted per-series
   conditions for Prometheus rule files; label matchers: `.*`, `.+`, `!=""` (the label is set), empty-alternative negation and dotted
   hostnames; **regular expressions** as `RLIKE`/`NOT RLIKE` (new optional `regex` flag on filters);
@@ -55,7 +55,7 @@ customer results. See [what migrates](docs/what-migrates.md), including "What co
 ### Measured (2026-11-16; counts only)
 - Public sample content, converted share of alerts and dashboard widgets together: Google Cloud 75%, Datadog 63%
   (a fresh, reproducible sample), Grafana 37%, AWS 35%, Azure 25%, Dynatrace 2%.
-- One real Grafana alert estate (5,039 rules): 8% at the start of this period, now 44% (2,218 rules, read from the original YAML export; 2,193 from a JSON copy made with a YAML 1.1 parser). One real dashboard: 42%.
+- One real Grafana alert estate (5,039 rules): 8% at the start of this period, now 46% (2,306 rules, read from the original YAML export). One real dashboard: 42%.
 - Verified on data in a sandbox: `RLIKE` is a full-string match; a missing attribute is excluded by `RLIKE` and
   kept by `NOT RLIKE`; the nested sum of the latest value per series is exact; `average(x) * cardinality(x)` is
   14% low with mixed scrape intervals over 5 minutes and 52% low over 1 minute; `clamp_min` and `if()` evaluate
