@@ -392,7 +392,8 @@ def test_a_loki_range_query_with_last_converts() -> None:
         ({"mode": ""}, True, ""),
         ({"mode": "strict"}, True, ""),
         ({"mode": "dropNN"}, True, "drops non-numeric"),
-        ({"mode": "replaceNN", "replaceWithValue": 0}, False, "grafana reduce mode"),
+        ({"mode": "replaceNN", "replaceWithValue": 0}, True, "replaces missing"),  # gt 80
+        ({"mode": "replaceNN", "replaceWithValue": 1}, False, "grafana reduce mode"),
         ({"mode": "weird"}, False, "grafana reduce mode"),
     ],
 )

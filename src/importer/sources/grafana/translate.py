@@ -315,6 +315,11 @@ N_RANGE_IGNORED = (
 N_DROPNN = (
     "the reduce mode drops non-numeric values; New Relic ignores empty values too, so it may differ"
 )
+N_REPLACE_ZERO = (
+    "the reduce mode replaces missing or non-numeric values with 0; under an above-threshold of 0 "
+    "or more a 0 never fires the rule, so New Relic, which skips missing values, fires the same; "
+    "Grafana never reaches its no-data state for those values, so check loss of signal"
+)
 N_PAUSED_UNKNOWN = (
     "the paused flag has a value the importer does not understand, so the rule is treated as "
     "paused and the condition is created disabled; it must be confirmed before you enable it"
@@ -1044,17 +1049,28 @@ def _check_expressions(rule: GrafanaRule) -> list[GfNode]:
     return queries
 
 
+def _replaces_with_zero(settings: Mapping[str, Any]) -> bool:
+    value = settings.get("replaceWithValue")
+    return isinstance(value, int | float) and not isinstance(value, bool) and value == 0
+
+
 def _reduce_step(
     nodes: dict[str, GfNode], step: GfNode | None, used: list[GfNode]
 ) -> tuple[GfNode | None, str, list[str]]:
-    """Take an optional reduce node off the chain: the next node, the reducer and the notes."""
+    """Take an optional reduce node off the chain: the next node, the reducer and the notes.
+
+    replaceNN with 0 gets N_REPLACE_ZERO here; the caller refuses it unless the threshold makes a 0
+    harmless (see _check_replace_zero)."""
     if step is None or _expression_type(step) != "reduce":
         return step, "last", []
     used.append(step)
     notes: list[str] = []
-    mode = str(_mapping(step.model.get("settings")).get("mode") or "").lower()
+    settings = _mapping(step.model.get("settings"))
+    mode = str(settings.get("mode") or "").lower()
     if mode == "dropnn":
         notes.append(N_DROPNN)
+    elif mode == "replacenn" and _replaces_with_zero(settings):
+        notes.append(N_REPLACE_ZERO)
     elif mode not in ("", "strict"):
         raise Fail(R_REDUCE_MODE)
     return (
@@ -1173,7 +1189,17 @@ def _read_pipeline(rule: GrafanaRule) -> tuple[GfNode, str, Threshold, bool, lis
     if reducer not in REDUCERS:
         raise Fail(R_REDUCER)
     threshold, recovery = _threshold(condition)
+    _check_replace_zero(notes, threshold, recovery)
     return step, reducer, threshold, recovery, notes
+
+
+def _check_replace_zero(notes: list[str], threshold: Threshold, recovery: bool) -> None:
+    """A 0 put in for a missing value fires nothing only above a threshold of 0 or more; a recovery
+    threshold below a positive value would resolve on it, so that stays manual too."""
+    if N_REPLACE_ZERO in notes and (
+        threshold.operator is not Operator.ABOVE or threshold.value < 0 or recovery
+    ):
+        raise Fail(R_REDUCE_MODE)
 
 
 def _make_threshold(kind: object, params: object) -> Threshold:

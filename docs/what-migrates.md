@@ -576,6 +576,11 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   those two kinds; range kinds keep two parameters). Queries and expressions the rule's condition
   never reads are ignored, and the rule says how many. Both are approximate. On a real estate of
   5,039 rules this moved the converted count from 411 to 609 (8% to 12%); not yet run on New Relic.
+- **Reduce mode replaceNN with 0:** a reduce node that replaces missing or non-numeric values with 0
+  converts only when the threshold is above a value of 0 or more and there is no recovery threshold:
+  a 0 can then never fire the rule, so New Relic, which skips missing values, fires the same. Other
+  replacement values and other thresholds stay manual. The Grafana no-data state differs (the
+  replaced values never reach it). Approximate; 121 more rules convert on the real estate.
 - **Threshold parameters:** for every single-value kind (`gt`, `lt`, `gte`, `lte`, `eq`, `ne`), in a
   threshold node or a classic condition, only the first number of `params` is read, as Grafana does
   (grafana/grafana 0468ba7, `pkg/expr/threshold.go` and `pkg/expr/classic/evaluator.go`); further
