@@ -136,3 +136,18 @@ def test_the_term_percentile_rules_and_the_saved_shape() -> None:
             )
     with pytest.raises(ValidationError):
         MetricTerm(metric="x", space_aggregation=Aggregation.SUM, percentile=50)
+
+
+@pytest.mark.parametrize("window", ["$__rate_interval", "$__interval", "${__rate_interval}"])
+def test_a_grafana_interval_variable_as_the_rate_window_converts(window: str) -> None:
+    # the window is dropped anyway (N_HIST_WINDOW), so its value does not matter
+    m = prom(f"histogram_quantile(0.99, sum(rate(demo_latency_bucket[{window}])) by (le))")
+    assert m.confidence is Confidence.APPROXIMATE, m.reasons
+    assert nrql_for(m) == "SELECT bucketPercentile(demo_latency_bucket, 99) FROM Metric"
+    assert p.N_HIST_WINDOW in m.reasons
+
+
+@pytest.mark.parametrize("window", ["$__range_ms", "$custom", "$__rate_interval:1m"])
+def test_other_variables_as_the_rate_window_stay_refused(window: str) -> None:
+    m = prom(f"histogram_quantile(0.99, sum(rate(demo_latency_bucket[{window}])) by (le))")
+    assert m.confidence is Confidence.MANUAL

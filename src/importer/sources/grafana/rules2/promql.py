@@ -426,8 +426,10 @@ R_HIST_LE = "a label matcher on le cannot be kept in a bucketPercentile query"
 
 HISTOGRAM_CALL = re.compile(r"\s*histogram_quantile\s*\(")
 QUANTILE = re.compile(r"\s*(0?\.\d+)\s*")
+# The window may also be Grafana's interval variable: bucketPercentile drops it (N_HIST_WINDOW).
 BUCKET_RATE = re.compile(
-    rf"\s*(?:rate|irate|increase)\s*\(\s*{SELECTOR}\s*\[\s*\d+\s*[smhdw]\s*\]\s*\)\s*"
+    rf"\s*(?:rate|irate|increase)\s*\(\s*{SELECTOR}\s*\["
+    r"\s*(?:\d+\s*[smhdw]|\$__(?:rate_)?interval|\$\{__(?:rate_)?interval\})\s*\]\s*\)\s*"
 )
 MULTIPLIER = re.compile(r"\s*(\d+(?:\.\d+)?)\s*")
 MIN_PERCENT, MAX_PERCENT = Decimal(1), Decimal("99.99")

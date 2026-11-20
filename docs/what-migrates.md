@@ -589,6 +589,10 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   accepted in a live check (2026-11-11, the Azure six-hour window). After creation or any edit the
   condition opens nothing until one full window has passed; the rule says so. Longer windows stay
   manual. Approximate; 88 more rules convert on the real estate.
+- **`histogram_quantile` with Grafana's interval variable:** a rate or increase window written as
+  `$__rate_interval` or `$__interval` inside `histogram_quantile` converts like a fixed window:
+  `bucketPercentile` drops the window anyway and reads the condition's own. Other variables stay
+  manual. Approximate; 71 more rules convert on the real estate.
 - **Threshold parameters:** for every single-value kind (`gt`, `lt`, `gte`, `lte`, `eq`, `ne`), in a
   threshold node or a classic condition, only the first number of `params` is read, as Grafana does
   (grafana/grafana 0468ba7, `pkg/expr/threshold.go` and `pkg/expr/classic/evaluator.go`); further
