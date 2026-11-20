@@ -1,0 +1,83 @@
+# Invented rules in the shape of Grafana's Alerting > Export (YAML 1.2, as Grafana writes it).
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: queues
+      folder: demo
+      interval: 1m
+      rules:
+        - uid: yaml-exp
+          title: Queue depth high
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: prom-demo
+              model:
+                expr: avg(queue_depth)
+                instant: true
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                expression: A
+                reducer: last
+                refId: B
+                type: reduce
+            - refId: C
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 1e+07
+                        type: gt
+                expression: B
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 5m
+          labels:
+            enabled: yes
+            paging: no
+            sticky: on
+            quiet: off
+            mode: "0755"
+            code: 0755
+          isPaused: false
+        - uid: yaml-quoted
+          title: Queue depth quoted
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: prom-demo
+              model:
+                expr: avg(queue_depth)
+                instant: true
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                expression: A
+                reducer: last
+                refId: B
+                type: reduce
+            - refId: C
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - "1e+07"
+                        type: gt
+                expression: B
+                refId: C
+                type: threshold
+          for: 5m
+          isPaused: false
