@@ -462,7 +462,6 @@ def test_identical_copies_that_were_merged_are_counted_in_a_note() -> None:
         ('{__name__="x"}', "promql expression is not a simple"),
         ("(x)", "promql expression is not a simple"),
         ('x{a="\\n"}', "promql label matcher"),
-        ('x{a!=""}', "promql label matcher"),
         ('x{__name__="y"}', "promql label matcher"),
         ('x{a="1" b="2"}', "promql expression is not a simple"),
         ('x{a=~"a%"}', "promql label matcher"),

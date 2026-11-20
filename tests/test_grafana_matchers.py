@@ -17,6 +17,9 @@ SELECT = "SELECT average(cpu) FROM Metric"
         ('cpu{a=~".*", b="x"}', " WHERE b = 'x'"),
         ('cpu{a=~".+"}', " WHERE a IS NOT NULL"),
         ('cpu{a!~".+"}', " WHERE a IS NULL"),
+        # Prometheus has no empty-valued labels, so `!=""` means the label is set, as `=~".+"`
+        ('cpu{a!=""}', " WHERE a IS NOT NULL"),
+        ('cpu{a!="", b="x"}', " WHERE a IS NOT NULL AND b = 'x'"),
         ('cpu{a!~"|x"}', " WHERE a != 'x' AND a IS NOT NULL"),
         ('cpu{a!~"x|y|"}', " WHERE a NOT IN ('x', 'y') AND a IS NOT NULL"),
         (
@@ -32,6 +35,14 @@ def test_matchers_with_a_plain_form_convert(expr: str, where: str) -> None:
     m = one(make(expr))
     assert m.confidence is Confidence.APPROXIMATE, m.reasons
     assert nrql_for(m) == SELECT + where
+
+
+def test_a_set_label_inside_a_counter_rate_converts() -> None:
+    m = one(make('sum by (pod) (rate(cpu_total{container!=""}[5m]))', instant=True, params=[1]))
+    assert m.confidence is Confidence.APPROXIMATE, m.reasons
+    assert nrql_for(m) == (
+        "SELECT sum(cpu_total) / 300 FROM Metric WHERE container IS NOT NULL FACET pod"
+    )
 
 
 def test_a_bare_dot_is_read_as_a_literal_dot_and_says_so() -> None:

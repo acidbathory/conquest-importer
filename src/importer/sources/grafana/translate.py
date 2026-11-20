@@ -567,6 +567,8 @@ def _match(
         if value == "":
             if op == "=" and absent_ok:
                 return [Match(key, "absent", ())]
+            if op == "!=" and absent_ok:  # a label that is set, as `=~".+"` below
+                return [Match(key, "absent", (), negate=True)]
             raise Fail(fail)
         return [Match(key, "eq", (value,), negate=op == "!=")]
     negate = op == "!~"

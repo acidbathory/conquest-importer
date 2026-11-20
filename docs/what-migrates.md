@@ -580,7 +580,7 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   moved outside it, which is exact. A Grafana `mean` reducer over a counter is read as the total change over the rule's range;
   a mean of ratios is read as a ratio of totals and can differ noticeably when the denominator varies. `irate`, `delta`,
   `max`/`min` reducers, `$__rate_interval` windows and counters without a counter-style name stay manual. Approximate.
-- **Label matchers:** `.*` is dropped (Prometheus also matches a missing label), `.+` becomes `IS NOT NULL`, `!~ "|word"` becomes
+- **Label matchers:** `.*` is dropped (Prometheus also matches a missing label), `.+` and `!= ""` become `IS NOT NULL`, `!~ "|word"` becomes
   not-word and not-empty, and words containing dots (hostnames) convert; a bare `.` between letters or digits is read as a
   literal dot and the rule says so. Real regexes (classes, groups, anchors, quantifiers) stay manual. Approximate.
 - **Regular expression matchers:** a real regex in `=~` or `!~` (character classes, groups, anchors, quantifiers,
