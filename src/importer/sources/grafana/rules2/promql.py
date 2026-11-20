@@ -13,7 +13,7 @@ for the one plain shape below, as approximate and unchecked against data.
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal, Inexact, localcontext
 
 from importer.core.ir import (
@@ -47,6 +47,7 @@ from importer.sources.grafana.translate import (
     N_COUNTER,
     N_COUNTER_EMPTY,
     N_FACET_IDENTITY,
+    N_MAX_AS_SUM,
     N_METRIC,
     N_NEGATION,
     N_RATE_DIVISION,
@@ -76,6 +77,7 @@ from importer.sources.grafana.translate import (
     counter_suffix_notes,
     extreme_plan,
     looked_back,
+    max_reads_as_sum,
     nrql_attribute,
     parse_matchers,
     register_prom_form,
@@ -222,10 +224,15 @@ def _counter_form(expr: str, ctx: Ctx) -> Built | None:
     operand = _operand(expr)
     if parts is None or parts[1] or operand is None or operand.function is None:
         return None
+    as_sum = max_reads_as_sum(operand.aggregator, ctx)
+    if as_sum:
+        operand = replace(operand, aggregator="sum")
     seconds = _check_counter(operand, ctx, facet=True)
     term = _term(operand.name)
     division: Expr | None = None
     notes = [N_METRIC, N_COUNTER, *_suffix_notes(operand.name)]
+    if as_sum:
+        notes.append(N_MAX_AS_SUM)
     if operand.function == "rate":
         division = BinOp(op="/", left=Ref(name="a"), right=Num(value=float(seconds)))
         notes.append(N_RATE_DIVISION.format(seconds=seconds))

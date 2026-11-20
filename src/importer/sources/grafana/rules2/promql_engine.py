@@ -66,6 +66,7 @@ from importer.sources.grafana.translate import (
     MAX_EXPRESSION,
     N_COUNTER,
     N_COUNTER_EMPTY,
+    N_MAX_AS_SUM,
     N_METRIC,
     N_NEGATION,
     N_PER_SERIES,
@@ -87,6 +88,7 @@ from importer.sources.grafana.translate import (
     counter_suffix_notes,
     extreme_plan,
     looked_back,
+    max_reads_as_sum,
     nrql_attribute,
     parse_matchers,
     regex_notes,
@@ -479,6 +481,8 @@ def _peel(node: Node) -> tuple[Node, float, Callable[[Node], Node]] | None:
     if node.matching is not None:
         return None
     left, right = _constant(node.lhs), _constant(node.rhs)
+    if node.op == "/" and right == 0:
+        return None  # the division by 0 keeps its own reason
     if right is not None and left is None:
         inner = _peel(node.lhs)
         core, factor, rebuild = inner if inner else (node.lhs, 1.0, lambda x: x)
@@ -509,11 +513,28 @@ def _hoist_constants(node: Node) -> Node:
     return node
 
 
+def _max_as_sum(tree: Node, ctx: Ctx) -> tuple[Node, list[str]]:
+    """`max(rate(x))`, times a positive constant, as `sum(rate(x))` and its note when the rule
+    fires above 0 (the two are above 0 together); any other tree comes back as it was."""
+    peeled = _peel(tree)
+    core, factor, rebuild = peeled if peeled else (tree, 1.0, lambda x: x)
+    core = _unwrap(core)
+    if factor <= 0 or not isinstance(core, Aggregate) or core.param is not None:
+        return tree, []
+    call = _unwrap(core.expr)
+    if not (isinstance(call, Call) and call.func in COUNTER_FUNCTIONS):
+        return tree, []
+    if not max_reads_as_sum(core.op, ctx):
+        return tree, []
+    return rebuild(replace(core, op="sum")), [N_MAX_AS_SUM]
+
+
 def _arith_form(expr: str, ctx: Ctx) -> Built | None:
     tree = _read(expr)
     if tree is None:
         return None
     tree = _hoist_constants(tree)
+    tree, sum_notes = _max_as_sum(tree, ctx)
     if variables_in(expr) or any(isinstance(n, Selector) and n.variables for n in walk(tree)):
         return None
     if isinstance(tree, (Number, Selector)) or (isinstance(tree, Aggregate) and tree.param):
@@ -555,6 +576,7 @@ def _arith_form(expr: str, ctx: Ctx) -> Built | None:
     if any(m.negate for leaf in leaves for m in leaf.matches):
         notes.append(N_NEGATION)
     notes += regex_notes(m for leaf in leaves for m in leaf.matches)
+    notes += sum_notes
     group_by = list(first.group_by)
     per_series = first.aggregator is None
     if per_series:

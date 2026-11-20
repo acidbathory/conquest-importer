@@ -70,7 +70,9 @@ RULES: list[Rule] = [
             "Only sum() of a rate or increase converts, because New Relic adds up the "
             "changes of all series. An average, minimum or maximum of per-series rates needs "
             "one value per series: write a condition with a FACET on the series label and "
-            "check it against the Grafana panel.",
+            "check it against the Grafana panel. A max() whose rule fires above 0 converts "
+            "as sum(), since both are above 0 at the same time; any other threshold stays "
+            "manual.",
         ],
     ),
     (

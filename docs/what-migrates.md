@@ -580,6 +580,11 @@ the ruler and `/apis` shapes are hand-made from the documentation.
   moved outside it, which is exact. A Grafana `mean` reducer over a counter is read as the total change over the rule's range;
   a mean of ratios is read as a ratio of totals and can differ noticeably when the denominator varies. `irate`, `delta`,
   `max`/`min` reducers, `$__rate_interval` windows and counters without a counter-style name stay manual. Approximate.
+- **`max()` across counter rates, threshold above 0:** `max by (s) (increase(x_total[10m])) > 0` (also `rate`, and
+  with a positive constant factor) converts as the `sum by (s)` form, because a rate or increase is never negative, so in
+  each group the maximum is above 0 exactly when the sum is. The condition then shows the sum, not the maximum. Any other
+  threshold (above 1, at least 0, below, ranges), `min` and `avg` across series, and arithmetic between aggregates stay
+  manual. Approximate.
 - **Label matchers:** `.*` is dropped (Prometheus also matches a missing label), `.+` and `!= ""` become `IS NOT NULL`, `!~ "|word"` becomes
   not-word and not-empty, and words containing dots (hostnames) convert; a bare `.` between letters or digits is read as a
   literal dot and the rule says so. Real regexes (classes, groups, anchors, quantifiers) stay manual. Approximate.

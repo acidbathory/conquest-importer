@@ -359,6 +359,11 @@ N_COUNTER = (
     "that window; Prometheus extrapolates rate() and increase() to the ends of the range, so the "
     "values may differ a little"
 )
+N_MAX_AS_SUM = (
+    "max() across series was written as sum(): a rate or increase of a counter is never "
+    "negative, so in each group the largest value is above 0 exactly when the sum is; this holds "
+    "only for the threshold above 0, and the value the condition shows is the sum, not the maximum"
+)
 N_COUNTER_SUFFIX = (
     "{names} assumed to be a counter from its name suffix _counter (New Relic only stores it "
     "as a delta count if the metric type is set to counter on remote write); a gauge in the "
@@ -765,6 +770,18 @@ class Built:
 def looked_back(ctx: Ctx) -> str:
     """The reducer that really applies: an instant query has one point, so it is `last`."""
     return "last" if ctx.instant else ctx.reducer
+
+
+def max_reads_as_sum(aggregator: str | None, ctx: Ctx) -> bool:
+    """max() across counter rates can be sum(): both are above 0 at the same time, as no rate or
+    increase is negative. Only the threshold above 0 keeps that true."""
+    threshold = ctx.threshold
+    return (
+        aggregator == "max"
+        and threshold is not None
+        and threshold.operator is Operator.ABOVE
+        and threshold.value == 0
+    )
 
 
 def extreme_plan(ctx: Ctx, reducer: str) -> tuple[Occurrences, int, str]:
