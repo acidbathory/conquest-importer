@@ -114,6 +114,7 @@ returns `{ id }`). Read back: `actor.account.alerts.compoundConditions { items {
 | A disabled component | Rejected: "All component conditions must be enabled for a compound alert". |
 | `FACETS_MATCH` with two components faceted the same way | Accepted. |
 | `FACETS_MATCH` with one faceted and one unfaceted component | Rejected: "No matching facets found across component conditions". |
+| `FACETS_IGNORED` with two faceted components, or one faceted and one unfaceted | Accepted (second run, 2026-11-20). |
 | No `thresholdDuration` | Accepted; stored as 60 seconds. |
 | A component from another policy | Accepted. |
 | The same component in two compound conditions | Accepted. |
