@@ -18,19 +18,22 @@ from typing import Any
 from importer.core.report import md_cell
 from importer.core.text import printable
 
-MAX_FILES = 5000
+MAX_FILES = 50_000  # a real estate passed 5,000 conditions; over the cap, a warning says so
 MAX_FILE_BYTES = 20_000_000
 MAX_HISTORY_ROWS = 10_000
 KEY_UNSAFE = re.compile(r"[^A-Za-z0-9_.-]")
 TEST_DEF = re.compile(r"^\s*(?:async\s+)?def (test_\w*)\(", re.MULTILINE)
 CONVERTED = ("exact", "approximate")
-LOWER_IS_BETTER = ("alerts_manual", "alerts_unsupported", "widgets_placeholders")
-HIGHER_IS_BETTER = ("alerts_converted", "widgets_converted", "verified")
+LOWER_IS_BETTER = ("alerts_manual", "alerts_unsupported", "rules_manual", "widgets_placeholders")
+HIGHER_IS_BETTER = ("alerts_converted", "rules_converted", "widgets_converted", "verified")
 BAD_VERDICTS = frozenset({"mismatch", "mismatched", "diverge", "diverged", "fail", "failed"})
 GOOD_VERDICTS = frozenset({"match", "matched", "verified", "pass", "passed"})
 # Sources whose converted items without a `data_path` in the saved IR are native (the field is
 # left out of the file for them). Other sources are not counted by data path at all.
 DEFAULT_DATA_PATH = {"gcp": "native"}
+# A Grafana rule whose queries are joined by OR becomes one condition per query, keyed
+# "<rule>/or-<query>"; the rule converts only when every one of its conditions does.
+SPLIT_MARK = {"grafana": "/or-"}
 EVIDENCE_FIELDS = ("id", "source", "claim", "date", "method", "evidence")
 
 
@@ -74,11 +77,35 @@ def _count_data_path(
         _bump(metrics, f"{prefix}{noun}_datapath_known")
 
 
+def _capped(folder: Path, warnings: list[str]) -> list[Path]:
+    """The JSON files of a folder, at most MAX_FILES, with a warning when some are left out."""
+    paths = sorted(folder.glob("*.json"))
+    if len(paths) > MAX_FILES:
+        warnings.append(
+            f"{printable(folder.name, 60)}: {len(paths)} files, only the first {MAX_FILES} read"
+        )
+    return paths[:MAX_FILES]
+
+
+def _rule_of(source: str, data: dict[str, Any], fallback: str) -> str:
+    key = data.get("source_key")
+    if not isinstance(key, str):
+        return fallback
+    mark = SPLIT_MARK.get(source)
+    return key.rsplit(mark, 1)[0] if mark and mark in key else key
+
+
+def _count_rules(metrics: dict[str, int], rules: dict[tuple[str, str], list[bool]]) -> None:
+    for (source, _), legs in rules.items():
+        _bump(metrics, f"out/{source}/rules_{'converted' if all(legs) else 'manual'}")
+
+
 def _scan_alerts(folder: Path, metrics: dict[str, int], warnings: list[str]) -> None:
     ir = folder / "ir"
     if ir.is_symlink() or not ir.is_dir():
         return
-    for path in sorted(ir.glob("*.json"))[:MAX_FILES]:
+    rules: dict[tuple[str, str], list[bool]] = {}
+    for path in _capped(ir, warnings):
         data = _read_json(path, warnings)
         if data is None:
             continue
@@ -88,6 +115,9 @@ def _scan_alerts(folder: Path, metrics: dict[str, int], warnings: list[str]) -> 
         source = _key(data.get("source_system", "unknown"))
         prefix = f"out/{source}/"
         confidence = data["confidence"]
+        if confidence in CONVERTED or confidence in ("manual", "unsupported"):
+            rule = (source, _rule_of(source, data, path.name))
+            rules.setdefault(rule, []).append(confidence in CONVERTED)
         if confidence in CONVERTED:
             _bump(metrics, prefix + "alerts_converted")
             _bump(metrics, prefix + f"alerts_{confidence}")
@@ -96,6 +126,7 @@ def _scan_alerts(folder: Path, metrics: dict[str, int], warnings: list[str]) -> 
             _bump(metrics, prefix + f"alerts_{confidence}")
         else:
             warnings.append(f"{printable(path.name, 60)} skipped: unknown confidence")
+    _count_rules(metrics, rules)
 
 
 def widget_class(kind: object) -> str:
@@ -110,7 +141,7 @@ def _scan_dashboards(folder: Path, metrics: dict[str, int], warnings: list[str])
     ir = folder / "dashboard-ir"
     if ir.is_symlink() or not ir.is_dir():
         return
-    for path in sorted(ir.glob("*.json"))[:MAX_FILES]:
+    for path in _capped(ir, warnings):
         data = _read_json(path, warnings)
         if data is None:
             continue

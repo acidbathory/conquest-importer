@@ -387,3 +387,45 @@ def test_one_rule_says_what_a_placeholder_widget_is() -> None:
         "other",
         "other",
     ]
+
+
+def _keyed(path: Path, name: str, key: str, confidence: str) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    (path / f"{name}.json").write_text(
+        json.dumps(
+            {"source_system": "grafana", "source_key": key, "name": name, "confidence": confidence}
+        )
+    )
+
+
+def test_rules_split_into_several_conditions_count_once(tmp_path: Path) -> None:
+    ir = tmp_path / "out" / "grafana" / "ir"
+    _keyed(ir, "1", "r1/or-A", "approximate")  # an OR rule, both queries converted
+    _keyed(ir, "2", "r1/or-B", "approximate")
+    _keyed(ir, "3", "r2", "approximate")
+    _keyed(ir, "4", "r3", "manual")
+    m = sb.gather([tmp_path / "out"], root=None, evidence=None, today="d")["metrics"]
+    assert m["out/grafana/alerts_converted"] == 3  # conditions
+    assert m["out/grafana/rules_converted"] == 2  # r1 and r2
+    assert m["out/grafana/rules_manual"] == 1
+
+
+def test_a_rule_with_one_leg_not_converted_is_not_a_converted_rule(tmp_path: Path) -> None:
+    ir = tmp_path / "out" / "grafana" / "ir"
+    _keyed(ir, "1", "r1/or-A", "approximate")
+    _keyed(ir, "2", "r1/or-B", "manual")
+    m = sb.gather([tmp_path / "out"], root=None, evidence=None, today="d")["metrics"]
+    assert m.get("out/grafana/rules_converted", 0) == 0
+    assert m["out/grafana/rules_manual"] == 1
+
+
+def test_a_folder_over_the_file_cap_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sb, "MAX_FILES", 2)
+    ir = tmp_path / "out" / "grafana" / "ir"
+    for name in "abc":
+        _monitor(ir, name, "exact")
+    board = sb.gather([tmp_path / "out"], root=None, evidence=None, today="d")
+    assert board["metrics"]["out/grafana/alerts_converted"] == 2
+    assert any("only the first 2" in w for w in board["warnings"])
